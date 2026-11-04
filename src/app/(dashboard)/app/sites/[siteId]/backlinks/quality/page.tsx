@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { ShieldCheck } from "lucide-react";
@@ -20,6 +20,7 @@ import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { qualitySees } from "@/convex/utils/sees/backlinks";
+import { qualitySees as qualityFigures } from "../_components/linkSees";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";
@@ -46,7 +47,12 @@ export default function SiteLinkQualityPage() {
   const site = useSite();
   const range = useSiteRange();
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
-  const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
+  // With the rivals' lines beside yours, and each rival's newest summary, for the eye alone (ask-hakken-every-chart-page-
+  // plan-2026-11-03.md, section 10: "Spam score up from 4 to 12 while rivals sit at 3–5"): the page draws only its own.
+  const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
+  const profiles = useQuery(api.siteLinks.linkProfilesAgainstRivals, { siteId });
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(() => qualityFigures(profile, series, profiles, { rivals: tn("rivals") }), [profile, series, profiles, tn]);
   const [shown, setShown] = useState<Record<Measure, boolean>>({ spamScore: true, brokenBacklinks: true, brokenPages: true });
 
   const points = (series?.[0]?.points ?? []).filter((point) => MEASURES.some((measure) => point[measure] !== undefined));
@@ -63,7 +69,7 @@ export default function SiteLinkQualityPage() {
         description={t("description")}
         pills={profile ? <span className="text-[12px] text-secondary">{t("asOf", { day: formatDay(profile.day) })}</span> : null}
       />
-      <SiteSees screen="backlinksQuality" seen={profile === undefined ? undefined : qualitySees(profile)} data={profile && { profile, series }} />
+      <SiteSees screen="backlinksQuality" seen={profile === undefined ? undefined : qualitySees(profile)} data={sees} />
 
       {profile === null ? (
         <HakkenEmptyState icon={ShieldCheck} title={t("title")} description={t("empty")} />

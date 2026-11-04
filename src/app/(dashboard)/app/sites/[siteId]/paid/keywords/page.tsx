@@ -8,7 +8,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
-import { formatCpc, formatNumber } from "../../../_components/siteFormat";
+import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
@@ -20,14 +20,16 @@ import { useSiteSort } from "../../../_components/useSiteSort";
 /**
  * The columns that sort, over every advert (docs/plans/active/
  * sites-table-sorting-plan.md): the search A to Z, the advert's place from
- * the top, and the most searched, dearest click, most visits and highest cost
- * first.
+ * the top, and the most searched and most visits first. What a click and the
+ * visits would cost are our data supplier's guesses, no longer shown
+ * (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 4; Anthony,
+ * 2026-11-03: "Take it off", then "Yes, all of it").
  */
-const SORTS = { keyword: "asc", position: "asc", volume: "desc", cpc: "desc", traffic: "desc", cost: "desc" } as const;
+const SORTS = { keyword: "asc", position: "asc", volume: "desc", traffic: "desc" } as const;
 
 /**
  * Paid keywords: the searches the site shows Google adverts on, where each
- * advert sits and what its visits would cost — from the newest ranked-keywords
+ * advert sits and the visits it brings — from the newest ranked-keywords
  * answer, paged and searched on the server.
  */
 export default function SitePaidKeywordsPage() {
@@ -69,9 +71,7 @@ export default function SitePaidKeywordsPage() {
           { key: "keyword", header: t("columns.keyword"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.position ?? "–"}</span> },
           { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
-          { key: "cpc", header: t("columns.cpc"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatCpc(row.cpc)}</span> },
           { key: "traffic", header: t("columns.traffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
-          { key: "cost", header: t("columns.cost"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.trafficCost === null ? "–" : `$${formatNumber(row.trafficCost)}`}</span> },
         ]}
       />
     </div>

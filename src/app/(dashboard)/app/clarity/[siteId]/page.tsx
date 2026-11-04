@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { LayoutDashboard, MousePointerClick } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { sameDayBefore } from "@/convex/utils/calendarPeriods";
@@ -44,9 +45,11 @@ import {
   useDeviceName,
   useCountedWords,
   usePeriodWords,
+  useClaritySeesWords,
   useSourceName,
   useWaitingWords,
 } from "../_components/ClarityParts";
+import { overviewSees, pageLinks } from "../_components/claritySees";
 import { RecordingsList } from "../_components/RecordingsList";
 import { useClarityArgs, useClarityPageHref, useClarityQuery, useClaritySiteId, useClarityStatus, useClarityChosen } from "../_components/useClarity";
 
@@ -80,6 +83,11 @@ export default function ClarityOverviewPage() {
   const kinds = usePageKinds(siteId);
   const { platformName } = useSystemSettings();
   const data = useQuery(api.clarityScreens.clarityOverview, args);
+  // What the eye reads: the answer, every name in the screen's own words (claritySees.ts).
+  const seesWords = useClaritySeesWords(chosen, kinds);
+  const locale = useLocale();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const seen = useMemo(() => (data ? overviewSees(data, seesWords) : undefined), [data, chosen, kinds.choices, status?.host, locale]);
   const header = <PageHeader icon={<LayoutDashboard className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />;
   if (status?.connection?.status !== "CONNECTED" && !status?.connection?.newestDay) {
     return <>{header}<HakkenEmptyState icon={MousePointerClick} title={t("notConnectedTitle")} description={t("notConnectedDescription")} action={<Link href={`/app/clarity/${siteId}/connection`} className="text-[13px] text-info hover:underline">{t("connect")}</Link>} /></>;
@@ -148,7 +156,7 @@ export default function ClarityOverviewPage() {
           ].filter(Boolean).join(" ")}
         </Notice>
       ) : null}
-      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.overview", siteId, data }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.overview", siteId, data: seen, links: pageLinks([worst?.page, data.stuck.quickBackPage?.page, ...data.errors.pages.slice(0, 3).map((row) => row.line.page)], pageHref) }} />
       <FigureRow columns={4}>
         <Figure label={t("figures.visits")} value={formatNumber(now.visits)} detail={<span className="flex flex-col">{before ? <Moved by={growthOf(now.visits, before.visits)}>{tc("percentOn", { way: wayOf(growthOf(now.visits, before.visits)), value: Math.abs(growthOf(now.visits, before.visits) ?? 0).toFixed(1), against })}</Moved> : <span className="text-muted">{against}</span>}<span className="text-secondary">{now.bots > 0 ? t("figures.botsLeftOut", { count: now.bots }) : span}</span></span>} />
         <Figure label={t("figures.scroll")} value={percent(now.scroll)} detail={<span className="flex flex-col">{before ? <Moved by={changeOf(now.scroll, before.scroll)}>{tc("pointsOn", { way: wayOf(changeOf(now.scroll, before.scroll)), value: Math.abs(changeOf(now.scroll, before.scroll) ?? 0).toFixed(1), against })}</Moved> : null}<span className="text-secondary">{t("figures.scrollDetail")}</span></span>} />

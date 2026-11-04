@@ -65,17 +65,23 @@ export function useSeenWords(namespace: "sites.seen" | "keywordResearch.seen", s
  * record or a page of this site with the way back to here. Nothing while the
  * query is loading, so the page's title never jumps.
  */
-export function SiteSees({ screen, seen, data }: {
+export function SiteSees({ screen, seen, data, eye }: {
   screen: string;
   seen: Seen | null | undefined;
   /** The page's own figures, for the eye's findings, writer and chat (sees-every-page-plan-2026-10-31.md). */
   data?: unknown;
+  /**
+   * The eye's key for the page, where it is not the box's words' (`screen`): Keywords' New and lost speaks in Wins and
+   * losses' words, yet is a page of its own with its own rules (ask-hakken-every-chart-page-plan-2026-11-03.md,
+   * section 10: "Keywords' new and lost shares its key with Google's moves").
+   */
+  eye?: string;
 }) {
   const { words, linkWords } = useSeenWords("sites.seen", screen);
   const hrefOf = useSeenHref();
   const siteId = useSiteId();
   useNoteAdvice(siteId, `sites.seen.${screen}`, seen);
-  const page = data !== undefined && data !== null ? { screen: `visibility.${screen}`, ...(siteId ? { siteId } : {}), data } : undefined;
+  const page = data !== undefined && data !== null ? { screen: `visibility.${eye ?? screen}`, ...(siteId ? { siteId } : {}), data } : undefined;
   if (!page && (!seen || seen.says.length === 0)) return null;
   const steps: HakkenSeesStep[] = (seen?.steps ?? []).map((step) => ({ words: words(step), link: linkWords(step.link), ...hrefOf(step.to) }));
   return <HakkenSees says={(seen?.says ?? []).map(words)} steps={steps} advice={seen ? seenAdvice(seen) : screen} {...(page ? { page } : {})} />;

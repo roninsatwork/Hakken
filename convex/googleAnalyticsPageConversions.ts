@@ -5,11 +5,11 @@ import { isPageRef } from "./holdPageRefs";
 import { periodRange, slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { shiftDay } from "./searchConsoleDays";
-import { splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { splitChannelKey, type ListRow, type PartOnly } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { connectionOf, conversionsOf, countedOf, readFor, readSlot } from "./googleAnalyticsRows";
 import { readPageSeries } from "./googleAnalyticsPageSeries";
-import { landingByChannel } from "./googleAnalyticsChannelReads";
+import { eachLandingByChannel } from "./googleAnalyticsChannelReads";
 import { landingKeyOf } from "./googleAnalyticsPageNumbers";
 
 /**
@@ -153,28 +153,35 @@ export const analyticsPageConversionGrid = tenantQuery({
     const country = await keptCountry(ctx, site.hold, args.country);
     const connection = await connectionOf(ctx, holdId);
     if (!connection?.newestDay || !isPageRef(args.page)) return null;
-    const byChannel = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
-    if (!byChannel) return null;
     const countedEvents = countedOf(connection);
-    // The landing pages' number for it: its own, or its address without the trailing slash's (`landingKeyOf`).
-    const landed = await landingKeyOf(ctx, holdId, args.page, byChannel.rows.map((row) => splitChannelKey(row.key).channel));
-    // This page's rows, one a channel: keyed page then channel; and every page's from each channel, the website's.
-    const own = new Map<string, ListRow>();
+    // Every page's visits and conversions from each channel, the website's, read a part at a time with the counted
+    // events alone; then this page's own rows whole, now and before (2026-11-04: read whole as rows, a year's landing
+    // pages by channel ran this out of its 64MB from Last 3 months on More Handles).
+    const pages = new Set<string>();
     const website = new Map<string, { visits: number; conversions: number }>();
-    for (const row of byChannel.rows) {
+    const byChannel = await eachLandingByChannel(ctx, holdId, args.period, "NOW", country, args.device, { events: new Set(countedEvents.map((event) => event.eventName)) }, (row) => {
       const { channel: page, source: channel } = splitChannelKey(row.key);
-      if (page === landed && row.visits > 0) own.set(channel, row);
+      pages.add(page);
       const whole = website.get(channel) ?? website.set(channel, { visits: 0, conversions: 0 }).get(channel)!;
       whole.visits += row.visits;
       whole.conversions += conversionsOf(row, countedEvents).conversions;
-    }
+    });
+    if (!byChannel) return null;
+    // The landing pages' number for it: its own, or its address without the trailing slash's (`landingKeyOf`).
+    const landed = await landingKeyOf(ctx, holdId, args.page, [...pages]);
+    const whole: PartOnly = { events: null, units: true, zeros: true, keep: (page) => page === landed };
+    // This page's rows, one a channel: keyed page then channel.
+    const own = new Map<string, ListRow>();
+    await eachLandingByChannel(ctx, holdId, args.period, "NOW", country, args.device, whole, (row) => {
+      const { channel: page, source: channel } = splitChannelKey(row.key);
+      if (page === landed && row.visits > 0) own.set(channel, row);
+    });
     // The span before's rows for this page, a channel each, where that span is held.
-    const wasByChannel = await landingByChannel(ctx, holdId, args.period, "BEFORE", country, args.device);
     const ownBefore = new Map<string, ListRow>();
-    for (const row of wasByChannel?.rows ?? []) {
+    const wasByChannel = await eachLandingByChannel(ctx, holdId, args.period, "BEFORE", country, args.device, whole, (row) => {
       const { channel: page, source: channel } = splitChannelKey(row.key);
       if (page === landed) ownBefore.set(channel, row);
-    }
+    });
     const hasBefore = wasByChannel !== null;
     const channels = [...own.entries()].sort((left, right) => right[1].visits - left[1].visits || left[0].localeCompare(right[0]));
     // A square's two units: the visits with the event and its times, Google's own count standing in for both on an older row.

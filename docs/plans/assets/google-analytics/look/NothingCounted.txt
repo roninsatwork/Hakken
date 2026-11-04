@@ -3,7 +3,7 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Conversions
 search: Find an event…
-table: Event | Conversions | Visits | Worth | Change
+table: Event | Conversions | Visits | Change
   table-bar
     download: Download CSV
   table-footer

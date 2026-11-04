@@ -3,7 +3,7 @@ import { seen, seenValidator } from "./utils/hakkenSees";
 import { contentGapSees } from "./utils/sees/competitors";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { companyHolds, listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { companyHolds, listHold, listWebsiteId, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { holdAiSummary, holdQuestionAnswers, holdQuestions } from "./holdLists";
 import { contentGapOf } from "./siteContentGap";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -90,89 +90,92 @@ export const listRivals = tenantQuery({
     lastSeenDay: v.union(v.string(), v.null()),
     verdict: rivalVerdictValidator,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const [ours, rivals, questions, answered] = await Promise.all([
-      searchStandings(ctx, site, { activeOnly: true, cap: STANDINGS_READ }),
-      myRivals(ctx, site),
-      holdQuestions(ctx, listHold(site), MAX_LIST),
-      holdQuestionAnswers(ctx, listHold(site), site.place, MAX_LIST),
-    ]);
-    const perRival = Math.max(1, Math.min(COMPARED_SEARCHES, Math.floor(RIVAL_READS / Math.max(1, rivals.length))));
-    const compared = ours
-      .filter((row) => row.isActive && row.stats?.lastCheckedDay)
-      .slice(0, perRival);
+  handler: async (ctx, args) => await readListRivals(ctx, args),
+});
 
-    // How often the answers to the questions still asked named each website
-    // of the group, from the list's rows (`siteListAi.ts`): one read, however
-    // long the list.
-    let answersCounted = 0;
-    const named = new Map<Id<"websites">, { times: number; lastDay: string | null }>();
-    const byPrompt = new Map(answered.map((row) => [row.prompt, row]));
-    for (const question of questions) {
-      if (!question.isActive) continue;
-      const row = byPrompt.get(question.prompt);
-      for (const engine of question.engines) {
-        const entry = row?.engines.find((held) => held.engine === engine);
-        if (!entry) continue;
-        answersCounted += entry.asked;
-        for (const seen of entry.sites) {
-          if (seen.named === 0) continue;
-          const held = named.get(seen.websiteId) ?? { times: 0, lastDay: null };
-          held.times += seen.named;
-          if (seen.lastNamedDay && (!held.lastDay || seen.lastNamedDay > held.lastDay)) held.lastDay = seen.lastNamedDay;
-          named.set(seen.websiteId, held);
-        }
+/** listRivals's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readListRivals(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const [ours, rivals, questions, answered] = await Promise.all([
+    searchStandings(ctx, site, { activeOnly: true, cap: STANDINGS_READ }),
+    myRivals(ctx, site),
+    holdQuestions(ctx, listHold(site), MAX_LIST),
+    holdQuestionAnswers(ctx, listHold(site), site.place, MAX_LIST),
+  ]);
+  const perRival = Math.max(1, Math.min(COMPARED_SEARCHES, Math.floor(RIVAL_READS / Math.max(1, rivals.length))));
+  const compared = ours
+    .filter((row) => row.isActive && row.stats?.lastCheckedDay)
+    .slice(0, perRival);
+
+  // How often the answers to the questions still asked named each website
+  // of the group, from the list's rows (`siteListAi.ts`): one read, however
+  // long the list.
+  let answersCounted = 0;
+  const named = new Map<Id<"websites">, { times: number; lastDay: string | null }>();
+  const byPrompt = new Map(answered.map((row) => [row.prompt, row]));
+  for (const question of questions) {
+    if (!question.isActive) continue;
+    const row = byPrompt.get(question.prompt);
+    for (const engine of question.engines) {
+      const entry = row?.engines.find((held) => held.engine === engine);
+      if (!entry) continue;
+      answersCounted += entry.asked;
+      for (const seen of entry.sites) {
+        if (seen.named === 0) continue;
+        const held = named.get(seen.websiteId) ?? { times: 0, lastDay: null };
+        held.times += seen.named;
+        if (seen.lastNamedDay && (!held.lastDay || seen.lastNamedDay > held.lastDay)) held.lastDay = seen.lastNamedDay;
+        named.set(seen.websiteId, held);
       }
     }
+  }
 
-    // Each competitor read as of the list's newest check, like the site's own
-    // row (`asOfListCheck`): a competitor off the page keeps no stale place.
-    const listSite = listWebsiteId(site);
-    const listStats = listSite === site.website._id
-      ? compared.map((row) => row.stats)
-      : await Promise.all(compared.map((row) => searchStats(ctx, listSite, row.keyword, site.place)));
-    return await Promise.all(rivals.map(async (rival) => {
-      const theirs = await Promise.all(compared.map(async (row, index) => {
-        const raw = await searchStats(ctx, rival.website._id, row.keyword, site.place);
-        return rival.website._id === listSite ? raw : asOfListCheck(raw, listStats[index]);
-      }));
-      let beatsYouOn = 0;
-      let youBeatOn = 0;
-      let rankedOn = 0;
-      // Widened by hand: assignments inside the callback below are invisible to
-      // narrowing, which would otherwise pin this at null.
-      let lastSeenDay = null as string | null;
-      compared.forEach((row, index) => {
-        const their = theirs[index];
-        const them = their?.lastPosition;
-        const us = row.stats?.lastPosition;
-        if (them !== undefined) rankedOn += 1;
-        if (them !== undefined && (us === undefined || them < us)) beatsYouOn += 1;
-        if (us !== undefined && (them === undefined || us < them)) youBeatOn += 1;
-        if (their && them !== undefined && (!lastSeenDay || their.lastCheckedDay > lastSeenDay)) {
-          lastSeenDay = their.lastCheckedDay;
-        }
-      });
-      const answers = named.get(rival.website._id);
-      if (answers?.lastDay && (!lastSeenDay || answers.lastDay > lastSeenDay)) lastSeenDay = answers.lastDay;
-      const trackedSinceDay = new Date(rival.hold.createdAt).toISOString().slice(0, 10);
-      return {
-        websiteId: rival.website._id,
-        host: rival.website.displayHost,
-        relationship: rival.summary.relationship,
-        beatsYouOn,
-        youBeatOn,
-        comparedOn: compared.length,
-        rankedOn,
-        namedInAnswers: answers?.times ?? 0,
-        answersCounted,
-        lastSeenDay,
-        verdict: rivalVerdict({ beatsYouOn, youBeatOn, lastSeenDay, trackedSinceDay }, site.today),
-      };
+  // Each competitor read as of the list's newest check, like the site's own
+  // row (`asOfListCheck`): a competitor off the page keeps no stale place.
+  const listSite = listWebsiteId(site);
+  const listStats = listSite === site.website._id
+    ? compared.map((row) => row.stats)
+    : await Promise.all(compared.map((row) => searchStats(ctx, listSite, row.keyword, site.place)));
+  return await Promise.all(rivals.map(async (rival) => {
+    const theirs = await Promise.all(compared.map(async (row, index) => {
+      const raw = await searchStats(ctx, rival.website._id, row.keyword, site.place);
+      return rival.website._id === listSite ? raw : asOfListCheck(raw, listStats[index]);
     }));
-  },
-});
+    let beatsYouOn = 0;
+    let youBeatOn = 0;
+    let rankedOn = 0;
+    // Widened by hand: assignments inside the callback below are invisible to
+    // narrowing, which would otherwise pin this at null.
+    let lastSeenDay = null as string | null;
+    compared.forEach((row, index) => {
+      const their = theirs[index];
+      const them = their?.lastPosition;
+      const us = row.stats?.lastPosition;
+      if (them !== undefined) rankedOn += 1;
+      if (them !== undefined && (us === undefined || them < us)) beatsYouOn += 1;
+      if (us !== undefined && (them === undefined || us < them)) youBeatOn += 1;
+      if (their && them !== undefined && (!lastSeenDay || their.lastCheckedDay > lastSeenDay)) {
+        lastSeenDay = their.lastCheckedDay;
+      }
+    });
+    const answers = named.get(rival.website._id);
+    if (answers?.lastDay && (!lastSeenDay || answers.lastDay > lastSeenDay)) lastSeenDay = answers.lastDay;
+    const trackedSinceDay = new Date(rival.hold.createdAt).toISOString().slice(0, 10);
+    return {
+      websiteId: rival.website._id,
+      host: rival.website.displayHost,
+      relationship: rival.summary.relationship,
+      beatsYouOn,
+      youBeatOn,
+      comparedOn: compared.length,
+      rankedOn,
+      namedInAnswers: answers?.times ?? 0,
+      answersCounted,
+      lastSeenDay,
+      verdict: rivalVerdict({ beatsYouOn, youBeatOn, lastSeenDay, trackedSinceDay }, site.today),
+    };
+  }));
+}
 
 const kindValidator = v.union(
   v.literal("COMPETITOR"), v.literal("DIRECTORY"), v.literal("PUBLISHER"),
@@ -239,47 +242,50 @@ export const marketMap = tenantQuery({
     sharedKeywords: v.union(v.number(), v.null()),
     day: v.union(v.string(), v.null()),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const [found, rivals] = await Promise.all([
-      ctx.db
-        .query("discoveredCompetitors")
-        .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
-        .take(MAX_DISCOVERED),
-      myRivals(ctx, site),
-    ]);
-    const held = [
-      { website: site.website, role: "YOU" as const },
-      ...rivals.map((rival) => ({ website: rival.website, role: "RIVAL" as const })),
-    ];
-    const heldHosts = new Set(held.map((entry) => entry.website.host));
-    const shared = new Map(found.map((row) => [row.host, row.intersections]));
-    const mine = await Promise.all(held.map(async ({ website, role }) => {
-      const latest = await latestFigures(ctx, website._id, site.place);
-      return {
-        host: website.displayHost,
-        role,
-        kind: null,
-        keywords: searchTotalOf(latest),
-        traffic: latest.metrics?.estimatedTraffic ?? null,
-        sharedKeywords: role === "YOU" ? null : shared.get(website.host) ?? null,
-        day: latest.metrics?.day ?? latest.ranking?.day ?? null,
-      };
-    }));
-    const listed = found.filter((row) => !heldHosts.has(row.host) && (row.domainKeywords !== undefined || row.domainTraffic !== undefined));
-    const others = listed
-      .map((row) => ({
-        host: row.host,
-        role: "FOUND" as const,
-        kind: row.kind ?? null,
-        keywords: row.domainKeywords ?? null,
-        traffic: row.domainTraffic !== undefined ? Math.round(row.domainTraffic) : null,
-        sharedKeywords: row.intersections,
-        day: row.lastSeenDay ?? null,
-      }));
-    return [...mine, ...others];
-  },
+  handler: async (ctx, args) => await readMarketMap(ctx, args),
 });
+
+/** marketMap's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readMarketMap(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const [found, rivals] = await Promise.all([
+    ctx.db
+      .query("discoveredCompetitors")
+      .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
+      .take(MAX_DISCOVERED),
+    myRivals(ctx, site),
+  ]);
+  const held = [
+    { website: site.website, role: "YOU" as const },
+    ...rivals.map((rival) => ({ website: rival.website, role: "RIVAL" as const })),
+  ];
+  const heldHosts = new Set(held.map((entry) => entry.website.host));
+  const shared = new Map(found.map((row) => [row.host, row.intersections]));
+  const mine = await Promise.all(held.map(async ({ website, role }) => {
+    const latest = await latestFigures(ctx, website._id, site.place);
+    return {
+      host: website.displayHost,
+      role,
+      kind: null,
+      keywords: searchTotalOf(latest),
+      traffic: latest.metrics?.estimatedTraffic ?? null,
+      sharedKeywords: role === "YOU" ? null : shared.get(website.host) ?? null,
+      day: latest.metrics?.day ?? latest.ranking?.day ?? null,
+    };
+  }));
+  const listed = found.filter((row) => !heldHosts.has(row.host) && (row.domainKeywords !== undefined || row.domainTraffic !== undefined));
+  const others = listed
+    .map((row) => ({
+      host: row.host,
+      role: "FOUND" as const,
+      kind: row.kind ?? null,
+      keywords: row.domainKeywords ?? null,
+      traffic: row.domainTraffic !== undefined ? Math.round(row.domainTraffic) : null,
+      sharedKeywords: row.intersections,
+      day: row.lastSeenDay ?? null,
+    }));
+  return [...mine, ...others];
+}
 
 type GapListRow = {
   keyword: string;

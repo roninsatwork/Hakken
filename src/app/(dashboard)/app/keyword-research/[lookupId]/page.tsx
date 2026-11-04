@@ -13,7 +13,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { CUT_COLUMN, PositionCell } from "../../sites/_components/SiteCells";
 import { SiteViewSwitch } from "../../sites/_components/SiteViewSwitch";
-import { formatCpc, formatNumber, formatVisits } from "../../sites/_components/siteFormat";
+import { formatNumber, formatVisits } from "../../sites/_components/siteFormat";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../sites/_components/useSiteSort";
@@ -91,7 +91,8 @@ function OverviewFigures({ lookup, figures }: { lookup: LookupOverview; figures:
       <Figure
         label={t("volume")}
         value={figures.volume === null ? <NoFigure /> : formatNumber(figures.volume)}
-        detail={<span className="text-secondary">{t("volumeDetail", { country: countryName(lookup.locationCode, lookup.country), cpc: formatCpc(figures.cpc) })}</span>}
+        // The country only: no cost per click (Anthony, 2026-11-03, on every guessed money figure: "Yes, all of it").
+        detail={<span className="text-secondary">{t("volumeDetail", { country: countryName(lookup.locationCode, lookup.country) })}</span>}
       />
       <Figure
         label={t("difficulty")}

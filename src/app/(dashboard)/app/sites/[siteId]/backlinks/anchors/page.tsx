@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -15,6 +16,7 @@ import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteChar
 import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { anchorsSees } from "../_components/linkSees";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -48,6 +50,14 @@ export default function SiteAnchorsPage() {
   const table = useSiteListPage(api.siteLinkLists.listAnchors, { siteId, ...(term ? { search: term } : {}), sort: order.key, direction: order.direction });
   // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+  // The whole anchor list summed on the server, for the eye (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10):
+  // the table shows one page of it. Skipped on a competitor, whose anchors are not bought.
+  const figures = useQuery(api.siteLinkLists.anchorFigures, competitor ? "skip" : { siteId });
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(
+    () => anchorsSees(table.result, figures, { noAnchor: t("noAnchor"), noWords: tn("noWords"), brand: tn("brand"), spammy: tn("spammy"), fresh: tn("fresh") }),
+    [table.result, figures, t, tn],
+  );
   const words = (anchor: string) => anchor || t("noAnchor");
   const charted = (table.pageRows ?? []).slice(0, CHARTED);
 
@@ -67,7 +77,7 @@ export default function SiteAnchorsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Anchor className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksAnchors" seen={table.result?.seen} data={table.result && { anchors: table.result, totals }} />
+      <SiteSees screen="backlinksAnchors" seen={table.result?.seen} data={sees} />
       <ListHeldLine held={!term ? table.result?.total : undefined} total={totals?.anchors} />
 
       <SiteChartCard

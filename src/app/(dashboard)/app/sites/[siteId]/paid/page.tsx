@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Megaphone } from "lucide-react";
@@ -12,21 +12,27 @@ import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
-import { formatDay, formatDollars, formatNumber, toCsv } from "../../_components/siteFormat";
+import { formatDay, formatNumber, toCsv } from "../../_components/siteFormat";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { paidSees } from "@/convex/utils/sees/paid";
 import { SiteSees } from "../../_components/SiteSees";
+import { paidSeen } from "../../_components/siteSeesData";
 
-const MEASURES = ["paidKeywords", "paidTraffic", "paidTrafficCost"] as const;
+/**
+ * Searches with adverts and the visits they bring. Never the estimated spend: our data supplier's guess at what the
+ * adverts cost, not money anyone measured (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 4; Anthony,
+ * 2026-11-03: "Take it off"). It stays stored; only showing it went.
+ */
+const MEASURES = ["paidKeywords", "paidTraffic"] as const;
 type Measure = (typeof MEASURES)[number];
 
 
 /**
  * Paid search: whether the site buys Google adverts, on how many searches,
- * the visits and their estimated monthly cost, now and over the dates chosen
- * — from the ranked-keywords answers already collected, so nothing is bought.
+ * and the visits they bring, now and over the dates chosen — from the
+ * ranked-keywords answers already collected, so nothing is bought.
  */
 export default function SitePaidPage() {
   const t = useTranslations("sites.paid");
@@ -36,7 +42,7 @@ export default function SitePaidPage() {
   const site = useSite();
   const range = useSiteRange();
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
-  const [shown, setShown] = useState<Record<Measure, boolean>>({ paidKeywords: true, paidTraffic: true, paidTrafficCost: false });
+  const [shown, setShown] = useState<Record<Measure, boolean>>({ paidKeywords: true, paidTraffic: true });
 
   const points = (series?.[0]?.points ?? []).filter((point) => point.paidKeywords !== undefined);
   const latest = points.length > 0 ? points[points.length - 1] : null;
@@ -44,6 +50,11 @@ export default function SitePaidPage() {
   // Said only of a check that found no adverts: dates holding no check say
   // nothing either way (docs/plans/active/sites-audit-fixes-plan.md, 2.2).
   const notAdvertising = latest !== null && latest.paidKeywords === 0;
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the boxes against the newest check
+  // before the dates, and each check's searches and visits by its day, never the guessed spend.
+  const line = series?.[0];
+  const te = useTranslations("sites.paid.eye");
+  const seen = useMemo(() => (line ? paidSeen(line, { name: site?.host ?? "", visitsName: t("traffic"), beforeName: te("before") }) : undefined), [line, site?.host, t, te]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,16 +64,15 @@ export default function SitePaidPage() {
         description={t("description")}
         pills={latest ? <span className="text-[12px] text-secondary">{t("asOf", { day: formatDay(latest.lastDay) })}</span> : null}
       />
-      <SiteSees screen="paid" seen={series && paidSees(series[0]?.points ?? [])} data={series} />
+      <SiteSees screen="paid" seen={series && paidSees(series[0]?.points ?? [])} data={seen} />
 
       {notAdvertising ? (
         <Notice>{t("notAdvertising")}</Notice>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Figure label={t("keywords")} value={formatNumber(latest?.paidKeywords)} href={listHref("paid/keywords")} />
         <Figure label={t("traffic")} value={formatNumber(latest?.paidTraffic)} href={listHref("paid/keywords", { sort: "traffic" })} />
-        <Figure label={t("spend")} value={formatDollars(latest?.paidTrafficCost)} href={listHref("paid/keywords", { sort: "cost" })} />
       </div>
 
       <SiteChartCard

@@ -8326,11 +8326,12 @@
           "conversionRate": "Quota di visite che hanno fatto {event}, al giorno"
         },
         "openAnalytics": "Apri in Google Analytics",
+        "openPage": "Apri la pagina",
         "titlePurchase": "Quota di visite con un acquisto, al giorno",
         "groups": {
           "by": {
             "channel": "canale",
-            "kind": "tipo di pagina",
+            "kind": "classificazione",
             "device": "dispositivo",
             "country": "paese",
             "page": "pagina di arrivo",
@@ -8458,7 +8459,8 @@
         },
         "openBing": "Apri in Bing Webmaster",
         "openClarity": "Apri in Clarity",
-        "openVisibility": "Apri in Visibility"
+        "openVisibility": "Apri in Visibility",
+        "upOrDown": "Su o giù"
       }
     },
     "costs": {
@@ -10623,10 +10625,34 @@
       "doFirst": "Prima di tutto",
       "new": "{count, plural, =0 {nuovo} one {# nuovo} other {# nuovi}}",
       "researching": "{platformName} sta facendo ricerche…",
+      "refresh": "Aggiorna: riscrivi e inizia una nuova chat",
+      "working": {
+        "reading": "Sto leggendo i numeri di questa pagina",
+        "readingCount": "Sto leggendo <n>{count}</n> numeri di questa pagina",
+        "finding": "Sto cercando ciò che spicca",
+        "weighing": "Sto decidendo cosa conta di più",
+        "screens": "Sto leggendo le altre schermate di questo sito",
+        "writing": "Sto scrivendo cosa significa",
+        "checking": "Sto controllando ogni numero con la pagina",
+        "guessing": "Sto cercando ciò che è solo un'ipotesi",
+        "rewriting": "Qualcosa non ha passato il controllo, quindi lo riscrivo"
+      },
+      "worked": {
+        "reading": "Ho letto i numeri di questa pagina",
+        "readingCount": "Ho letto <n>{count}</n> numeri di questa pagina",
+        "finding": "{count, plural, =0 {Niente spicca da solo} one {Ho trovato <n>#</n> cosa che spicca} other {Ho trovato <n>#</n> cose che spiccano}}",
+        "weighing": "Ho deciso cosa conta di più",
+        "screens": "{count, plural, one {Ho letto <n>#</n> altra schermata} other {Ho letto <n>#</n> altre schermate}}",
+        "writing": "Ho scritto cosa significa",
+        "checking": "Ho controllato i numeri",
+        "guessing": "Ho cercato le ipotesi",
+        "rewriting": "L'ho riscritto"
+      },
       "figures": "Cosa mostrano i numeri",
       "figuresNote": "Da questa pagina, ora",
       "means": "Cosa significa",
       "meansNote": "Scritto dal team di {platformName}",
+      "meansNoteAt": "Scritto dal team di {platformName} alle {time}",
       "ask": "Chiedi di questa pagina",
       "askPlaceholder": "Chiedi di questa pagina…",
       "send": "Invia",
@@ -10662,7 +10688,30 @@
         "rowApart": "<b>{name}</b>: <n>{value}</n> {measure}. La media è <n>{mean}</n>.",
         "apartWebsite": "<b>{name}</b>: <n>{value}</n> {measure}. Tutto il sito: <n>{mean}</n>.",
         "apartGroup": "<b>{name}</b>: <n>{value}</n> {measure}. Pagine simili: <n>{mean}</n>.",
-        "thisPage": "Questa pagina"
+        "thisPage": "Questa pagina",
+        "movedUp": "<b>{name}</b>: {measure} in aumento del <n>{change}</n>, a <n>{now}</n> da <n>{before}</n>.",
+        "movedDown": "<b>{name}</b>: {measure} in calo del <n>{change}</n>, a <n>{now}</n> da <n>{before}</n>.",
+        "movedUpPoints": "<b>{name}</b>: {measure} in aumento di <n>{points}</n> punti, a <n>{now}</n> da <n>{before}</n>.",
+        "movedDownPoints": "<b>{name}</b>: {measure} in calo di <n>{points}</n> punti, a <n>{now}</n> da <n>{before}</n>.",
+        "movedUpAgainst": "<b>{name}</b>: {measure} in aumento del <n>{change}</n>, a <n>{now}</n> da <n>{before}</n>. <b>{other}</b>: {otherWay, select, up {in aumento} other {in calo}} del <n>{otherChange}</n>.",
+        "movedDownAgainst": "<b>{name}</b>: {measure} in calo del <n>{change}</n>, a <n>{now}</n> da <n>{before}</n>. <b>{other}</b>: {otherWay, select, up {in aumento} other {in calo}} del <n>{otherChange}</n>.",
+        "apartOther": "<b>{name}</b>: <n>{value}</n> {measure}. Per <b>{other}</b>: <n>{mean}</n>.",
+        "placeUp": "<b>{name}</b>: {measure} <n>{now}</n>, da <n>{before}</n>. La salita più grande.",
+        "placeDown": "<b>{name}</b>: {measure} <n>{now}</n>, da <n>{before}</n>. La discesa più grande.",
+        "placeMoved": "<b>{name}</b>: {measure} <n>{now}</n>, da <n>{before}</n>.",
+        "placeApart": "<b>{name}</b>: posizione <n>{value}</n> nei risultati di ricerca. La media è la posizione <n>{mean}</n>.",
+        "placeApartWebsite": "<b>{name}</b>: posizione <n>{value}</n> nei risultati di ricerca. Tutto il sito: posizione <n>{mean}</n>.",
+        "placeApartGroup": "<b>{name}</b>: posizione <n>{value}</n> nei risultati di ricerca. Pagine simili: posizione <n>{mean}</n>.",
+        "placeApartOther": "<b>{name}</b>: posizione <n>{value}</n> nei risultati di ricerca. Per <b>{other}</b>: posizione <n>{mean}</n>.",
+        "rivalUp": "<b>{name}</b>: salite a <n>{now}</n> {measure}, da <n>{before}</n>. Voi: <n>{you}</n>, da <n>{youBefore}</n>.",
+        "rivalDown": "<b>{name}</b>: scese a <n>{now}</n> {measure}, da <n>{before}</n>. Voi: <n>{you}</n>, da <n>{youBefore}</n>.",
+        "newLost": "{measure}: <n>{gained}</n> in più, <n>{lost}</n> in meno.",
+        "newLostBefore": "{measure}: <n>{gained}</n> in più, <n>{lost}</n> in meno. Prima: <n>{gainedBefore}</n> in più, <n>{lostBefore}</n> in meno.",
+        "shareMoved": "<b>{name}</b>: <n>{share}</n> di tutte le {measure}, da <n>{before}</n> prima.",
+        "countedDifferently": "Le pagine per visita sono passate da <n>{before}</n> a <n>{now}</n>. Di solito significa che le visualizzazioni di pagina sono state conteggiate in modo diverso in queste date, quindi aumenti e cali potrebbero non essere reali.",
+        "halfOfViews": "Metà delle tue visualizzazioni è arrivata da <n>{pages}</n> pagine, contro <n>{before}</n> prima.",
+        "busyFewer": "<n>{fewer}</n> delle tue <n>{busy}</n> pagine molto viste hanno avuto meno visualizzazioni. Una pagina molto vista ha <n>{visits}</n> visite o più.",
+        "busyFewerNamed": "<n>{fewer}</n> delle tue <n>{busy}</n> pagine molto viste hanno avuto meno visualizzazioni, soprattutto <b>{name}</b>. Una pagina molto vista ha <n>{visits}</n> visite o più."
       },
       "askBelow": "Chiedi qualcosa su questa pagina qui sotto.",
       "noCredits": "La tua azienda ha usato tutti i crediti, quindi {platformName} non può scrivere nuovi consigli per questa pagina. Aggiungi crediti in <billing>Fatturazione</billing>.",
@@ -10718,7 +10767,7 @@
         "ctrPercent": "cliccato",
         "conversionRatePercent": "tasso di conversione",
         "ratePercent": "tasso di conversione",
-        "scroll": "quanto scorrono le persone",
+        "scroll": "della pagina scorsa, in media",
         "sharePercent": "del totale",
         "engagementRatePercent": "delle visite coinvolte",
         "bounceRatePercent": "delle visite uscite subito",
@@ -10731,7 +10780,119 @@
         "checkout": "checkout iniziati",
         "basket": "aggiunte al carrello",
         "looks": "visualizzazioni dei prodotti",
-        "looked": "visualizzazioni dei prodotti"
+        "looked": "visualizzazioni dei prodotti",
+        "productsAdded": "prodotti aggiunti al carrello",
+        "leftInBasketPercent": "degli articoli aggiunti sono rimasti nel carrello",
+        "brandClicks": "clic sulle ricerche del marchio",
+        "position": "posizione nei risultati di ricerca",
+        "averagePosition": "posizione nei risultati di ricerca",
+        "rating": "valutazione in stelle",
+        "spamScore": "punteggio di spam",
+        "domainRank": "punteggio del dominio",
+        "difficulty": "difficoltà di posizionamento",
+        "volatility": "quanto si sono mossi i risultati",
+        "visitsADay": "visite al giorno",
+        "visitsLost": "visite perse",
+        "viewsLost": "visualizzazioni perse",
+        "viewsGained": "visualizzazioni in più",
+        "peopleInHalfHour": "persone negli ultimi 30 minuti",
+        "conversionsPerHundred": "conversioni ogni 100 visite",
+        "leftAtOncePercent": "quota di visite uscite subito",
+        "leftWithoutAnotherPercent": "sono usciti senza vedere un'altra pagina",
+        "enquiries": "richieste",
+        "visitors": "visitatori",
+        "googleVisits": "visite da Google",
+        "googleEnquiries": "richieste da Google",
+        "aiVisits": "visite dagli assistenti di IA",
+        "aiMentions": "volte in cui le risposte dell'IA lo nominano",
+        "aiOverviews": "ricerche che lo mostrano nelle AI Overview di Google",
+        "aiCitedPages": "pagine citate dagli assistenti di IA",
+        "findings": "scoperte",
+        "checkedFindings": "scoperte verificate",
+        "pagesToChange": "pagine che il piano cambierebbe",
+        "pagesGoing": "pagine da unire, reindirizzare o rimuovere",
+        "visitsPerEnquiry": "visite per una richiesta",
+        "visitorsPerEnquiry": "visitatori per una richiesta",
+        "googleClicksPerEnquiry": "clic da Google per una richiesta",
+        "peoplePerConversion": "persone per una conversione",
+        "visitsPerHundredClicks": "visite ogni 100 clic da Google",
+        "strength": "forza agli occhi di Google, su 1.000",
+        "enquiryRatePercent": "tasso di richieste",
+        "enquiriesSharePercent": "quota delle richieste",
+        "visitsSharePercent": "quota delle visite",
+        "marketSharePercent": "quota dei visitatori da Google del mercato",
+        "namedSharePercent": "quota delle sue risposte che nominano il sito",
+        "searchClicks": "clic da Bing e Google",
+        "searchesWithClicks": "parole chiave che hanno portato clic",
+        "pagesWithClicks": "pagine che hanno portato clic",
+        "searchesOnBoth": "parole chiave presenti sia su Bing sia su Google",
+        "moneyPages": "pagine che portano richieste",
+        "robotsBlocked": "pagine bloccate da robots.txt",
+        "daysSinceRead": "giorni dall'ultima lettura",
+        "bingSharePercent": "dei suoi clic da Bing e Google è arrivato da Bing",
+        "clicksSharePercent": "dei clic di Bing",
+        "paidKeywords": "ricerche con annunci",
+        "paidTraffic": "visite al mese dagli annunci",
+        "sharedKeywords": "ricerche in comune con te",
+        "aboveYou": "ricerche in cui è sopra di te",
+        "searchesChecked": "ricerche controllate",
+        "featureShown": "ricerche in cui compare",
+        "rankedUp": "ricerche salite",
+        "rankedDown": "ricerche scese",
+        "newSearches": "nuove ricerche posizionate",
+        "websites": "siti",
+        "aiAsks": "richieste all'AI al mese",
+        "questions": "domande",
+        "aiAnswers": "risposte AI",
+        "newReviews": "nuove recensioni",
+        "badMentions": "pagine che ne parlano male",
+        "brokenPages": "pagine non funzionanti",
+        "pagesCrawled": "pagine scansionate",
+        "localPacks": "ricerche in cui la mappa delle attività locali la mostra",
+        "featuredSnippets": "ricerche in cui il riquadro di risposta è una sua pagina",
+        "placeOnGoogle": "posizione su Google",
+        "visitsPerSearch": "visitatori stimati per ogni ricerca posizionata",
+        "daysToAnswer": "giorni per rispondere a una recensione",
+        "onPageScore": "punteggio tecnico, su 100",
+        "paidVisitsPerSearch": "visite al mese per ogni ricerca con annunci",
+        "aiSharePercent": "delle richieste fatte all'AI",
+        "voiceSharePercent": "delle menzioni nelle risposte AI",
+        "noLinkSharePercent": "delle pagine che la nominano non hanno link",
+        "answeredSharePercent": "delle nuove recensioni con risposta",
+        "errorVisits": "visite con un errore",
+        "wentBack": "visite tornate subito indietro",
+        "errorPages": "pagine con errori",
+        "wentBackPercent": "delle visite è tornato subito indietro",
+        "errorPercent": "delle visite ha avuto un errore",
+        "deadPercent": "delle visite ha avuto un clic a vuoto",
+        "ragePercent": "delle visite ha avuto un clic di rabbia",
+        "errorClicksPercent": "delle visite ha avuto un clic fallito",
+        "clicksADay": "clic al giorno",
+        "impressionsADay": "volte mostrato al giorno",
+        "lostADay": "ricerche perse al giorno",
+        "newADay": "nuove ricerche al giorno",
+        "pageOne": "ricerche sulla prima pagina di Google",
+        "clicksPerThousand": "clic ogni 1.000 volte mostrato",
+        "ownClicksSharePercent": "dei suoi clic da Google",
+        "searchesLost": "ricerche perse",
+        "searchesGained": "nuove ricerche",
+        "linksGained": "link guadagnati",
+        "linksLost": "link persi",
+        "linkServers": "server che rimandano qui",
+        "pageOneSearches": "ricerche sulla prima pagina di Google",
+        "rivalsWatched": "concorrenti che segui",
+        "linksPerWebsite": "link da ogni sito che rimanda qui, in media",
+        "nofollowWebsitesPercent": "dei siti che rimandano qui chiedono a Google di non seguire i loro link",
+        "linksSharePercent": "dei link",
+        "pageOnePercent": "delle sue ricerche sulla prima pagina di Google",
+        "top3Percent": "delle sue ricerche tra i primi 3 di Google",
+        "furtherPercent": "delle sue ricerche oltre la seconda pagina di Google",
+        "pageTwoPercent": "delle sue ricerche sulla seconda pagina di Google",
+        "trafficPercent": "dei visitatori stimati da Google",
+        "searchesPercent": "delle ricerche per cui si posiziona",
+        "fellPercent": "delle sue ricerche è sceso all'ultimo controllo",
+        "newPercent": "delle sue ricerche era nuovo all'ultimo controllo",
+        "pagesAVisit": "pagine per visita"
       }
     },
     "sidePanel": {
@@ -11061,6 +11222,28 @@
     "allCompanies": "Tutte le aziende"
   },
   "sites": {
+    "seesNames": {
+      "rivals": "Un concorrente tipico",
+      "rose": "Ricerche salite",
+      "fell": "Ricerche scese",
+      "brand": "Link con il nome della tua attività",
+      "noWords": "Link senza parole",
+      "spammy": "Parole che sembrano spam",
+      "fresh": "Parole viste per la prima volta negli ultimi 3 mesi",
+      "busiestThree": "Le 3 reti più usate",
+      "oneWebsite": "Server con un solo sito che rimanda qui",
+      "otherDays": "Gli altri giorni, in media",
+      "otherWeeks": "Le altre settimane, in media",
+      "otherMonths": "Gli altri mesi, in media",
+      "rivalsAbove": "Concorrenti sopra di te",
+      "rivalsMissing": "Concorrenti assenti dai risultati",
+      "itsSearches": "La sua quota delle ricerche",
+      "quietPages": "Pagine che non portano quasi nessuno",
+      "wholeWebsite": "Tutto il sito",
+      "closestOthers": "Le altre ricerche appena fuori dalla prima pagina",
+      "topFive": "Le 5 pagine più visitate",
+      "oneSearch": "Pagine che si posizionano per una sola ricerca"
+    },
     "list": {
       "title": "Siti web",
       "description": "Ogni sito che possiedi, con i concorrenti con cui è confrontato. Aprine uno per vederne tutte le pagine.",
@@ -11308,6 +11491,10 @@
     "overview": {
       "title": "Panoramica",
       "description": "Come sta andando questo sito? I numeri principali per le date scelte, e cosa è cambiato rispetto al giorno prima.",
+      "eye": {
+        "middle": "Il concorrente a metà del tuo gruppo",
+        "shared": "ricerche in comune"
+      },
       "noComparison": "Ancora niente da confrontare",
       "unchanged": "Invariato",
       "performance": "Andamento",
@@ -11339,10 +11526,8 @@
           "keywords": "Parole chiave",
           "top3": "Prime 3 · {count}",
           "visits": "Visite al mese",
-          "worth": "Valgono {value}",
           "paidSearches": "Ricerche a pagamento",
-          "paidVisits": "Visite a pagamento",
-          "cost": "Costo {value}"
+          "paidVisits": "Visite a pagamento"
         },
         "links": {
           "title": "Profilo dei backlink",
@@ -11372,16 +11557,16 @@
         "searches": "{count, plural, one {ricerca} other {ricerche}}"
       },
       "pageKinds": {
-        "title": "Pagine per tipo",
-        "hint": "Tutte le {count} pagine posizionate, ognuna classificata per tipo: la sua quota di pagine e di visite.",
+        "title": "Pagine per classificazione",
+        "hint": "Tutte le {count} pagine posizionate, ognuna con la sua classificazione: la sua quota di pagine e di visite.",
         "pages": "Pagine",
         "visits": "Visite",
-        "kind": "Tipo",
+        "kind": "Classificazione",
         "pagesShare": "Quota di pagine",
         "visitsShare": "Quota di visite",
         "row": "{count, plural, one {# pagina} other {# pagine}} ({pagesShare}) · {visitsShare} delle visite",
         "capped": "Contate sulle {count} pagine posizionate per più ricerche.",
-        "hintHeld": "Le {count} pagine delle ricerche conservate, ciascuna classificata per tipo: la sua quota di quelle pagine, e di tutte le visite del sito.",
+        "hintHeld": "Le {count} pagine delle ricerche conservate, ciascuna con la sua classificazione: la sua quota di quelle pagine, e di tutte le visite del sito.",
         "titleClassified": "Pagine per classificazione",
         "hintClassified": "Tutte le {count} pagine posizionate, ognuna con la tua classificazione: la sua quota di pagine e di visite.",
         "hintHeldClassified": "Le {count} pagine delle ricerche conservate, ciascuna con la tua classificazione: la sua quota di quelle pagine, e di tutte le visite del sito."
@@ -11459,6 +11644,11 @@
     },
     "aiMentions": {
       "title": "Menzioni",
+      "eye": {
+        "never": "Domande in cui nessun assistente ti nomina",
+        "warned": "Risposte che ti sconsigliano",
+        "before": "Il controllo precedente"
+      },
       "description": "Gli assistenti AI citano questo sito? Per ogni domanda su cui è misurato, come lo tratta ciascun assistente. Apri una domanda per leggere le risposte.",
       "searchPlaceholder": "Cerca tra le domande…",
       "engineFilter": "Motore",
@@ -11560,6 +11750,10 @@
     },
     "googleSearches": {
       "title": "Le tue ricerche",
+      "eye": {
+        "pageOne": "Ricerche nella prima pagina di Google",
+        "best": "La sua migliore"
+      },
       "description": "Dove si posiziona questo sito sulle ricerche più importanti per lui? Ognuna controllata da {place}. Apri una ricerca per la sua storia e l'intera pagina dei risultati di Google.",
       "searchPlaceholder": "Trova una ricerca…",
       "verdictFilter": "Come sta andando",
@@ -11590,6 +11784,9 @@
     },
     "googleMoves": {
       "title": "Salite e discese",
+      "eye": {
+        "usual": "{step, select, day {Un giorno normale} week {Una settimana normale} other {Un mese normale}}"
+      },
       "description": "Quali ricerche si sono mosse all'ultimo controllo? Prima lo spostamento più grande. Aprine una per la sua storia.",
       "tabs": {
         "UP": "Salite",
@@ -12021,6 +12218,9 @@
     },
     "rivalRecord": {
       "description": "Come si confronta {rival} con {site}: su ogni ricerca per cui vi posizionate entrambi, chi è davanti.",
+      "eye": {
+        "theyLead": "Ricerche in cui {rival} è sopra di te"
+      },
       "missingTitle": "Nessun concorrente scelto",
       "missingBody": "Apri un concorrente da Confronto diretto per confrontarlo qui.",
       "notFoundTitle": "Concorrente non trovato",
@@ -12172,6 +12372,10 @@
     },
     "sideBySide": {
       "title": "Confronto diretto",
+      "eye": {
+        "middle": "Il concorrente a metà del tuo gruppo",
+        "youAbove": "Ricerche in cui sei sopra di lui"
+      },
       "description": "Come si confronta questo sito con i suoi concorrenti? Ognuno com'era al suo ultimo controllo. Apri un concorrente per il confronto ricerca per ricerca.",
       "columns": {
         "website": "Sito",
@@ -12327,6 +12531,11 @@
     },
     "googleAbove": {
       "title": "Chi si posiziona sopra di te",
+      "eye": {
+        "aboveYou": "sopra di te",
+        "first": "Ricerche in cui sei primo",
+        "notOnPage": "Ricerche in cui non sei tra i primi 100"
+      },
       "description": "Chi supera questo sito sulle sue ricerche più importanti? I siti che Google mette sopra di lui su ciascuna, controllati da {place}.",
       "searchPlaceholder": "Cerca una ricerca o un sito…",
       "positionFilter": "Dove sei",
@@ -12556,6 +12765,10 @@
     },
     "marketMap": {
       "title": "Mappa del mercato",
+      "eye": {
+        "middle": "Il sito a metà del tuo mercato",
+        "more": "Siti del tuo mercato con più visitatori di te"
+      },
       "description": "Dove si trova questo sito nel suo mercato? Ogni sito per numero di ricerche per cui si posiziona e le visite che portano.",
       "chartTitle": "Parole chiave e traffico",
       "chartHint": "Ogni punto è un sito. Più a destra si posiziona per più ricerche; più in alto riceve più visite.",
@@ -12792,6 +13005,9 @@
         "brokenTo": "Link rotto verso {to} (risposta {code})"
       },
       "title": "Controllo del sito",
+      "eye": {
+        "errors": "Pagine con errori"
+      },
       "description": "Cosa non va nelle pagine di questo sito? Cosa ha trovato l'ultima scansione — pagine che non funzionano, titoli mancanti o ripetuti, pagine lente — prima i problemi più gravi. Apri un problema per vederne le pagine.",
       "score": "Punteggio tecnico",
       "scoreScale": "su 100",
@@ -12939,10 +13155,12 @@
     },
     "paid": {
       "title": "Ricerca a pagamento",
-      "description": "Questo sito paga annunci su Google? Su quante ricerche, e quanto costerebbero le visite.",
+      "eye": {
+        "before": "Il controllo precedente"
+      },
+      "description": "Questo sito paga annunci su Google? Su quante ricerche, e quante visite portano.",
       "keywords": "Ricerche con annunci",
       "traffic": "Visite al mese dagli annunci",
-      "spend": "Spesa stimata al mese",
       "notAdvertising": "Questo sito non sembra comprare annunci su Google al momento. I dati si riempiono se inizia.",
       "chartTitle": "Ricerca a pagamento nel tempo",
       "chartHint": "Spunta le misure da disegnare. Ogni linea ha la sua scala.",
@@ -12950,15 +13168,13 @@
     },
     "paidKeywords": {
       "title": "Parole chiave a pagamento",
-      "description": "Su quali ricerche questo sito compra annunci? Dove si trova ogni annuncio e quanto costano le sue visite.",
+      "description": "Su quali ricerche questo sito compra annunci? Dove si trova ogni annuncio e quante visite porta.",
       "searchPlaceholder": "Cerca una ricerca o una pagina…",
       "columns": {
         "keyword": "Ricerca",
         "position": "Posizione dell'annuncio",
         "volume": "Volume",
-        "cpc": "Costo/clic",
         "traffic": "Visite",
-        "cost": "Costo stimato",
         "page": "Pagina di destinazione",
         "lastChecked": "Ultimo controllo"
       },
@@ -13486,6 +13702,9 @@
       },
       "yours": {
         "title": "Le tue recensioni",
+        "eye": {
+          "stars": "Stelle in media, {period}"
+        },
         "description": "Ogni recensione sulle tue schede collegate, dalla più recente, e se hai risposto.",
         "figures": {
           "rating": "Valutazione",
@@ -13536,6 +13755,9 @@
       },
       "rivals": {
         "title": "Recensioni a confronto con i concorrenti",
+        "eye": {
+          "answering": "Il concorrente che risponde di più"
+        },
         "description": "Le tue recensioni accanto ai concorrenti che segui: quante, quanto buone e quanto rapidamente risponde ogni attività.",
         "figures": {
           "place": "La tua posizione per recensioni",
@@ -13704,6 +13926,11 @@
       },
       "demand": {
         "title": "Domanda nell'IA",
+        "eye": {
+          "searches": "Le tue ricerche",
+          "onGoogle": "Su Google",
+          "every": "Tutte le ricerche insieme"
+        },
         "description": "Quanto spesso le tue ricerche vengono chieste agli strumenti di IA ogni mese, accanto a quanto vengono cercate su Google. Una stima, costruita dalle \"Altre domande\" di Google.",
         "figures": {
           "ai": "Chieste all'IA al mese",
@@ -13787,6 +14014,9 @@
     },
     "radar": {
       "title": "Radar del marchio",
+      "eye": {
+        "rivalsNotYou": "Domande che nominano i concorrenti e non te"
+      },
       "description": "Quanto spesso le risposte IA nominano te e i tuoi concorrenti, su tutte le domande che le persone fanno, non solo quelle che monitori.",
       "where": "Risposte IA di Google · {place}",
       "you": "{name} · tu",
@@ -13985,6 +14215,9 @@
     },
     "mentions": {
       "title": "Citazioni sul web",
+      "eye": {
+        "noLink": "Pagine che ti nominano senza link"
+      },
       "description": "Pagine sul web che ti nominano, come parlano di te e se ti collegano.",
       "you": "{name} · tu",
       "youShort": "Tu",
@@ -14060,6 +14293,9 @@
       "empty": "Ancora nessuna pagina che ti nomina: il web viene cercato ogni settimana, dal prossimo controllo.",
       "rivals": {
         "title": "Citazioni sul web contro i concorrenti",
+        "eye": {
+          "middle": "Il concorrente a metà"
+        },
         "description": "Quanto spesso il web nomina te e i concorrenti che segui, e come parla di ciascuno.",
         "figures": {
           "share": "La tua quota di citazioni",
@@ -14931,13 +15167,12 @@
         "none": "Ancora nessuna ricerca a pagamento letta: la legge il prossimo controllo.",
         "notAdvertising": "Non fa pubblicità su Google nel controllo più recente.",
         "advertising": "Fa pubblicità su {a} ricerche su Google, che portano circa {countB, plural, one {# visita} other {# visite}} al mese.",
-        "cost": "Quelle visite costerebbero circa {a} $ al mese in annunci.",
-        "seeKeywords": "Guarda per quali ricerche paga e quanto costa ciascuna."
+        "seeKeywords": "Guarda per quali ricerche paga e quante visite porta ciascuna."
       },
       "paidKeywords": {
         "none": "Nessuna ricerca a pagamento letta: non fa pubblicità su Google nel controllo più recente.",
-        "keywords": "Paga per {a} ricerche, circa {b} $ al mese in clic.",
-        "dearest": "“{text}” costa di più: circa {a} $ al mese.",
+        "keywords": "Paga per {a} ricerche, che portano circa {countB, plural, one {# visita} other {# visite}} al mese.",
+        "mostSearched": "“{text}” è la più cercata: circa {a} volte al mese.",
         "mostVisits": "“{text}” porta più visite a pagamento: circa {a} al mese.",
         "seeSearch": "Guarda chi è posizionato per “{text}” senza pagare."
       },
@@ -15651,14 +15886,14 @@
     },
     "types": {
       "title": "Per classificazione delle pagine",
-      "description": "Le tue pagine per tipo, e le tue parole chiave per ciò che cerca chi cerca: quante ce ne sono di ciascuno e quanti clic porta ognuno. Clicca un tipo per vederne le pagine o le parole chiave.",
+      "description": "Le tue pagine per classificazione, e le tue parole chiave per ciò che cerca chi cerca: quante ce ne sono di ciascuna e quanti clic porta ognuna. Clicca una riga per vederne le pagine o le parole chiave.",
       "fromArticles": "Clic dagli articoli",
       "fromServices": "Clic dalle pagine di servizio",
       "fromBrand": "Clic dalle ricerche di brand",
       "fromCommercial": "Clic dalle ricerche commerciali",
       "ofClicks": "{share} dei clic",
-      "pagesTitle": "Pagine per tipo",
-      "pagesHint": "Tutte le {count} pagine mostrate da Google, ciascuna con il suo tipo: la sua quota delle pagine e dei clic.",
+      "pagesTitle": "Pagine per classificazione",
+      "pagesHint": "Tutte le {count} pagine mostrate da Google, ciascuna con la sua classificazione: la sua quota delle pagine e dei clic.",
       "fromInformational": "Clic dai contenuti informativi",
       "pagesTitleClassified": "Pagine per classificazione",
       "pagesHintClassified": "Tutte le {count} pagine mostrate da Google, ciascuna con la tua classificazione: la sua quota delle pagine e dei clic.",
@@ -15667,7 +15902,7 @@
       "pages": "Pagine",
       "keywords": "Parole chiave",
       "clicks": "Clic",
-      "kind": "Tipo",
+      "kind": "Classificazione",
       "count": "Quante",
       "pagesLine": "{count, plural, =1 {# pagina} other {{rows} pagine}} ({share}) · {clicks} dei clic",
       "keywordsLine": "{count, plural, =1 {# parola chiave} other {{rows} parole chiave}} ({share}) · {clicks} dei clic",
@@ -15776,6 +16011,46 @@
       "chartHintUsual": "Su 10. Il tuo solito è {usual}: Alta è il 30% sopra, Molto alta il 60%. Passa sopra una G per l'aggiornamento di Google.",
       "chartNothing": "Nessun giorno ha ancora abbastanza parole chiave per un punteggio.",
       "series": "Volatilità"
+    },
+    "sees": {
+      "website": "L'intero sito",
+      "clicks": "Clic",
+      "shown": "Volte mostrato",
+      "weekends": "Nel fine settimana",
+      "weekdays": "Nei giorni feriali",
+      "recent": "Gli ultimi 28 giorni",
+      "earlier": "I 28 giorni prima",
+      "others": "Gli altri servizi",
+      "beforeIt": "Prima",
+      "place": "Posizione {place}",
+      "topThree": "Posizioni da 1 a 3",
+      "fourToTen": "Posizioni da 4 a 10",
+      "firstPage": "La prima pagina di Google",
+      "secondPage": "La seconda pagina di Google",
+      "websiteAtPlace": "L'intero sito in posizione {place}",
+      "lostFirstPage": "Perse dalla prima pagina di Google",
+      "newFirstPage": "Nuove sulla prima pagina di Google",
+      "recentSteps": {
+        "day": "Gli ultimi 7 giorni",
+        "week": "Le ultime 4 settimane",
+        "month": "Gli ultimi 3 mesi"
+      },
+      "earlierSteps": {
+        "day": "I giorni prima",
+        "week": "Le settimane prima",
+        "month": "I mesi prima"
+      },
+      "averageSteps": {
+        "day": "Un giorno in media",
+        "week": "Una settimana in media",
+        "month": "Un mese in media"
+      },
+      "usual": "Il tuo solito",
+      "last7": "Gli ultimi 7 giorni",
+      "week7Before": "I 7 giorni prima",
+      "climbed5": "Salite di 5 posizioni o più",
+      "fell5": "Scese di 5 posizioni o più",
+      "dayBefore": "Il giorno prima"
     },
     "seen": {
       "volatility": {
@@ -15931,7 +16206,7 @@
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
       },
       "types": {
-        "noTypes": "Non ci sono clic da dividere per tipo di pagina in queste date.",
+        "noTypes": "Non ci sono clic da dividere per classificazione in queste date.",
         "topType": "{text} portano più clic: il {a}%."
       },
       "places": {
@@ -16072,7 +16347,7 @@
       "events": "Eventi",
       "conversions": "Conversioni",
       "products": "Prodotti",
-      "visitors": "Visitatori",
+      "visitors": "Visite",
       "trackingHealth": "Salute del tracciamento",
       "connection": "Connessione"
     },
@@ -16192,7 +16467,6 @@
         "status": "Stato",
         "visits": "Visite",
         "conversions": "Conversioni",
-        "value": "Valore",
         "updated": "Aggiornato"
       }
     },
@@ -16245,7 +16519,8 @@
         "last6Months": "i 6 mesi precedenti",
         "last12Months": "i 12 mesi precedenti",
         "custom": "lo stesso numero di giorni precedenti"
-      }
+      },
+      "theseDates": "queste date"
     },
     "connect": {
       "failed": "Impossibile avviare la connessione. Riprova.",
@@ -16351,7 +16626,7 @@
       "title": "Ancora niente conta come conversione",
       "body": "Spunta gli eventi di Google Analytics che sono una conversione per {host} — un modulo inviato, una chiamata cliccata, un acquisto — e vengono contati qui, anche per gli ultimi 90 giorni.",
       "button": "Scegli cosa conta",
-      "hint": "Visite, canali e pagine ci sono già; solo le conversioni e il loro valore aspettano questa scelta."
+      "hint": "Visite, canali e pagine ci sono già; solo le conversioni aspettano questa scelta."
     },
     "table": {
       "fewVisits": "Meno di 100 visite: troppo poche per fidarsi",
@@ -16380,22 +16655,15 @@
         "timeTitle": "Tempo di coinvolgimento per visita",
         "dwell": "Tempo di permanenza",
         "conversions": "Conversioni",
-        "conversionsShort": "Conv.",
-        "conversionsShortTitle": "Conversioni fatte su questa pagina",
         "rate": "Tasso conv.",
         "rateTitle": "Conversioni fatte su questa pagina, sulle sue visite",
-        "viewsChange": "Variazione visualizzazioni",
-        "viewsChangeTitle": "Visualizzazioni rispetto alle date precedenti: quante in più o in meno",
-        "conversionsChange": "Variazione conv.",
-        "conversionsChangeTitle": "Conversioni fatte su questa pagina rispetto alle date precedenti: quante in più o in meno",
+        "viewsChangeTitle": "Visualizzazioni: {now} rispetto a {before}. Una differenza di 1 o {most} visualizzazioni appare come Uguale.",
+        "conversionsChangeTitle": "Conversioni: {now} rispetto a {before}.",
         "conversionsStarted": "Conversioni dalle visite",
         "conversionsStartedTitle": "Conversioni nelle visite iniziate sulla pagina, fatte ovunque sul sito",
-        "value": "Valore",
         "change": "Variazione",
         "changeTitle": "Visite rispetto al periodo precedente",
         "purchases": "Acquisti",
-        "revenue": "Ricavi",
-        "averageOrder": "Ordine medio",
         "campaign": "Campagna",
         "adKeyword": "Parola chiave",
         "visitorType": "Visitatore",
@@ -16418,7 +16686,10 @@
         "onward": "Proseguite",
         "onwardTitle": "Visite che dopo questa hanno aperto un'altra pagina, contate una volta per visita, e la loro quota sulle sue visite",
         "next": "Andate soprattutto a",
-        "nextTitle": "La pagina che la maggior parte di quelle visite ha aperto subito dopo, e la sua quota"
+        "nextTitle": "La pagina che la maggior parte di quelle visite ha aperto subito dopo, e la sua quota",
+        "upOrDown": "Su o giù",
+        "timeOnPage": "Tempo sulla pagina",
+        "conversionsHereTitle": "Conversioni fatte su questa pagina"
       },
       "notSorted": "Non classificate",
       "pagesCount": "{count, plural, =1 {1 pagina} other {# pagine}}",
@@ -16435,7 +16706,6 @@
         "people": "Persone",
         "time": "Secondi di coinvolgimento per visita",
         "conversions": "Conversioni",
-        "value": "Valore ({currency})",
         "change": "Variazione delle visite (%)",
         "source": "Sorgente / mezzo",
         "viewsChange": "Variazione visualizzazioni",
@@ -16455,16 +16725,16 @@
       "tick": "Mostra {page} nel grafico",
       "tickColumn": "Nel grafico",
       "tickLimit": "Al massimo cinque pagine nel grafico",
-      "moveRule": "una crescita o un calo è di {views} visualizzazioni o più",
       "moves": {
-        "label": "Quali pagine",
+        "label": "Mostra",
         "all": "Tutte {count}",
         "gains": "In crescita {count}",
         "dropped": "In calo {count}",
         "static": "Stabili {count}",
         "none": "Nessuna visita {count}"
       },
-      "noPageLost": "Google Analytics ha perso la pagina"
+      "noPageLost": "Google Analytics ha perso la pagina",
+      "per100Visits": "<figure>{rate}</figure> ogni 100 visite"
     },
     "chart": {
       "title": "Visite e conversioni nel tempo",
@@ -16472,7 +16742,6 @@
       "visits": "Visite",
       "engaged": "Visite coinvolte",
       "conversions": "Conversioni",
-      "value": "Valore ({sign})",
       "empty": "Ancora niente da disegnare per queste date.",
       "visitsTitle": {
         "day": "Visite al giorno",
@@ -16554,7 +16823,7 @@
         }
       },
       "conversionsTitle": "Conversioni nel tempo",
-      "conversionsHint": "Una linea per ogni tipo di conversione, su una sola scala. Spunta Valore per aggiungere il denaro su una scala sua.",
+      "conversionsHint": "Una linea per ogni tipo di conversione, su una sola scala.",
       "viewsOnlyTitle": {
         "day": "Visualizzazioni ogni giorno",
         "week": "Visualizzazioni ogni settimana",
@@ -16567,15 +16836,6 @@
         "month": "Visite da link contrassegnati al mese"
       },
       "campaignsHint": "{period}.",
-      "pagesDaily": {
-        "title": {
-          "day": "Visualizzazioni al giorno",
-          "week": "Visualizzazioni alla settimana",
-          "month": "Visualizzazioni al mese"
-        },
-        "hint": "{period}: tutto il tuo sito, tratteggiato, e le pagine spuntate nella tabella, al massimo cinque.",
-        "website": "Il tuo sito"
-      },
       "converted": {
         "day": "Un giorno con una conversione: più grande per più",
         "week": "Una settimana con una conversione: più grande per più",
@@ -16617,7 +16877,6 @@
       "engaged": "Visite coinvolte",
       "ofVisits": "{rate} delle visite",
       "conversions": "Conversioni",
-      "value": "Valore",
       "nothingCounted": "Ancora niente contato",
       "onBeforeUp": "▲ {change} rispetto a {before}",
       "onBeforeDown": "▼ {change} rispetto a {before}",
@@ -16630,9 +16889,11 @@
       "pagesPerVisit": "Pagine per visita",
       "bounce": "Frequenza di rimbalzo",
       "bounceLine": "visite senza interazione",
-      "ofValue": "{value} di valore",
       "pointsUp": "▲ {change} punti rispetto a {before}",
-      "pointsDown": "▼ {change} punti rispetto a {before}"
+      "pointsDown": "▼ {change} punti rispetto a {before}",
+      "fewerThan": "▼ {change} in meno rispetto a {before}",
+      "moreThan": "▲ {change} in più rispetto a {before}",
+      "sameAs": "Uguale a {before}"
     },
     "overview": {
       "title": "Panoramica",
@@ -16645,8 +16906,7 @@
         "visits": "Visite",
         "change": "Variazione",
         "left": "Uscite da qui",
-        "conversions": "Conversioni",
-        "value": "Valore"
+        "conversions": "Conversioni"
       },
       "unclassified": "Non classificata",
       "moreThan": "{rate} in più rispetto a {before}",
@@ -16663,8 +16923,8 @@
       },
       "kinds": {
         "title": "Pagine per classificazione",
-        "note": "Il tipo di pagina su cui sono arrivate le visite: {count, plural, =1 {una classificazione} other {# classificazioni}}.",
-        "none": "Le pagine di questo sito non hanno ancora classificazioni, quindi le visite non si possono raggruppare per tipo di pagina di arrivo.",
+        "note": "Dove sono arrivate le visite: {count, plural, =1 {una classificazione} other {# classificazioni}}.",
+        "none": "Le pagine di questo sito non hanno ancora classificazioni, quindi le visite non si possono raggruppare per pagina di arrivo.",
         "seeAll": "Vedi {count, plural, =1 {le classificazioni delle pagine} other {tutte le # classificazioni delle pagine}}",
         "empty": "Nessuna visita in queste date."
       },
@@ -16678,7 +16938,6 @@
       "conversions": {
         "title": "Conversioni",
         "note": "{conversions, plural, =1 {Una conversione} other {# conversioni}}, {change}: il {rate} delle visite ha convertito.",
-        "worth": "{conversions, plural, =1 {Una conversione} other {# conversioni}} per {value}, {change}: il {rate} delle visite ha convertito.",
         "nothingCounted": "Ancora niente conta come conversione: scegli cosa conta nella pagina Connessione.",
         "keyEvent": "Evento chiave",
         "times": "Volte",
@@ -16712,12 +16971,11 @@
       },
       "shop": {
         "title": "Negozio",
-        "note": "{bought, plural, =1 {Uno acquistato} other {# acquistati}} per {revenue}; {basket, plural, =1 {uno aggiunto al carrello} other {# aggiunti al carrello}}.",
+        "note": "{bought, plural, =1 {Uno acquistato} other {# acquistati}}; {basket, plural, =1 {uno aggiunto al carrello} other {# aggiunti al carrello}}.",
         "product": "Prodotto",
         "viewed": "Visti",
         "basket": "Aggiunti al carrello",
         "bought": "Acquistati",
-        "revenue": "Ricavi",
         "seeAll": "Vedi tutti i prodotti",
         "empty": "Niente venduto in queste date."
       },
@@ -16831,39 +17089,39 @@
       },
       "map": {
         "title": "Dove arriva ogni canale, per classificazione delle pagine",
-        "hint": "{period}. Ogni quadrato sono le visite di un canale arrivate su quel tipo di pagina, più chiaro per una quota maggiore del canale, con le sue conversioni.",
+        "hint": "{period}. Ogni quadrato sono le visite di un canale arrivate sulle pagine di quella classificazione, più chiaro per una quota maggiore del canale, con le sue conversioni.",
         "everyDevice": "Di ogni dispositivo, come vengono conservate le pagine di destinazione.",
         "visits": "{count, plural, =1 {1 visita} other {# visite}}",
         "conversions": "{count, plural, =1 {1 conv.} other {# conv.}}",
         "conversionsColumn": "conversioni",
         "hover": "{channel} → {kind}: {visits, plural, =1 {1 visita} other {# visite}}, {conversions, plural, =1 {1 conversione} other {# conversioni}}",
-        "legendVisits": "69 · visite iniziate su quel tipo di pagina",
+        "legendVisits": "69 · visite iniziate sulle pagine di quella classificazione",
         "legendConversions": "3 conv. · conversioni fatte da quelle visite",
         "legendShades": "da una quota minore a una maggiore del canale",
         "legendEmpty": "nessuna visita",
         "empty": "Nessuna pagina di destinazione in queste date."
       },
-      "worth": {
-        "title": "Quanto vale una visita, per canale",
-        "hint": "Gli ultimi 12 mesi, così i canali piccoli hanno abbastanza visite per giudicarli. La barra sono le conversioni sulle visite (passa sopra per la cifra); il valore di una visita è il valore delle sue conversioni diviso per le visite, ogni conversione valutata come in Google Analytics, o come impostato nelle tue impostazioni di conversione dove Analytics non ha un valore. In arancione chi converte meglio del {siteRate} del sito, su almeno {few} visite.",
+      "perVisit": {
+        "title": "Quanto spesso una visita converte, per canale",
+        "hint": "Gli ultimi 12 mesi, così i canali piccoli hanno abbastanza visite per giudicarli. La barra sono le conversioni sulle visite (passa sopra per la cifra). In arancione chi converte meglio del {siteRate} del sito, su almeno {few} visite.",
         "rate": "Tasso di conversione",
-        "readout": "{rate} di {visits} visite convertite · {each} a visita",
+        "readout": "{rate} di {visits} visite convertite",
         "empty": "Ancora niente da valutare negli ultimi 12 mesi.",
-        "readoutFew": "{rate} di {visits} visite convertite · {each} a visita · meno di 100 visite: troppo poche per fidarsi"
+        "readoutFew": "{rate} di {visits} visite convertite · meno di 100 visite: troppo poche per fidarsi"
       }
     },
     "channel": {
       "back": "Canali",
       "assistantsTitle": "Assistenti AI",
       "description": {
-        "Referral": "I siti che hanno mandato visitatori a {host} con un link: le pagine dove sono arrivati, i tipi di pagina, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
-        "OrganicSearch": "I motori di ricerca che hanno mandato visitatori a {host}: le pagine dove sono arrivati, i tipi di pagina, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
-        "OrganicSocial": "I social network che hanno mandato visitatori a {host}: le pagine dove sono arrivati, i tipi di pagina, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
-        "PaidSearch": "Gli annunci di ricerca a pagamento che hanno mandato visitatori a {host}: le pagine dove sono arrivati, i tipi di pagina, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
-        "Email": "Le email che hanno mandato visitatori a {host}: le pagine dove sono arrivati, i tipi di pagina, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
-        "Direct": "Visite arrivate direttamente su {host}, digitando l'indirizzo o da un segnalibro: le pagine dove sono arrivate, i tipi di pagina, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
-        "AIassistants": "Visitatori mandati a {host} dagli assistenti AI — ChatGPT, Perplexity, Gemini, Copilot, Claude e altri — ciascuno con il suo nome: le pagine dove sono arrivati, i tipi di pagina, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
-        "other": "I visitatori che questo canale ha mandato a {host}: le pagine dove sono arrivati, i tipi di pagina, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}."
+        "Referral": "I siti che hanno mandato visitatori a {host} con un link: le pagine dove sono arrivati, le loro classificazioni, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
+        "OrganicSearch": "I motori di ricerca che hanno mandato visitatori a {host}: le pagine dove sono arrivati, le loro classificazioni, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
+        "OrganicSocial": "I social network che hanno mandato visitatori a {host}: le pagine dove sono arrivati, le loro classificazioni, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
+        "PaidSearch": "Gli annunci di ricerca a pagamento che hanno mandato visitatori a {host}: le pagine dove sono arrivati, le loro classificazioni, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
+        "Email": "Le email che hanno mandato visitatori a {host}: le pagine dove sono arrivati, le loro classificazioni, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
+        "Direct": "Visite arrivate direttamente su {host}, digitando l'indirizzo o da un segnalibro: le pagine dove sono arrivate, le loro classificazioni, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
+        "AIassistants": "Visitatori mandati a {host} dagli assistenti AI — ChatGPT, Perplexity, Gemini, Copilot, Claude e altri — ciascuno con il suo nome: le pagine dove sono arrivati, le loro classificazioni, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}.",
+        "other": "I visitatori che questo canale ha mandato a {host}: le pagine dove sono arrivati, le loro classificazioni, ogni evento chiave e cosa hanno portato. La variazione è sulle visite rispetto a {before}."
       },
       "findAssistant": "Trova un assistente…",
       "findSource": "Trova una fonte…",
@@ -16873,7 +17131,6 @@
         "engagement": "Tasso di coinvolgimento",
         "siteRate": "{rate} per tutto il sito",
         "conversions": "Conversioni",
-        "value": "Valore",
         "noneBefore": "Nessuna neanche {before}",
         "noConversions": "Ancora nessuna conversione"
       }
@@ -16933,13 +17190,13 @@
       "kindBars": {
         "title": "Dove arriva {channel}, per classificazione delle pagine",
         "titleAssistants": "Dove arrivano gli assistenti AI, per classificazione delle pagine",
-        "hint": "Visite arrivate su ogni tipo di pagina, rispetto a {before} (la barra grigia). Passa sopra una barra per visite e conversioni.",
+        "hint": "Visite arrivate sulle pagine di ogni classificazione, rispetto a {before} (la barra grigia). Passa sopra una barra per visite e conversioni.",
         "everyDevice": "Di ogni dispositivo, come vengono conservate le pagine di destinazione.",
         "conversions": "conversioni",
         "readout": "{visits, plural, =1 {1 visita} other {# visite}} · {conversions, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}",
         "empty": "Nessuna pagina di destinazione in queste date.",
-        "hintEveryAssistant": "Ogni visita mandata da un assistente AI, sotto qualsiasi canale Google Analytics l'abbia archiviata: i tipi di pagina dove sono arrivate, rispetto a {before} (la barra grigia). Passa sopra una barra per visite e conversioni.",
-        "hintAssistants": "Le visite che Google Analytics ha archiviato come AI Assistant: i tipi di pagina dove sono arrivate, rispetto a {before} (la barra grigia). Passa sopra una barra per visite e conversioni."
+        "hintEveryAssistant": "Ogni visita mandata da un assistente AI, sotto qualsiasi canale Google Analytics l'abbia archiviata: le classificazioni delle pagine dove sono arrivate, rispetto a {before} (la barra grigia). Passa sopra una barra per visite e conversioni.",
+        "hintAssistants": "Le visite che Google Analytics ha archiviato come AI Assistant: le classificazioni delle pagine dove sono arrivate, rispetto a {before} (la barra grigia). Passa sopra una barra per visite e conversioni."
       },
       "movers": {
         "title": "Le pagine dietro il cambiamento",
@@ -16981,7 +17238,6 @@
           "times": "Volte",
           "before": "Volte prima",
           "change": "Variazione",
-          "value": "Valore",
           "landed": "Arrivati su"
         },
         "noneHere": "Nessuno in queste date",
@@ -17057,14 +17313,105 @@
     },
     "allPages": {
       "title": "Tutte le pagine",
-      "description": "Ogni pagina del tuo sito: visite, visualizzazioni e conversioni, e se è cresciuta o calata rispetto alle date precedenti.",
+      "description": "Guarda quanto spesso le persone hanno aperto ogni pagina del tuo sito, e se è salito o sceso.",
       "findPage": "Trova una pagina…",
+      "viewsCounted": "Questi aumenti e cali potrebbero non essere reali. Le pagine per visita sono passate da {before} a {now}. Di solito significa che le visualizzazioni di pagina sono state conteggiate in modo diverso in queste date, non che le persone abbiano cambiato abitudini. Le visite sono un riferimento più sicuro.",
       "empty": "Nessuna pagina vista in queste date.",
       "emptyMoves": {
         "gains": "Nessuna pagina è cresciuta in queste date.",
         "dropped": "Nessuna pagina è calata in queste date.",
         "static": "Nessuna pagina è rimasta stabile in queste date.",
         "none": "Ogni pagina del tuo sito è stata vista in queste date."
+      },
+      "boxes": {
+        "pageViews": "Visualizzazioni di pagina",
+        "pagesAVisit": "Pagine per visita",
+        "pagesAVisitBefore": "{before}: {figure}",
+        "wholeWebsite": "Tutto il sito. {words}",
+        "busyFewer": "Pagine molto viste, meno visualizzazioni",
+        "busyOutOf": "Su {count} pagine con {visits} visite o più.",
+        "quietMore": "Pagine poco viste, più visualizzazioni",
+        "quietOutOf": "Su {count} pagine con meno di {visits} visite."
+      },
+      "classification": {
+        "label": "Classificazione",
+        "leftOut": "Tutte tranne ricerca e carrello",
+        "every": "Ogni classificazione",
+        "shop": "Ricerca, carrello e account",
+        "notSorted": "Non ancora ordinate"
+      },
+      "map": {
+        "title": "Una mappa delle tue pagine",
+        "hint": {
+          "views": "Ogni riquadro è una delle tue {count} pagine più viste, e più è grande, più visualizzazioni ha avuto.",
+          "visits": "Ogni riquadro è una delle tue {count} pagine più visitate, e più è grande, più visite ha avuto."
+        },
+        "colourHint": {
+          "views": "I riquadri arancioni hanno avuto più visualizzazioni rispetto a {before}, quelli grigi meno.",
+          "visits": "I riquadri arancioni hanno avuto più visite rispetto a {before}, quelli grigi meno.",
+          "conversions": "I riquadri arancioni hanno avuto più conversioni rispetto a {before}, quelli grigi meno."
+        },
+        "count": "Conta",
+        "colourShows": "Il colore mostra",
+        "measure": {
+          "views": "Visualizzazioni",
+          "visits": "Visite",
+          "conversions": "Conversioni"
+        },
+        "figure": {
+          "views": "{count, plural, =1 {# visualizzazione} other {# visualizzazioni}}",
+          "visits": "{count, plural, =1 {# visita} other {# visite}}"
+        },
+        "in": {
+          "views": "Visualizzazioni: {when}",
+          "visits": "Visite: {when}",
+          "conversions": "Conversioni: {when}"
+        },
+        "upOrDown": "Su o giù",
+        "same": "Uguale",
+        "share": "{count, plural, =1 {Questa pagina ha avuto} other {Queste # pagine hanno avuto}} {share} di tutte le tue visualizzazioni.",
+        "shareOfClassification": "{count, plural, =1 {Questa pagina ha avuto} other {Queste # pagine hanno avuto}} {share} delle visualizzazioni di questa classificazione.",
+        "cantAdd": "Una visita può aprire molte pagine, quindi questi riquadri non si possono sommare.",
+        "leftOut": "Le pagine di ricerca, carrello e account non sono sulla mappa.",
+        "csv": {
+          "page": "Pagina",
+          "views": "Visualizzazioni",
+          "viewsBefore": "Visualizzazioni prima",
+          "visits": "Visite",
+          "visitsBefore": "Visite prima",
+          "conversions": "Conversioni",
+          "conversionsBefore": "Conversioni prima",
+          "address": "Indirizzo"
+        },
+        "homePage": "Pagina iniziale"
+      },
+      "lines": {
+        "title": {
+          "views": {
+            "day": "Visualizzazioni al giorno",
+            "week": "Visualizzazioni a settimana",
+            "month": "Visualizzazioni al mese"
+          },
+          "visits": {
+            "day": "Visite al giorno",
+            "week": "Visite a settimana",
+            "month": "Visite al mese"
+          },
+          "conversions": {
+            "day": "Conversioni al giorno",
+            "week": "Conversioni a settimana",
+            "month": "Conversioni al mese"
+          }
+        },
+        "hint": "{count, plural, =0 {Spunta una pagina nella tabella per disegnarla qui.} =1 {La pagina che hai spuntato nella tabella: {when}.} other {Le # pagine che hai spuntato nella tabella: {when}.}}",
+        "show": "Mostra",
+        "website": "Tutto il sito",
+        "switch": {
+          "off": "No",
+          "on": "Sì"
+        },
+        "nothingTicked": "Spunta una pagina nella tabella per disegnarla qui. Puoi spuntarne fino a {most}.",
+        "csvDay": "Giorno"
       }
     },
     "page": {
@@ -17361,8 +17708,6 @@
       "didIt": "Visite che lo hanno fatto",
       "rate": "Tasso di conversione",
       "ofSiteVisits": "Su {visits} visite",
-      "worth": "Valore",
-      "noWorth": "Nessun valore impostato",
       "dayByDay": {
         "day": "{event}, giorno per giorno",
         "week": "{event}, settimana per settimana",
@@ -17434,7 +17779,6 @@
         "change": "Variazione",
         "conversions": "Conversioni",
         "visits": "Visite",
-        "worth": "Valore",
         "changeTitle": "Conversioni rispetto al periodo precedente"
       },
       "noValue": "Nessun valore",
@@ -17550,12 +17894,13 @@
           "itemsLeft": "Articoli lasciati nel carrello",
           "share": "Quota degli articoli venduti (%)",
           "itemsBoughtBefore": "Articoli comprati {before}"
-        }
+        },
+        "eyeOthers": "Gli altri prodotti in elenco"
       }
     },
     "visitors": {
-      "title": "Visitatori",
-      "description": "Chi ha visitato: quante persone, se erano già venute, cosa hanno usato, la loro età, genere e interessi dove Google lo sa, e cosa legge ogni tipo di visitatore.",
+      "title": "Visite",
+      "description": "Le tue visite, nuove e di ritorno. Chi è venuto, cosa ha usato e le pagine che ha guardato.",
       "showing": "Mostra",
       "views": {
         "visitorType": "Nuovi o di ritorno",
@@ -17575,19 +17920,7 @@
       },
       "empty": "Nessuna visita in queste date.",
       "preparing": "I visitatori arrivano con la prossima raccolta, entro un giorno.",
-      "people": "Persone",
-      "newVisitors": "Nuovi visitatori",
-      "returning": "Visitatori di ritorno",
-      "ofPeople": "{rate} delle persone",
       "visitsAPerson": "Visite a persona",
-      "new": "Nuovi",
-      "returningLine": "Di ritorno",
-      "chartTitle": {
-        "day": "Visitatori nuovi e di ritorno al giorno",
-        "week": "Visitatori nuovi e di ritorno a settimana",
-        "month": "Visitatori nuovi e di ritorno al mese"
-      },
-      "chartHint": "{period}.",
       "signalsOff": "Età, genere e interessi compaiono solo quando Google Signals è attivo nel Google Analytics di questo sito. Per {host} è spento, quindi quei tre elenchi sono vuoti.",
       "names": {
         "new": "Nuovi",
@@ -17596,23 +17929,86 @@
         "female": "Donne",
         "unknown": "Sconosciuto"
       },
-      "map": {
-        "title": "Dove atterra ogni tipo di visitatore, per classificazione di pagina",
-        "hint": "{period}. Segue la scelta sopra la tabella. Ogni quadrato è le visite del gruppo iniziate su quel tipo di pagina, più chiaro per una quota maggiore del gruppo, con le sue conversioni.",
-        "hintNoConversions": "{period}. Segue la scelta sopra la tabella. Ogni quadrato è le visite del gruppo iniziate su quel tipo di pagina, più chiaro per una quota maggiore del gruppo. Gli interessi sono conservati senza le loro conversioni.",
-        "everything": "Tutto il resto",
-        "visits": "{count, plural, =1 {1 visita} other {# visite}}",
-        "conversions": "{count, plural, =1 {1 conv.} other {# conv.}}",
-        "hover": "{group} → {kind}: {visits, plural, =1 {1 visita} other {# visite}}, {conversions, plural, =1 {1 conversione} other {# conversioni}}",
-        "hoverPlain": "{group} → {kind}: {visits, plural, =1 {1 visita} other {# visite}}",
-        "legendVisits": "58 · visite iniziate su quel tipo di pagina",
-        "legendConversions": "3 conv. · conversioni fatte da quelle visite",
-        "legendShades": "da una quota minore a una maggiore del gruppo",
-        "legendEmpty": "nessuna visita",
-        "collecting": "Ancora in raccolta: la prossima raccolta conserva dove atterrano questi visitatori.",
-        "empty": "Nessuna visita in queste date.",
-        "privacy": "Google ha nascosto alcuni gruppi piccoli per proteggere la privacy delle persone."
-      }
+      "visits": "Visite",
+      "newVisits": "Visite nuove",
+      "returningVisits": "Visite di ritorno",
+      "line": {
+        "title": {
+          "day": "Visite nuove e di ritorno per giorno",
+          "week": "Visite nuove e di ritorno per settimana",
+          "month": "Visite nuove e di ritorno per mese"
+        },
+        "hint": "{span}.",
+        "compareHint": {
+          "day": "{span}. Le linee grigie tratteggiate sono {before}, giorno per giorno.",
+          "week": "{span}. Le linee grigie tratteggiate sono {before}, settimana per settimana.",
+          "month": "{span}. Le linee grigie tratteggiate sono {before}, mese per mese."
+        },
+        "new": "Nuove",
+        "returning": "Di ritorno",
+        "newBefore": "Nuove a {before}",
+        "returningBefore": "Di ritorno a {before}",
+        "visits": "Visite",
+        "eyeWeekend": "nel fine settimana",
+        "eyeWeekday": "Nei giorni feriali"
+      },
+      "compareWith": "Confronta con",
+      "nothing": "Niente",
+      "who": {
+        "title": "Chi visita il tuo sito, per {by, select, age {età} gender {genere} browser {browser} system {sistema operativo} other {interesse}}",
+        "titleTypes": "Visite nuove e di ritorno",
+        "byLabel": "Per",
+        "by": {
+          "visitorType": "Nuove o di ritorno",
+          "age": "Età",
+          "gender": "Genere",
+          "browser": "Browser",
+          "system": "Sistema operativo",
+          "interest": "Interesse"
+        },
+        "hint": {
+          "visitorType": "Visite di chi arriva per la prima volta e di chi torna.",
+          "age": "Google conosce l'età solo per {placed} delle {visits} visite.",
+          "gender": "Google sa se sono uomini o donne solo per {placed} delle {visits} visite.",
+          "browser": "Il browser che le persone hanno usato.",
+          "system": "Il sistema del telefono o del computer che le persone hanno usato.",
+          "interest": "I {shown} interessi più grandi dei {count} che Google conosce. Una persona può averne molti."
+        },
+        "greyBars": "Le barre grigie sono {before}.",
+        "visits": "Visite",
+        "waiting": "Ancora in raccolta: la prossima raccolta porta i dati di questo dispositivo.",
+        "empty": "Nessuna visita in queste date."
+      },
+      "kinds": {
+        "title": "Cosa hanno guardato le persone, per classificazione",
+        "hint": "Ogni riquadro è una classificazione. Più è grande, più spesso le persone hanno guardato le sue pagine.",
+        "notSorted": "Non ancora ordinate",
+        "caption": "{views} visualizzazioni · {share}",
+        "views": "visualizzazioni",
+        "ofViews": "di tutte le visualizzazioni",
+        "pages": "pagine",
+        "also": "Anche: {list}",
+        "alsoOne": "{name} {views} visualizzazioni",
+        "unsorted": "Le tue pagine non sono ancora ordinate in gruppi, quindi non c'è niente per cui sommare le visualizzazioni.",
+        "waiting": "Ancora in raccolta: la prossima raccolta porta le pagine di questo dispositivo.",
+        "empty": "Nessuna pagina vista in queste date."
+      },
+      "eyeWebsite": "L'intero sito"
+    },
+    "eyeNames": {
+      "website": "L'intero sito",
+      "visits": "Visite",
+      "conversions": "Conversioni",
+      "views": "Visualizzazioni",
+      "landing": "Tutte le pagine di destinazione",
+      "tagged": "Tutte le visite dalle campagne",
+      "rightNow": "Adesso",
+      "usualHalfHour": "Una mezz'ora normale il mese scorso",
+      "viewsShare": "La sua quota di visualizzazioni il mese scorso",
+      "square": "Tutte le pagine di questo riquadro",
+      "thisPage": "Questa pagina",
+      "shopPages": "Le pagine di ricerca, carrello e account",
+      "homePage": "La pagina iniziale"
     },
     "landingPage": {
       "back": "Pagine di destinazione",
@@ -17881,31 +18277,31 @@
     },
     "seen": {
       "landingPage": {
-        "makes": "{text} porta {aMoney} al mese, il {bRate} del valore del sito.",
+        "converts": "{text} ha portato {count, plural, =1 {una conversione} other {# conversioni}} da {b} visite questo mese.",
         "makesNothing": "{text} ha portato {a} visite questo mese e ancora nessuna conversione.",
         "noVisits": "Nessuna visita è iniziata su {text} questo mese.",
         "noneFromGoogle": "Tutte le sue {a} conversioni sono arrivate da persone giunte senza una ricerca: le sue {b} visite da Google non hanno convertito.",
         "inGoogle": "In Google è in posizione {a}, ed è stata cliccata {b} volte su {c} visualizzazioni.",
         "conversionsFell": "Le sue conversioni sono calate da {a} a {b}.",
         "conversionsRose": "Le sue conversioni sono salite da {a} a {b}.",
-        "fixPush": "Lavora sulle ricerche per cui compare in seconda pagina: circa {aMoney} al mese.",
-        "fixClick": "Riscrivi titolo e descrizione: circa {aMoney} al mese.",
-        "fixConvert": "Dalle un passo successivo verso il servizio che sostiene: circa {aMoney} al mese.",
-        "fixLeave": "Fai in modo che la pagina risponda a ciò che è stato cercato: circa {aMoney} al mese.",
-        "fixFall": "Controlla la sua posizione in Google e cosa è cambiato sulla pagina: circa {aMoney} al mese.",
+        "fixPush": "Lavora sulle ricerche per cui compare in seconda pagina.",
+        "fixClick": "Riscrivi titolo e descrizione.",
+        "fixConvert": "Dalle un passo successivo verso il servizio che sostiene.",
+        "fixLeave": "Fai in modo che la pagina risponda a ciò che è stato cercato.",
+        "fixFall": "Controlla la sua posizione in Google e cosa è cambiato sulla pagina.",
         "whatChanged": "Controlla cosa è cambiato sulla pagina questo mese: {count, plural, one {una conversione in meno} other {# conversioni in meno}}.",
         "hero": "È una delle tue pagine eroe: cambiala solo con un test."
       },
       "websites": {
         "none": "Qui non c'è ancora nessuno dei siti della tua azienda. Aggiungine uno in Visibilità per vedere cosa conta Google Analytics.",
         "noneConnected": "{count, plural, =1 {Il tuo sito non è} other {Nessuno dei tuoi # siti è}} ancora collegato a Google Analytics, quindi nessuno può dire quali pagine portano richieste o vendite.",
-        "notCounting": "{text} ha avuto {a} visite il mese scorso, ma lì ancora niente conta come conversione, quindi le sue pagine non si possono pesare per ciò che portano.",
-        "made": "{text} ha fatto {aMoney} con {countB, plural, =1 {una conversione} other {# conversioni}} il mese scorso.",
-        "fellVisitsUp": "{text} ha fatto {aMoney} il mese scorso, in calo da {bMoney}, anche se le sue visite sono salite del {cRate}.",
-        "value": {
-          "down": "{text} ha fatto {aMoney} il mese scorso, in calo da {bMoney}.",
-          "up": "{text} ha fatto {aMoney} il mese scorso, in crescita da {bMoney}.",
-          "same": "{text} ha fatto {aMoney} il mese scorso, come nel mese precedente."
+        "notCounting": "{text} ha avuto {a} visite il mese scorso, ma lì ancora niente conta come conversione, quindi nessuno può dire quali sue pagine portano richieste o vendite.",
+        "converted": "{text} ha avuto {count, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}} il mese scorso.",
+        "fellVisitsUp": "{text} ha avuto {count, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}} il mese scorso, in calo da {b}, anche se le sue visite sono salite del {cRate}.",
+        "conversions": {
+          "down": "{text} ha avuto {count, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}} il mese scorso, in calo da {b}.",
+          "up": "{text} ha avuto {count, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}} il mese scorso, in crescita da {b}.",
+          "same": "{text} ha avuto {count, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}} il mese scorso, come nel mese precedente."
         },
         "unknown": "Anche il tracciamento di {text} va sistemato: il {aRate} delle sue visite non si può attribuire a un canale o a una pagina di destinazione.",
         "tracking": "Il tracciamento di {text} va controllato: {count, plural, =1 {uno} other {#}} dei suoi {b} controlli {count, plural, =1 {non passa} other {non passano}}.",
@@ -17917,8 +18313,8 @@
         "connect": "Collega {text} a Google Analytics."
       },
       "overview": {
-        "notCounting": "In queste date sono arrivate {a} visite, ma ancora niente conta come conversione, quindi nessuno può dire quali pagine o canali fanno guadagnare.",
-        "made": "Queste date hanno portato {count, plural, =1 {una conversione} other {# conversioni}}, per un valore di {bMoney}.",
+        "notCounting": "In queste date sono arrivate {a} visite, ma ancora niente conta come conversione, quindi nessuno può dire quali pagine o canali portano richieste o vendite.",
+        "made": "Queste date hanno portato {count, plural, =1 {una conversione} other {# conversioni}}.",
         "lead": {
           "down": {
             "up": "Le visite sono salite del {aRate}, ma le conversioni sono scese da {b} a {c}.",
@@ -17946,7 +18342,7 @@
         },
         "googleRarely": "Google ha mostrato le tue pagine {a} volte negli ultimi 30 giorni, ma solo il {bRate} di queste ha ricevuto un clic.",
         "google": "Google ha mostrato le tue pagine {a} volte negli ultimi 30 giorni, e il {bRate} di queste ha ricevuto un clic.",
-        "chooseWhatCounts": "Scegli cosa conta come conversione, e quanto vale ciascuna.",
+        "chooseWhatCounts": "Scegli cosa conta come conversione.",
         "channel": {
           "fell": "Scopri perché le visite {text} hanno smesso di convertire: {count, plural, =1 {una conversione} other {# conversioni}}, in calo da {b}.",
           "rose": "Guarda cosa ha fatto convertire di più le visite {text}: {count, plural, =1 {una conversione} other {# conversioni}}, in crescita da {b}."
@@ -17967,7 +18363,7 @@
       },
       "channels": {
         "none": "Nessuna visita in queste date.",
-        "lead": "{text} porta {a} delle tue {b} visite, e {cMoney} del loro valore.",
+        "lead": "{text} porta {a} delle tue {b} visite, e {countC, plural, =1 {una conversione} other {# conversioni}}.",
         "leadVisits": "{text} porta più visite di tutti: {a} delle tue {b}.",
         "fell": "Le visite {text} hanno convertito meno di prima: {count, plural, =1 {una volta} other {# volte}}, in calo da {b}.",
         "rose": "Le visite {text} hanno convertito più di prima: {count, plural, =1 {una volta} other {# volte}}, in crescita da {b}.",
@@ -17988,7 +18384,7 @@
         "topOnly": "{text} ha portato più visite di tutti: {a}.",
         "leaveSooner": "Questi visitatori se ne vanno presto: solo il {aRate} è rimasto, contro il {bRate} di tutte le visite al sito.",
         "stayLonger": "Questi visitatori restano: il {aRate} è coinvolto, contro il {bRate} di tutte le visite al sito.",
-        "converted": "Hanno convertito {count, plural, =1 {una volta} other {# volte}}, per un valore di {bMoney}.",
+        "converted": "Hanno convertito {count, plural, =1 {una volta} other {# volte}}.",
         "noneConverted": "Nessuno di loro ha convertito.",
         "nextStep": "Guarda verso quali pagine {text} manda le persone, e dai a ciascuna un passo successivo chiaro.",
         "checkAnswers": "Controlla cosa dice {text} dei tuoi servizi, così i visitatori che manda trovano ciò che ha promesso."
@@ -18083,20 +18479,20 @@
         "none": "Nessuna pagina di destinazione in queste date.",
         "leakTop": "{text} porta più visite di tutte, {a}, ma nessuna conversione.",
         "leak": "{text} porta {a} visite ma nessuna conversione.",
-        "earners": "{text} e {more} fanno {aMoney} dei tuoi {bMoney}.",
-        "earner": "{text} fa {aMoney} dei tuoi {bMoney}.",
+        "topConverters": "{text} e {more} hanno portato {a} delle tue {b} conversioni.",
+        "topConverter": "{text} ha portato {a} delle tue {b} conversioni.",
         "notSet": "{a} visite, il {bRate}, sono arrivate su una pagina che Google Analytics non ha saputo nominare, quindi non si sa da dove sono partite quelle persone.",
         "noConversions": "Nessuna di queste {a} visite ha ancora convertito.",
-        "groupLead": "Le tue pagine {text} fanno {aMoney} dei tuoi {bMoney}.",
-        "groupsNoValue": "Nessun gruppo di pagine ha fatto guadagnare in queste date.",
+        "groupLead": "Le tue pagine {text} hanno portato {a} delle tue {b} conversioni.",
+        "groupsNone": "Nessun gruppo di pagine ha portato una conversione in queste date.",
         "unsorted": "{count, plural, =1 {Una pagina non è} other {# pagine non sono}} ancora in un gruppo di pagine, quindi le {count, plural, =1 {sue} other {loro}} {b} visite non si sommano al resto.",
         "device": {
           "mobile": "I telefoni hanno portato {a} delle {b} visite, e {countC, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}}.",
           "desktop": "I computer hanno portato {a} delle {b} visite, e {countC, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}}.",
           "tablet": "I tablet hanno portato {a} delle {b} visite, e {countC, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}}."
         },
-        "allFrom": "{count, plural, =1 {È arrivata} =2 {Sono arrivate entrambe} other {Sono arrivate tutte e #}} da {text} ({bMoney}).",
-        "mostFrom": "La maggior parte è arrivata da {text}: {count, plural, =1 {una conversione} other {# conversioni}}, per un valore di {bMoney}.",
+        "allFrom": "{count, plural, =1 {È arrivata} =2 {Sono arrivate entrambe} other {Sono arrivate tutte e #}} da {text}.",
+        "mostFrom": "La maggior parte è arrivata da {text}: {count, plural, =1 {una conversione} other {# conversioni}}.",
         "engagesLess": "{text} è la pagina più visitata qui, con {a} visite, ma solo il {bRate} è stato coinvolto, contro il {cRate} su ogni dispositivo.",
         "nextStep": "Dai a {text} un passo successivo verso il servizio che sostiene.",
         "fixNotSet": "Sistema le {a} visite senza pagina di destinazione.",
@@ -18175,10 +18571,10 @@
         "noneAfter": "Nessuna delle {a} persone che lo hanno fatto ha poi convertito."
       },
       "conversions": {
-        "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali fanno guadagnare.",
+        "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali portano richieste o vendite.",
         "fired": "La tua proprietà registra {event}: è successo {count, plural, =1 {una volta} other {# volte}} nelle stesse date.",
-        "tick": "Spunta {event} e indica quanto vale.",
-        "chooseWhatCounts": "Scegli cosa conta come conversione, e quanto vale ciascuna.",
+        "tick": "Spunta {event}, così conta come conversione.",
+        "chooseWhatCounts": "Scegli cosa conta come conversione.",
         "noneHappened": "Nessuno {count, plural, =1 {del tipo contato} other {dei # tipi contati}} è successo in queste date.",
         "allOne": "{count, plural, =1 {L'unica conversione è stata} other {Tutte le # conversioni sono state}} {event}.",
         "topKind": "{event} ha fatto {a} delle {b} conversioni.",
@@ -18186,7 +18582,6 @@
         "rateDown": "La quota di visite che convertono è scesa dal {aRate} al {bRate}.",
         "rateUp": "La quota di visite che convertono è salita dal {aRate} al {bRate}.",
         "trySilent": "Prova tu stesso {event}, e controlla che Google Analytics {count, plural, =1 {lo registri} other {li registri}}.",
-        "setValue": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore.",
         "cameAll": "{count, plural, =1 {È arrivata} other {Tutte e # sono arrivate}} da visite {text} atterrate su pagine {more}.",
         "cameMost": "Le visite {text} ne hanno fatte {a} su {b}; la maggior parte delle conversioni è partita da pagine {more}.",
         "biggestNone": "{text} ha portato {a} delle {b} visite, e nessuna ha convertito.",
@@ -18210,13 +18605,11 @@
       },
       "visitors": {
         "none": "Nessuna visita in queste date.",
-        "people": "{a} persone hanno fatto le {b} visite; il {cRate} era nuovo sul sito.",
-        "returnersConvert": "Le {a} visite di chi è tornato hanno convertito al {bRate}, contro il {cRate} dei nuovi visitatori.",
-        "returningLand": "Chi è tornato è atterrato soprattutto su pagine {text}: il {aRate} delle sue visite.",
-        "browserLags": "Il {aRate} delle visite era su {text}, con meno coinvolgimento: {bRate} contro il {cRate} del sito.",
-        "signalsOff": "Età, genere e interessi sono vuoti: Google Signals è spento nel Google Analytics di questo sito.",
-        "hidden": "Google ha nascosto alcuni gruppi piccoli per proteggere la privacy delle persone.",
-        "reasonToReturn": "Dai a chi torna un motivo per contattarti: converte almeno il doppio delle volte.",
+        "visits": "{a} visite. Il {bRate} veniva da nuovi visitatori.",
+        "returningLand": "Il {aRate} delle visite di ritorno è iniziato su pagine {text}.",
+        "browserLags": "{text} ha avuto il {aRate} delle visite. Il {bRate} si è fermato a guardare, contro il {cRate} del sito.",
+        "signalsOff": "Età, genere e interessi sono vuoti. Google Signals è spento nel Google Analytics di questo sito.",
+        "hidden": "Google ha tolto alcuni gruppi piccoli per proteggere la privacy delle persone.",
         "checkBrowser": "Invia il tuo modulo di contatto da {text} e controlla che arrivi."
       },
       "trackingHealth": {
@@ -18354,7 +18747,7 @@
       },
       "connect": {
         "searchConsole": "Search Console mostra che Google ha mandato a {text} {a} clic negli ultimi 30 giorni, su {b} visualizzazioni nei risultati.",
-        "cantSay": "Non può dire quali di quelle visite sono diventate una richiesta o una vendita, quindi nessuno può ancora dire quali pagine fanno guadagnare e quali portano solo visite.",
+        "cantSay": "Non può dire quali di quelle visite sono diventate una richiesta o una vendita, quindi nessuno può ancora dire quali pagine portano richieste o vendite e quali portano solo visite.",
         "add": "Aggiungi Google Analytics: un solo accesso, visto che Search Console è già collegato."
       },
       "chooseEvents": {
@@ -18517,7 +18910,7 @@
     "conversionFlow": {
       "unclassified": "Non classificate",
       "title": "Come le visite sono arrivate a una conversione, per classificazione di pagina",
-      "hint": "{period}: da dove sono arrivate le visite, il tipo di pagina su cui sono atterrate e come sono finite. Fai clic su un riquadro per seguirne i percorsi in entrata e in uscita; fai di nuovo clic per vederli tutti.",
+      "hint": "{period}: da dove sono arrivate le visite, la classificazione della pagina su cui sono atterrate e come sono finite. Fai clic su un riquadro per seguirne i percorsi in entrata e in uscita; fai di nuovo clic per vederli tutti.",
       "everyDevice": "Tutti i dispositivi, come sono conservate le pagine di destinazione.",
       "came": "Arrivate da",
       "landed": "Atterrate su",
@@ -18541,7 +18934,6 @@
       "bandHoverConverted": "{from} → {to}: {visits, plural, =1 {1 visita} other {# visite}}, {conversions, plural, =1 {1 conversione} other {# conversioni}}",
       "bandEnded": "{from} → {to}: {count, plural, =1 {una volta} other {# volte}}",
       "bandLeft": "{from}: {count, plural, =1 {1 visita uscita} other {# visite uscite}} senza convertire",
-      "bandRevenue": "{words}, {money} di ricavi",
       "legendConversions": "Conversioni, su una pagina o sul percorso che vi ha portato — più grandi se di più",
       "legendUncounted": "Un evento chiave non contato come conversione",
       "legendLeft": "Uscite senza convertire",
@@ -18552,12 +18944,12 @@
       "csvVisits": "Visite",
       "csvConversions": "Conversioni",
       "byKindTitle": "Conversioni per classificazione di pagina",
-      "byKindHint": "{period}. Ogni quadrato è le conversioni fatte dalle visite iniziate su quel tipo di pagina, più chiaro per una quota maggiore di quella conversione.",
+      "byKindHint": "{period}. Ogni quadrato è le conversioni fatte dalle visite iniziate sulle pagine di quella classificazione, più chiaro per una quota maggiore di quella conversione.",
       "byKindCounted": "{count, plural, =1 {1 conversione} other {# conversioni}}",
       "byKindNotCounted": "{count} · non contato",
       "byKindNever": "mai successo",
       "byKindHover": "{event} → {kind}: {count, plural, =1 {una volta} other {# volte}}",
-      "byKindLegend": "3 · conversioni da visite iniziate su quel tipo di pagina",
+      "byKindLegend": "3 · conversioni da visite iniziate sulle pagine di quella classificazione",
       "byKindShades": "da una quota minore a una maggiore della conversione",
       "byKindEmpty": "nessuna",
       "byKindNone": "Nessuna conversione in queste date.",
@@ -18597,7 +18989,7 @@
       "perConversionCsv": "Visite per una conversione"
     },
     "conversionsMap": {
-      "title": "Conversioni per tipo di pagina, canale, dispositivo o paese",
+      "title": "Conversioni per classificazione, canale, dispositivo o paese",
       "linesTitle": "Conversioni nel tempo per tipo",
       "timeTitle": "Una conversione, giorno per giorno",
       "count": "Conteggio",
@@ -18608,7 +19000,7 @@
       },
       "columns": "Colonne",
       "columnsOf": {
-        "kind": "Tipo di pagina",
+        "kind": "Classificazione",
         "channel": "Canale",
         "device": "Dispositivo",
         "country": "Paese"
@@ -18665,12 +19057,12 @@
       "timeTitleRate": "{event}: la quota di visite che lo ha fatto, giorno per giorno",
       "linesTitleFor": "{event} al giorno, una linea per {column}",
       "columnsLower": {
-        "kind": "tipo di pagina",
+        "kind": "classificazione",
         "channel": "canale",
         "device": "dispositivo",
         "country": "paese"
       },
-      "hint": "Ogni quadrato: le visite che lo hanno fatto, da quel tipo di pagina. Clicca un quadrato per le pagine dietro.",
+      "hint": "Ogni quadrato: le visite che lo hanno fatto, dalle pagine di quella classificazione. Clicca un quadrato per le pagine dietro.",
       "timeHintPer": "Quante visite sono servite per un {event}, ogni giorno. Meno è meglio.",
       "timeHintRate": "La quota delle visite di ogni giorno che lo ha fatto. Confrontala con {before}.",
       "timeHintRateBought": "La quota delle visite di ogni giorno che ha comprato. Confrontala con {before}.",
@@ -18681,7 +19073,6 @@
       "visits": "visite {period}",
       "conversions": "conversioni {period}",
       "kind": "{name} {period}",
-      "worth": "valore di {name} {period}",
       "rate": "{name} ogni cento visite {period}",
       "didIt": "visite che hanno fatto {name} {period}",
       "siteVisits": "visite al sito {period}",
@@ -19041,6 +19432,15 @@
         "versus": "Guarda Bing contro Google",
         "keyword": "Guarda la parola chiave",
         "connect": "Collegalo"
+      },
+      "eye": {
+        "weekOf": "Settimana del {day}",
+        "home": "La home page",
+        "lastSixWeeks": "le ultime 6 settimane",
+        "sixWeeksBefore": "Le 6 settimane prima",
+        "topThree": "Parole chiave ai posti da 1 a 3",
+        "inGoogleNotBing": "Pagine che portano richieste nell'indice di Google ma non in quello di Bing",
+        "averageDay": "Un giorno medio"
       }
     }
   },
@@ -19196,7 +19596,7 @@
       "description": "Quante persone la cercano, quanto è difficile entrare tra i primi dieci di Google e cosa significa per {host}.",
       "descriptionNoWebsite": "Quante persone la cercano, quanto è difficile entrare tra i primi dieci di Google e chi mostra Google.",
       "volume": "Ricerche al mese",
-      "volumeDetail": "{country} · Costo per clic {cpc}",
+      "volumeDetail": "{country}",
       "difficulty": "Difficoltà",
       "difficultyDetail": "Circa {count} siti che rimandano per entrare tra i primi dieci",
       "topVisits": "Visite del primo risultato",
@@ -20053,6 +20453,38 @@
     }
   },
   "insights": {
+    "sees": {
+      "website": "L'intero sito",
+      "theirEnquiries": "Le loro richieste",
+      "lastThreeMonths": "Gli ultimi 3 mesi",
+      "lastTwelveMonths": "Gli ultimi 12 mesi",
+      "lastNinetyDays": "Gli ultimi 90 giorni",
+      "last28Days": "Gli ultimi 28 giorni",
+      "usualDay": "Un giorno normale",
+      "usualWeek": "Una settimana media",
+      "otherGroups": "Gli altri gruppi",
+      "otherServices": "Gli altri servizi",
+      "otherPages": "Le altre pagine",
+      "belowRate": "Pagine che portano meno richieste dell'intero sito",
+      "noEnquiryClicks": "Ricerche le cui pagine non hanno portato richieste",
+      "toRebuild": "Pagine da rifare o ripristinare",
+      "toMergeOrRemove": "Pagine da unire, reindirizzare o rimuovere",
+      "sinceWritten": "Da quando è stata scritta",
+      "shownOnGoogle": "Volte mostrato su Google",
+      "thisWeek": "Questa settimana",
+      "leader": "{name}, al primo posto",
+      "above": "{name}, un posto sopra",
+      "below": "{name}, un posto sotto",
+      "owner": "{page}, la pagina che dovrebbe averle",
+      "everyGroup": "Tutti i gruppi",
+      "everyService": "Tutti i servizi",
+      "foundAgain": "Trovate anche la settimana prima",
+      "rivalAbove": "Ricerche in cui un concorrente è sopra di te",
+      "splitSearches": "Ricerche che Google divide tra le tue pagine",
+      "toChange": "Pagine da migliorare, unire o rimuovere",
+      "weekends": "Nel fine settimana",
+      "weekdays": "Nei giorni feriali"
+    },
     "refresh": {
       "updating": "Aggiornamento di Insights per {host}: {complete} sezioni completate su {total}. I risultati completati restano disponibili.",
       "completed": "Insights per {host}: tutte le sezioni aggiornate il {when}.",
@@ -21181,7 +21613,7 @@
         "shown": "Mostrato, 90 giorni",
         "page": "Pagina",
         "converts": "La pagina converte",
-        "kind": "Tipo di pagina"
+        "kind": "Classificazione"
       },
       "sees": {
         "best": "La tua migliore opportunità è ‘{search}’: cercata {volume} volte al mese{known, select, yes {, e la pagina su cui arriva trasforma il {rate}% dei visitatori in richieste} other {}}. Sei in posizione {place} su Google.",
@@ -21201,8 +21633,8 @@
       "notSorted": "Non classificata",
       "noPage": "Ancora nessuna pagina",
       "kinds": {
-        "title": "Ricerche a portata di mano, per tipo di pagina",
-        "hint": "Il tipo di pagina su cui arriva ogni ricerca, secondo le tue classificazioni: se le ricerche che quasi vinci portano alle pagine che vendono.",
+        "title": "Ricerche a portata di mano, per classificazione",
+        "hint": "La classificazione della pagina su cui arriva ogni ricerca: se le ricerche che quasi vinci portano alle pagine che vendono.",
         "count": "Ricerche"
       }
     },
@@ -21325,8 +21757,8 @@
       },
       "searchSteps": "Trova un passaggio",
       "kinds": {
-        "title": "Visite con richiesta, per tipo di pagina",
-        "hint": "Il periodo scelto in alto, rispetto al periodo di confronto: il passaggio dalla visita alla richiesta, per ogni tipo di pagina."
+        "title": "Visite con richiesta, per classificazione",
+        "hint": "Il periodo scelto in alto, rispetto al periodo di confronto: il passaggio dalla visita alla richiesta, per ogni classificazione."
       }
     },
     "pageReviews": {
@@ -21359,7 +21791,7 @@
         "perEnquiry": "Visitatori per una richiesta",
         "before": "Anno scorso",
         "verdict": "Verdetto",
-        "kind": "Tipo di pagina"
+        "kind": "Classificazione"
       },
       "notSorted": "Non classificata"
     },
@@ -21604,7 +22036,7 @@
     },
     "enquiries": {
       "title": "Cosa porta richieste",
-      "description": "Le tue richieste per tipo di pagina, per provenienza e per tipo di richiesta, e le ricerche e le pagine dietro di esse.",
+      "description": "Le tue richieste per classificazione, per provenienza e per tipo di richiesta, e le ricerche e le pagine dietro di esse.",
       "emptyTitle": "Ancora niente da leggere",
       "emptyDescription": "Collega Google Analytics e attendi un mese intero per vedere cosa porta le tue richieste.",
       "sees": {
@@ -21624,14 +22056,14 @@
       "notRecorded": "Pagina non registrata",
       "otherPages": "Altre pagine",
       "month": "Mese",
-      "kind": "Tipo di pagina",
+      "kind": "Classificazione",
       "then": "Prima",
       "source": "Fonte",
       "unknownSource": "Fonte non registrata",
       "sourcePage": {
         "back": "Cosa porta richieste",
         "title": "Richieste da {name}",
-        "description": "Le persone che questa fonte ha mandato al tuo sito, le pagine e i tipi di pagina su cui sono arrivate e le richieste che hanno fatto.",
+        "description": "Le persone che questa fonte ha mandato al tuo sito, le pagine su cui sono arrivate con le loro classificazioni, e le richieste che hanno fatto.",
         "emptyTitle": "Niente per questa fonte",
         "emptyDescription": "Nessuna visita da questa fonte nei mesi conservati.",
         "visits": "Visite, {period}",
@@ -21641,7 +22073,7 @@
         "monthlyHint": "Ogni visita e richiesta che Google Analytics ha contato da questa fonte, con gli aggiornamenti di Google.",
         "visitsSeries": "Visite",
         "enquiriesSeries": "Richieste",
-        "kinds": "Su quali tipi di pagina {name} manda le persone",
+        "kinds": "Verso quali classificazioni {name} manda le persone",
         "kindsHint": "Il periodo scelto, per le tue classificazioni.",
         "pages": "Pagine su cui {name} ha mandato persone"
       },
@@ -21650,20 +22082,20 @@
       "underOne": "meno di 1",
       "about": "circa {count}",
       "kinds": {
-        "title": "Per tipo di pagina",
+        "title": "Per classificazione",
         "hint": "Le tue classificazioni delle pagine, sommate per tipo: servizio, informazione, caso studio, prodotto.",
-        "monthly": "Richieste per tipo di pagina, mese per mese",
-        "monthlyHint": "Ogni richiesta, per il tipo di pagina su cui la persona è arrivata, con gli aggiornamenti di Google.",
-        "against": "Richieste per tipo di pagina: {period} rispetto a {then}",
-        "againstHint": "Le richieste di ogni tipo di pagina, affiancate.",
-        "rate": "Visite con richiesta, per tipo di pagina",
-        "rateHint": "La quota di visite di ogni tipo di pagina finite con una richiesta.",
-        "share": "Quota di visite rispetto a quota di richieste, per tipo di pagina",
-        "shareHint": "Un tipo di pagina con molte più visite che richieste altera i dati di tutto il sito.",
+        "monthly": "Richieste per classificazione, mese per mese",
+        "monthlyHint": "Ogni richiesta, per la classificazione della pagina su cui la persona è arrivata, con gli aggiornamenti di Google.",
+        "against": "Richieste per classificazione: {period} rispetto a {then}",
+        "againstHint": "Le richieste di ogni classificazione, affiancate.",
+        "rate": "Visite con richiesta, per classificazione",
+        "rateHint": "La quota di visite di ogni classificazione finite con una richiesta.",
+        "share": "Quota di visite rispetto a quota di richieste, per classificazione",
+        "shareHint": "Una classificazione con molte più visite che richieste altera i dati di tutto il sito.",
         "shareVisits": "Quota di visite",
         "shareEnquiries": "Quota di richieste",
-        "table": "Ogni tipo di pagina",
-        "search": "Trova un tipo di pagina…"
+        "table": "Ogni classificazione",
+        "search": "Trova una classificazione…"
       },
       "columns": {
         "type": "Tipo",
@@ -21733,9 +22165,9 @@
     },
     "moved": {
       "title": "Cosa è cambiato",
-      "hint": "{now} rispetto a {then}: richieste per tipo di pagina di arrivo e per provenienza.",
+      "hint": "{now} rispetto a {then}: richieste per classificazione della pagina di arrivo e per provenienza.",
       "skew": "Gli articoli portano il {visitsShare}% delle visite ma il {enquiriesShare}% delle richieste: il {rateWith}% di tutte le visite ha fatto una richiesta, il {rateWithout}% senza gli articoli.",
-      "kinds": "Richieste per tipo di pagina: {now} rispetto a {then}",
+      "kinds": "Richieste per classificazione: {now} rispetto a {then}",
       "kindsHint": "Le tue classificazioni delle pagine, le cinque con più visite.",
       "sources": "Richieste per provenienza: {now} rispetto a {then}",
       "sourcesHint": "Google, assistenti AI, accessi diretti e altri siti, ciascuno sommato."
@@ -21805,7 +22237,7 @@
         "owner": "Dovrebbe averne di più",
         "sure": "Affidabilità",
         "page": "Pagina",
-        "kind": "Tipo di pagina",
+        "kind": "Classificazione",
         "decision": "Cosa fare",
         "searches": "Ricerche",
         "owns": "Dovrebbe avere",
@@ -21910,8 +22342,8 @@
         "KEEP": "Da tenere"
       },
       "chart": {
-        "title": "Cosa fare con le tue pagine, per tipo di pagina",
-        "hint": "La decisione per ogni pagina, secondo le tue classificazioni: prima i tipi con più pagine."
+        "title": "Cosa fare con le tue pagine, per classificazione",
+        "hint": "La decisione per ogni pagina, secondo le tue classificazioni: prima quelle con più pagine."
       },
       "first": {
         "title": "Prima: le pagine con più in gioco",
@@ -21931,7 +22363,7 @@
       },
       "columns": {
         "page": "Pagina",
-        "kind": "Tipo di pagina",
+        "kind": "Classificazione",
         "verdict": "Decisione",
         "why": "Perché",
         "visits": "Visite, 12 mesi",
@@ -22001,12 +22433,12 @@
       },
       "growing": {
         "title": "Stai crescendo nell'AI?",
-        "hint": "Ogni visita e richiesta che un assistente AI ti ha mandato, mese per mese, per assistente e per tipo di pagina di arrivo.",
+        "hint": "Ogni visita e richiesta che un assistente AI ti ha mandato, mese per mese, per assistente e per classificazione della pagina di arrivo.",
         "monthly": "Visite da ogni assistente AI, mese per mese",
         "monthlyHint": "Da Google Analytics, con gli aggiornamenti di Google.",
         "against": "Visite da ogni assistente: {now} rispetto a {then}",
         "againstHint": "Ogni assistente affiancato.",
-        "kinds": "I tipi di pagina su cui arrivano i visitatori dall'AI, {period}",
+        "kinds": "Le classificazioni su cui arrivano i visitatori dall'AI, {period}",
         "kindsHint": "Secondo le tue classificazioni: se l'AI manda le persone alle pagine che vendono.",
         "search": "Trova un assistente…",
         "table": "Ogni assistente"
@@ -22052,7 +22484,7 @@
         "yearAgo": "Un anno prima",
         "enquiries": "Richieste",
         "visits": "Visite",
-        "kind": "Tipo di pagina",
+        "kind": "Classificazione",
         "asked": "Risposte",
         "named": "Ti nominano",
         "recommended": "Ti raccomandano",
@@ -22182,7 +22614,13 @@
       "pagesFrom": "I dati di ogni singola pagina partono dal {day}: i giorni prima hanno solo i dati del sito.",
       "cut": "In {count, plural, one {# giorno} other {# giorni}} Clarity ha inviato solo le sue 1.000 righe più visitate per pagina, quindi le pagine meno visitate possono mancare.",
       "cutBrowsers": "In {count, plural, one {# giorno} other {# giorni}} Clarity ha inviato solo le sue 1.000 righe più visitate per pagina e browser, quindi il browser di una pagina meno visitata può mancare.",
-      "cutSources": "In {count, plural, one {# giorno} other {# giorni}} Clarity ha inviato solo le sue 1.000 righe più visitate per pagina e provenienza, quindi una provenienza minore può mancare."
+      "cutSources": "In {count, plural, one {# giorno} other {# giorni}} Clarity ha inviato solo le sue 1.000 righe più visitate per pagina e provenienza, quindi una provenienza minore può mancare.",
+      "eye": {
+        "website": "L'intero sito",
+        "low": "Pagine scorse per meno di un quarto",
+        "otherSources": "Le sue altre provenienze",
+        "days": "dal {from} al {to}"
+      }
     },
     "overview": {
       "title": "Panoramica",
@@ -22256,7 +22694,7 @@
         "empty": "Ancora nessuna pagina."
       },
       "groupsChart": {
-        "title": "Quanto viene scorso ogni tipo di pagina",
+        "title": "Quanto vengono scorse le pagine di ogni classificazione",
         "hint": "I tuoi gruppi di pagine, in media: {span} contro {before}. Tenui: troppe poche visite per giudicare.",
         "hintAlone": "I tuoi gruppi di pagine, in media, {span}. Tenui: troppe poche visite per giudicare.",
         "empty": "Ancora nessun gruppo di pagine."

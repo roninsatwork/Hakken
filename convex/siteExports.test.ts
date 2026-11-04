@@ -76,7 +76,8 @@ describe("downloading a whole table", () => {
     const file = await asRonins.action(api.siteExports.exportSiteTable, { siteId: own.holdId, kind: "keywords" });
     expect(file).toMatchObject({ rows: 1_205, complete: true, fileName: expect.stringMatching(/^ronins\.co\.uk-keywords-\d{4}-\d{2}-\d{2}\.csv$/) });
     const lines = file.csv.split("\n");
-    expect(lines[0]).toBe("keyword,position,change,status,volume,intent,difficulty,cpc_usd,traffic,page,last_checked");
+    // No cost per click (Anthony, 2026-11-03, on every guessed money figure: "Yes, all of it").
+    expect(lines[0]).toBe("keyword,position,change,status,volume,intent,difficulty,traffic,page,last_checked");
     expect(lines).toHaveLength(1_206);
     // A comma inside a keyword is quoted, not a new column.
     expect(lines.some((row) => /^"search, number \d+",/.test(row))).toBe(true);

@@ -1,0 +1,110 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-03T13:29:31Z" },
+  "title": "Hakken — Visitors, redo",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1730,
+      "title": "1 · Today · Google Analytics → Visitors, More Handles, last month",
+      "expand": "fill"
+    },
+    "Redo.dc.html": {
+      "x": 2040,
+      "y": 0,
+      "w": 1440,
+      "h": 2620,
+      "title": "2 · The redo so far · now called Visits, with Who visits your website and What people looked at · press Play to switch By and Compare with",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": ["Main.dc.html", "Redo.dc.html"],
+  "notes": {
+    "todayBoxes": {
+      "x": 1520,
+      "y": 360,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "The four boxes\n\n• New and returning add up to more than everyone. 93.6% plus 20.9% is 114.5%.\n• That's because someone who came for the first time and then came back in October is in both.\n• New visitors and Returning visitors aren't compared with September."
+    },
+    "todayLine": {
+      "x": 1520,
+      "y": 640,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "New and returning visitors a day\n\n• A dot marks a day with a conversion. More Handles has them every day.\n• So every day has a dot, and the dots all look the same. They tell you nothing."
+    },
+    "todaySquares": {
+      "x": 1520,
+      "y": 900,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "Where each kind of visitor lands\n\n• One group has two numbers. New is 24,115 visits here and 24,289 in the table.\n• Some squares have more conversions than visits. Returning visitors on Unclassified pages made 2,033 visits and 3,552 conversions.\n• That's because it counts every conversion, not each visit that converted.\n• On Interests it says there are no conversions. The table shows some."
+    },
+    "todayTable": {
+      "x": 1520,
+      "y": 1320,
+      "w": 440,
+      "fill": "blue",
+      "size": "s",
+      "text": "The table\n\n• Returning visitors show 11,809 conversions from 9,510 visits. It says \"124.2% of visits\".\n• Unknown has 1,540 people, 4.3% engaged and no conversions. They may be robots, or people who said no to cookies.\n• On Age, Google doesn't know the age for about 3 in 4 visits. Unknown is the biggest row.\n• Interests has 123 of Google's long names. The top one is \"Travel Buffs\". One person can have many."
+    },
+    "redoTop": {
+      "x": 3560,
+      "y": 0,
+      "w": 440,
+      "fill": "green",
+      "size": "s",
+      "text": "The redo so far\n\n• The page now counts visits, as you asked on 3 November.\n• It's called Visits now, in its title and in the menu.\n• The squares are gone. Who visits your website takes their place.\n• What people looked at is new. It sits under the daily line, at your comment.\n• The table is as it is today, faults and all. Board 1 lists them."
+    },
+    "redoVisits": {
+      "x": 3560,
+      "y": 380,
+      "w": 440,
+      "fill": "green",
+      "size": "s",
+      "text": "Now in visits\n\n• The boxes count visits. New and returning no longer add up to more than everyone.\n• Every box says how it compares with September, by name.\n• The line shows new and returning visits a day, not people.\n• Compare with lays September over October as dashed grey lines. Press Play to try it. Added at your comment on 3 November.\n• September sits under October by date, so the weekends don't line up.\n• The dots are gone, because the chart with menus doesn't draw them. Open question 5 in the plan asks if you want them back.\n• The line under the title says visits too."
+    },
+    "redoWho": {
+      "x": 3560,
+      "y": 1420,
+      "w": 440,
+      "fill": "green",
+      "size": "s",
+      "text": "New. Who visits your website, by …\n\nThis is the chart you approved on a page's own screen on 3 November. Not built here yet.\n\n• Use By to switch between New or returning, Age, Gender, Browser, Operating system and Interest. Press Play to try it.\n• The orange bars are October. The grey bars are September.\n• Each bar is visits, with its number on it.\n• Age and Gender leave out visits Google can't place. The line under the title says how many it knows.\n• Interest shows the 8 biggest of 123, with short names."
+    },
+    "redoTreemap": {
+      "x": 3560,
+      "y": 1000,
+      "w": 440,
+      "fill": "green",
+      "size": "s",
+      "text": "New. What people looked at, by kind of page\n\nThe treemap from the kit. It counts every page people looked at, not just the first. Changed at your comment on 3 November.\n\n• Each box is one of your page groups, sized by views. That's 152,926 views of 9,538 pages in October.\n• It uses views because one visit can see many pages of the same kind. Adding up visits would count that visit again for each page.\n• Not sorted yet is the biggest, at nearly 1 in 3 views. That's 3,198 pages with no group yet.\n• Blog, Electrical and Lighting are too small to name. You only see their figures on hover."
+    },
+    "redoLimits": {
+      "x": 3560,
+      "y": 2000,
+      "w": 440,
+      "fill": "orange",
+      "size": "s",
+      "text": "Limits\n\n• Google's counts differ a little. The boxes say 35,739 visits. New, returning and not known add up to 35,923.\n• Device isn't in By. The device menu at the top already does that.\n• In this drawing, Compare with on the bars doesn't switch. It always shows September."
+    },
+    "redoAsk": {
+      "x": 3560,
+      "y": 2340,
+      "w": 440,
+      "fill": "purple",
+      "size": "s",
+      "text": "Still to decide\n\nThe chart has its own By menu. The table under it has its own switch. Today they can show different things.\n\nShould one choice change both?"
+    }
+  },
+  "designSystems": []
+}

@@ -178,7 +178,7 @@ const EN_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sa
 const IT_WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
 /** A chart of groups' groups and periods in words (ask-hakken-every-chart-plan-2026-10-31.md), as the screens say them. */
 const EN_GROUPS_BY: Record<string, string> = {
-  channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
+  channel: "channel", kind: "classification", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
   source: "source", browser: "browser", website: "website", position: "Google position", product: "product",
   age: "age", gender: "gender", weekday: "day of the week",
 };

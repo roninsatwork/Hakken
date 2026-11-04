@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { AtSign } from "lucide-react";
@@ -26,6 +27,7 @@ import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { WORTH_ASKING } from "@/convex/utils/sees/mentions";
 import { SiteSees } from "../../_components/SiteSees";
+import { webMentionsSeen } from "../../_components/siteSeesData";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -94,13 +96,21 @@ export default function WebMentionsPage() {
     const of = all.filter((row) => within(row.day, step));
     return datedRow({ day: step.key, lastDay: step.to }, { well: of.filter((row) => row.tone === 1).length, neutral: of.filter((row) => row.tone === 0).length, badly: of.filter((row) => row.tone === 2).length });
   });
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the boxes for the dates and the span
+  // before them, the kinds of website the new pages are, and every page held by its day, in the page's own words.
+  const te = useTranslations("sites.mentions.eye");
+  const { from: spanFrom, to: spanTo } = range;
+  const { from: beforeFrom, to: beforeTo } = range.before;
+  const seen = useMemo(() => (data ? webMentionsSeen(data.rows as Row[], { from: spanFrom, to: spanTo, before: { from: beforeFrom, to: beforeTo } }, {
+    kinds: (kind) => t(`kindsMany.${kind}` as "kindsMany.NEWS"), kind: (kind) => t(`kinds.${kind}` as "kinds.NEWS"), tone: (tone) => t(`toneOne.${tone}` as "toneOne.WELL"),
+  }, { business: data.names[0] ?? site?.host ?? "", noLink: te("noLink"), badly: t("figures.badly") }) : undefined), [data, spanFrom, spanTo, beforeFrom, beforeTo, site?.host, t, te]);
   const linkWords = (row: Row) => (row.linked ? t("link.linked") : row.strength >= WORTH_ASKING && row.tone !== 2 ? t("link.ask") : t("link.none"));
   const fileBase = `${site?.host ?? "site"}-web-mentions`;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<AtSign className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="mentions" seen={data?.seen} data={data} />
+      <SiteSees screen="mentions" seen={data?.seen} data={seen} />
 
       {data ? (
         <FigureRow>

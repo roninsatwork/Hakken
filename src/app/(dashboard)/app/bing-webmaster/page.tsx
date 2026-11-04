@@ -21,7 +21,7 @@ import { useSitePager } from "../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../sites/_components/useSiteSort";
 import { SiteMark } from "../sites/_components/SiteMark";
-import { BingSees, formatCtr, formatShare } from "./_components/BingParts";
+import { formatCtr, formatShare } from "./_components/BingParts";
 import { bingQuery } from "./_components/useBing";
 
 type SiteRow = FunctionReturnType<typeof api.bingWebmasterReads.bingSites>[number];
@@ -57,7 +57,6 @@ const ctrOf = (row: SiteRow) => (row.clicks !== null && row.impressions ? row.cl
 export default function BingWebmasterPage() {
   const t = useTranslations("bingWebmaster.list");
   const ts = useTranslations("bingWebmaster.status");
-  const tw = useTranslations("bingWebmaster.seen.websites");
   const router = useRouter();
   const params = useSearchParams();
   const sites = useQuery(api.bingWebmasterReads.bingSites, {});
@@ -67,23 +66,12 @@ export default function BingWebmasterPage() {
   const { rows: sorted, tableSort } = useSiteSortedList(rows, SORTS, { opening: "host", name: hostOf });
   const paged = useSitePager(sorted, { isLoading: sorted === undefined });
   const dash = <NoFigure />;
-  const top = sites?.filter((row) => row.clicks !== null).sort((left, right) => (right.clicks ?? 0) - (left.clicks ?? 0))[0];
 
   return (
     <>
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader icon={<ScanSearch className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} divider />
-
-        {sites ? (
-          <BingSees screen="websites" data={sites} says={[
-            top
-              ? top.googleClicks !== null
-                ? tw("top", { host: top.host, clicks: formatNumber(top.clicks), share: formatShare(top.share), google: formatNumber(top.googleClicks) })
-                : tw("topNoGoogle", { host: top.host, clicks: formatNumber(top.clicks) })
-              : tw("none"),
-          ]} />
-        ) : null}
 
         <DataTable
           rows={paged.pageRows}

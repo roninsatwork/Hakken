@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -34,6 +35,7 @@ import {
 } from "./SearchConsoleTables";
 import {
   countryArg,
+  isReadyMade,
   useResultKind,
   useSearchConsoleCountry,
   useSearchConsoleHref,
@@ -87,7 +89,8 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const ask = { siteId, searchType: kind, dimension, key, from: range.from, to: range.to, ...countryArg(country) };
   const series = useLiveAsk(api.searchConsoleLists.searchConsoleKeySeries, ready ? { ...ask, ...periodArg(range) } : null);
   const splits = useLiveAsk(api.searchConsoleLists.searchConsoleKeySplits, ready ? ask : null);
-  const days = series.answer === undefined ? undefined : series.answer.ok ? series.answer : { days: [], totals: null, previous: null, previousHeld: false };
+  const answered = series.answer;
+  const days = useMemo(() => (answered === undefined ? undefined : answered.ok ? answered : { days: [], totals: null, previous: null, previousHeld: false }), [answered]);
   const other = dimension === "query" ? "page" : "query";
   const list = useSearchConsoleList({ dimension: other, within: { kind: dimension, key }, chips: CHIPS });
   const otherSegment = other === "query" ? "keywords/keyword" : "pages/page";
@@ -101,6 +104,34 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const allPlacesHref = hrefFor(`${dimension === "query" ? "keywords/keyword" : "pages/page"}/countries`, { key, [BACK_KEY]: `${pathname}?${params.toString()}` });
   const router = useRouter();
   const problem = useListProblem(list);
+  // The eye's own figures for this search or page (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6): the
+  // whole website's click rate at each place on Google and its clicks by device, from the ready-made period, so the
+  // record is set against its own website; every row named as the screen names it.
+  const tw = useTranslations("searchConsole.sees");
+  const readyMade = ready && isReadyMade(range, status?.connection?.newestDay);
+  const websiteAsk = { siteId, searchType: kind, from: range.from, to: range.to, ...countryArg(country) };
+  const curve = useQuery(api.searchConsoleChanges.searchConsoleCurve, readyMade ? websiteAsk : "skip");
+  const devices = useQuery(api.searchConsoleLists.searchConsoleSplitList, readyMade ? { ...websiteAsk, dimension: "device", ...periodArg(range) } : "skip");
+  const cameFrom = splits.answer?.ok ? splits.answer : null;
+  const rowsShown = list.table.pageRows ?? null;
+  const seesData = useMemo(() => {
+    if (!days) return undefined;
+    const deviceName = (device: string) => tp(`deviceNames.${device}` as "deviceNames.MOBILE");
+    return {
+      name: title,
+      [dimension === "query" ? "keyword" : "page"]: key,
+      figures: days,
+      cameFrom: cameFrom ? { devices: cameFrom.devices.map((row) => ({ ...row, name: deviceName(row.key) })) } : null,
+      rows: rowsShown ? rowsShown.map((row) => ({ ...row, name: other === "page" ? pageLabel(row.key, host) : row.key })) : null,
+      picked: true,
+      website: {
+        curve: curve && !curve.live ? curve.points.map((point) => ({ ...point, name: tw("websiteAtPlace", { place: point.position }) })) : null,
+        devices: devices && !devices.live ? devices.rows.map((row) => ({ key: row.key, name: deviceName(row.key), clicks: row.clicks, impressions: row.impressions })) : null,
+      },
+    };
+  }, [days, title, dimension, key, cameFrom, rowsShown, other, host, curve, devices, tp, tw]);
+  // "Do first" may open the row the eye names: a page splitting this search, or this page's search that moved most.
+  const seesLinks = useMemo(() => (rowsShown ?? []).slice(0, 3).map((row) => ({ label: other === "page" ? pageLabel(row.key, host) : row.key, href: recordHref(otherSegment, row.key) })), [rowsShown, other, host, recordHref, otherSegment]);
   const download: { header: string; field: ExportField }[] = [
     { header: t(other === "query" ? "table.keyword" : "table.page"), field: "key" },
     { header: t("table.clicks"), field: "clicks" },
@@ -140,8 +171,9 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
       />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="record" seen={days && range.period !== "custom" ? recordSees(title, days.totals, days.previous, range.period) : null}
-            data={days ? { [dimension === "query" ? "keyword" : "page"]: key, figures: days, cameFrom: splits.answer?.ok ? splits.answer : null, rows: list.table.pageRows ?? null } : undefined}
+          <SearchConsoleSees screen="record" eye={dimension === "query" ? "keyword" : "page"} seen={days && range.period !== "custom" ? recordSees(title, days.totals, days.previous, range.period) : null}
+            data={seesData}
+            links={seesLinks}
           />
           <ResultKindSwitch />
           {days === undefined ? (

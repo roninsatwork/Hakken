@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { groupOwner, listHold, requireMySite } from "./siteAccess";
+import { groupOwner, listHold, requireMySite, type SiteReader } from "./siteAccess";
 import { holdQuestions } from "./holdLists";
 import { readFanOutLimits } from "./fanOutLimits";
 import { radarRivals } from "./brandRadar";
@@ -98,73 +98,76 @@ export const radarOverview = tenantQuery({
     })),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { readings: all } = await readings(ctx, site);
-    const months = [...new Set(all.flatMap((reading) => reading.months?.months ?? []))].sort().slice(-12);
-    const tracked = new Set((await holdQuestions(ctx, listHold(site), MAX_PROMPTS_PER_WEBSITE)).map((question) => question.prompt.toLowerCase()));
-    const businesses = all.map((reading) => {
-      const series = reading.months;
-      const mentions = series ? unpackColumn(series.mentions) : [];
-      const asks = series ? unpackColumn(series.asks) : [];
-      const at = (month: string) => series?.months.indexOf(month) ?? -1;
-      const last = series?.months.at(-1) ?? null;
-      const ownPages = new Set((reading.part?.pages ?? []).filter((url) => onHost(url, reading.website.host)));
-      return {
-        websiteId: reading.website._id,
-        host: reading.website.displayHost,
-        you: reading.you,
-        mentions: last ? mentions[at(last)] ?? null : null,
-        before: series && series.months.length > 1 ? mentions[series.months.length - 2] ?? null : null,
-        asks: last ? asks[at(last)] ?? null : null,
-        pagesCited: ownPages.size,
-        series: months.map((month) => (at(month) >= 0 ? mentions[at(month)] ?? null : null)),
-      };
-    });
-
-    // Every question naming the website or a rival, once: where each business came, by where the answer first names it.
-    const byQuestion = new Map<string, { question: string; volume: number; named: Array<{ host: string; you: boolean; at: number }>; yourPage: string | null }>();
-    let yourCitedAnswers = 0;
-    for (const reading of all) {
-      if (!reading.part) continue;
-      for (const entry of questionsOf(reading.part)) {
-        const key = entry.question.toLowerCase();
-        const row = byQuestion.get(key) ?? { question: entry.question, volume: entry.volume, named: [], yourPage: null };
-        if (entry.firstAt !== null) row.named.push({ host: reading.website.displayHost, you: reading.you, at: entry.firstAt });
-        if (reading.you) {
-          const own = entry.pages.find((url) => onHost(url, reading.website.host));
-          if (own) {
-            row.yourPage = pathOf(own);
-            yourCitedAnswers += 1;
-          }
-        }
-        byQuestion.set(key, row);
-      }
-    }
-    const pull = all.find((reading) => reading.you)?.part?.pullId;
-    const cost = pull ? (await ctx.db.get(pull as Id<"seoDataPulls">))?.costUsd ?? null : null;
-    const result = {
-      month: months.at(-1) ?? null,
-      perCheckUsd: cost && cost > 0 ? cost : null,
-      businesses,
-      months,
-      yourCitedAnswers,
-      questions: [...byQuestion.values()].map((row) => {
-        const order = [...row.named].sort((left, right) => left.at - right.at);
-        const you = order.findIndex((entry) => entry.you);
-        return {
-          question: row.question,
-          volume: row.volume,
-          you: you >= 0 ? you + 1 : null,
-          rivals: order.filter((entry) => !entry.you).map((entry) => entry.host),
-          yourPage: row.yourPage,
-          tracked: tracked.has(row.question.toLowerCase()),
-        };
-      }),
-    };
-    return { ...result, seen: radarOverviewSees(result) };
-  },
+  handler: async (ctx, args) => await readRadarOverview(ctx, args),
 });
+
+/** radarOverview's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readRadarOverview(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { readings: all } = await readings(ctx, site);
+  const months = [...new Set(all.flatMap((reading) => reading.months?.months ?? []))].sort().slice(-12);
+  const tracked = new Set((await holdQuestions(ctx, listHold(site), MAX_PROMPTS_PER_WEBSITE)).map((question) => question.prompt.toLowerCase()));
+  const businesses = all.map((reading) => {
+    const series = reading.months;
+    const mentions = series ? unpackColumn(series.mentions) : [];
+    const asks = series ? unpackColumn(series.asks) : [];
+    const at = (month: string) => series?.months.indexOf(month) ?? -1;
+    const last = series?.months.at(-1) ?? null;
+    const ownPages = new Set((reading.part?.pages ?? []).filter((url) => onHost(url, reading.website.host)));
+    return {
+      websiteId: reading.website._id,
+      host: reading.website.displayHost,
+      you: reading.you,
+      mentions: last ? mentions[at(last)] ?? null : null,
+      before: series && series.months.length > 1 ? mentions[series.months.length - 2] ?? null : null,
+      asks: last ? asks[at(last)] ?? null : null,
+      pagesCited: ownPages.size,
+      series: months.map((month) => (at(month) >= 0 ? mentions[at(month)] ?? null : null)),
+    };
+  });
+
+  // Every question naming the website or a rival, once: where each business came, by where the answer first names it.
+  const byQuestion = new Map<string, { question: string; volume: number; named: Array<{ host: string; you: boolean; at: number }>; yourPage: string | null }>();
+  let yourCitedAnswers = 0;
+  for (const reading of all) {
+    if (!reading.part) continue;
+    for (const entry of questionsOf(reading.part)) {
+      const key = entry.question.toLowerCase();
+      const row = byQuestion.get(key) ?? { question: entry.question, volume: entry.volume, named: [], yourPage: null };
+      if (entry.firstAt !== null) row.named.push({ host: reading.website.displayHost, you: reading.you, at: entry.firstAt });
+      if (reading.you) {
+        const own = entry.pages.find((url) => onHost(url, reading.website.host));
+        if (own) {
+          row.yourPage = pathOf(own);
+          yourCitedAnswers += 1;
+        }
+      }
+      byQuestion.set(key, row);
+    }
+  }
+  const pull = all.find((reading) => reading.you)?.part?.pullId;
+  const cost = pull ? (await ctx.db.get(pull as Id<"seoDataPulls">))?.costUsd ?? null : null;
+  const result = {
+    month: months.at(-1) ?? null,
+    perCheckUsd: cost && cost > 0 ? cost : null,
+    businesses,
+    months,
+    yourCitedAnswers,
+    questions: [...byQuestion.values()].map((row) => {
+      const order = [...row.named].sort((left, right) => left.at - right.at);
+      const you = order.findIndex((entry) => entry.you);
+      return {
+        question: row.question,
+        volume: row.volume,
+        you: you >= 0 ? you + 1 : null,
+        rivals: order.filter((entry) => !entry.you).map((entry) => entry.host),
+        yourPage: row.yourPage,
+        tracked: tracked.has(row.question.toLowerCase()),
+      };
+    }),
+  };
+  return { ...result, seen: radarOverviewSees(result) };
+}
 
 const kindValidator = v.union(v.literal("DIRECTORY"), v.literal("REVIEWS"), v.literal("FORUM"), v.literal("NEWS"), v.literal("VIDEO"), v.literal("REFERENCE"), v.literal("WEBSITE"), v.literal("RIVAL"), v.literal("YOURS"));
 

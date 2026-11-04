@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,7 @@ import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { pagesSees } from "../_components/keywordSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -73,6 +75,17 @@ export default function SitePagesPage() {
     direction: order.direction,
   }, [{ siteId, list: "pages" }]);
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
+  // Every page summed on the server, for the eye alone (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the
+  // table shows one page of them. Each kind of page in the reader's words, as the Type column names it.
+  const figures = useQuery(api.siteKeywords.pageFigures, { siteId });
+  const tn = useTranslations("sites.seesNames");
+  // Each kind's words as one text, the same while they are: `label` is new on every draw, so the figures are built again
+  // only when a part changes.
+  const kindWords = (figures?.kinds ?? []).map((kind) => `${kind.kind}\u0000${pageKinds.label(kind.kind)}`).join("\u0001");
+  const sees = useMemo(() => {
+    const words = new Map(kindWords.split("\u0001").map((entry) => entry.split("\u0000") as [string, string]));
+    return pagesSees(table.result, figures, series, (kind) => words.get(kind) ?? kind, { website: site?.host ?? tn("wholeWebsite"), itsSearches: tn("itsSearches"), quietPages: tn("quietPages"), topFive: tn("topFive"), oneSearch: tn("oneSearch") });
+  }, [table.result, figures, series, kindWords, site?.host, tn]);
   const points = (series?.[0]?.points ?? []).filter((point) => point.pages !== undefined || point.estimatedTraffic !== undefined);
   // The whole site's traffic at its newest check, for each page's share of it.
   const siteTraffic = [...points].reverse().find((point) => point.estimatedTraffic !== undefined)?.estimatedTraffic ?? null;
@@ -80,7 +93,7 @@ export default function SitePagesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<FileText className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="keywordsPages" seen={table.result?.seen} data={table.result && { pages: table.result, series }} />
+      <SiteSees screen="keywordsPages" seen={table.result?.seen} data={sees} />
       {/* A list held in part (sites-data-completeness-plan.md, §4.E): the pages are those of the searches held. */}
       {isPartHeld(site?.coverage) ? (
         <div className="flex flex-col gap-1">

@@ -7,7 +7,8 @@ import type { SeesAsk } from "@/src/ui/components/screens/HakkenSees";
  * the figures the page shows, each named by a key the specialist writes in
  * double brackets and the Editor fills in, with what it counts in plain
  * words — and the places a step may link to. Nothing is worked out here that
- * the page does not show; money is sent in pounds, a rate in percent. Every
+ * the page does not show; a rate is sent in percent, and never money (Anthony,
+ * 2026-11-03: "Take money off"). Every
  * word comes from the catalogue (`googleAnalytics.seesAsk`, the menu's page
  * names), handed in by the screen.
  */
@@ -20,22 +21,20 @@ type Words = (key: string, values?: Record<string, string | number>) => string;
 type Links = { funnel: string; trackingHealth: string; channels: string; conversions: string };
 
 const count = (key: string, value: number, label: string): Fact => ({ key, value, unit: "count", label });
-const money = (key: string, hundredths: number, label: string, currency: string | null): Fact => ({ key, value: Math.round(hundredths) / 100, unit: "money", label, ...(currency ? { currency } : {}) });
 const percent = (key: string, share: number, label: string): Fact => ({ key, value: Math.round(share * 1000) / 10, unit: "percent", label });
 
 const where = (at: Where) => ({ siteId: at.siteId, path: at.path, period: at.period, ...(at.from ? { from: at.from } : {}), ...(at.to ? { to: at.to } : {}), country: at.country, device: at.device });
 
-/** The Conversions page (board "Main"): every conversion counted, the visits, the second box's rate, each kind's worth. */
+/** The Conversions page (board "Main"): every conversion counted, the visits, the second box's rate. */
 export function conversionsAsk(at: Where, words: Words, menu: Links, page: {
   visits: number;
   visitsBefore: number | null;
   total: number;
   totalBefore: number | null;
-  kinds: ReadonlyArray<{ eventName: string; count: number; countBefore: number | null; value: number | null; valueBefore: number | null }>;
+  kinds: ReadonlyArray<{ eventName: string; count: number; countBefore: number | null }>;
   rateOf: string | null;
   rate: number | null;
   rateBefore: number | null;
-  currency: string | null;
   sells: boolean;
   nameOf: (eventName: string) => string;
   hrefFor: (segment: string, filters?: Record<string, string>) => string;
@@ -52,8 +51,6 @@ export function conversionsAsk(at: Where, words: Words, menu: Links, page: {
     const name = page.nameOf(kind.eventName);
     facts.push(count(`conv.${kind.eventName}.now`, kind.count, words("kind", { name, ...now })));
     if (kind.countBefore !== null) facts.push(count(`conv.${kind.eventName}.before`, kind.countBefore, words("kind", { name, ...before })));
-    if (kind.value) facts.push(money(`conv.${kind.eventName}.worth.now`, kind.value, words("worth", { name, ...now }), page.currency));
-    if (kind.valueBefore) facts.push(money(`conv.${kind.eventName}.worth.before`, kind.valueBefore, words("worth", { name, ...before }), page.currency));
   }
   if (page.rateOf && page.rate !== null) facts.push(percent("conv.rate.now", page.rate, words("rate", { name: page.nameOf(page.rateOf), ...now })));
   if (page.rateOf && page.rateBefore !== null) facts.push(percent("conv.rate.before", page.rateBefore, words("rate", { name: page.nameOf(page.rateOf), ...before })));
@@ -73,7 +70,7 @@ export function conversionsAsk(at: Where, words: Words, menu: Links, page: {
   };
 }
 
-/** A conversion's own screen (board "Conversion"): how many, the visits that did it, its rate, its worth, the website's visits. */
+/** A conversion's own screen (board "Conversion"): how many, the visits that did it, its rate, the website's visits. */
 export function conversionAsk(at: Where, words: Words, menu: Links, page: {
   eventName: string;
   name: string;
@@ -85,9 +82,6 @@ export function conversionAsk(at: Where, words: Words, menu: Links, page: {
   siteVisitsBefore: number | null;
   rate: number | null;
   rateBefore: number | null;
-  worth: number | null;
-  worthBefore: number | null;
-  currency: string | null;
   sells: boolean;
   hrefFor: (segment: string, filters?: Record<string, string>) => string;
 }): SeesAsk {
@@ -103,8 +97,6 @@ export function conversionAsk(at: Where, words: Words, menu: Links, page: {
   if (page.siteVisitsBefore !== null) facts.push(count("ev.siteVisits.before", page.siteVisitsBefore, words("siteVisits", before)));
   if (page.rate !== null) facts.push(percent("ev.rate.now", page.rate, words("rate", now)));
   if (page.rateBefore !== null) facts.push(percent("ev.rate.before", page.rateBefore, words("rate", before)));
-  if (page.worth) facts.push(money("ev.worth.now", page.worth, words("worth", now), page.currency));
-  if (page.worthBefore) facts.push(money("ev.worth.before", page.worthBefore, words("worth", before), page.currency));
   return {
     ...where(at),
     screen: `googleAnalytics.event:${page.eventName}`,

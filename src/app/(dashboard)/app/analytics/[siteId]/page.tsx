@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -20,11 +21,12 @@ import { VisitsChart } from "../_components/AnalyticsChart";
 import { AnalyticsPanel } from "../_components/AnalyticsPanels";
 import { AnalyticsSees } from "../_components/AnalyticsSees";
 import { ChangeCell, PageLink } from "../_components/AnalyticsCells";
-import { formatMoney, formatPercent, formatPerVisit, formatTime } from "../_components/analyticsFormat";
+import { formatPercent, formatPerVisit, formatTime } from "../_components/analyticsFormat";
 import { useEventName } from "../_components/useEventName";
 import { useHealthWords } from "../_components/useHealthWords";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useVisitorName } from "../_components/useVisitorName";
+import { useEyeNames } from "../_components/useEyeFigures";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus, periodWord } from "../_components/useAnalytics";
 
 type Overview = NonNullable<FunctionReturnType<typeof api.googleAnalyticsReads.analyticsOverview>>;
@@ -71,6 +73,7 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
     : rest === null || pagePanels === null ? null : { ...rest, ...pagePanels };
   const currency = status.connection?.currency ?? null;
   const counting = countsAnything(status);
+  const seesData = useOverviewSees(overview, chart, panels, status);
 
   if (overview?.preparing) {
     return <Notice>{t("preparing")}</Notice>;
@@ -79,10 +82,10 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
   const before = overview?.before ?? null;
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="overview" seen={overview?.seen} currency={currency} data={{ figures: overview, chart, panels, health: status.connection?.health }} />
+      <AnalyticsSees screen="overview" seen={overview?.seen} currency={currency} data={seesData} />
 
       {now ? (
-        <AnalyticsFigures now={now} before={before} currency={currency} conversionsHref={hrefFor("conversions")} counting={counting} />
+        <AnalyticsFigures now={now} before={before} conversionsHref={hrefFor("conversions")} counting={counting} />
       ) : <div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />}
 
       <VisitsChart
@@ -93,15 +96,50 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
         exportName="google-analytics-overview"
       />
 
-      <ChannelsPanel panels={panels} now={now} before={before} currency={currency} />
+      <ChannelsPanel panels={panels} now={now} before={before} />
       <KindsPanel panels={panels} />
       <LandingPanel panels={panels} now={now} before={before} />
-      <ConversionsPanel panels={panels} now={now} before={before} currency={currency} counting={counting} />
+      <ConversionsPanel panels={panels} now={now} before={before} counting={counting} />
       <WhoPanel panels={panels} now={now} before={before} />
-      {status.connection?.shop ? <ShopPanel panels={panels} currency={currency} /> : null}
+      {status.connection?.shop ? <ShopPanel panels={panels} /> : null}
       <HealthPanel status={status} />
     </div>
   );
+}
+
+/**
+ * What the eye reads of Overview (ask-hakken-every-chart-page-plan-2026-11-03.md, section 5): its figures, chart and
+ * panels as the page draws them, Who visited by the names the panel shows, every channel as Channels' table reads it
+ * (the panel shows three), and the names its findings use, in the reader's words. Never money: `AnalyticsSees` takes
+ * off what the reads still carry for Ask Hakken.
+ */
+function useOverviewSees(
+  overview: Overview | null | undefined,
+  chart: FunctionReturnType<typeof api.googleAnalyticsChartReads.analyticsChart> | undefined,
+  panels: Panels | null | undefined,
+  status: AnalyticsStatus,
+) {
+  const args = useAnalyticsArgs();
+  const tf = useTranslations("googleAnalytics.filters.devices");
+  const nameOf = useVisitorName();
+  const names = useEyeNames();
+  const channels = useQuery(api.googleAnalyticsReads.analyticsListPage, status.connection?.newestDay ? { ...args, list: "channel", sort: "visits", direction: "desc", page: 1, rows: 25 } : "skip");
+  const health = status.connection?.health;
+  return useMemo(() => {
+    if (!overview) return overview;
+    const { who, ...rest } = panels ?? ({} as Partial<Panels>);
+    // Each share as a percentage already, so `pageData.ts` turns neither round.
+    const named = (who ?? []).map((row) => ({
+      name: row.kind === "device" ? (tf.has(row.label) ? tf(row.label) : row.label) : nameOf(row.label),
+      kind: row.kind, nowPercent: Math.round(row.share * 1000) / 10, beforePercent: row.shareBefore === null ? null : Math.round(row.shareBefore * 1000) / 10,
+    }));
+    // Never Search Console's clicks, which the read carries for the old box and this page no longer shows.
+    const { searchConsole: _searchConsole, ...figures } = overview;
+    void _searchConsole;
+    return { figures, chart, panels: panels ? rest : panels, who: named, ...(channels ? { channelsTable: channels } : {}), health, names };
+    // The words change only with the language, which reloads the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overview, chart, panels, channels, health, names]);
 }
 
 /** "27.0% more than the 30 days before", "the same as …", or nothing to compare with yet. */
@@ -122,7 +160,7 @@ const mono = (text: string, tone = "text-foreground") => <span className={`white
 const quiet = (text: string) => <span className="text-[12.5px] text-secondary">{text}</span>;
 
 /** OV2: the channels with the most visits, and the visits from tagged links and ad keywords. */
-function ChannelsPanel({ panels, now, before, currency }: { panels: Panels | null | undefined; now: Figures | null; before: Figures | null; currency: string | null }) {
+function ChannelsPanel({ panels, now, before }: { panels: Panels | null | undefined; now: Figures | null; before: Figures | null }) {
   const t = useTranslations("googleAnalytics.overview");
   const args = useAnalyticsArgs();
   const hrefFor = useAnalyticsHref(args.siteId);
@@ -145,7 +183,6 @@ function ChannelsPanel({ panels, now, before, currency }: { panels: Panels | nul
           { key: "visits", header: t("columns.visits"), align: "right", cell: (row) => mono(formatNumber(row.visits)) },
           { key: "change", header: t("columns.change"), align: "right", cell: (row) => <ChangeCell change={row.change} /> },
           { key: "conversions", header: t("columns.conversions"), align: "right", cell: (row) => mono(formatNumber(row.conversions), row.conversions > 0 ? "text-foreground" : "text-muted") },
-          { key: "value", header: t("columns.value"), align: "right", cell: (row) => (row.value > 0 ? mono(formatMoney(row.value, currency), "text-secondary") : <NoFigure />) },
         ]}
       />
     </AnalyticsPanel>
@@ -222,16 +259,15 @@ function LandingPanel({ panels, now, before }: { panels: Panels | null | undefin
 const STATUS_TONE = { counted: "success", uncounted: "warning", never: "warning" } as const;
 
 /** OV5: what counts and the key events not counted, those that happened first. */
-function ConversionsPanel({ panels, now, before, currency, counting }: { panels: Panels | null | undefined; now: Figures | null; before: Figures | null; currency: string | null; counting: boolean }) {
+function ConversionsPanel({ panels, now, before, counting }: { panels: Panels | null | undefined; now: Figures | null; before: Figures | null; counting: boolean }) {
   const t = useTranslations("googleAnalytics.overview");
   const args = useAnalyticsArgs();
   const hrefFor = useAnalyticsHref(args.siteId);
   const nameOf = useEventName();
   const changeWords = useChangeWords();
   const conversions = panels?.conversions;
-  const note = !counting ? t("conversions.nothingCounted") : now ? t(now.value > 0 ? "conversions.worth" : "conversions.note", {
+  const note = !counting ? t("conversions.nothingCounted") : now ? t("conversions.note", {
     conversions: now.conversions,
-    value: formatMoney(now.value, currency),
     change: changeWords(now.conversions, before?.conversions),
     rate: formatPercent(now.visits > 0 ? now.conversions / now.visits : null),
   }) : undefined;
@@ -254,7 +290,6 @@ function ConversionsPanel({ panels, now, before, currency, counting }: { panels:
             ),
           },
           { key: "times", header: t("conversions.times"), align: "right", cell: (row) => mono(formatNumber(row.times)) },
-          { key: "value", header: t("columns.value"), align: "right", cell: (row) => (row.value ? mono(formatMoney(row.value, currency)) : <NoFigure />) },
           { key: "change", header: t("columns.change"), align: "right", cell: (row) => <ChangeCell change={row.change} /> },
           { key: "counted", header: t("conversions.counted"), cell: (row) => <StatusLabel tone={STATUS_TONE[row.status]}>{t(`conversions.status.${row.status}`)}</StatusLabel> },
         ]}
@@ -302,12 +337,12 @@ function WhoPanel({ panels, now, before }: { panels: Panels | null | undefined; 
 }
 
 /** OV7: the best sellers, for a website that sells. */
-function ShopPanel({ panels, currency }: { panels: Panels | null | undefined; currency: string | null }) {
+function ShopPanel({ panels }: { panels: Panels | null | undefined }) {
   const t = useTranslations("googleAnalytics.overview");
   const args = useAnalyticsArgs();
   const hrefFor = useAnalyticsHref(args.siteId);
   const shop = panels?.shop;
-  const note = shop ? t("shop.note", { bought: shop.bought, revenue: formatMoney(shop.revenue, currency), basket: shop.basket }) : undefined;
+  const note = shop ? t("shop.note", { bought: shop.bought, basket: shop.basket }) : undefined;
   return (
     <AnalyticsPanel title={t("shop.title")} description={note} seeAll={{ href: hrefFor("products"), label: t("shop.seeAll") }}>
       <CompactList
@@ -319,7 +354,6 @@ function ShopPanel({ panels, currency }: { panels: Panels | null | undefined; cu
           { key: "viewed", header: t("shop.viewed"), align: "right", cell: (row) => mono(formatNumber(row.looks)) },
           { key: "basket", header: t("shop.basket"), align: "right", cell: (row) => mono(formatNumber(row.basket)) },
           { key: "bought", header: t("shop.bought"), align: "right", cell: (row) => mono(formatNumber(row.bought)) },
-          { key: "revenue", header: t("shop.revenue"), align: "right", cell: (row) => mono(formatMoney(row.revenue, currency)) },
         ]}
       />
     </AnalyticsPanel>

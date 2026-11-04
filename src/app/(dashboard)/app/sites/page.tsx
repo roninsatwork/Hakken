@@ -16,8 +16,6 @@ import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { cn } from "@/src/ui/lib/utils";
 import { formatDay, formatNumber } from "./_components/siteFormat";
 import { SiteMark } from "./_components/SiteMark";
-import { SiteSees } from "./_components/SiteSees";
-import { websitesSees } from "@/convex/utils/sees/site";
 import { groupHolds } from "./_components/siteGroups";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
@@ -134,7 +132,6 @@ export default function SitesPage() {
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader icon={<Globe className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} divider />
-        <SiteSees screen="websites" seen={sites && websitesSees(sites)} data={sites} />
 
         <DataTable
           rows={paged.pageRows}

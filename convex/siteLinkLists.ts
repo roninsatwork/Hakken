@@ -475,3 +475,86 @@ export const linkChanges = tenantQuery({
     return [...points.values()].sort((left, right) => left.day.localeCompare(right.day));
   },
 });
+
+/** An anchor's spam score from which its links read as bought or spam (DataForSEO's 0–100; the "PBN" anchors score 60 and more). */
+const SPAMMY_ANCHOR = 50;
+/** Anchors first seen this many days before the list's day are new. */
+const FRESH_DAYS = 90;
+const shareShape = v.object({ links: v.number(), websites: v.number(), anchors: v.number() });
+
+/**
+ * The whole anchor list, summed for the eye on Anchors (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10:
+ * "38% of links use one search phrase as their words"): the page shows one page of a list of hundreds, so the rules'
+ * shares are worked out here, over every anchor. The links with the most-used words, those naming the business, those
+ * with no words, those whose words score as spam, and those first seen in the last 90 days. No money, nothing bought.
+ */
+export const anchorFigures = tenantQuery({
+  args: { siteId: v.id("companyWebsites") },
+  returns: v.object({
+    day: v.union(v.string(), v.null()),
+    anchors: v.number(),
+    links: v.number(),
+    top: v.union(v.null(), v.object({ anchor: v.string(), links: v.number(), websites: v.number() })),
+    brand: shareShape,
+    noWords: shareShape,
+    spammy: shareShape,
+    fresh: shareShape,
+  }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const { rows: held } = heldTo(await readAnchors(ctx, site.website._id), LINK_LIST_READ);
+    const every = newestPerKey(held, (row) => row.anchor).filter((row) => row.status !== "LOST");
+    const day = every.reduce<string | null>((newest, row) => (newest === null || row.day > newest ? row.day : newest), null);
+    // The business's own name, as its website spells it: "acme" of acme.co.uk, as the box finds it (`anchorsSees`).
+    const brand = site.website.host.toLowerCase().replace(/^www\./, "").split(".")[0];
+    const freshFrom = day ? new Date(Date.parse(`${day}T00:00:00Z`) - FRESH_DAYS * 86_400_000).toISOString().slice(0, 10) : null;
+    const sum = (rows: typeof every) => ({ links: rows.reduce((total, row) => total + row.backlinks, 0), websites: rows.reduce((total, row) => total + row.referringDomains, 0), anchors: rows.length });
+    const top = [...every].sort((left, right) => right.backlinks - left.backlinks)[0];
+    return {
+      day,
+      anchors: every.length,
+      links: every.reduce((total, row) => total + row.backlinks, 0),
+      top: top ? { anchor: top.anchor, links: top.backlinks, websites: top.referringDomains } : null,
+      brand: sum(every.filter((row) => brand.length >= 3 && row.anchor.toLowerCase().replace(/\s+/g, "").includes(brand))),
+      noWords: sum(every.filter((row) => row.anchor.trim() === "")),
+      spammy: sum(every.filter((row) => (row.spamScore ?? 0) >= SPAMMY_ANCHOR)),
+      fresh: sum(every.filter((row) => freshFrom !== null && row.firstSeen !== undefined && row.firstSeen >= freshFrom)),
+    };
+  },
+});
+
+/**
+ * Every server and network links come from, summed for the eye on Referring IPs (section 10: "One network holds 14% of
+ * linking websites"): the server carrying the most links and its share of every link, and the network holding the most
+ * linking websites, over the whole list rather than the page on screen.
+ */
+export const serverFigures = tenantQuery({
+  args: { siteId: v.id("companyWebsites") },
+  returns: v.object({
+    servers: v.number(),
+    networks: v.number(),
+    links: v.number(),
+    websites: v.number(),
+    /** Servers each carrying one linking website only. */
+    oneWebsiteServers: v.number(),
+    topServer: v.union(v.null(), v.object({ ip: v.string(), subnet: v.string(), links: v.number(), websites: v.number() })),
+    topNetwork: v.union(v.null(), v.object({ subnet: v.string(), servers: v.number(), links: v.number(), websites: v.number() })),
+  }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const { rows: held } = heldTo(await readServers(ctx, site.website._id), LINK_LIST_READ);
+    const every = newestPerKey(held, (row) => row.ip).filter((row) => row.status !== "LOST");
+    const networks = networksOf(every);
+    const server = [...every].sort((left, right) => right.backlinks - left.backlinks)[0];
+    const network = [...networks].sort((left, right) => right.referringDomains - left.referringDomains || right.backlinks - left.backlinks)[0];
+    return {
+      servers: every.length,
+      networks: networks.length,
+      links: every.reduce((total, row) => total + row.backlinks, 0),
+      websites: every.reduce((total, row) => total + row.referringDomains, 0),
+      oneWebsiteServers: every.filter((row) => row.referringDomains === 1).length,
+      topServer: server ? { ip: server.ip, subnet: server.subnet, links: server.backlinks, websites: server.referringDomains } : null,
+      topNetwork: network ? { subnet: network.subnet, servers: network.ips, links: network.backlinks, websites: network.referringDomains } : null,
+    };
+  },
+});

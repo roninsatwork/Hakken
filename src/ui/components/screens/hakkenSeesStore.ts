@@ -206,6 +206,64 @@ export function withSeesParts(data: unknown, held: Readonly<Record<string, unkno
   return { page: data, ...held };
 }
 
+/**
+ * The section's own pages, as its menu lists them (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 6): the
+ * places a press's "Do first" steps may send the reader, on every page of every section, not only the three pages that
+ * handed links of their own. The menu (`SectionMenu`) publishes them; the eye adds them after the page's own.
+ */
+export type SeesLink = { label: string; href: string };
+let sectionLinks: readonly SeesLink[] = [];
+const NO_LINKS: readonly SeesLink[] = [];
+
+/** Publish a section's pages while its menu is drawn; the same list again changes nothing. */
+export function useSeesSectionLinks(links: readonly SeesLink[] | null) {
+  const key = links ? JSON.stringify(links) : "";
+  useEffect(() => {
+    if (!links || links.length === 0) return;
+    const held: readonly SeesLink[] = JSON.parse(key);
+    sectionLinks = held;
+    changed();
+    return () => {
+      if (sectionLinks !== held) return;
+      sectionLinks = NO_LINKS;
+      changed();
+    };
+    // The list by its words and addresses, never by the array it came in.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+}
+
+/** The section's pages its menu published, the same array until they change. */
+export function useSectionLinks(): readonly SeesLink[] {
+  return useStore(() => sectionLinks, () => NO_LINKS);
+}
+
+/**
+ * The charts on the page, each its title and a way to read its figures — the download it already offers (`ChartCard`'s
+ * `csv`) — for Ask Hakken to redraw from (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 9). Read only when
+ * a conversation starts, so a chart costs nothing while nobody asks.
+ */
+export type SeesChart = { title: string; csv: () => string };
+/** Each chart by its card, holding its latest title and figures: a card keeps its place while its figures change. */
+const charts = new Map<string, { current: SeesChart | null }>();
+
+/** Register a chart while it is drawn; its latest figures are read when a conversation starts. */
+export function useSeesChart(id: string, chart: SeesChart | null) {
+  useEffect(() => {
+    const held = charts.get(id) ?? { current: null };
+    held.current = chart;
+    charts.set(id, held);
+  }, [id, chart]);
+  useEffect(() => () => {
+    charts.delete(id);
+  }, [id]);
+}
+
+/** The charts drawn on the page now, in the order they were first drawn. */
+export function seesCharts(): SeesChart[] {
+  return [...charts.values()].flatMap((held) => (held.current ? [held.current] : []));
+}
+
 /** Everything forgotten: for tests. */
 export function resetSees() {
   current = null;
@@ -214,6 +272,8 @@ export function resetSees() {
   claims = [];
   asked = null;
   parts = {};
+  sectionLinks = NO_LINKS;
+  charts.clear();
   readKept.clear();
   changed();
 }
@@ -221,7 +281,8 @@ export function resetSees() {
 /**
  * The Ask Hakken conversation started from the eye's panel on each page, by the page's key (`seesKey`), while the
  * panel stays open (sees-side-panel-plan-2026-10-31.md, phase 3); each press of the eye starts a new one
- * (ask-hakken-every-chart-plan-2026-10-31.md, §2b). The conversations themselves are in Ask Hakken's list.
+ * (ask-hakken-every-chart-plan-2026-10-31.md, §2b), as does a refresh (Anthony, 2026-11-04). The conversations
+ * themselves stay in Ask Hakken's list.
  */
 const seesThreads = new Map<string, string>();
 let threadsVersion = 0;
@@ -231,7 +292,8 @@ export function noteSeesThread(key: string, threadId: string) {
   threadsVersion += 1;
   for (const listener of threadListeners) listener();
 }
-function forgetSeesThreads() {
+/** The panel's chats let go of: each press of the eye, and a super admin's refresh, starts a new one. */
+export function forgetSeesThreads() {
   if (seesThreads.size === 0) return;
   seesThreads.clear();
   threadsVersion += 1;

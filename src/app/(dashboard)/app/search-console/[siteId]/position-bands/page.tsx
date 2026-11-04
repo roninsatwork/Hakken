@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Change } from "@/src/ui/components/screens/Change";
@@ -53,9 +54,15 @@ export default function SearchConsoleBandsPage() {
   ];
   // A tick box for each band, as drawn.
   const ticks = useSeriesTicks(series);
+  // The eye's figures: the list's, with each band named as its boxes name it, and the chart's days, weeks or months.
+  const bandNames = useMemo(() => ({
+    "1-3": t("bands.top3"), "4-10": t("filters.bands.4-10"), "11-20": t("filters.bands.11-20"), "21-50": t("filters.bands.21-50"), "51+": t("filters.bands.51+"),
+  }), [t]);
+  // The chart's periods by their first day (`day`), so the eye keeps the newest of a long chart, never its oldest.
+  const seesData = useMemo(() => (list.pageData ? { ...list.pageData, chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null, names: bandNames } : undefined), [list.pageData, periods, bandNames]);
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="bands" seen={list.summary ? bandsSees(list.summary) : null} data={list.pageData ? { ...list.pageData, chart: periods ?? null } : undefined} />}
+      sees={<SearchConsoleSees screen="bands" seen={list.summary ? bandsSees(list.summary) : null} data={seesData} />}
       icon={<BarChart3 className="h-5 w-5 text-brand" />}
       title={t("bands.title")}
       description={t("bands.description")}

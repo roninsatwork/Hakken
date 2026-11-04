@@ -47,7 +47,7 @@ export const REASON_WORDS: Record<Reason, string> = {
 
 /** The shape of its answer, fixed in code so the run can read it (shown read-only on its Instructions page). */
 export const PAGE_ANSWER = [
-  "You are given pages of one website, each with the rule's verdict and reason: its path, title, kind of page, its visits and enquiries over 12 months, Google's showings and clicks over 90 days, how many other websites link to it, the site audit's flags, and the page the rule would merge or redirect it into.",
+  "You are given pages of one website, each with the rule's verdict and reason: its path, title, classification, its visits and enquiries over 12 months, Google's showings and clicks over 90 days, how many other websites link to it, the site audit's flags, and the page the rule would merge or redirect it into.",
   "Answer in JSON only: {\"pages\": [{\"path\": \"/…/\", \"verdict\": \"KEEP\" | \"IMPROVE\" | \"MERGE\" | \"REDIRECT\" | \"REMOVE\", \"into\": \"/…/\" or null, \"why\": \"…\"}]}.",
   "Give every page you are handed, keeping the rule's verdict unless the evidence says otherwise, and always one sentence why that a business owner understands.",
   "Never remove a page other websites link to: redirect it. Never remove a service, product, company or legal page. Merge or redirect a page only into another page of the same website, named in into.",

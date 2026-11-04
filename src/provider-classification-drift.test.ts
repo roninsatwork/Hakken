@@ -97,6 +97,16 @@ describe('Provider Classification Drift', () => {
       // Analytics' channels show apart (that plan's §4.4): naming them is the subject.
       'convex/utils/aiAssistants.ts',
       'convex/utils/aiAssistants.test.ts',
+      // Visibility's AI answers are asked of each assistant, and the eye's rules are tested on More Handles' own saved
+      // answers, each filed under its engine (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): naming the
+      // engines is the subject.
+      'convex/utils/sees/visibilityPeriods.test.ts',
+      'src/test/fixtures/moreHandlesVisibility.json',
+      // Insights' AI search reads the same answers and the assistants' visits, each by its name; its rules are tested on
+      // More Handles' saved figures (the same plan, section 9).
+      'convex/utils/sees/insightsPageFindings.test.ts',
+      'src/test/fixtures/moreHandlesInsightsPeriods.json',
+      'src/test/fixtures/moreHandlesInsightsWeek.json',
       'src/provider-classification-drift.test.ts',
     ]);
 

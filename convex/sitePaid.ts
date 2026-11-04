@@ -89,16 +89,16 @@ export async function filePaidKeywords(
 /**
  * Paid keywords' columns that sort (docs/plans/active/
  * sites-table-sorting-plan.md): the search A to Z, the advert's position from
- * the top, and the most searched, dearest click, most visits and highest cost
- * first.
+ * the top, and the most searched and most visits first. Never by what a click
+ * or the visits would cost: our data supplier's guesses, no longer shown
+ * (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 4; Anthony,
+ * 2026-11-03: "Take it off"). They stay stored.
  */
-const PAID_SORTS: ListSorts<Doc<"sitePaidKeywords">, "keyword" | "position" | "volume" | "cpc" | "traffic" | "cost"> = {
+const PAID_SORTS: ListSorts<Doc<"sitePaidKeywords">, "keyword" | "position" | "volume" | "traffic"> = {
   keyword: { value: (row) => row.keyword, first: "asc" },
   position: { value: (row) => row.position, first: "asc" },
   volume: { value: (row) => row.volume, first: "desc" },
-  cpc: { value: (row) => row.cpc, first: "desc" },
   traffic: { value: (row) => row.traffic, first: "desc" },
-  cost: { value: (row) => row.trafficCost, first: "desc" },
 };
 
 /**
@@ -116,7 +116,7 @@ export const listPaidKeywords = tenantQuery({
     ...listPageArgs,
     search: v.optional(v.string()),
     sort: v.optional(v.union(
-      v.literal("keyword"), v.literal("position"), v.literal("volume"), v.literal("cpc"), v.literal("traffic"), v.literal("cost"),
+      v.literal("keyword"), v.literal("position"), v.literal("volume"), v.literal("traffic"),
     )),
     direction: sortDirectionArg,
   },
@@ -127,9 +127,7 @@ export const listPaidKeywords = tenantQuery({
     url: v.union(v.string(), v.null()),
     page: v.string(),
     volume: v.union(v.number(), v.null()),
-    cpc: v.union(v.number(), v.null()),
     traffic: v.union(v.number(), v.null()),
-    trafficCost: v.union(v.number(), v.null()),
     day: v.string(),
   })),
   handler: async (ctx, args) => {
@@ -154,13 +152,11 @@ export const listPaidKeywords = tenantQuery({
         url: row.url ?? null,
         page: row.page,
         volume: row.volume ?? null,
-        cpc: row.cpc ?? null,
         traffic: row.traffic ?? null,
-        trafficCost: row.trafficCost ?? null,
         day: row.day,
       })),
       // What Hakken sees is of every search advertised on, whatever the search box holds.
-      seen: paidKeywordsSees(held.map((row) => ({ keyword: row.keyword, traffic: row.traffic ?? null, trafficCost: row.trafficCost ?? null }))),
+      seen: paidKeywordsSees(held.map((row) => ({ keyword: row.keyword, traffic: row.traffic ?? null, volume: row.volume ?? null }))),
     };
   },
 });

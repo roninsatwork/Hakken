@@ -4,12 +4,12 @@ import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
+import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { SITE_SERIES_COLOURS, SiteBarChart, SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
 import { datedRow } from "../../sites/_components/datedRows";
 import { formatMonth, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
 import { SearchConsoleChartCard, useSeriesTicks } from "../../search-console/_components/SearchConsoleChartCard";
-import { currencySign, pathOf } from "./analyticsFormat";
+import { pathOf } from "./analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, type Step, periodWord } from "./useAnalytics";
 import type { VisitorList } from "./AnalyticsListScreen";
 import { coarserThanStep, perStep, stepKey } from "./stepScale";
@@ -23,7 +23,6 @@ export type ChartDay = {
   engaged: number;
   views?: number;
   conversions: number;
-  value: number;
   events?: number[];
 };
 
@@ -32,7 +31,6 @@ const MEASURE_COLOURS: Record<string, string> = {
   visits: CHART_SERIES_ORANGE,
   engaged: CHART_SERIES_BLUE,
   conversions: CHART_SERIES_VIOLET,
-  value: CHART_SERIES_AMBER,
 };
 
 /** Days into the step chosen — each week or month added up from its days — dated by their first day. */
@@ -40,14 +38,13 @@ export function stepped(days: readonly ChartDay[], step: Step, eventCount = 0): 
   const buckets = new Map<string, ChartDay & { first: string; last: string }>();
   for (const day of [...days].sort((left, right) => left.day.localeCompare(right.day))) {
     const key = stepKey(step, day.day, day.lastDay);
-    const bucket = buckets.get(key) ?? { day: key, first: day.day, last: day.day, visits: 0, engaged: 0, views: 0, conversions: 0, value: 0, events: Array<number>(eventCount).fill(0) };
+    const bucket = buckets.get(key) ?? { day: key, first: day.day, last: day.day, visits: 0, engaged: 0, views: 0, conversions: 0, events: Array<number>(eventCount).fill(0) };
     const last = day.lastDay ?? day.day;
     if (last > bucket.last) bucket.last = last;
     bucket.visits += day.visits;
     bucket.views = (bucket.views ?? 0) + (day.views ?? 0);
     bucket.engaged += day.engaged;
     bucket.conversions += day.conversions;
-    bucket.value += day.value;
     (day.events ?? []).forEach((count, index) => (bucket.events![index] = (bucket.events![index] ?? 0) + count));
     buckets.set(key, bucket);
   }
@@ -61,7 +58,6 @@ export function stepped(days: readonly ChartDay[], step: Step, eventCount = 0): 
         engaged: each(bucket.engaged),
         views: each(bucket.views ?? 0),
         conversions: each(bucket.conversions),
-        value: Math.round(perStep(bucket.value, bucket.first, bucket.last, step)) / 100,
         ...Object.fromEntries((bucket.events ?? []).map((count, index) => [`event${index}`, each(count)])),
         ...(coarserThanStep(bucket.first, bucket.last, step) ? { coarse: true } : {}),
       },
@@ -73,25 +69,25 @@ export function stepped(days: readonly ChartDay[], step: Step, eventCount = 0): 
 /**
  * "Visits and conversions over time" (§5; §11 boards 2 and 15): tick the
  * measures to draw, each line on its own scale so small and large numbers read
- * together; visits and conversions ticked at first. Steps by day, week or
- * month as chosen at the top.
+ * together; visits and conversions ticked at first, never money (Anthony,
+ * 2026-11-03: "Take money off"). Steps by day, week or month as chosen at the
+ * top.
  */
-export function AnalyticsChart({ days, host, from, to, currency, exportName }: {
+export function AnalyticsChart({ days, host, from, to, exportName }: {
   days: readonly ChartDay[];
   host: string;
   from: string | null;
   to: string | null;
-  currency: string | null;
   exportName: string;
 }) {
   const t = useTranslations("googleAnalytics.chart");
   const [step] = useStep();
-  const series: SiteSeries[] = (["visits", "engaged", "conversions", "value"] as const).map((key) => ({
+  const series: SiteSeries[] = (["visits", "engaged", "conversions"] as const).map((key) => ({
     key,
-    name: key === "value" ? t("value", { sign: currencySign(currency) }) : t(key),
+    name: t(key),
     colour: MEASURE_COLOURS[key],
   }));
-  const { shown, controls } = useSeriesTicks(series, ["engaged", "value"]);
+  const { shown, controls } = useSeriesTicks(series, ["engaged"]);
   const data = stepped(days, step);
   return (
     <SearchConsoleChartCard
@@ -158,25 +154,21 @@ export function VisitsChart({ days, host, from, to, exportName, viewsOnly = fals
 
 /**
  * "Conversions over time" (§11 board 7; back by GA35, §18.2 board 24): one
- * line for each kind of conversion, on one scale; tick Value to add the money
- * on a scale of its own. Restored as built on 2026-10-10.
+ * line for each kind of conversion, on one scale, never money (Anthony,
+ * 2026-11-03: "Take money off"). Restored as built on 2026-10-10.
  */
-export function ConversionsChart({ days, events, names, host, from, to, currency }: {
+export function ConversionsChart({ days, events, names, host, from, to }: {
   days: readonly ChartDay[];
   events: readonly string[];
   names: (eventName: string) => string;
   host: string;
   from: string | null;
   to: string | null;
-  currency: string | null;
 }) {
   const t = useTranslations("googleAnalytics.chart");
   const [step] = useStep();
-  const series: SiteSeries[] = [
-    ...events.map((eventName, index) => ({ key: `event${index}`, name: names(eventName), colour: SITE_SERIES_COLOURS[index % SITE_SERIES_COLOURS.length] })),
-    { key: "value", name: t("value", { sign: currencySign(currency) }), colour: CHART_SERIES_AMBER },
-  ];
-  const { shown, controls } = useSeriesTicks(series, ["value"]);
+  const series: SiteSeries[] = events.map((eventName, index) => ({ key: `event${index}`, name: names(eventName), colour: SITE_SERIES_COLOURS[index % SITE_SERIES_COLOURS.length] }));
+  const { shown, controls } = useSeriesTicks(series, []);
   const data = stepped(days, step, events.length);
   return (
     <SearchConsoleChartCard
@@ -191,7 +183,7 @@ export function ConversionsChart({ days, events, names, host, from, to, currency
       step={step}
     >
       {data.length > 0
-        ? <SiteLineChart data={data} series={shown} scaleOf={(entry) => (entry.key === "value" ? "value" : "conversions")} />
+        ? <SiteLineChart data={data} series={shown} sharedScale />
         : <p className="py-10 text-center text-[12px] text-muted">{t("empty")}</p>}
     </SearchConsoleChartCard>
   );
@@ -392,77 +384,5 @@ export function CampaignsDailyChart() {
       exportName="google-analytics-campaigns-daily"
       title={{ ...t.raw("campaignsTitle") as { day: string; week: string; month: string }, hint: t("campaignsHint", { period: tf(`periods.${periodWord(args.period)}`) }) }}
     />
-  );
-}
-
-/** Lines of views a day added up into the step chosen, one value a line, dated by each bucket's first day. */
-function viewsByStep(step: Step, series: readonly SiteSeries[], lines: ReadonlyArray<ReadonlyArray<{ day: string; lastDay?: string; views: number }>>): Array<Record<string, unknown>> {
-  const buckets = new Map<string, { first: string; last: string; views: number[] }>();
-  lines.forEach((points, line) => {
-    for (const point of points) {
-      const key = stepKey(step, point.day, point.lastDay);
-      const bucket = buckets.get(key) ?? { first: point.day, last: point.day, views: series.map(() => 0) };
-      if (point.day < bucket.first) bucket.first = point.day;
-      const last = point.lastDay ?? point.day;
-      if (last > bucket.last) bucket.last = last;
-      bucket.views[line] += point.views;
-      buckets.set(key, bucket);
-    }
-  });
-  // A page's week or month held whole, as its average for the step (ga-stored-figures-plan.md SF2b).
-  return [...buckets.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, bucket]) => datedRow(
-    { day: step === "month" ? `${key}-01` : bucket.first, lastDay: bucket.last },
-    {
-      ...Object.fromEntries(series.map((entry, index) => [entry.key, Math.round(perStep(bucket.views[index] ?? 0, bucket.first, bucket.last, step) * 10) / 10])),
-      ...(coarserThanStep(bucket.first, bucket.last, step) ? { coarse: true } : {}),
-    },
-    step === "month" ? formatMonth(key) : formatShortDay(bucket.first),
-  ));
-}
-
-/** Each ticked page's line, in the order ticked; the website's is grey and dashed. */
-const PLOTTED_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_AMBER, CHART_SERIES_TEAL];
-
-/**
- * All pages' "Views a day" (docs/plans/active/all-pages-rethink-plan.md AP2,
- * AP3): short and wide over the table, as Google Analytics draws Pages and
- * screens — the whole website dashed, from Overview's days, and each page
- * ticked in the table a line of its own, five at most, asked of Google when
- * first drawn. Stepped by day, week or month as chosen at the top.
- */
-export function PagesDailyChart({ pages }: { pages: readonly string[] }) {
-  const t = useTranslations("googleAnalytics.chart.pagesDaily");
-  const tc = useTranslations("googleAnalytics.chart");
-  const tf = useTranslations("googleAnalytics.filters");
-  const args = useAnalyticsArgs();
-  const status = useAnalyticsStatus();
-  const [step] = useStep();
-  const [period] = usePeriod();
-  const ready = Boolean(status?.connection?.newestDay);
-  const website = useQuery(api.googleAnalyticsChartReads.analyticsChart, ready ? args : "skip");
-  const daily = useQuery(api.googleAnalyticsPageReads.analyticsPagesDaily, ready && pages.length > 0 ? { ...args, pages: [...pages] } : "skip");
-  const drawn = pages.flatMap((ref, index) => {
-    const page = daily?.pages.find((one) => one.ref === ref);
-    return page?.points ? [{ ...page, points: page.points, colour: PLOTTED_COLOURS[index] ?? CHART_SERIES_SLATE }] : [];
-  });
-  const series: SiteSeries[] = [
-    { key: "website", name: t("website"), colour: CHART_SERIES_SLATE, dashed: true },
-    ...drawn.map((page, index) => ({ key: `page${index}`, name: pathOf(page.address), colour: page.colour })),
-  ];
-  const data = viewsByStep(step, series, [website?.points ?? [], ...drawn.map((page) => page.points)]);
-  const hint = `${t("hint", { period: tf(`periods.${periodWord(period)}`) })}${data.some((row) => row.coarse === true) ? ` ${tc(`coarse.${step}`)}` : ""}`;
-  return (
-    <SearchConsoleChartCard
-      title={t(`title.${step}`)}
-      hint={hint}
-      exportName="google-analytics-pages-daily"
-      csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number)]))}
-      host={status?.host ?? ""}
-      from={null}
-      to={null}
-      step={step}
-    >
-      {data.length > 0 ? <SiteLineChart data={data} series={series} height={200} sharedScale /> : <p className="py-10 text-center text-[12px] text-muted">{tc("empty")}</p>}
-    </SearchConsoleChartCard>
   );
 }

@@ -72,16 +72,15 @@ function cell(value: string | number | boolean | null | undefined): string {
 
 const line = (values: Array<string | number | boolean | null | undefined>) => values.map(cell).join(",");
 
-/** Dollars to the cent: DataForSEO's prices arrive with float noise (14.960000038146973). */
-const cents = (value: number | null | undefined) => (value === null || value === undefined ? null : Math.round(value * 100) / 100);
-
 /** How an answer treated the site, in the words of the answers file, by the one rule every screen reads (`answerStance`). */
 const STANCE_WORDS = { WARNED_AGAINST: "warned against", RECOMMENDED: "recommended", NAMED: "named", NOT_NAMED: "not named" } as const;
 
 /** Each table's columns, in the order the page shows them. Headings in English, like every CSV here. */
 const HEADERS: Record<ExportKind, string[]> = {
-  keywords: ["keyword", "position", "change", "status", "volume", "intent", "difficulty", "cpc_usd", "traffic", "page", "last_checked"],
-  pages: ["page", "type", "keywords", "top_3", "best_position", "traffic", "traffic_value_usd", "page_rank", "linking_websites", "top_keyword", "last_checked"],
+  // No cost per click and no worth of the visits (Anthony, 2026-11-03, on every guessed money figure: "Yes, all of it"):
+  // our data supplier's guesses, not money anyone measured. They stay in what is stored; the files no longer carry them.
+  keywords: ["keyword", "position", "change", "status", "volume", "intent", "difficulty", "traffic", "page", "last_checked"],
+  pages: ["page", "type", "keywords", "top_3", "best_position", "traffic", "page_rank", "linking_websites", "top_keyword", "last_checked"],
   // Then a position and traffic pair per competitor, named when the file is
   // read (`exportPage`), and the newest day a competitor was seen ranking.
   gap: ["keyword", "intent", "volume", "difficulty"],
@@ -99,7 +98,9 @@ const HEADERS: Record<ExportKind, string[]> = {
   domains: ["website", "rank", "links", "pages_linking", "spam_score", "first_seen", "lost", "status", "last_checked"],
   anchors: ["anchor", "links", "linking_websites", "rank", "first_seen", "status", "last_checked"],
   ips: ["address", "network", "linking_websites", "links", "rank", "first_seen", "status", "last_checked"],
-  paid: ["keyword", "advert_position", "volume", "cpc_usd", "visits", "estimated_cost_usd", "landing_page", "last_checked"],
+  // Searches and visits, never what a click or the visits would cost: our data supplier's guesses (decision 4 of
+  // ask-hakken-every-chart-page-plan-2026-11-03.md; Anthony, 2026-11-03: "Take it off"). They stay stored.
+  paid: ["keyword", "advert_position", "volume", "visits", "landing_page", "last_checked"],
   answers: ["day", "engine", "question", "this_website", "answer", "sources"],
   // Your pages: the company's classification (or Hakken's kind while it has none), and where each page was found.
   yourPages: ["page", "group", "sitemap_file", "crawled", "shown_by_google", "ranks", "clicks_90_days"],
@@ -119,7 +120,6 @@ const EXPORT_SORTS: Partial<Record<ExportKind, Record<string, (row: never) => So
     position: (row: Doc<"siteKeywordRanks">) => row.position,
     change: (row: Doc<"siteKeywordRanks">) => row.change,
     volume: (row: Doc<"siteKeywordRanks">) => (row.volumeKnown ? row.volume : null),
-    cpc: (row: Doc<"siteKeywordRanks">) => row.cpc,
     traffic: (row: Doc<"siteKeywordRanks">) => row.traffic,
     lastSeen: (row: Doc<"siteKeywordRanks">) => row.day,
   },
@@ -172,9 +172,7 @@ const EXPORT_SORTS: Partial<Record<ExportKind, Record<string, (row: never) => So
     keyword: (row: Doc<"sitePaidKeywords">) => row.keyword,
     position: (row: Doc<"sitePaidKeywords">) => row.position,
     volume: (row: Doc<"sitePaidKeywords">) => row.volume,
-    cpc: (row: Doc<"sitePaidKeywords">) => row.cpc,
     traffic: (row: Doc<"sitePaidKeywords">) => row.traffic,
-    cost: (row: Doc<"sitePaidKeywords">) => row.trafficCost,
   },
 };
 
@@ -340,7 +338,7 @@ export const exportPage = internalQuery({
           .withIndex("by_site_band_position", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).lt("band", "zz_none"))
           .paginate(page), (row: Doc<"siteKeywordRanks">) => line([
           row.keyword, row.position, row.change, row.status, row.volumeKnown ? row.volume : null, row.intent,
-          row.difficulty, cents(row.cpc), row.traffic === undefined ? null : Math.round(row.traffic), row.page, row.day,
+          row.difficulty, row.traffic === undefined ? null : Math.round(row.traffic), row.page, row.day,
         ]), (row) => row.keyword);
       case "pages": {
         // The page's type as the screen shows it: the company's own classification by name once it has any, Not sorted in words.
@@ -355,7 +353,6 @@ export const exportPage = internalQuery({
           .order("desc").paginate(page), (row: Doc<"sitePageRanks">) => line([
           row.page, typeOf(row), row.keywords, row.top3, row.bestPosition,
           row.traffic === undefined ? null : Math.round(row.traffic),
-          row.trafficValue === undefined ? null : Math.round(row.trafficValue),
           row.pageRank, row.referringDomains, row.topKeyword, row.day,
         ]), (row) => row.page);
       }
@@ -460,8 +457,8 @@ export const exportPage = internalQuery({
         return done(await ctx.db.query("sitePaidKeywords")
           .withIndex("by_site_traffic", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
           .order("desc").paginate(page), (row: Doc<"sitePaidKeywords">) => line([
-          row.keyword, row.position, row.volume, cents(row.cpc),
-          row.traffic === undefined ? null : Math.round(row.traffic), row.trafficCost === undefined ? null : Math.round(row.trafficCost), row.page, row.day,
+          row.keyword, row.position, row.volume,
+          row.traffic === undefined ? null : Math.round(row.traffic), row.page, row.day,
         ]), (row) => row.keyword);
     }
   },

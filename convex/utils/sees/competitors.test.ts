@@ -5,10 +5,11 @@ import { paidKeywordsSees, paidSees } from "./paid";
 
 /** What Hakken sees on the Paid search and Competitors screens (discovery-detail-and-hakken-sees-plan.md §6). */
 describe("Paid search", () => {
-  test("advertising, what the visits would cost, and its searches", () => {
-    const box = paidSees([{ paidKeywords: 3 }, { paidKeywords: 12, paidTraffic: 340, paidTrafficCost: 1200 }, {}]);
+  // Searches and visits, never what the adverts would cost (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 4).
+  test("advertising, and the visits it brings: never the guessed spend", () => {
+    const box = paidSees([{ paidKeywords: 3 }, { paidKeywords: 12, paidTraffic: 340 }, {}]);
     expect(box).toEqual({
-      says: [{ code: "advertising", a: 12, b: 340 }, { code: "cost", a: 1200 }],
+      says: [{ code: "advertising", a: 12, b: 340 }],
       steps: [{ code: "seeKeywords", link: "paidKeywords", to: { segment: "paid/keywords" } }],
     });
     expectWords("paid", box);
@@ -17,11 +18,11 @@ describe("Paid search", () => {
     expectWords("paid", { says: [{ code: "notAdvertising" }, { code: "none" }], steps: [] });
   });
 
-  test("the searches paid for, the dearest, and the one bringing most visits", () => {
-    const box = paidKeywordsSees([{ keyword: "web design", traffic: 200, trafficCost: 400.4 }, { keyword: "seo agency", traffic: 50, trafficCost: 800.6 }]);
+  test("the searches paid for and their visits, the one bringing most visits, and the most searched: no dearest search", () => {
+    const box = paidKeywordsSees([{ keyword: "web design", traffic: 200, volume: 900 }, { keyword: "seo agency", traffic: 50, volume: 2400 }]);
     expect(box).toEqual({
-      says: [{ code: "keywords", a: 2, b: 1201 }, { code: "dearest", text: "seo agency", a: 801 }, { code: "mostVisits", text: "web design", a: 200 }],
-      steps: [{ code: "seeSearch", text: "seo agency", link: "seeSearch", to: { record: "keyword", key: "seo agency" } }],
+      says: [{ code: "keywords", a: 2, b: 250 }, { code: "mostVisits", text: "web design", a: 200 }, { code: "mostSearched", text: "seo agency", a: 2400 }],
+      steps: [{ code: "seeSearch", text: "web design", link: "seeSearch", to: { record: "keyword", key: "web design" } }],
     });
     expectWords("paidKeywords", box);
     expect(paidKeywordsSees([]).says).toEqual([{ code: "none" }]);

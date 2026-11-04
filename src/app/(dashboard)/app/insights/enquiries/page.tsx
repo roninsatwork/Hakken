@@ -27,8 +27,9 @@ import { useSiteSearch } from "../../sites/_components/useSiteParam";
 import { LABEL } from "../_components/StrategyNote";
 import { KindsAgainstChart, KindsRateChart, SourcesAgainstChart, useKindName } from "../_components/PeriodCharts";
 import { monthsWords, periodWords, sourceWords } from "../_components/insightPeriodWords";
-import { useInsightsBox, useInsightsHref, useInsightsPeriodChoice, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsPeriodChoice, useInsightsPeriodView, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
 import { boxedSays } from "../_components/insightBoxSays";
+import { enquiriesNames, enquiriesSees } from "../_components/insightsSees";
 
 const KIND_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_TEAL, CHART_SERIES_ROSE, CHART_SERIES_SLATE];
 type Trio = { now: number; before: number | null; yearAgo: number | null };
@@ -64,13 +65,20 @@ export default function InsightsEnquiriesPage() {
   const tBox = usePlatformTranslations("insights.box");
   const tPeriod = usePlatformTranslations("insights.period");
   const tWhy = usePlatformTranslations("insights.why");
+  const tAll = usePlatformTranslations("insights");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const period = useInsightsPeriodChoice();
   const view = useInsightsPeriodView();
   const data = useQuery(api.insightsPeriod.insightsEnquiries, { ...(site ? { siteId: site } : {}), ...(period ? { period } : {}) });
-  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ period: view, enquiries: data, box }), [view, data, box]);
+  // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not
+  // handed over again on every render — each source by the name its table shows, with the reader's words its rules name.
+  const seesData = useMemo(
+    () => enquiriesSees(view, data, box, enquiriesNames(tAll), (row) => sourceWords(row.name, row.group, { typed: tAll("why.groups.TYPED"), unknown: tAll("enquiries.unknownSource") })),
+    [view, data, box, tAll],
+  );
   const [kindSearch, setKindSearch, kindTerm] = useSiteSearch("kq", "kinds");
   const [sourceSearch, setSourceSearch, sourceTerm] = useSiteSearch("sq", "sources");
   const [pageSearch, setPageSearch, pageTerm] = useSiteSearch("pq", "pages");
@@ -138,7 +146,7 @@ export default function InsightsEnquiriesPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox, view?.chosen?.id)} steps={[]} page={{ screen: "insights.enquiries", siteId: site, data: seesData }} />
+      <HakkenSees says={boxedSays(box, says, tBox, view?.chosen?.id)} steps={[]} page={{ screen: "insights.enquiries", siteId: eyeSite, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.enquiries", { period: nowWords })} value={formatNumber(view.figures.enquiries.now)} detail={<span className="text-secondary">{t("figures.against", { then: formatNumber(then(view.figures.enquiries) ?? 0), period: compareWords })}</span>} />
         <Figure label={t("figures.service", { period: nowWords })} value={formatNumber(sum(service, "enquiries", "now"))} detail={<span className="text-secondary">{t("figures.against", { then: formatNumber(sum(service, "enquiries", side)), period: compareWords })}</span>} />

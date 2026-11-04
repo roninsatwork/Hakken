@@ -15,7 +15,7 @@ import { SiteBarChart, SiteLineChart, type SiteSeries } from "../../sites/_compo
 import { formatNumber, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
 import { SearchConsoleChartCard, useSeriesTicks } from "../../search-console/_components/SearchConsoleChartCard";
 import { useKindName } from "../[siteId]/channels/_components/ChannelParts";
-import { formatMoney, formatPercent, formatPerConversion } from "./analyticsFormat";
+import { formatPercent, formatPerConversion } from "./analyticsFormat";
 import { eventList } from "./AnalyticsSees";
 import { useEventName } from "./useEventName";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep, periodWord } from "./useAnalytics";
@@ -29,7 +29,7 @@ import { shiftDays } from "./stepScale";
  * conversions by page classification (`ChannelMap`, Anthony: "maybe in this
  * style"); the visits needed for one conversion over time, against the days
  * just before (Anthony, 2026-10-20); and what people did before
- * converting, over 12 months, as Channels' "What a visit is worth" is drawn.
+ * converting, over 12 months, as Channels' "How often a visit converts" is drawn.
  * Read from Conversions' own answers and what Hakken holds: nothing is asked
  * of Google.
  */
@@ -50,7 +50,7 @@ export function useFlowKindName(kinds: ReadonlyArray<{ kind: string; name: strin
 }
 
 /** "How visits reached a conversion, by page classification" (CV3): channels, then the kind of page landed on, then how the visit ended. */
-export function ConversionFlowCard({ flow, currency }: { flow: Flow | null; currency: string | null }) {
+export function ConversionFlowCard({ flow }: { flow: Flow | null }) {
   const t = useTranslations("googleAnalytics.conversionFlow");
   const tf = useTranslations("googleAnalytics.filters");
   const [period] = usePeriod();
@@ -88,8 +88,8 @@ export function ConversionFlowCard({ flow, currency }: { flow: Flow | null; curr
         : route.conversions > 0 ? t("bandHoverConverted", { from, to, visits: route.visits, conversions: route.conversions })
           : t("bandHover", { from, to, visits: route.visits });
     return {
-      from: route.from, to: route.to, visits: route.visits, conversions: route.conversions, landings: route.channels,
-      hover: route.revenue > 0 ? t("bandRevenue", { words, money: formatMoney(route.revenue, currency) }) : words,
+      // Never money (Anthony, 2026-11-03: "Take money off").
+      from: route.from, to: route.to, visits: route.visits, conversions: route.conversions, landings: route.channels, hover: words,
     };
   });
   const conversions = flow.endings.filter((row) => row.counted).reduce((sum, row) => sum + row.count, 0);
@@ -334,8 +334,8 @@ function VisitsPerConversionChart({ days, events, figures, before, from, to, exp
 /**
  * "What people did before converting" (CV4): each action over the last 12
  * months, the share of its people who went on to convert, orange where that
- * beats everyone's on enough people to judge — Channels' "What a visit is
- * worth" drawn the same way.
+ * beats everyone's on enough people to judge — Channels' "How often a visit
+ * converts" drawn the same way.
  */
 export function BeforeConvertingCard({ before }: { before: Before | null }) {
   const t = useTranslations("googleAnalytics.conversionFlow");

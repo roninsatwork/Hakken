@@ -14,7 +14,7 @@ import { AnalyticsSees } from "./AnalyticsSees";
 import { BeforeLine } from "./AnalyticsFigures";
 import { ConversionsByHourCard, ConversionsByKindCard, ConversionsOverTimeCard } from "./ConversionsCards";
 import { conversionAsk } from "./seesAskFacts";
-import { formatMoney, formatPercent } from "./analyticsFormat";
+import { formatPercent } from "./analyticsFormat";
 import { useEventName } from "./useEventName";
 import { periodWord, useAnalyticsArgs, useAnalyticsHref, usePeriod, type AnalyticsStatus } from "./useAnalytics";
 
@@ -24,11 +24,12 @@ type EventAnswer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsEven
  * A conversion's own screen, opened from a row of What counts as a conversion
  * (the canvas "Conversions page, three ways", board "Conversion", approved
  * 2026-10-30; conversions-and-agents-build-plan-2026-10-30.md, phase 3): the
- * way back and the conversion's name, with Google's own name under it; four
+ * way back and the conversion's name, with Google's own name under it; three
  * figures against the month before — how many, the visits that did it, its
- * rate in every hundred visits, what it was worth; its times day by day; a
- * line per channel; and when people convert, by hour and day of the week.
- * An event that does not count keeps the event screen (`EventBody`).
+ * rate in every hundred visits, never its money (Anthony, 2026-11-03: "Take
+ * money off"); its times day by day; a line per channel; and when people
+ * convert, by hour and day of the week. An event that does not count keeps
+ * the event screen (`EventBody`).
  */
 export function ConversionScreen({ status, event, answer }: { status: AnalyticsStatus; event: string; answer: EventAnswer }) {
   const t = useTranslations("googleAnalytics.eventScreen");
@@ -39,9 +40,8 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
   const [period] = usePeriod();
   const hrefFor = useAnalyticsHref(args.siteId);
   const nameOf = useEventName();
-  // What it was worth: the conversions' own read, which prices each kind (set in Analytics, in Hakken, or each order's own).
+  // The conversions' own read: whether the website sells, and its dates.
   const conversions = useQuery(api.googleAnalyticsReads.analyticsConversions, args);
-  const kind = conversions?.kinds.find((one) => one.eventName === event) ?? null;
   const currency = status.connection?.currency ?? null;
   const name = nameOf(event);
   // A shop's purchase reads as its sales do on the board ("Purchases", "Visits that bought"); every other conversion by its name.
@@ -63,8 +63,8 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
     { funnel: tm("landingPages"), trackingHealth: tm("trackingHealth"), channels: tm("channels"), conversions: tm("conversions") },
     {
       eventName: event, name, times: figures.times, timesBefore: figures.timesBefore, visits: figures.visits, visitsBefore: figures.visitsBefore,
-      siteVisits: figures.siteVisits, siteVisitsBefore: figures.siteVisitsBefore, rate, rateBefore, worth: kind?.value ?? null, worthBefore: kind?.valueBefore ?? null,
-      currency, sells: (conversions?.shop?.purchases ?? 0) > 0, hrefFor,
+      siteVisits: figures.siteVisits, siteVisitsBefore: figures.siteVisitsBefore, rate, rateBefore,
+      sells: (conversions?.shop?.purchases ?? 0) > 0, hrefFor,
     },
   );
 
@@ -76,9 +76,9 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
         title={name}
         description={t("countedDescription", { google: event })}
       />
-      <AnalyticsSees screen="event" seen={answer.seen} currency={currency} ask={ask} data={{ conversion: answer, worth: kind }} />
+      <AnalyticsSees screen="event" seen={answer.seen} currency={currency} ask={ask} data={{ conversion: answer }} />
 
-      <FigureRow columns={4}>
+      <FigureRow columns={3}>
         <Figure label={label} emphasis value={formatNumber(figures.times)} detail={<BeforeLine now={figures.times} before={figures.timesBefore} />} />
         <Figure label={t(isPurchase ? "bought" : "didIt")} value={formatNumber(figures.visits)} detail={<BeforeLine now={figures.visits} before={figures.visitsBefore} />} />
         <Figure
@@ -93,11 +93,6 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
               <span className="text-[12px] text-secondary">{t("ofSiteVisits", { visits: formatNumber(figures.siteVisits) })}</span>
             )
           }
-        />
-        <Figure
-          label={t("worth")}
-          value={kind?.value ? formatMoney(kind.value, currency) : "–"}
-          detail={kind?.value ? <BeforeLine now={kind.value} before={kind.valueBefore} /> : <span className="text-[12px] text-secondary">{t("noWorth")}</span>}
         />
       </FigureRow>
 

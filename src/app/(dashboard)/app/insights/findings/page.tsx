@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ListChecks } from "lucide-react";
@@ -12,9 +13,11 @@ import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_ROSE, CHART_SERIES
 import { FINDING_SECTIONS, sectionOf } from "@/convex/utils/insightSections";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { datedRow, monthRow } from "../../sites/_components/datedRows";
-import { formatDay, formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { useFindingsTable } from "../_components/FindingsTable";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { findingsNames, findingsSees } from "../_components/insightsSees";
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 
 /** Each section's colour on the charts: cannibalisation in orange, the rest away from it. */
 const SECTION_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_TEAL, CHART_SERIES_ROSE, CHART_SERIES_SLATE];
@@ -35,8 +38,21 @@ export default function InsightsAllFindingsPage() {
   const t = usePlatformTranslations("insights.findings");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const rows = useQuery(api.insightsReads.insightsAllFindings, site ? { siteId: site } : {});
   const table = useFindingsTable({ rows, when: "found", opening: "week" });
+  // The eye on a page that already shows Hakken's advice (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 2;
+  // Anthony: "replace whatever has gone before as it's clearly broken"): findings of its own about this page, and the
+  // advice it shows — each section's biggest finding and its first step — handed with the figures, so the piece written
+  // builds on it and never says something different. Its sentences and steps are no longer the eye's words.
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => findingsSees(rows, findingsNames(tAll)), [rows, tAll]);
+  const advice = useMemo(() => (rows ? FINDING_SECTIONS.flatMap((section) => {
+    const top = rows.filter((row) => sectionOf(row) === section).sort((a, b) => (b.atStake ?? 0) - (a.atStake ?? 0) || b.week.localeCompare(a.week) || a.rank - b.rank)[0];
+    return top ? [{ section: tAll(`findings.sections.${section}.title`), headline: top.headline, firstStep: top.action }] : [];
+  }) : undefined), [rows, tAll]);
+  useSeesPart("advice", advice);
   const all = rows ?? [];
   const sectionName = (section: string) => t(`sections.${section}.title`);
   const series = FINDING_SECTIONS.map((section, at) => ({ key: section, name: sectionName(section), colour: SECTION_COLOURS[at] }));
@@ -54,19 +70,18 @@ export default function InsightsAllFindingsPage() {
     const top = all.filter((row) => sectionOf(row) === section).sort((a, b) => (b.atStake ?? 0) - (a.atStake ?? 0) || b.week.localeCompare(a.week) || a.rank - b.rank)[0];
     return top ? [{ section, top }] : [];
   });
-  const newest = weeks.at(-1), before = weeks.at(-2);
-  const says = [
-    ...(newest ? [t("overview.sees.weeks", { count: all.filter((row) => row.week === newest).length, week: formatDay(newest), before: before ? all.filter((row) => row.week === before).length : 0, beforeWeek: before ? formatDay(before) : "", hasBefore: before ? "yes" : "no" })] : []),
-    ...(due.length > 0 ? [t("overview.sees.due", { count: due.length, from: formatDay(due.map((row) => row.checkOn!).sort()[0]), to: formatDay(due.map((row) => row.checkOn!).sort().at(-1)!) })] : []),
-  ];
-  const steps = biggest.map(({ section, top }) => ({ words: t("overview.biggest", { section: sectionName(section), headline: top.headline }), link: t("overview.see"), href: href(`findings/${top.findingId}`) }));
+  // Where the piece's first steps may point: each section's own findings, and its biggest finding's whole case.
+  const links = biggest.flatMap(({ section, top }) => [
+    { label: sectionName(section), href: href(`findings/sections/${section}`) },
+    { label: top.headline, href: href(`findings/${top.findingId}`) },
+  ]);
 
   return (
     <>
       <PageHeader icon={<ListChecks className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       {all.length > 0 ? (
         <>
-          <HakkenSees says={says} steps={steps} page={{ screen: "insights.findings", siteId: site, data: rows }} />
+          <HakkenSees says={[]} steps={[]} page={{ screen: "insights.findings", siteId: eyeSite, data: seesData, links }} />
           <ChartCard title={t("overview.weekly")} hint={t("overview.weeklyHint")} exportName="insights-findings-by-week" csv={() => toCsv([t("overview.week"), ...series.map((entry) => entry.name)], weekRows.map((row) => [row.day, ...series.map((entry) => Number(row[entry.key] ?? 0))]))} enoughData={weekRows.length > 0}>
             <SiteBarChart data={weekRows} series={series} stacked labels={(value) => (value > 0 ? formatNumber(value) : null)} />
           </ChartCard>

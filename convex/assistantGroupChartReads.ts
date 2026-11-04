@@ -6,6 +6,7 @@ import { holdFor } from "./assistantReads";
 import { hourGrid } from "./googleAnalyticsEventReads";
 import { nameRows, readAnalyticsList } from "./googleAnalyticsReads";
 import { connectionOf, countedOf, readFor } from "./googleAnalyticsRows";
+import { isUnknownValue } from "./utils/analyticsUnknown";
 import { readList } from "./searchConsoleLists";
 import { calendarPeriodValidator, periodSpan, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 import { pathOf } from "./utils/hakkenTaskRules";
@@ -96,7 +97,8 @@ export async function groupsChartOf(
   }
 
   if (ask.page) return await pageChartOf(ctx, companyId, hold, ask, ask.page);
-  if (ask.by === "age" || ask.by === "gender" || ask.by === "weekday") return { ok: false, problem: "Age, gender and day of the week are drawn for one page: name the page's address." };
+  if (ask.by === "weekday") return { ok: false, problem: "The day of the week is drawn for one page: name the page's address." };
+  if (ask.by === "age" || ask.by === "gender") return await visitorGroupsChartOf(ctx, hold, ask, site);
   if (ask.by === "product") return await productsChartOf(ctx, hold, ask);
   const measure: AnalyticsChartMeasure = (ANALYTICS_CHART_MEASURES as readonly string[]).includes(ask.measure) ? ask.measure as AnalyticsChartMeasure : "visits";
   if (ask.by === "query") return { ok: false, problem: "Searches come from Search Console: ask with lookup search_console." };
@@ -119,7 +121,7 @@ export async function groupsChartOf(
 
   if (ask.by === "page") {
     // Landing pages, as their screen lists them: each one's visits, and the conversion named (a shop's purchase, else every one).
-    if (ask.kind === "grid") return { ok: false, problem: "A grid lays conversions across groups: ask for one by channel, kind of page, device or country." };
+    if (ask.kind === "grid") return { ok: false, problem: "A grid lays conversions across groups: ask for one by channel, classification, device or country." };
     const connection = await connectionOf(ctx, hold._id);
     if (!connection?.newestDay) return { ok: false, problem: `${hold.host} has no Google Analytics figures yet.` };
     const counted = countedOf(connection).map((one) => one.eventName);
@@ -154,6 +156,29 @@ export async function groupsChartOf(
 
 type Hold = { _id: Id<"companyWebsites">; host: string };
 type Built = { ok: true; chart: GroupsChart } | { ok: false; problem: string };
+
+/**
+ * The whole website's visits by age or gender, as Visits' "Who visits your website" bars draw them
+ * (visits-redo-plan-2026-11-03.md, step 3): each group Google placed, its visits and the span before's, the unknown left
+ * out. Visits only: the lists count every conversion, not visits that converted, so a rate could pass 100%.
+ */
+async function visitorGroupsChartOf(ctx: Reader, hold: Hold, ask: GroupsAsk, site: string): Promise<Built> {
+  if (ask.measure !== "visits") return { ok: false, problem: "By age and gender a chart counts visits only: Google's counts for them add up every conversion, not visits that converted." };
+  if (ask.kind === "scatter" || ask.kind === "grid") return { ok: false, problem: "By age and gender a chart is bars, stacked bars or a pie of visits." };
+  const connection = await connectionOf(ctx, hold._id);
+  if (!connection?.newestDay) return { ok: false, problem: `${hold.host} has no Google Analytics figures yet.` };
+  const list = ask.by as "age" | "gender";
+  const now = await readFor(ctx, hold._id, list, ask.period, "NOW", "");
+  if (!now || now === "LIVE") return { ok: false, problem: "No visits by age or gender are kept for those dates yet: they come with the next collection." };
+  const was = await readFor(ctx, hold._id, list, ask.period, "BEFORE", "");
+  const before = new Map(was && was !== "LIVE" ? was.rows.map((row) => [row.key, row.visits]) : []);
+  const visits = now.rows
+    .filter((row) => row.visits > 0 && !isUnknownValue(row.key))
+    .sort((left, right) => (list === "age" ? left.key.localeCompare(right.key) : right.visits - left.visits))
+    .map((row) => ({ column: list === "age" ? row.key.replace("-", "–") : row.key, visits: row.visits, ...(was && was !== "LIVE" ? { visitsBefore: before.get(row.key) ?? 0 } : {}) }));
+  if (visits.length === 0) return { ok: false, problem: `Google placed none of ${hold.host}'s visits by ${list} in those dates: Google signals may be off.` };
+  return groupsChartFrom({ visits, conversions: [] }, { kind: ask.kind, by: ask.by, measure: "visits", website: hold.host, period: ask.period, link: `${site}/visits?view=${list}&period=${ask.period}` });
+}
 
 /** The groups one page's chart can be by, as its own screen shows them. */
 const PAGE_BY: readonly GroupChartBy[] = ["channel", "source", "device", "country", "age", "gender", "weekday"];

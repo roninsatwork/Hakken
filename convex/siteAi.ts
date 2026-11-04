@@ -99,33 +99,36 @@ export const shareOfVoice = tenantQuery({
     lastDay: v.union(v.string(), v.null()),
     sites: v.array(v.object({ websiteId: v.id("websites"), host: v.string(), isYou: v.boolean(), named: v.number() })),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    // The list's summary counts the whole group, so one row gives every
-    // member's share — whichever member is open.
-    const [rivals, summary] = await Promise.all([
-      myRivals(ctx, site),
-      holdAiSummary(ctx, listHold(site), site.place),
-    ]);
-
-    const everyone = [
-      { websiteId, host: site.website.displayHost, isYou: true },
-      ...rivals.map((rival) => ({ websiteId: rival.website._id, host: rival.website.displayHost, isYou: false })),
-    ];
-    return AI_ENGINES.flatMap((engine) => {
-      const held = summary?.engines.find((entry) => entry.engine === engine);
-      if (!held) return [];
-      const named = new Map(held.named.map((entry) => [entry.websiteId, entry.times]));
-      return [{
-        engine,
-        asked: held.asked,
-        lastDay: held.lastDay,
-        sites: everyone.map((entry) => ({ ...entry, named: named.get(entry.websiteId) ?? 0 })),
-      }];
-    });
-  },
+  handler: async (ctx, args) => await readShareOfVoice(ctx, args),
 });
+
+/** shareOfVoice's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readShareOfVoice(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId = site.website._id;
+  // The list's summary counts the whole group, so one row gives every
+  // member's share — whichever member is open.
+  const [rivals, summary] = await Promise.all([
+    myRivals(ctx, site),
+    holdAiSummary(ctx, listHold(site), site.place),
+  ]);
+
+  const everyone = [
+    { websiteId, host: site.website.displayHost, isYou: true },
+    ...rivals.map((rival) => ({ websiteId: rival.website._id, host: rival.website.displayHost, isYou: false })),
+  ];
+  return AI_ENGINES.flatMap((engine) => {
+    const held = summary?.engines.find((entry) => entry.engine === engine);
+    if (!held) return [];
+    const named = new Map(held.named.map((entry) => [entry.websiteId, entry.times]));
+    return [{
+      engine,
+      asked: held.asked,
+      lastDay: held.lastDay,
+      sites: everyone.map((entry) => ({ ...entry, named: named.get(entry.websiteId) ?? 0 })),
+    }];
+  });
+}
 
 /**
  * The site's pages the engines link to in their answers, most cited first —

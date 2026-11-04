@@ -9,9 +9,9 @@ figures
   figure: Enquiries, September #
   figure: Visits that enquired
 chart-card: Visits and enquiries from ChatGPT, month by month
-chart-card: Which kinds of page ChatGPT sends people to
+chart-card: Which classifications ChatGPT sends people to
 search: Find a page…
-table: Page | Kind of page | Visits | Enquiries | Visits that enquired
+table: Page | Classification | Visits | Enquiries | Visits that enquired
   table-bar: Pages ChatGPT sent people to
     download: Download
   table-footer

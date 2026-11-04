@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -21,6 +22,7 @@ import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { mentionsSees } from "@/convex/utils/sees/aiAnswers";
 import { SiteSees } from "../../../_components/SiteSees";
+import { aiMentionsSeen } from "../../../_components/siteSeesData";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -78,6 +80,11 @@ export default function SiteMentionsPage() {
   const points = (series?.[0]?.points ?? []).filter((point) => point.ai.length > 0);
   const engines = [...new Set(points.flatMap((point) => point.ai.map((entry) => entry.engine)))];
 
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): each assistant's answers naming you
+  // over every question, each assistant on the chart at its newest check against the check before the dates (or its
+  // first in them), the questions no assistant names you on, and the answers warning against you.
+  const te = useTranslations("sites.aiMentions.eye");
+  const seen = useMemo(() => (rows ? aiMentionsSeen(rows, series?.[0], engineLabel, { never: te("never"), warned: te("warned"), before: te("before") }) : undefined), [rows, series, engineLabel, te]);
   const term = settled.toLowerCase();
   const matches = wordStartMatcher(term);
   const matching = rows?.filter((row) =>
@@ -91,7 +98,7 @@ export default function SiteMentionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="aiMentions" seen={rows && mentionsSees(rows)} data={rows && { mentions: rows, series }} />
+      <SiteSees screen="aiMentions" seen={rows && mentionsSees(rows)} data={seen} />
 
       <SiteChartCard
         title={t("chartTitle")}

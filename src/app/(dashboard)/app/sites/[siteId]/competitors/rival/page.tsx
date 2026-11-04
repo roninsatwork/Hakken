@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -26,6 +27,7 @@ import { SiteMark } from "../../../_components/SiteMark";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { rivalSeen } from "../../../_components/siteSeesData";
 import { sharedSiteQuery, useSiteParam } from "../../../_components/useSiteParam";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
@@ -103,6 +105,13 @@ export default function SiteRivalPage() {
   const citedRows = useQuery(api.siteRivalCited.rivalCitedPages, rivalId ? { siteId, rivalId } : "skip");
   const cited = useCitedPagesTable(citedRows, { fileName: `${site?.host ?? "site"}-${hold?.host ?? "rival"}-cited-pages`, withHost: false, table: "cited" });
 
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the four boxes, each line of the
+  // chart from the check before the dates, the searches the rival leads on of all you share, and the table's searches.
+  const te = useTranslations("sites.rivalRecord.eye");
+  const seen = useMemo(() => (hold && figures && table.result
+    ? rivalSeen(hold.host, figures, rivals?.find((row) => row.host === hold.host)?.verdict ?? null, sharedInAll, lead, table.result, trend, citedRows, { you: site?.host ?? "", theyLead: te("theyLead", { rival: hold.host }) })
+    : undefined), [hold, figures, rivals, sharedInAll, lead, table.result, trend, citedRows, site?.host, te]);
+
   if (!asked) {
     return <DetailHeader back={back} icon={<Swords className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
   }
@@ -130,7 +139,7 @@ export default function SiteRivalPage() {
           </Link>
         ) : undefined}
       />
-      <SiteSees screen="competitorsRival" seen={table.result?.seen} data={table.result && { rival: hold?.host, yours, theirs, verdict, sharedInAll, shared: table.result, ownLine, rivalLine, cited: citedRows }} />
+      <SiteSees screen="competitorsRival" seen={table.result?.seen} data={seen} />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Figure label={t("figures.traffic")} value={formatNumber(theirs?.estimatedTraffic)} detail={yoursLine(yours?.estimatedTraffic)} />

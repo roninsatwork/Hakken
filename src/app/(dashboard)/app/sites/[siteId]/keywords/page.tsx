@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -16,10 +17,11 @@ import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteStackedAreaChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
-import { formatCpc, formatDay, formatNumber, formatVisits, toCsv } from "../../_components/siteFormat";
+import { formatDay, formatNumber, formatVisits, toCsv } from "../../_components/siteFormat";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useCompareDay, useSite, useSiteId } from "../../_components/useSite";
 import { SiteSees } from "../../_components/SiteSees";
+import { keywordsSees } from "./_components/keywordSees";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSort } from "../../_components/useSiteSort";
 import { TableDownload } from "../../_components/SiteDownloads";
@@ -37,12 +39,16 @@ const KD_BANDS = ["kd00_10", "kd11_30", "kd31_70", "kd71_100"] as const;
  * The columns whose headings order the list — the whole list, on the server
  * (docs/plans/active/sites-table-sorting-plan.md) — each with its first
  * press: the keyword A to Z, position from the top, the biggest rise, most
- * searched, dearest clicks, most visits. Change gives way to "On {day}" when
- * a day is compared, which is fetched for the rows on screen only and so
- * cannot order the list; Last seen is only in the view that shows it.
+ * searched, most visits. Change gives way to "On {day}" when a day is
+ * compared, which is fetched for the rows on screen only and so cannot order
+ * the list; Last seen is only in the view that shows it.
+ *
+ * No cost per click, in either view (Anthony, 2026-11-03, on every guessed
+ * money figure: "Yes, all of it"): it is our data supplier's guess at what an
+ * advertiser pays, not money anyone measured. It stays in what is stored.
  */
-const SORTS = { keyword: "asc", position: "asc", change: "desc", volume: "desc", cpc: "desc", traffic: "desc" } as const;
-const SORTS_COMPARED = { keyword: "asc", position: "asc", volume: "desc", cpc: "desc", traffic: "desc" } as const;
+const SORTS = { keyword: "asc", position: "asc", change: "desc", volume: "desc", traffic: "desc" } as const;
+const SORTS_COMPARED = { keyword: "asc", position: "asc", volume: "desc", traffic: "desc" } as const;
 const SORTS_OLDER = { ...SORTS, lastSeen: "desc" } as const;
 
 type Band = (typeof BANDS)[number];
@@ -106,7 +112,13 @@ export default function SiteKeywordsPage() {
   );
   const onDay = new Map((compared ?? []).map((row) => [row.keyword, row]));
 
-  const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
+  // With the rivals' lines beside yours, and the whole list summed on the server, for the eye alone (ask-hakken-every-
+  // chart-page-plan-2026-11-03.md, section 10: "Searches that fell carried 1,240 estimated visitors; those that rose 310"):
+  // the chart draws only its own, the first line, and the table one page.
+  const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
+  const figures = useQuery(api.siteKeywords.keywordFigures, { siteId });
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(() => keywordsSees(table.result, figures, series, { rivals: tn("rivals"), rose: tn("rose"), fell: tn("fell") }), [table.result, figures, series, tn]);
   // DataForSEO's bands over everything the site ranks for where it has them;
   // the list's own only for a list that is the whole site (§8.7).
   const listWhole = site?.coverage?.whole ?? false;
@@ -134,7 +146,7 @@ export default function SiteKeywordsPage() {
         description={t("description")}
         pills={isPartHeld(coverage) ? <HeldLine coverage={coverage} className="text-[12px] text-secondary" /> : null}
       />
-      <SiteSees screen="keywords" seen={table.result?.seen} data={table.result && { keywords: table.result, series }} />
+      <SiteSees screen="keywords" seen={table.result?.seen} data={sees} />
 
       {/* A competitor's list is its top 1,000, refreshed monthly (finish-off plan, items 6b, 6c and 14). */}
       {site?.relationship === "TRACKED" ? <Notice>{t("competitorTop")}</Notice> : null}
@@ -223,13 +235,6 @@ export default function SiteKeywordsPage() {
             }]
             : [{ key: "change", header: t("columns.change"), align: "right" as const, sortable: true, cell: (row: (typeof shownRows)[number]) => <Change by={row.change} /> }]),
           { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
-          {
-            key: "cpc",
-            header: <span title={t("cpcHint")}>{t("columns.cpc")}</span>,
-            align: "right",
-            sortable: true,
-            cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatCpc(row.cpc)}</span>,
-          },
           {
             key: "traffic",
             header: <span title={t("trafficHint")}>{t("columns.traffic")}</span>,

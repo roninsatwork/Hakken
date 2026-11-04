@@ -1,0 +1,3026 @@
+{
+ "thisWeek": {
+  "website": {
+   "views": 8949,
+   "viewsBefore": 12207,
+   "visits": 2129,
+   "visitsBefore": 2631
+  },
+  "gained": [
+   {
+    "key": "~11",
+    "label": "https://www.morehandles.co.uk/locks/surface-barrel-bolts.html",
+    "views": 36,
+    "viewsBefore": 3,
+    "visits": 5,
+    "visitsBefore": 3,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~4w1",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-durham-door-pull-handle.html",
+    "views": 28,
+    "viewsBefore": 0,
+    "visits": 1,
+    "visitsBefore": 0,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~61",
+    "label": "https://www.morehandles.co.uk/front-door-furniture/cylinder-pulls.html",
+    "views": 26,
+    "viewsBefore": 0,
+    "visits": 9,
+    "visitsBefore": 0,
+    "conversions": 1,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~a",
+    "label": "https://www.morehandles.co.uk/handles/flush-pull-handles.html",
+    "views": 44,
+    "viewsBefore": 18,
+    "visits": 13,
+    "visitsBefore": 7,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~8u2",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/schwinn/schwinn-cupboard-handles.html",
+    "views": 24,
+    "viewsBefore": 0,
+    "visits": 3,
+    "visitsBefore": 0,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~53n",
+    "label": "https://www.morehandles.co.uk/chatsworth-porcelain-white-door-handle-on-rose-pair.html",
+    "views": 24,
+    "viewsBefore": 0,
+    "visits": 3,
+    "visitsBefore": 0,
+    "conversions": 6,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~45",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-knobs/brass-cupboard-knobs.html",
+    "views": 23,
+    "viewsBefore": 1,
+    "visits": 6,
+    "visitsBefore": 1,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~1k",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-backplate/brass-door-handles.html",
+    "views": 33,
+    "viewsBefore": 11,
+    "visits": 3,
+    "visitsBefore": 5,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~dj",
+    "label": "https://www.morehandles.co.uk/electrical/switches.html",
+    "views": 22,
+    "viewsBefore": 1,
+    "visits": 5,
+    "visitsBefore": 1,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~ma",
+    "label": "https://www.morehandles.co.uk/from-the-anvil-cast-solid-brass-suffolk-latch-set.html",
+    "views": 21,
+    "viewsBefore": 0,
+    "visits": 3,
+    "visitsBefore": 0,
+    "conversions": 0,
+    "conversionsBefore": 0
+   }
+  ],
+  "lost": [
+   {
+    "key": "~2s",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-knobs.html",
+    "views": 97,
+    "viewsBefore": 255,
+    "visits": 32,
+    "visitsBefore": 47,
+    "conversions": 6,
+    "conversionsBefore": 5
+   },
+   {
+    "key": "~2",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+    "views": 78,
+    "viewsBefore": 180,
+    "visits": 41,
+    "visitsBefore": 68,
+    "conversions": 1,
+    "conversionsBefore": 4
+   },
+   {
+    "key": "~4e",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/m-marcus-heritage-brass-hardware/marcus-heritage-door-handles.html",
+    "views": 7,
+    "viewsBefore": 68,
+    "visits": 4,
+    "visitsBefore": 4,
+    "conversions": 0,
+    "conversionsBefore": 1
+   },
+   {
+    "key": "~o3",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose/bronze-and-antique-brass-door-handles-on-rose.html",
+    "views": 0,
+    "viewsBefore": 54,
+    "visits": 0,
+    "visitsBefore": 7,
+    "conversions": 0,
+    "conversionsBefore": 3
+   },
+   {
+    "key": "~4c",
+    "label": "https://www.morehandles.co.uk/hinges/interior-door-hinges.html",
+    "views": 6,
+    "viewsBefore": 57,
+    "visits": 4,
+    "visitsBefore": 11,
+    "conversions": 0,
+    "conversionsBefore": 1
+   },
+   {
+    "key": "~3ce",
+    "label": "https://www.morehandles.co.uk/serozzetta-zone-door-handle-on-backplate-pair.html",
+    "views": 0,
+    "viewsBefore": 50,
+    "visits": 0,
+    "visitsBefore": 10,
+    "conversions": 0,
+    "conversionsBefore": 10
+   },
+   {
+    "key": "~1b",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles.html",
+    "views": 246,
+    "viewsBefore": 294,
+    "visits": 66,
+    "visitsBefore": 62,
+    "conversions": 1,
+    "conversionsBefore": 2
+   },
+   {
+    "key": "~2i",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose.html",
+    "views": 120,
+    "viewsBefore": 165,
+    "visits": 22,
+    "visitsBefore": 31,
+    "conversions": 4,
+    "conversionsBefore": 13
+   },
+   {
+    "key": "~1",
+    "label": "https://www.morehandles.co.uk/door-handles.html",
+    "views": 84,
+    "viewsBefore": 122,
+    "visits": 41,
+    "visitsBefore": 63,
+    "conversions": 1,
+    "conversionsBefore": 2
+   },
+   {
+    "key": "~39m",
+    "label": "https://www.morehandles.co.uk/heritage-brass-interior-letterflap-v860.html",
+    "views": 2,
+    "viewsBefore": 34,
+    "visits": 2,
+    "visitsBefore": 13,
+    "conversions": 0,
+    "conversionsBefore": 25
+   }
+  ],
+  "conversionsLost": [
+   {
+    "key": "~fu",
+    "label": "https://www.morehandles.co.uk/waltz-round-cupboard-knob-on-stepped-rose.html",
+    "views": 118,
+    "viewsBefore": 121,
+    "visits": 80,
+    "visitsBefore": 77,
+    "conversions": 21,
+    "conversionsBefore": 53
+   },
+   {
+    "key": "~39m",
+    "label": "https://www.morehandles.co.uk/heritage-brass-interior-letterflap-v860.html",
+    "views": 2,
+    "viewsBefore": 34,
+    "visits": 2,
+    "visitsBefore": 13,
+    "conversions": 0,
+    "conversionsBefore": 25
+   },
+   {
+    "key": "~16d",
+    "label": "https://www.morehandles.co.uk/fingertip-design-ivory-crackle-glaze-porcelain-mushroom-cupboard-knob.html",
+    "views": 1,
+    "viewsBefore": 4,
+    "visits": 1,
+    "visitsBefore": 3,
+    "conversions": 0,
+    "conversionsBefore": 23
+   },
+   {
+    "key": "~f9",
+    "label": "https://www.morehandles.co.uk/m-marcus-sorrento-indigo-door-handle-on-square-rose-pair.html",
+    "views": 2,
+    "viewsBefore": 15,
+    "visits": 1,
+    "visitsBefore": 2,
+    "conversions": 0,
+    "conversionsBefore": 22
+   },
+   {
+    "key": "~9w",
+    "label": "https://www.morehandles.co.uk/zoo-hardware-ball-bearing-pulleys-2-1-4.html",
+    "views": 0,
+    "viewsBefore": 3,
+    "visits": 0,
+    "visitsBefore": 3,
+    "conversions": 0,
+    "conversionsBefore": 22
+   },
+   {
+    "key": "~2gf",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-fingertip-design-traditional-pattern-cupboard-knob.html",
+    "views": 0,
+    "viewsBefore": 9,
+    "visits": 0,
+    "visitsBefore": 5,
+    "conversions": 0,
+    "conversionsBefore": 21
+   },
+   {
+    "key": "~1ss",
+    "label": "https://www.morehandles.co.uk/zoo-hardware-top-drawer-fittings-magnetic-catch.html",
+    "views": 0,
+    "viewsBefore": 2,
+    "visits": 0,
+    "visitsBefore": 1,
+    "conversions": 0,
+    "conversionsBefore": 21
+   },
+   {
+    "key": "~740",
+    "label": "https://www.morehandles.co.uk/hafele-beulah-cabinet-bar-handle.html",
+    "views": 2,
+    "viewsBefore": 4,
+    "visits": 1,
+    "visitsBefore": 2,
+    "conversions": 0,
+    "conversionsBefore": 19
+   },
+   {
+    "key": "~9gz",
+    "label": "https://www.morehandles.co.uk/letter-plate-brush-draught-seal.html",
+    "views": 3,
+    "viewsBefore": 20,
+    "visits": 2,
+    "visitsBefore": 4,
+    "conversions": 0,
+    "conversionsBefore": 18
+   },
+   {
+    "key": "~f8",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-solid-brass-parliament-hinge.html",
+    "views": 2,
+    "viewsBefore": 3,
+    "visits": 2,
+    "visitsBefore": 2,
+    "conversions": 0,
+    "conversionsBefore": 17
+   }
+  ],
+  "bands": {
+   "busy": 321,
+   "busyFewer": 84,
+   "busyVisits": 3,
+   "quiet": 1344,
+   "quietMore": 154
+  },
+  "concentration": {
+   "noViews": 9317,
+   "noViewsBefore": 8225,
+   "pagesForHalf": 108,
+   "pagesForHalfBefore": 159
+  },
+  "shop": {
+   "pages": 67,
+   "views": 1906,
+   "viewsBefore": 2249
+  },
+  "classifications": [
+   {
+    "kind": "SHOP_PAGES",
+    "name": null,
+    "views": 1906,
+    "viewsBefore": 2249,
+    "pages": 41
+   },
+   {
+    "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+    "name": "Cupboard Handles",
+    "views": 1658,
+    "viewsBefore": 2605,
+    "pages": 267
+   },
+   {
+    "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+    "name": "Handles",
+    "views": 1383,
+    "viewsBefore": 1644,
+    "pages": 320
+   },
+   {
+    "kind": "NOT_SORTED",
+    "name": null,
+    "views": 923,
+    "viewsBefore": 1415,
+    "pages": 394
+   },
+   {
+    "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+    "name": "Brand",
+    "views": 837,
+    "viewsBefore": 881,
+    "pages": 12
+   },
+   {
+    "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+    "name": "Other Ironmongery",
+    "views": 495,
+    "viewsBefore": 801,
+    "pages": 156
+   },
+   {
+    "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+    "name": "Locks",
+    "views": 464,
+    "viewsBefore": 600,
+    "pages": 144
+   },
+   {
+    "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+    "name": "Door Knobs",
+    "views": 343,
+    "viewsBefore": 434,
+    "pages": 72
+   },
+   {
+    "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+    "name": "Buy By Brand",
+    "views": 287,
+    "viewsBefore": 386,
+    "pages": 67
+   },
+   {
+    "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+    "name": "Hinges",
+    "views": 220,
+    "viewsBefore": 449,
+    "pages": 83
+   },
+   {
+    "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+    "name": "Blog",
+    "views": 139,
+    "viewsBefore": 206,
+    "pages": 34
+   },
+   {
+    "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+    "name": "Window Furniture",
+    "views": 137,
+    "viewsBefore": 226,
+    "pages": 56
+   },
+   {
+    "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+    "name": "Electrical",
+    "views": 84,
+    "viewsBefore": 281,
+    "pages": 20
+   },
+   {
+    "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+    "name": "Lighting",
+    "views": 73,
+    "viewsBefore": 30,
+    "pages": 24
+   }
+  ]
+ },
+ "lastWeek": {
+  "website": {
+   "views": 33343,
+   "viewsBefore": 35274,
+   "visits": 7568,
+   "visitsBefore": 8055
+  },
+  "gained": [
+   {
+    "key": "~1b",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles.html",
+    "views": 1058,
+    "viewsBefore": 754,
+    "visits": 213,
+    "visitsBefore": 198,
+    "conversions": 12,
+    "conversionsBefore": 17
+   },
+   {
+    "key": "~jb",
+    "label": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+    "views": 228,
+    "viewsBefore": 10,
+    "visits": 224,
+    "visitsBefore": 1,
+    "conversions": 1,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~0",
+    "label": "https://www.morehandles.co.uk/",
+    "views": 2357,
+    "viewsBefore": 2152,
+    "visits": 1142,
+    "visitsBefore": 1199,
+    "conversions": 11,
+    "conversionsBefore": 11
+   },
+   {
+    "key": "~2i",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose.html",
+    "views": 513,
+    "viewsBefore": 344,
+    "visits": 86,
+    "visitsBefore": 82,
+    "conversions": 24,
+    "conversionsBefore": 11
+   },
+   {
+    "key": "~2l",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-backplate.html",
+    "views": 436,
+    "viewsBefore": 353,
+    "visits": 99,
+    "visitsBefore": 77,
+    "conversions": 8,
+    "conversionsBefore": 8
+   },
+   {
+    "key": "~4e",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/m-marcus-heritage-brass-hardware/marcus-heritage-door-handles.html",
+    "views": 107,
+    "viewsBefore": 30,
+    "visits": 14,
+    "visitsBefore": 13,
+    "conversions": 3,
+    "conversionsBefore": 1
+   },
+   {
+    "key": "~3ce",
+    "label": "https://www.morehandles.co.uk/serozzetta-zone-door-handle-on-backplate-pair.html",
+    "views": 57,
+    "viewsBefore": 4,
+    "visits": 15,
+    "visitsBefore": 4,
+    "conversions": 11,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~j",
+    "label": "https://www.morehandles.co.uk/tubular-latch-tls50-heavy-sprung-architectural-quality.html",
+    "views": 61,
+    "viewsBefore": 9,
+    "visits": 30,
+    "visitsBefore": 9,
+    "conversions": 10,
+    "conversionsBefore": 5
+   },
+   {
+    "key": "~2t",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/polished-nickel-satin-nickel-cupboard-handles.html",
+    "views": 100,
+    "viewsBefore": 59,
+    "visits": 21,
+    "visitsBefore": 16,
+    "conversions": 1,
+    "conversionsBefore": 3
+   },
+   {
+    "key": "~5c",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose/polished-nickel-satin-nickel-door-handles-on-rose.html",
+    "views": 56,
+    "viewsBefore": 15,
+    "visits": 7,
+    "visitsBefore": 6,
+    "conversions": 0,
+    "conversionsBefore": 0
+   }
+  ],
+  "lost": [
+   {
+    "key": "~2",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+    "views": 435,
+    "viewsBefore": 534,
+    "visits": 177,
+    "visitsBefore": 193,
+    "conversions": 9,
+    "conversionsBefore": 24
+   },
+   {
+    "key": "~fu",
+    "label": "https://www.morehandles.co.uk/waltz-round-cupboard-knob-on-stepped-rose.html",
+    "views": 337,
+    "viewsBefore": 426,
+    "visits": 211,
+    "visitsBefore": 276,
+    "conversions": 142,
+    "conversionsBefore": 254
+   },
+   {
+    "key": "~46",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/kitchen-door-handles.html",
+    "views": 176,
+    "viewsBefore": 259,
+    "visits": 61,
+    "visitsBefore": 81,
+    "conversions": 4,
+    "conversionsBefore": 2
+   },
+   {
+    "key": "~d6",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/kitchen-door-handles/kitchen-cupboard-knobs.html",
+    "views": 23,
+    "viewsBefore": 84,
+    "visits": 13,
+    "visitsBefore": 14,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~m",
+    "label": "https://www.morehandles.co.uk/discounts",
+    "views": 25,
+    "viewsBefore": 78,
+    "visits": 26,
+    "visitsBefore": 45,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~z",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/different-cupboard-knobs.html",
+    "views": 40,
+    "viewsBefore": 91,
+    "visits": 23,
+    "visitsBefore": 47,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~3d",
+    "label": "https://www.morehandles.co.uk/handles/door-pull-handles/antique-brass-bronze-door-pull-handles.html",
+    "views": 17,
+    "viewsBefore": 68,
+    "visits": 7,
+    "visitsBefore": 12,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~11",
+    "label": "https://www.morehandles.co.uk/locks/surface-barrel-bolts.html",
+    "views": 9,
+    "viewsBefore": 59,
+    "visits": 6,
+    "visitsBefore": 15,
+    "conversions": 0,
+    "conversionsBefore": 3
+   },
+   {
+    "key": "~a",
+    "label": "https://www.morehandles.co.uk/handles/flush-pull-handles.html",
+    "views": 52,
+    "viewsBefore": 101,
+    "visits": 23,
+    "visitsBefore": 36,
+    "conversions": 0,
+    "conversionsBefore": 3
+   },
+   {
+    "key": "~d9",
+    "label": "https://www.morehandles.co.uk/door-hardware-sets.html",
+    "views": 15,
+    "viewsBefore": 59,
+    "visits": 12,
+    "visitsBefore": 14,
+    "conversions": 0,
+    "conversionsBefore": 1
+   }
+  ],
+  "conversionsLost": [
+   {
+    "key": "~fu",
+    "label": "https://www.morehandles.co.uk/waltz-round-cupboard-knob-on-stepped-rose.html",
+    "views": 337,
+    "viewsBefore": 426,
+    "visits": 211,
+    "visitsBefore": 276,
+    "conversions": 142,
+    "conversionsBefore": 254
+   },
+   {
+    "key": "~ut",
+    "label": "https://www.morehandles.co.uk/m-marcus-york-bathroom-lock-3.html",
+    "views": 0,
+    "viewsBefore": 10,
+    "visits": 0,
+    "visitsBefore": 8,
+    "conversions": 0,
+    "conversionsBefore": 42
+   },
+   {
+    "key": "~21s",
+    "label": "https://www.morehandles.co.uk/hafele-cabinet-d-handle.html",
+    "views": 4,
+    "viewsBefore": 21,
+    "visits": 4,
+    "visitsBefore": 13,
+    "conversions": 1,
+    "conversionsBefore": 29
+   },
+   {
+    "key": "~7ot",
+    "label": "https://www.morehandles.co.uk/kirkpatrick-standard-arrow-head-pull-handle-1883.html",
+    "views": 6,
+    "viewsBefore": 29,
+    "visits": 7,
+    "visitsBefore": 5,
+    "conversions": 0,
+    "conversionsBefore": 25
+   },
+   {
+    "key": "~1l8",
+    "label": "https://www.morehandles.co.uk/alexander-and-wilks-quantock-cupboard-knob-on-square-backplate.html",
+    "views": 22,
+    "viewsBefore": 47,
+    "visits": 15,
+    "visitsBefore": 17,
+    "conversions": 8,
+    "conversionsBefore": 32
+   },
+   {
+    "key": "~by",
+    "label": "https://www.morehandles.co.uk/alexander-and-wilks-architectural-handrail-bracket.html",
+    "views": 5,
+    "viewsBefore": 36,
+    "visits": 5,
+    "visitsBefore": 16,
+    "conversions": 0,
+    "conversionsBefore": 22
+   },
+   {
+    "key": "~65z",
+    "label": "https://www.morehandles.co.uk/eurospec-euro-profile-square-escutcheon.html",
+    "views": 0,
+    "viewsBefore": 8,
+    "visits": 0,
+    "visitsBefore": 2,
+    "conversions": 0,
+    "conversionsBefore": 22
+   },
+   {
+    "key": "~1o0",
+    "label": "https://www.morehandles.co.uk/m-marcus-black-iron-bridgnorth-door-handle-on-backplate-pair.html",
+    "views": 3,
+    "viewsBefore": 19,
+    "visits": 3,
+    "visitsBefore": 9,
+    "conversions": 0,
+    "conversionsBefore": 22
+   },
+   {
+    "key": "~pr",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-octagon-pointed-centre-door-knob.html",
+    "views": 5,
+    "viewsBefore": 12,
+    "visits": 5,
+    "visitsBefore": 7,
+    "conversions": 0,
+    "conversionsBefore": 21
+   },
+   {
+    "key": "~fo",
+    "label": "https://www.morehandles.co.uk/steel-t-bar-cupboard-handle-ftd445.html",
+    "views": 43,
+    "viewsBefore": 75,
+    "visits": 29,
+    "visitsBefore": 41,
+    "conversions": 31,
+    "conversionsBefore": 51
+   }
+  ],
+  "bands": {
+   "busy": 159,
+   "busyFewer": 63,
+   "busyVisits": 12,
+   "quiet": 4553,
+   "quietMore": 763
+  },
+  "concentration": {
+   "noViews": 7188,
+   "noViewsBefore": 6273,
+   "pagesForHalf": 168,
+   "pagesForHalfBefore": 222
+  },
+  "shop": {
+   "pages": 130,
+   "views": 6370,
+   "viewsBefore": 7098
+  },
+  "classifications": [
+   {
+    "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+    "name": "Cupboard Handles",
+    "views": 6929,
+    "viewsBefore": 7207,
+    "pages": 623
+   },
+   {
+    "kind": "SHOP_PAGES",
+    "name": null,
+    "views": 6370,
+    "viewsBefore": 7098,
+    "pages": 76
+   },
+   {
+    "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+    "name": "Handles",
+    "views": 4651,
+    "viewsBefore": 4407,
+    "pages": 791
+   },
+   {
+    "kind": "NOT_SORTED",
+    "name": null,
+    "views": 3588,
+    "viewsBefore": 4149,
+    "pages": 1236
+   },
+   {
+    "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+    "name": "Brand",
+    "views": 2760,
+    "viewsBefore": 2643,
+    "pages": 13
+   },
+   {
+    "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+    "name": "Other Ironmongery",
+    "views": 1978,
+    "viewsBefore": 1976,
+    "pages": 387
+   },
+   {
+    "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+    "name": "Locks",
+    "views": 1689,
+    "viewsBefore": 1985,
+    "pages": 370
+   },
+   {
+    "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+    "name": "Door Knobs",
+    "views": 1195,
+    "viewsBefore": 1277,
+    "pages": 170
+   },
+   {
+    "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+    "name": "Buy By Brand",
+    "views": 1055,
+    "viewsBefore": 976,
+    "pages": 122
+   },
+   {
+    "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+    "name": "Hinges",
+    "views": 955,
+    "viewsBefore": 1039,
+    "pages": 247
+   },
+   {
+    "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+    "name": "Electrical",
+    "views": 785,
+    "viewsBefore": 939,
+    "pages": 521
+   },
+   {
+    "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+    "name": "Window Furniture",
+    "views": 655,
+    "viewsBefore": 762,
+    "pages": 129
+   },
+   {
+    "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+    "name": "Blog",
+    "views": 634,
+    "viewsBefore": 626,
+    "pages": 75
+   },
+   {
+    "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+    "name": "Lighting",
+    "views": 99,
+    "viewsBefore": 190,
+    "pages": 21
+   }
+  ]
+ },
+ "thisMonth": {
+  "website": {
+   "views": 13237,
+   "viewsBefore": 14008,
+   "visits": 2994,
+   "visitsBefore": 3140
+  },
+  "gained": [
+   {
+    "key": "~0",
+    "label": "https://www.morehandles.co.uk/",
+    "views": 1051,
+    "viewsBefore": 802,
+    "visits": 505,
+    "visitsBefore": 376,
+    "conversions": 2,
+    "conversionsBefore": 6
+   },
+   {
+    "key": "~2l",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-backplate.html",
+    "views": 187,
+    "viewsBefore": 128,
+    "visits": 34,
+    "visitsBefore": 18,
+    "conversions": 3,
+    "conversionsBefore": 2
+   },
+   {
+    "key": "~1",
+    "label": "https://www.morehandles.co.uk/door-handles.html",
+    "views": 123,
+    "viewsBefore": 79,
+    "visits": 63,
+    "visitsBefore": 48,
+    "conversions": 2,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~1k",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-backplate/brass-door-handles.html",
+    "views": 44,
+    "viewsBefore": 0,
+    "visits": 5,
+    "visitsBefore": 0,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~5c",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose/polished-nickel-satin-nickel-door-handles-on-rose.html",
+    "views": 42,
+    "viewsBefore": 0,
+    "visits": 8,
+    "visitsBefore": 0,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~2g",
+    "label": "https://www.morehandles.co.uk/handles/door-pull-handles.html",
+    "views": 59,
+    "viewsBefore": 24,
+    "visits": 14,
+    "visitsBefore": 7,
+    "conversions": 2,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~7lz",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-fingertip-design-keyhole-cupboard-handle.html",
+    "views": 33,
+    "viewsBefore": 2,
+    "visits": 9,
+    "visitsBefore": 2,
+    "conversions": 13,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~gb",
+    "label": "https://www.morehandles.co.uk/alexander-and-wilks-quantock-cup-handle.html",
+    "views": 40,
+    "viewsBefore": 12,
+    "visits": 17,
+    "visitsBefore": 8,
+    "conversions": 7,
+    "conversionsBefore": 5
+   },
+   {
+    "key": "~4w1",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-durham-door-pull-handle.html",
+    "views": 28,
+    "viewsBefore": 0,
+    "visits": 1,
+    "visitsBefore": 0,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~54b",
+    "label": "https://www.morehandles.co.uk/spira-brass-vertical-rim-lock.html",
+    "views": 26,
+    "viewsBefore": 0,
+    "visits": 3,
+    "visitsBefore": 0,
+    "conversions": 9,
+    "conversionsBefore": 0
+   }
+  ],
+  "lost": [
+   {
+    "key": "~fu",
+    "label": "https://www.morehandles.co.uk/waltz-round-cupboard-knob-on-stepped-rose.html",
+    "views": 173,
+    "viewsBefore": 252,
+    "visits": 118,
+    "visitsBefore": 124,
+    "conversions": 33,
+    "conversionsBefore": 109
+   },
+   {
+    "key": "~2s",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-knobs.html",
+    "views": 153,
+    "viewsBefore": 217,
+    "visits": 44,
+    "visitsBefore": 43,
+    "conversions": 6,
+    "conversionsBefore": 7
+   },
+   {
+    "key": "~2f",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/croft-hardware.html",
+    "views": 6,
+    "viewsBefore": 53,
+    "visits": 4,
+    "visitsBefore": 32,
+    "conversions": 0,
+    "conversionsBefore": 1
+   },
+   {
+    "key": "~14",
+    "label": "https://www.morehandles.co.uk/other-ironmongery/hat-coat-robe-hooks.html",
+    "views": 27,
+    "viewsBefore": 71,
+    "visits": 7,
+    "visitsBefore": 8,
+    "conversions": 0,
+    "conversionsBefore": 1
+   },
+   {
+    "key": "~7",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+    "views": 74,
+    "viewsBefore": 111,
+    "visits": 24,
+    "visitsBefore": 32,
+    "conversions": 3,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~48",
+    "label": "https://www.morehandles.co.uk/door-knobs/rim-door-knobs.html",
+    "views": 21,
+    "viewsBefore": 57,
+    "visits": 9,
+    "visitsBefore": 10,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~59",
+    "label": "https://www.morehandles.co.uk/door-knobs/mortice-door-knobs/antique-brass-bronze-door-knobs.html",
+    "views": 4,
+    "viewsBefore": 37,
+    "visits": 2,
+    "visitsBefore": 5,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~2hd",
+    "label": "https://www.morehandles.co.uk/fingertip-design-cottage-cup-handle-ftd557a.html",
+    "views": 1,
+    "viewsBefore": 34,
+    "visits": 1,
+    "visitsBefore": 11,
+    "conversions": 0,
+    "conversionsBefore": 6
+   },
+   {
+    "key": "~4h",
+    "label": "https://www.morehandles.co.uk/door-knobs/mortice-door-knobs.html",
+    "views": 5,
+    "viewsBefore": 35,
+    "visits": 5,
+    "visitsBefore": 12,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~68e",
+    "label": "https://www.morehandles.co.uk/frelan-burlington-westminster-cabinet-handle.html",
+    "views": 0,
+    "viewsBefore": 28,
+    "visits": 0,
+    "visitsBefore": 1,
+    "conversions": 0,
+    "conversionsBefore": 2
+   }
+  ],
+  "conversionsLost": [
+   {
+    "key": "~fu",
+    "label": "https://www.morehandles.co.uk/waltz-round-cupboard-knob-on-stepped-rose.html",
+    "views": 173,
+    "viewsBefore": 252,
+    "visits": 118,
+    "visitsBefore": 124,
+    "conversions": 33,
+    "conversionsBefore": 109
+   },
+   {
+    "key": "~7e",
+    "label": "https://www.morehandles.co.uk/ztlka-double-sprung-tubular-latch-architectural-quality.html",
+    "views": 14,
+    "viewsBefore": 35,
+    "visits": 14,
+    "visitsBefore": 18,
+    "conversions": 1,
+    "conversionsBefore": 38
+   },
+   {
+    "key": "~313",
+    "label": "https://www.morehandles.co.uk/zoo-5-lever-security-sashlock-british-standard.html",
+    "views": 0,
+    "viewsBefore": 2,
+    "visits": 0,
+    "visitsBefore": 1,
+    "conversions": 0,
+    "conversionsBefore": 21
+   },
+   {
+    "key": "~2ri",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-suffolk-mortice-door-knob-pair.html",
+    "views": 0,
+    "viewsBefore": 6,
+    "visits": 0,
+    "visitsBefore": 5,
+    "conversions": 0,
+    "conversionsBefore": 19
+   },
+   {
+    "key": "~1kk",
+    "label": "https://www.morehandles.co.uk/cottingham-single-cast-shaker-knob-antique-iron-35mm.html",
+    "views": 11,
+    "viewsBefore": 23,
+    "visits": 8,
+    "visitsBefore": 14,
+    "conversions": 1,
+    "conversionsBefore": 18
+   },
+   {
+    "key": "~1vt",
+    "label": "https://www.morehandles.co.uk/alexander-and-wilks-bardom-ridged-cup-handle.html",
+    "views": 39,
+    "viewsBefore": 54,
+    "visits": 21,
+    "visitsBefore": 23,
+    "conversions": 10,
+    "conversionsBefore": 21
+   },
+   {
+    "key": "~1ie",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-solid-brass-cabinet-hinge.html",
+    "views": 3,
+    "viewsBefore": 3,
+    "visits": 1,
+    "visitsBefore": 2,
+    "conversions": 0,
+    "conversionsBefore": 11
+   },
+   {
+    "key": "~2pf",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-mila-heritage-pear-drop-casement-handle.html",
+    "views": 12,
+    "viewsBefore": 35,
+    "visits": 13,
+    "visitsBefore": 30,
+    "conversions": 1,
+    "conversionsBefore": 11
+   },
+   {
+    "key": "~7hh",
+    "label": "https://www.morehandles.co.uk/alexander-wilks-cambridge-round-cupboard-knob.html",
+    "views": 9,
+    "viewsBefore": 19,
+    "visits": 7,
+    "visitsBefore": 10,
+    "conversions": 6,
+    "conversionsBefore": 15
+   },
+   {
+    "key": "~429",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-art-deco-door-handle-on-backplate-pair.html",
+    "views": 2,
+    "viewsBefore": 10,
+    "visits": 2,
+    "visitsBefore": 5,
+    "conversions": 0,
+    "conversionsBefore": 9
+   }
+  ],
+  "bands": {
+   "busy": 217,
+   "busyFewer": 51,
+   "busyVisits": 5,
+   "quiet": 1946,
+   "quietMore": 324
+  },
+  "concentration": {
+   "noViews": 8945,
+   "noViewsBefore": 8472,
+   "pagesForHalf": 119,
+   "pagesForHalfBefore": 154
+  },
+  "shop": {
+   "pages": 70,
+   "views": 2771,
+   "viewsBefore": 2941
+  },
+  "classifications": [
+   {
+    "kind": "SHOP_PAGES",
+    "name": null,
+    "views": 2771,
+    "viewsBefore": 2941,
+    "pages": 46
+   },
+   {
+    "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+    "name": "Cupboard Handles",
+    "views": 2725,
+    "viewsBefore": 3369,
+    "pages": 367
+   },
+   {
+    "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+    "name": "Handles",
+    "views": 1822,
+    "viewsBefore": 1517,
+    "pages": 390
+   },
+   {
+    "kind": "NOT_SORTED",
+    "name": null,
+    "views": 1427,
+    "viewsBefore": 1526,
+    "pages": 565
+   },
+   {
+    "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+    "name": "Brand",
+    "views": 1191,
+    "viewsBefore": 973,
+    "pages": 12
+   },
+   {
+    "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+    "name": "Other Ironmongery",
+    "views": 810,
+    "viewsBefore": 792,
+    "pages": 200
+   },
+   {
+    "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+    "name": "Locks",
+    "views": 673,
+    "viewsBefore": 750,
+    "pages": 185
+   },
+   {
+    "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+    "name": "Door Knobs",
+    "views": 498,
+    "viewsBefore": 585,
+    "pages": 92
+   },
+   {
+    "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+    "name": "Buy By Brand",
+    "views": 372,
+    "viewsBefore": 431,
+    "pages": 76
+   },
+   {
+    "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+    "name": "Hinges",
+    "views": 282,
+    "viewsBefore": 487,
+    "pages": 98
+   },
+   {
+    "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+    "name": "Blog",
+    "views": 247,
+    "viewsBefore": 233,
+    "pages": 43
+   },
+   {
+    "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+    "name": "Window Furniture",
+    "views": 220,
+    "viewsBefore": 246,
+    "pages": 72
+   },
+   {
+    "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+    "name": "Electrical",
+    "views": 112,
+    "viewsBefore": 80,
+    "pages": 24
+   },
+   {
+    "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+    "name": "Lighting",
+    "views": 87,
+    "viewsBefore": 78,
+    "pages": 27
+   }
+  ]
+ },
+ "lastMonth": {
+  "website": {
+   "views": 152926,
+   "viewsBefore": 167878,
+   "visits": 35739,
+   "visitsBefore": 37507
+  },
+  "gained": [
+   {
+    "key": "~0",
+    "label": "https://www.morehandles.co.uk/",
+    "views": 9665,
+    "viewsBefore": 9173,
+    "visits": 5002,
+    "visitsBefore": 4077,
+    "conversions": 53,
+    "conversionsBefore": 31
+   },
+   {
+    "key": "~jb",
+    "label": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+    "views": 266,
+    "viewsBefore": 34,
+    "visits": 235,
+    "visitsBefore": 10,
+    "conversions": 1,
+    "conversionsBefore": 8
+   },
+   {
+    "key": "~38p",
+    "label": "https://www.morehandles.co.uk/cottingham-shaker-with-seam-cast-cupboard-knob.html",
+    "views": 248,
+    "viewsBefore": 100,
+    "visits": 154,
+    "visitsBefore": 75,
+    "conversions": 86,
+    "conversionsBefore": 61
+   },
+   {
+    "key": "~1",
+    "label": "https://www.morehandles.co.uk/door-handles.html",
+    "views": 1157,
+    "viewsBefore": 1025,
+    "visits": 695,
+    "visitsBefore": 577,
+    "conversions": 13,
+    "conversionsBefore": 2
+   },
+   {
+    "key": "~2g",
+    "label": "https://www.morehandles.co.uk/handles/door-pull-handles.html",
+    "views": 602,
+    "viewsBefore": 496,
+    "visits": 145,
+    "visitsBefore": 124,
+    "conversions": 13,
+    "conversionsBefore": 5
+   },
+   {
+    "key": "~4g",
+    "label": "https://www.morehandles.co.uk/door-knobs/luxury-door-knobs.html",
+    "views": 227,
+    "viewsBefore": 123,
+    "visits": 74,
+    "visitsBefore": 62,
+    "conversions": 2,
+    "conversionsBefore": 3
+   },
+   {
+    "key": "~4a",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-backplate/polished-chrome-satin-chrome-door-handles.html",
+    "views": 196,
+    "viewsBefore": 94,
+    "visits": 51,
+    "visitsBefore": 26,
+    "conversions": 4,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~o3",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose/bronze-and-antique-brass-door-handles-on-rose.html",
+    "views": 240,
+    "viewsBefore": 138,
+    "visits": 54,
+    "visitsBefore": 26,
+    "conversions": 6,
+    "conversionsBefore": 4
+   },
+   {
+    "key": "~58",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/luxury-cupboard-handles-knobs.html",
+    "views": 350,
+    "viewsBefore": 252,
+    "visits": 123,
+    "visitsBefore": 97,
+    "conversions": 8,
+    "conversionsBefore": 9
+   },
+   {
+    "key": "~7is",
+    "label": "https://www.morehandles.co.uk/eclipse-insignia-knurled-latch-door-pack-with-76mm-latch-3-hinges.html",
+    "views": 117,
+    "viewsBefore": 31,
+    "visits": 57,
+    "visitsBefore": 17,
+    "conversions": 44,
+    "conversionsBefore": 15
+   }
+  ],
+  "lost": [
+   {
+    "key": "~2i",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose.html",
+    "views": 1594,
+    "viewsBefore": 1968,
+    "visits": 349,
+    "visitsBefore": 323,
+    "conversions": 55,
+    "conversionsBefore": 38
+   },
+   {
+    "key": "~2",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+    "views": 1939,
+    "viewsBefore": 2207,
+    "visits": 779,
+    "visitsBefore": 643,
+    "conversions": 48,
+    "conversionsBefore": 35
+   },
+   {
+    "key": "~1wb",
+    "label": "https://www.morehandles.co.uk/kirkpatrick-shutter-bar-3413.html",
+    "views": 53,
+    "viewsBefore": 259,
+    "visits": 39,
+    "visitsBefore": 170,
+    "conversions": 9,
+    "conversionsBefore": 68
+   },
+   {
+    "key": "~15",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/alexander-and-wilks.html",
+    "views": 269,
+    "viewsBefore": 461,
+    "visits": 144,
+    "visitsBefore": 238,
+    "conversions": 0,
+    "conversionsBefore": 3
+   },
+   {
+    "key": "~7",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+    "views": 665,
+    "viewsBefore": 855,
+    "visits": 246,
+    "visitsBefore": 292,
+    "conversions": 7,
+    "conversionsBefore": 23
+   },
+   {
+    "key": "~c",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose/polished-chrome-satin-chrome-door-handles-on-rose.html",
+    "views": 131,
+    "viewsBefore": 302,
+    "visits": 35,
+    "visitsBefore": 46,
+    "conversions": 2,
+    "conversionsBefore": 1
+   },
+   {
+    "key": "~1he",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-wall-mounted-door-stop.html",
+    "views": 60,
+    "viewsBefore": 228,
+    "visits": 59,
+    "visitsBefore": 161,
+    "conversions": 17,
+    "conversionsBefore": 44
+   },
+   {
+    "key": "~4z",
+    "label": "https://www.morehandles.co.uk/locks/rim-locks-rim-latches.html",
+    "views": 133,
+    "viewsBefore": 295,
+    "visits": 48,
+    "visitsBefore": 70,
+    "conversions": 2,
+    "conversionsBefore": 4
+   },
+   {
+    "key": "~z",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/different-cupboard-knobs.html",
+    "views": 257,
+    "viewsBefore": 416,
+    "visits": 140,
+    "visitsBefore": 141,
+    "conversions": 1,
+    "conversionsBefore": 1
+   },
+   {
+    "key": "~3f",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/brass-cupboard-handles.html",
+    "views": 296,
+    "viewsBefore": 436,
+    "visits": 97,
+    "visitsBefore": 134,
+    "conversions": 5,
+    "conversionsBefore": 9
+   }
+  ],
+  "conversionsLost": [
+   {
+    "key": "~8n3",
+    "label": "https://www.morehandles.co.uk/hafele-langham-cupboard-knob.html",
+    "views": 14,
+    "viewsBefore": 26,
+    "visits": 11,
+    "visitsBefore": 17,
+    "conversions": 16,
+    "conversionsBefore": 135
+   },
+   {
+    "key": "~c1",
+    "label": "https://www.morehandles.co.uk/alexander-and-wilks-wade-round-cupboard-knob.html",
+    "views": 109,
+    "viewsBefore": 180,
+    "visits": 71,
+    "visitsBefore": 99,
+    "conversions": 28,
+    "conversionsBefore": 88
+   },
+   {
+    "key": "~gb",
+    "label": "https://www.morehandles.co.uk/alexander-and-wilks-quantock-cup-handle.html",
+    "views": 119,
+    "viewsBefore": 232,
+    "visits": 71,
+    "visitsBefore": 125,
+    "conversions": 39,
+    "conversionsBefore": 98
+   },
+   {
+    "key": "~1wb",
+    "label": "https://www.morehandles.co.uk/kirkpatrick-shutter-bar-3413.html",
+    "views": 53,
+    "viewsBefore": 259,
+    "visits": 39,
+    "visitsBefore": 170,
+    "conversions": 9,
+    "conversionsBefore": 68
+   },
+   {
+    "key": "~3mq",
+    "label": "https://www.morehandles.co.uk/rim-cylinder-night-latch-york-security-nl3060.html",
+    "views": 112,
+    "viewsBefore": 160,
+    "visits": 85,
+    "visitsBefore": 88,
+    "conversions": 20,
+    "conversionsBefore": 61
+   },
+   {
+    "key": "~7hj",
+    "label": "https://www.morehandles.co.uk/easi-t-euro-profle-nightlatch-case-only-mcn5025sss.html",
+    "views": 35,
+    "viewsBefore": 107,
+    "visits": 26,
+    "visitsBefore": 70,
+    "conversions": 3,
+    "conversionsBefore": 40
+   },
+   {
+    "key": "~18s",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-3-concealed-fix-numerals.html",
+    "views": 65,
+    "viewsBefore": 70,
+    "visits": 39,
+    "visitsBefore": 39,
+    "conversions": 16,
+    "conversionsBefore": 52
+   },
+   {
+    "key": "~63f",
+    "label": "https://www.morehandles.co.uk/frelan-jedo-venice-door-handles-pair.html",
+    "views": 13,
+    "viewsBefore": 58,
+    "visits": 6,
+    "visitsBefore": 37,
+    "conversions": 0,
+    "conversionsBefore": 35
+   },
+   {
+    "key": "~7ll",
+    "label": "https://www.morehandles.co.uk/atlantic-hardware-millhouse-brass-eiffel-knurled-t-bar-cabinet-pull-handle.html",
+    "views": 11,
+    "viewsBefore": 16,
+    "visits": 9,
+    "visitsBefore": 9,
+    "conversions": 4,
+    "conversionsBefore": 36
+   },
+   {
+    "key": "~10",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cup-handles.html",
+    "views": 797,
+    "viewsBefore": 841,
+    "visits": 287,
+    "visitsBefore": 254,
+    "conversions": 19,
+    "conversionsBefore": 50
+   }
+  ],
+  "bands": {
+   "busy": 170,
+   "busyFewer": 101,
+   "busyVisits": 50,
+   "quiet": 9133,
+   "quietMore": 2202
+  },
+  "concentration": {
+   "noViews": 4100,
+   "noViewsBefore": 5731,
+   "pagesForHalf": 219,
+   "pagesForHalfBefore": 223
+  },
+  "shop": {
+   "pages": 407,
+   "views": 31146,
+   "viewsBefore": 37295
+  },
+  "classifications": [
+   {
+    "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+    "name": "Cupboard Handles",
+    "views": 31727,
+    "viewsBefore": 34783,
+    "pages": 888
+   },
+   {
+    "kind": "SHOP_PAGES",
+    "name": null,
+    "views": 31146,
+    "viewsBefore": 37295,
+    "pages": 235
+   },
+   {
+    "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+    "name": "Handles",
+    "views": 19254,
+    "viewsBefore": 21462,
+    "pages": 1414
+   },
+   {
+    "kind": "NOT_SORTED",
+    "name": null,
+    "views": 16880,
+    "viewsBefore": 17436,
+    "pages": 2962
+   },
+   {
+    "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+    "name": "Brand",
+    "views": 11623,
+    "viewsBefore": 11143,
+    "pages": 13
+   },
+   {
+    "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+    "name": "Other Ironmongery",
+    "views": 8937,
+    "viewsBefore": 10009,
+    "pages": 817
+   },
+   {
+    "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+    "name": "Locks",
+    "views": 8130,
+    "viewsBefore": 9353,
+    "pages": 736
+   },
+   {
+    "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+    "name": "Door Knobs",
+    "views": 5965,
+    "viewsBefore": 6030,
+    "pages": 315
+   },
+   {
+    "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+    "name": "Hinges",
+    "views": 5026,
+    "viewsBefore": 5693,
+    "pages": 380
+   },
+   {
+    "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+    "name": "Buy By Brand",
+    "views": 4853,
+    "viewsBefore": 6346,
+    "pages": 212
+   },
+   {
+    "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+    "name": "Window Furniture",
+    "views": 3279,
+    "viewsBefore": 3598,
+    "pages": 310
+   },
+   {
+    "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+    "name": "Blog",
+    "views": 2746,
+    "viewsBefore": 3023,
+    "pages": 112
+   },
+   {
+    "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+    "name": "Electrical",
+    "views": 2610,
+    "viewsBefore": 1002,
+    "pages": 1019
+   },
+   {
+    "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+    "name": "Lighting",
+    "views": 748,
+    "viewsBefore": 705,
+    "pages": 117
+   }
+  ]
+ },
+ "last3Months": {
+  "website": {
+   "views": 656318,
+   "viewsBefore": 968839,
+   "visits": 108862,
+   "visitsBefore": 100625
+  },
+  "gained": [
+   {
+    "key": "~38",
+    "label": "https://www.morehandles.co.uk/blog/cabinet-handles-size-guide-how-to-choose-the-right-size/",
+    "views": 1035,
+    "viewsBefore": 238,
+    "visits": 609,
+    "visitsBefore": 75,
+    "conversions": 1,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~46",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/kitchen-door-handles.html",
+    "views": 3667,
+    "viewsBefore": 3141,
+    "visits": 829,
+    "visitsBefore": 557,
+    "conversions": 82,
+    "conversionsBefore": 8
+   },
+   {
+    "key": "~2f",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/croft-hardware.html",
+    "views": 686,
+    "viewsBefore": 261,
+    "visits": 379,
+    "visitsBefore": 71,
+    "conversions": 7,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~7hk",
+    "label": "https://www.morehandles.co.uk/front-door-furniture/letterplates-letterboxes/letter-tidy/dartington-internal-letter-tidy-with-draught-excluder.html",
+    "views": 770,
+    "viewsBefore": 361,
+    "visits": 438,
+    "visitsBefore": 116,
+    "conversions": 116,
+    "conversionsBefore": 15
+   },
+   {
+    "key": "~3mq",
+    "label": "https://www.morehandles.co.uk/rim-cylinder-night-latch-york-security-nl3060.html",
+    "views": 399,
+    "viewsBefore": 0,
+    "visits": 198,
+    "visitsBefore": 0,
+    "conversions": 97,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~7hm",
+    "label": "https://www.morehandles.co.uk/eclipse-insignia-knurled-bathroom-door-pack-with-76mm-lock-3-hinges.html",
+    "views": 340,
+    "viewsBefore": 0,
+    "visits": 91,
+    "visitsBefore": 0,
+    "conversions": 63,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~1he",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-wall-mounted-door-stop.html",
+    "views": 653,
+    "viewsBefore": 338,
+    "visits": 320,
+    "visitsBefore": 97,
+    "conversions": 93,
+    "conversionsBefore": 62
+   },
+   {
+    "key": "~jb",
+    "label": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+    "views": 312,
+    "viewsBefore": 0,
+    "visits": 247,
+    "visitsBefore": 0,
+    "conversions": 9,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~7is",
+    "label": "https://www.morehandles.co.uk/eclipse-insignia-knurled-latch-door-pack-with-76mm-latch-3-hinges.html",
+    "views": 296,
+    "viewsBefore": 0,
+    "visits": 113,
+    "visitsBefore": 0,
+    "conversions": 79,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~1wb",
+    "label": "https://www.morehandles.co.uk/kirkpatrick-shutter-bar-3413.html",
+    "views": 547,
+    "viewsBefore": 260,
+    "visits": 276,
+    "visitsBefore": 68,
+    "conversions": 91,
+    "conversionsBefore": 37
+   }
+  ],
+  "lost": [
+   {
+    "key": "~0",
+    "label": "https://www.morehandles.co.uk/",
+    "views": 36646,
+    "viewsBefore": 45580,
+    "visits": 13239,
+    "visitsBefore": 11150,
+    "conversions": 115,
+    "conversionsBefore": 110
+   },
+   {
+    "key": "~1b",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles.html",
+    "views": 15984,
+    "viewsBefore": 23436,
+    "visits": 2730,
+    "visitsBefore": 2531,
+    "conversions": 229,
+    "conversionsBefore": 114
+   },
+   {
+    "key": "~2s",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-knobs.html",
+    "views": 9552,
+    "viewsBefore": 16586,
+    "visits": 1480,
+    "visitsBefore": 1608,
+    "conversions": 147,
+    "conversionsBefore": 120
+   },
+   {
+    "key": "~fu",
+    "label": "https://www.morehandles.co.uk/waltz-round-cupboard-knob-on-stepped-rose.html",
+    "views": 8352,
+    "viewsBefore": 12864,
+    "visits": 3696,
+    "visitsBefore": 3288,
+    "conversions": 2512,
+    "conversionsBefore": 1535
+   },
+   {
+    "key": "~10",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cup-handles.html",
+    "views": 3143,
+    "viewsBefore": 6369,
+    "visits": 814,
+    "visitsBefore": 1001,
+    "conversions": 78,
+    "conversionsBefore": 46
+   },
+   {
+    "key": "~2",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+    "views": 8434,
+    "viewsBefore": 11386,
+    "visits": 2114,
+    "visitsBefore": 2383,
+    "conversions": 112,
+    "conversionsBefore": 64
+   },
+   {
+    "key": "~2i",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose.html",
+    "views": 6902,
+    "viewsBefore": 9708,
+    "visits": 995,
+    "visitsBefore": 895,
+    "conversions": 111,
+    "conversionsBefore": 55
+   },
+   {
+    "key": "~47",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/kitchen-door-handles/kitchen-cupboard-handles.html",
+    "views": 3021,
+    "viewsBefore": 5736,
+    "visits": 480,
+    "visitsBefore": 556,
+    "conversions": 29,
+    "conversionsBefore": 30
+   },
+   {
+    "key": "~a",
+    "label": "https://www.morehandles.co.uk/handles/flush-pull-handles.html",
+    "views": 1971,
+    "viewsBefore": 4358,
+    "visits": 480,
+    "visitsBefore": 691,
+    "conversions": 20,
+    "conversionsBefore": 32
+   },
+   {
+    "key": "~15",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/alexander-and-wilks.html",
+    "views": 1814,
+    "viewsBefore": 3917,
+    "visits": 653,
+    "visitsBefore": 1077,
+    "conversions": 6,
+    "conversionsBefore": 14
+   }
+  ],
+  "conversionsLost": [
+   {
+    "key": "~1vt",
+    "label": "https://www.morehandles.co.uk/alexander-and-wilks-bardom-ridged-cup-handle.html",
+    "views": 2276,
+    "viewsBefore": 2899,
+    "visits": 874,
+    "visitsBefore": 660,
+    "conversions": 793,
+    "conversionsBefore": 1132
+   },
+   {
+    "key": "~7hd",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/luxury-cupboard-handles-knobs/alexander-and-wilks-bardom-ridged-cup-handle.html",
+    "views": 1064,
+    "viewsBefore": 830,
+    "visits": 463,
+    "visitsBefore": 237,
+    "conversions": 287,
+    "conversionsBefore": 390
+   },
+   {
+    "key": "~a6s",
+    "label": "https://www.morehandles.co.uk/other-ironmongery/m-marcus-heritage-brass-wall-mounted-door-stop.html",
+    "views": 278,
+    "viewsBefore": 1770,
+    "visits": 83,
+    "visitsBefore": 509,
+    "conversions": 26,
+    "conversionsBefore": 114
+   },
+   {
+    "key": "~72f",
+    "label": "https://www.morehandles.co.uk/hafele-oriel-cabinet-knob.html",
+    "views": 139,
+    "viewsBefore": 368,
+    "visits": 71,
+    "visitsBefore": 95,
+    "conversions": 15,
+    "conversionsBefore": 81
+   },
+   {
+    "key": "~4vw",
+    "label": "https://www.morehandles.co.uk/hafele-cabinet-d-pull-handle.html",
+    "views": 66,
+    "viewsBefore": 180,
+    "visits": 22,
+    "visitsBefore": 57,
+    "conversions": 5,
+    "conversionsBefore": 70
+   },
+   {
+    "key": "~aco",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/vintage-cupboard-handles-knobs/chatsworth-porcelain-white-cupboard-knob.html",
+    "views": 58,
+    "viewsBefore": 666,
+    "visits": 19,
+    "visitsBefore": 196,
+    "conversions": 4,
+    "conversionsBefore": 67
+   },
+   {
+    "key": "~9gr",
+    "label": "https://www.morehandles.co.uk/hinges/continuous-piano-hinges/carlisle-brass-electro-brass-continuous-piano-hinge-ebh.html",
+    "views": 155,
+    "viewsBefore": 1015,
+    "visits": 47,
+    "visitsBefore": 299,
+    "conversions": 4,
+    "conversionsBefore": 65
+   },
+   {
+    "key": "~7ha",
+    "label": "https://www.morehandles.co.uk/other-ironmongery/shelf-brackets/dartington-tilford-shelf-bracket.html",
+    "views": 444,
+    "viewsBefore": 1223,
+    "visits": 274,
+    "visitsBefore": 375,
+    "conversions": 52,
+    "conversionsBefore": 110
+   },
+   {
+    "key": "~wd",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-solid-brass-victorian-cupboard-knob.html",
+    "views": 368,
+    "viewsBefore": 844,
+    "visits": 152,
+    "visitsBefore": 214,
+    "conversions": 62,
+    "conversionsBefore": 116
+   },
+   {
+    "key": "~8dh",
+    "label": "https://www.morehandles.co.uk/serozzetta-andros-economy-shortplate-door-handle-pair.html",
+    "views": 52,
+    "viewsBefore": 169,
+    "visits": 21,
+    "visitsBefore": 41,
+    "conversions": 11,
+    "conversionsBefore": 65
+   }
+  ],
+  "bands": {
+   "busy": 157,
+   "busyFewer": 134,
+   "busyVisits": 150,
+   "quiet": 11897,
+   "quietMore": 3642
+  },
+  "concentration": {
+   "noViews": 3601,
+   "noViewsBefore": 5479,
+   "pagesForHalf": 226,
+   "pagesForHalfBefore": 219
+  },
+  "shop": {
+   "pages": 995,
+   "views": 136440,
+   "viewsBefore": 194185
+  },
+  "classifications": [
+   {
+    "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+    "name": "Cupboard Handles",
+    "views": 139236,
+    "viewsBefore": 220806,
+    "pages": 1030
+   },
+   {
+    "kind": "SHOP_PAGES",
+    "name": null,
+    "views": 136440,
+    "viewsBefore": 194185,
+    "pages": 555
+   },
+   {
+    "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+    "name": "Handles",
+    "views": 85952,
+    "viewsBefore": 125493,
+    "pages": 1801
+   },
+   {
+    "kind": "NOT_SORTED",
+    "name": null,
+    "views": 68501,
+    "viewsBefore": 96485,
+    "pages": 4023
+   },
+   {
+    "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+    "name": "Brand",
+    "views": 44394,
+    "viewsBefore": 57029,
+    "pages": 13
+   },
+   {
+    "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+    "name": "Other Ironmongery",
+    "views": 40441,
+    "viewsBefore": 62295,
+    "pages": 1254
+   },
+   {
+    "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+    "name": "Locks",
+    "views": 35104,
+    "viewsBefore": 45212,
+    "pages": 948
+   },
+   {
+    "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+    "name": "Door Knobs",
+    "views": 24861,
+    "viewsBefore": 36720,
+    "pages": 364
+   },
+   {
+    "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+    "name": "Buy By Brand",
+    "views": 24142,
+    "viewsBefore": 46667,
+    "pages": 286
+   },
+   {
+    "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+    "name": "Hinges",
+    "views": 20791,
+    "viewsBefore": 31904,
+    "pages": 496
+   },
+   {
+    "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+    "name": "Window Furniture",
+    "views": 13864,
+    "viewsBefore": 21709,
+    "pages": 452
+   },
+   {
+    "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+    "name": "Blog",
+    "views": 13352,
+    "viewsBefore": 19515,
+    "pages": 143
+   },
+   {
+    "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+    "name": "Electrical",
+    "views": 5582,
+    "viewsBefore": 6070,
+    "pages": 1079
+   },
+   {
+    "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+    "name": "Lighting",
+    "views": 3656,
+    "viewsBefore": 4746,
+    "pages": 161
+   }
+  ]
+ },
+ "last6Months": {
+  "website": {
+   "views": 1625157,
+   "viewsBefore": 1842512,
+   "visits": 209585,
+   "visitsBefore": 198354
+  },
+  "gained": [
+   {
+    "key": "~5cl",
+    "label": "https://www.morehandles.co.uk/eclipse-knurled-cupboard-knob.html",
+    "views": 2636,
+    "viewsBefore": 0,
+    "visits": 755,
+    "visitsBefore": 0,
+    "conversions": 449,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~46",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/kitchen-door-handles.html",
+    "views": 6808,
+    "viewsBefore": 4259,
+    "visits": 1388,
+    "visitsBefore": 1318,
+    "conversions": 90,
+    "conversionsBefore": 11
+   },
+   {
+    "key": "~2pf",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-mila-heritage-pear-drop-casement-handle.html",
+    "views": 3208,
+    "viewsBefore": 1365,
+    "visits": 1189,
+    "visitsBefore": 405,
+    "conversions": 267,
+    "conversionsBefore": 128
+   },
+   {
+    "key": "~a6s",
+    "label": "https://www.morehandles.co.uk/other-ironmongery/m-marcus-heritage-brass-wall-mounted-door-stop.html",
+    "views": 2048,
+    "viewsBefore": 319,
+    "visits": 592,
+    "visitsBefore": 103,
+    "conversions": 140,
+    "conversionsBefore": 21
+   },
+   {
+    "key": "~8i",
+    "label": "https://www.morehandles.co.uk/alexander-and-wilks-scandi-pull-handle.html",
+    "views": 1959,
+    "viewsBefore": 242,
+    "visits": 732,
+    "visitsBefore": 66,
+    "conversions": 218,
+    "conversionsBefore": 38
+   },
+   {
+    "key": "~d9",
+    "label": "https://www.morehandles.co.uk/door-hardware-sets.html",
+    "views": 1387,
+    "viewsBefore": 35,
+    "visits": 340,
+    "visitsBefore": 10,
+    "conversions": 8,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~38",
+    "label": "https://www.morehandles.co.uk/blog/cabinet-handles-size-guide-how-to-choose-the-right-size/",
+    "views": 1273,
+    "viewsBefore": 0,
+    "visits": 685,
+    "visitsBefore": 0,
+    "conversions": 1,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~pq",
+    "label": "https://www.morehandles.co.uk/m-marcus-heritage-brass-letterplate.html",
+    "views": 2031,
+    "viewsBefore": 972,
+    "visits": 666,
+    "visitsBefore": 292,
+    "conversions": 342,
+    "conversionsBefore": 111
+   },
+   {
+    "key": "~7hd",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/luxury-cupboard-handles-knobs/alexander-and-wilks-bardom-ridged-cup-handle.html",
+    "views": 1894,
+    "viewsBefore": 853,
+    "visits": 700,
+    "visitsBefore": 270,
+    "conversions": 677,
+    "conversionsBefore": 131
+   },
+   {
+    "key": "~a74",
+    "label": "https://www.morehandles.co.uk/hinges/eclipse-cupboard-cup-pull-76mm.html",
+    "views": 1038,
+    "viewsBefore": 0,
+    "visits": 252,
+    "visitsBefore": 0,
+    "conversions": 96,
+    "conversionsBefore": 0
+   }
+  ],
+  "lost": [
+   {
+    "key": "~1b",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles.html",
+    "views": 39420,
+    "viewsBefore": 74459,
+    "visits": 5303,
+    "visitsBefore": 7726,
+    "conversions": 343,
+    "conversionsBefore": 470
+   },
+   {
+    "key": "~2s",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-knobs.html",
+    "views": 26138,
+    "viewsBefore": 48841,
+    "visits": 3100,
+    "visitsBefore": 4727,
+    "conversions": 267,
+    "conversionsBefore": 318
+   },
+   {
+    "key": "~0",
+    "label": "https://www.morehandles.co.uk/",
+    "views": 82226,
+    "viewsBefore": 93343,
+    "visits": 24547,
+    "visitsBefore": 27651,
+    "conversions": 225,
+    "conversionsBefore": 200
+   },
+   {
+    "key": "~2l",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-backplate.html",
+    "views": 16955,
+    "viewsBefore": 26239,
+    "visits": 2049,
+    "visitsBefore": 2522,
+    "conversions": 232,
+    "conversionsBefore": 211
+   },
+   {
+    "key": "~47",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/kitchen-door-handles/kitchen-cupboard-handles.html",
+    "views": 8757,
+    "viewsBefore": 17917,
+    "visits": 1035,
+    "visitsBefore": 1600,
+    "conversions": 59,
+    "conversionsBefore": 145
+   },
+   {
+    "key": "~10",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cup-handles.html",
+    "views": 9512,
+    "viewsBefore": 17671,
+    "visits": 1815,
+    "visitsBefore": 2560,
+    "conversions": 124,
+    "conversionsBefore": 136
+   },
+   {
+    "key": "~2i",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose.html",
+    "views": 16610,
+    "viewsBefore": 23785,
+    "visits": 1889,
+    "visitsBefore": 2281,
+    "conversions": 166,
+    "conversionsBefore": 243
+   },
+   {
+    "key": "~2",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+    "views": 19820,
+    "viewsBefore": 24253,
+    "visits": 4512,
+    "visitsBefore": 7025,
+    "conversions": 176,
+    "conversionsBefore": 87
+   },
+   {
+    "key": "~t",
+    "label": "https://www.morehandles.co.uk/blog/tubular-latch-guide-choosing-right-latch/",
+    "views": 7197,
+    "viewsBefore": 11621,
+    "visits": 2951,
+    "visitsBefore": 4162,
+    "conversions": 9,
+    "conversionsBefore": 7
+   },
+   {
+    "key": "~z",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/different-cupboard-knobs.html",
+    "views": 4196,
+    "viewsBefore": 7842,
+    "visits": 1078,
+    "visitsBefore": 1688,
+    "conversions": 28,
+    "conversionsBefore": 43
+   }
+  ],
+  "conversionsLost": [
+   {
+    "key": "~1b",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles.html",
+    "views": 39420,
+    "viewsBefore": 74459,
+    "visits": 5303,
+    "visitsBefore": 7726,
+    "conversions": 343,
+    "conversionsBefore": 470
+   },
+   {
+    "key": "~wd",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-solid-brass-victorian-cupboard-knob.html",
+    "views": 1212,
+    "viewsBefore": 1858,
+    "visits": 367,
+    "visitsBefore": 570,
+    "conversions": 178,
+    "conversionsBefore": 296
+   },
+   {
+    "key": "~wu",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-fingertip-design-oxford-cupboard-knob.html",
+    "views": 1286,
+    "viewsBefore": 1414,
+    "visits": 434,
+    "visitsBefore": 426,
+    "conversions": 249,
+    "conversionsBefore": 362
+   },
+   {
+    "key": "~qa",
+    "label": "https://www.morehandles.co.uk/olde-victorian-rim-lock.html",
+    "views": 402,
+    "viewsBefore": 636,
+    "visits": 156,
+    "visitsBefore": 181,
+    "conversions": 91,
+    "conversionsBefore": 198
+   },
+   {
+    "key": "~47",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/kitchen-door-handles/kitchen-cupboard-handles.html",
+    "views": 8757,
+    "viewsBefore": 17917,
+    "visits": 1035,
+    "visitsBefore": 1600,
+    "conversions": 59,
+    "conversionsBefore": 145
+   },
+   {
+    "key": "~2i",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose.html",
+    "views": 16610,
+    "viewsBefore": 23785,
+    "visits": 1889,
+    "visitsBefore": 2281,
+    "conversions": 166,
+    "conversionsBefore": 243
+   },
+   {
+    "key": "~2cv",
+    "label": "https://www.morehandles.co.uk/ludlow-foundries-curly-tail-locking-casement-fastener-lf1006.html",
+    "views": 64,
+    "viewsBefore": 111,
+    "visits": 29,
+    "visitsBefore": 30,
+    "conversions": 13,
+    "conversionsBefore": 86
+   },
+   {
+    "key": "~8c2",
+    "label": "https://www.morehandles.co.uk/prima-hardware-tubular-latch-ce-heavy-duty-bolt-through.html",
+    "views": 143,
+    "viewsBefore": 302,
+    "visits": 63,
+    "visitsBefore": 94,
+    "conversions": 13,
+    "conversionsBefore": 81
+   },
+   {
+    "key": "~dv",
+    "label": "https://www.morehandles.co.uk/fab-n-fix-windsor-inline-multi-point-door-handle-pair.html",
+    "views": 219,
+    "viewsBefore": 522,
+    "visits": 91,
+    "visitsBefore": 164,
+    "conversions": 6,
+    "conversionsBefore": 73
+   },
+   {
+    "key": "~us",
+    "label": "https://www.morehandles.co.uk/bala-door-knob-weiser-style-replacement-set.html",
+    "views": 434,
+    "viewsBefore": 835,
+    "visits": 141,
+    "visitsBefore": 246,
+    "conversions": 42,
+    "conversionsBefore": 107
+   }
+  ],
+  "bands": {
+   "busy": 160,
+   "busyFewer": 103,
+   "busyVisits": 300,
+   "quiet": 13702,
+   "quietMore": 6650
+  },
+  "concentration": {
+   "noViews": 3144,
+   "noViewsBefore": 6146,
+   "pagesForHalf": 227,
+   "pagesForHalfBefore": 117
+  },
+  "shop": {
+   "pages": 1800,
+   "views": 330625,
+   "viewsBefore": 357719
+  },
+  "classifications": [
+   {
+    "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+    "name": "Cupboard Handles",
+    "views": 360042,
+    "viewsBefore": 490943,
+    "pages": 1098
+   },
+   {
+    "kind": "SHOP_PAGES",
+    "name": null,
+    "views": 330625,
+    "viewsBefore": 357719,
+    "pages": 995
+   },
+   {
+    "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+    "name": "Handles",
+    "views": 211445,
+    "viewsBefore": 250223,
+    "pages": 2015
+   },
+   {
+    "kind": "NOT_SORTED",
+    "name": null,
+    "views": 164986,
+    "viewsBefore": 160779,
+    "pages": 4791
+   },
+   {
+    "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+    "name": "Other Ironmongery",
+    "views": 102736,
+    "viewsBefore": 91869,
+    "pages": 1571
+   },
+   {
+    "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+    "name": "Brand",
+    "views": 101423,
+    "viewsBefore": 114293,
+    "pages": 13
+   },
+   {
+    "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+    "name": "Locks",
+    "views": 80316,
+    "viewsBefore": 77702,
+    "pages": 1083
+   },
+   {
+    "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+    "name": "Buy By Brand",
+    "views": 70809,
+    "viewsBefore": 83737,
+    "pages": 325
+   },
+   {
+    "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+    "name": "Door Knobs",
+    "views": 61581,
+    "viewsBefore": 80468,
+    "pages": 382
+   },
+   {
+    "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+    "name": "Hinges",
+    "views": 52695,
+    "viewsBefore": 46777,
+    "pages": 579
+   },
+   {
+    "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+    "name": "Window Furniture",
+    "views": 35573,
+    "viewsBefore": 27391,
+    "pages": 533
+   },
+   {
+    "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+    "name": "Blog",
+    "views": 32867,
+    "viewsBefore": 46340,
+    "pages": 163
+   },
+   {
+    "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+    "name": "Electrical",
+    "views": 11652,
+    "viewsBefore": 3904,
+    "pages": 1122
+   },
+   {
+    "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+    "name": "Lighting",
+    "views": 8402,
+    "viewsBefore": 10367,
+    "pages": 183
+   }
+  ]
+ },
+ "last12Months": {
+  "website": {
+   "views": 3467680,
+   "viewsBefore": 1765308,
+   "visits": 403071,
+   "visitsBefore": 338862
+  },
+  "gained": [
+   {
+    "key": "~0",
+    "label": "https://www.morehandles.co.uk/",
+    "views": 175569,
+    "viewsBefore": 90991,
+    "visits": 51533,
+    "visitsBefore": 47165,
+    "conversions": 425,
+    "conversionsBefore": 368
+   },
+   {
+    "key": "~fu",
+    "label": "https://www.morehandles.co.uk/waltz-round-cupboard-knob-on-stepped-rose.html",
+    "views": 42880,
+    "viewsBefore": 8028,
+    "visits": 12725,
+    "visitsBefore": 4318,
+    "conversions": 7112,
+    "conversionsBefore": 1306
+   },
+   {
+    "key": "~2l",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-backplate.html",
+    "views": 43194,
+    "viewsBefore": 23631,
+    "visits": 4589,
+    "visitsBefore": 4041,
+    "conversions": 443,
+    "conversionsBefore": 252
+   },
+   {
+    "key": "~2s",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-knobs.html",
+    "views": 74979,
+    "viewsBefore": 56437,
+    "visits": 7872,
+    "visitsBefore": 9042,
+    "conversions": 585,
+    "conversionsBefore": 360
+   },
+   {
+    "key": "~2i",
+    "label": "https://www.morehandles.co.uk/handles/door-handles-on-rose.html",
+    "views": 40395,
+    "viewsBefore": 23251,
+    "visits": 4263,
+    "visitsBefore": 3597,
+    "conversions": 409,
+    "conversionsBefore": 180
+   },
+   {
+    "key": "~1b",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles.html",
+    "views": 113879,
+    "viewsBefore": 96846,
+    "visits": 13159,
+    "visitsBefore": 15234,
+    "conversions": 813,
+    "conversionsBefore": 623
+   },
+   {
+    "key": "~1",
+    "label": "https://www.morehandles.co.uk/door-handles.html",
+    "views": 25043,
+    "viewsBefore": 8477,
+    "visits": 7679,
+    "visitsBefore": 3259,
+    "conversions": 83,
+    "conversionsBefore": 38
+   },
+   {
+    "key": "~2",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+    "views": 44073,
+    "viewsBefore": 30562,
+    "visits": 11483,
+    "visitsBefore": 16049,
+    "conversions": 263,
+    "conversionsBefore": 90
+   },
+   {
+    "key": "~7",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+    "views": 14305,
+    "viewsBefore": 6646,
+    "visits": 2489,
+    "visitsBefore": 1666,
+    "conversions": 136,
+    "conversionsBefore": 50
+   },
+   {
+    "key": "~47",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/kitchen-door-handles/kitchen-cupboard-handles.html",
+    "views": 26674,
+    "viewsBefore": 19311,
+    "visits": 2632,
+    "visitsBefore": 2758,
+    "conversions": 204,
+    "conversionsBefore": 117
+   }
+  ],
+  "lost": [
+   {
+    "key": "~2q",
+    "label": "https://www.morehandles.co.uk/about-us",
+    "views": 2370,
+    "viewsBefore": 6893,
+    "visits": 872,
+    "visitsBefore": 3422,
+    "conversions": 3,
+    "conversionsBefore": 17
+   },
+   {
+    "key": "~dgs",
+    "label": "https://www.morehandles.co.uk/handles.html",
+    "views": 0,
+    "viewsBefore": 4319,
+    "visits": 0,
+    "visitsBefore": 2875,
+    "conversions": 0,
+    "conversionsBefore": 11
+   },
+   {
+    "key": "~dgw",
+    "label": "https://www.morehandles.co.uk/locks.html",
+    "views": 0,
+    "viewsBefore": 1435,
+    "visits": 0,
+    "visitsBefore": 892,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~1q6",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/buster-and-punch/buster-punch-deals.html",
+    "views": 90,
+    "viewsBefore": 908,
+    "visits": 17,
+    "visitsBefore": 505,
+    "conversions": 1,
+    "conversionsBefore": 2
+   },
+   {
+    "key": "~dgn",
+    "label": "https://www.morehandles.co.uk/hinges/soft-close-cabinet-hinges.html",
+    "views": 0,
+    "viewsBefore": 605,
+    "visits": 0,
+    "visitsBefore": 302,
+    "conversions": 0,
+    "conversionsBefore": 5
+   },
+   {
+    "key": "~17",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-catches-latches.html",
+    "views": 2680,
+    "viewsBefore": 3258,
+    "visits": 832,
+    "visitsBefore": 1719,
+    "conversions": 17,
+    "conversionsBefore": 17
+   },
+   {
+    "key": "~dgo",
+    "label": "https://www.morehandles.co.uk/buy-by-brand/armac-martin.html",
+    "views": 0,
+    "viewsBefore": 567,
+    "visits": 0,
+    "visitsBefore": 338,
+    "conversions": 0,
+    "conversionsBefore": 1
+   },
+   {
+    "key": "~dhf",
+    "label": "https://www.morehandles.co.uk/atlantic-latch-faceplate-kit-for-tubular-latches.html",
+    "views": 0,
+    "viewsBefore": 415,
+    "visits": 0,
+    "visitsBefore": 217,
+    "conversions": 0,
+    "conversionsBefore": 22
+   },
+   {
+    "key": "~k",
+    "label": "https://www.morehandles.co.uk/blog/how-to-measure-a-door-to-fit-door-handles/",
+    "views": 814,
+    "viewsBefore": 1186,
+    "visits": 279,
+    "visitsBefore": 967,
+    "conversions": 0,
+    "conversionsBefore": 0
+   },
+   {
+    "key": "~aj",
+    "label": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/leather-cupboard-handles.html",
+    "views": 767,
+    "viewsBefore": 1124,
+    "visits": 227,
+    "visitsBefore": 595,
+    "conversions": 2,
+    "conversionsBefore": 3
+   }
+  ],
+  "conversionsLost": [
+   {
+    "key": "~5qs",
+    "label": "https://www.morehandles.co.uk/fingertip-design-lines-radio-cupboard-knob.html",
+    "views": 890,
+    "viewsBefore": 815,
+    "visits": 275,
+    "visitsBefore": 419,
+    "conversions": 93,
+    "conversionsBefore": 164
+   },
+   {
+    "key": "~5rd",
+    "label": "https://www.morehandles.co.uk/eurospec-grade-7-stainless-steel-ball-bearing-hinge.html",
+    "views": 422,
+    "viewsBefore": 555,
+    "visits": 112,
+    "visitsBefore": 295,
+    "conversions": 35,
+    "conversionsBefore": 103
+   },
+   {
+    "key": "~1tp",
+    "label": "https://www.morehandles.co.uk/second-nature-yard-cupboard-handle.html",
+    "views": 577,
+    "viewsBefore": 352,
+    "visits": 196,
+    "visitsBefore": 227,
+    "conversions": 23,
+    "conversionsBefore": 88
+   },
+   {
+    "key": "~66",
+    "label": "https://www.morehandles.co.uk/buy-by-brand.html",
+    "views": 3187,
+    "viewsBefore": 2836,
+    "visits": 945,
+    "visitsBefore": 1309,
+    "conversions": 11,
+    "conversionsBefore": 73
+   },
+   {
+    "key": "~12m",
+    "label": "https://www.morehandles.co.uk/frelan-sprung-contract-oval-mortice-door-knob-pair.html",
+    "views": 471,
+    "viewsBefore": 147,
+    "visits": 163,
+    "visitsBefore": 63,
+    "conversions": 20,
+    "conversionsBefore": 75
+   },
+   {
+    "key": "~7ly",
+    "label": "https://www.morehandles.co.uk/carlisle-brass-fingertip-design-crystal-faceted-cupboard-knob.html",
+    "views": 263,
+    "viewsBefore": 280,
+    "visits": 104,
+    "visitsBefore": 173,
+    "conversions": 26,
+    "conversionsBefore": 69
+   },
+   {
+    "key": "~1ou",
+    "label": "https://www.morehandles.co.uk/frelan-linear-door-pull-handle.html",
+    "views": 92,
+    "viewsBefore": 14,
+    "visits": 34,
+    "visitsBefore": 11,
+    "conversions": 6,
+    "conversionsBefore": 42
+   },
+   {
+    "key": "~33r",
+    "label": "https://www.morehandles.co.uk/eurospec-mitred-door-handle-on-backplate-cslp1162.html",
+    "views": 274,
+    "viewsBefore": 192,
+    "visits": 111,
+    "visitsBefore": 86,
+    "conversions": 7,
+    "conversionsBefore": 41
+   },
+   {
+    "key": "~dv",
+    "label": "https://www.morehandles.co.uk/fab-n-fix-windsor-inline-multi-point-door-handle-pair.html",
+    "views": 741,
+    "viewsBefore": 553,
+    "visits": 255,
+    "visitsBefore": 284,
+    "conversions": 79,
+    "conversionsBefore": 113
+   },
+   {
+    "key": "~7qf",
+    "label": "https://www.morehandles.co.uk/second-nature-porcelain-white-crackle-cupboard-knob.html",
+    "views": 214,
+    "viewsBefore": 312,
+    "visits": 77,
+    "visitsBefore": 148,
+    "conversions": 0,
+    "conversionsBefore": 34
+   }
+  ],
+  "bands": {
+   "busy": 151,
+   "busyFewer": 2,
+   "busyVisits": 600,
+   "quiet": 15248,
+   "quietMore": 11622
+  },
+  "concentration": {
+   "noViews": 3524,
+   "noViewsBefore": 8078,
+   "pagesForHalf": 165,
+   "pagesForHalfBefore": 83
+  },
+  "shop": {
+   "pages": 3016,
+   "views": 688344,
+   "viewsBefore": 301917
+  },
+  "classifications": [
+   {
+    "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+    "name": "Cupboard Handles",
+    "views": 850995,
+    "viewsBefore": 522318,
+    "pages": 1149
+   },
+   {
+    "kind": "SHOP_PAGES",
+    "name": null,
+    "views": 688344,
+    "viewsBefore": 301917,
+    "pages": 1800
+   },
+   {
+    "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+    "name": "Handles",
+    "views": 461668,
+    "viewsBefore": 223679,
+    "pages": 2149
+   },
+   {
+    "kind": "NOT_SORTED",
+    "name": null,
+    "views": 325765,
+    "viewsBefore": 169654,
+    "pages": 5707
+   },
+   {
+    "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+    "name": "Brand",
+    "views": 215716,
+    "viewsBefore": 117231,
+    "pages": 13
+   },
+   {
+    "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+    "name": "Other Ironmongery",
+    "views": 194605,
+    "viewsBefore": 88479,
+    "pages": 1714
+   },
+   {
+    "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+    "name": "Locks",
+    "views": 158018,
+    "viewsBefore": 63719,
+    "pages": 1135
+   },
+   {
+    "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+    "name": "Buy By Brand",
+    "views": 154546,
+    "viewsBefore": 76281,
+    "pages": 387
+   },
+   {
+    "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+    "name": "Door Knobs",
+    "views": 142049,
+    "viewsBefore": 66738,
+    "pages": 394
+   },
+   {
+    "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+    "name": "Hinges",
+    "views": 99472,
+    "viewsBefore": 44360,
+    "pages": 616
+   },
+   {
+    "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+    "name": "Blog",
+    "views": 79207,
+    "viewsBefore": 53551,
+    "pages": 192
+   },
+   {
+    "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+    "name": "Window Furniture",
+    "views": 62965,
+    "viewsBefore": 27184,
+    "pages": 586
+   },
+   {
+    "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+    "name": "Lighting",
+    "views": 18769,
+    "viewsBefore": 9502,
+    "pages": 207
+   },
+   {
+    "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+    "name": "Electrical",
+    "views": 15556,
+    "viewsBefore": 688,
+    "pages": 1145
+   }
+  ]
+ }
+}

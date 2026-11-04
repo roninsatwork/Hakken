@@ -96,6 +96,14 @@ export async function keywordListOf(
     pagesShown: pairParts?.[0]?.shown ?? null,
     bookTexts,
   });
+  // The four searches What Hakken sees moved most, named as the rows on screen are (`readList` names them the same).
+  const movers = table.summary.wholeList?.movers;
+  if (movers) {
+    for (const way of ["brandUp", "brandDown", "otherUp", "otherDown"] as const) {
+      const moved = movers[way];
+      if (moved) movers[way] = { ...moved, key: await names.textOf(moved.key) };
+    }
+  }
   return {
     rows: table.rows,
     cut: table.cut,
@@ -132,8 +140,10 @@ export async function keywordFiguresOf(
   searchType: SearchType,
   period: SearchConsolePeriod,
   country: string | undefined,
+  /** The period itself, or the span before it (Click rate by position's curve before, for What Hakken sees: 2026-11-03). */
+  which: "NOW" | "BEFORE" = "NOW",
 ): Promise<KeywordFigures | null> {
-  const parts = await partsToRead(ctx, companyWebsiteId, searchType, "query", period, "NOW", country);
+  const parts = await partsToRead(ctx, companyWebsiteId, searchType, "query", period, which, country);
   if (parts.length === 0) return null;
   const columns = keywordColumnsOf(parts);
   if (columns) {

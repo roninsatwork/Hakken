@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { FunctionArgs } from "convex/server";
 import type { api } from "@/convex/_generated/api";
@@ -12,6 +10,7 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { LAYER } from "@/src/ui/lib/layers";
 import { cn } from "@/src/ui/lib/utils";
 import { publishSees } from "./hakkenSeesStore";
+import { SeesWords } from "./SeesWriting";
 
 /** One "Do first" step: its sentence, its link's words and where the link leads. */
 export type HakkenSeesStep = { words: string; link: string; href: string; external?: boolean };
@@ -138,34 +137,5 @@ export function SeesBubble({ says, steps, researching = false, id }: { says: str
         <SeesWords says={says} steps={steps} />
       )}
     </div>
-  );
-}
-
-/** The bubble's words: the sentences, then "Do first" and the steps, each with its quiet link. */
-export function SeesWords({ says, steps }: { says: string[]; steps: HakkenSeesStep[] }) {
-  const t = useTranslations("ui.hakkenSees");
-  return (
-    <>
-      {/* A page with nothing to say by its rule yet still has the chat below (sees-every-page-plan-2026-10-31.md). */}
-      <p className="text-[13px] leading-[1.6] text-secondary">{says.length > 0 ? says.join(" ") : t("askBelow")}</p>
-      {steps.length > 0 ? (
-        <div className="mt-1 flex flex-col gap-2">
-          <div className="text-[12px] text-muted">{t("doFirst")}</div>
-          {steps.map((step, at) => (
-            <div key={`${at}-${step.href}`} className="flex flex-wrap items-center gap-3">
-              <span className="text-[13px] text-foreground">{at + 1}. {step.words}</span>
-              <Link
-                href={step.href}
-                {...(step.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                className="inline-flex items-center gap-1.5 text-[12px] text-secondary hover:text-foreground"
-              >
-                {step.link}
-                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </Link>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </>
   );
 }

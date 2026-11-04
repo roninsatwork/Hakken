@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { findingValidator } from "./utils/sees/findingValidator";
+import { seesStageRowValidator } from "./utils/sees/stages";
 import { v } from "convex/values";
 import { factValidator } from "./utils/insightFacts";
 import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
@@ -437,6 +438,10 @@ export const insightsTables = {
     shop: v.optional(v.boolean()),
     /** What the figures show, as code found them and Jev ordered them when the words were written: the panel's first section. */
     findings: v.optional(v.array(findingValidator)),
+    /** What the press has done so far, the last being what it is doing now, for the panel to show (`utils/sees/stages.ts`). */
+    stages: v.optional(v.array(seesStageRowValidator)),
+    /** A super admin's refresh: the company's credits pay nothing for it (`seesAsk.refreshSees`). */
+    notCharged: v.optional(v.boolean()),
     /** Who pressed the eye for the words being written: the press is charged to them once written (ask-hakken-every-chart-plan, §3). */
     askedBy: v.optional(v.id("users")),
     /**

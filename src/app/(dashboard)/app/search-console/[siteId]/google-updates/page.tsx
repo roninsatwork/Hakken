@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { CalendarClock } from "lucide-react";
@@ -115,6 +116,11 @@ export default function SearchConsoleUpdatesPage() {
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "dates", name: titleOf });
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
   const host = status?.host ?? "";
+  // The eye's figures: every update in the dates with its days before and after, and the dates' own days and totals
+  // against the span before, so a move with no update in the dates reads as the website's own.
+  const tw = useTranslations("searchConsole.sees");
+  const dayFigures = days.figures ?? null;
+  const seesData = useMemo(() => (rows ? { updates: rows, days: dayFigures, names: { beforeIt: tw("beforeIt") } } : undefined), [rows, dayFigures, tw]);
   const notYet = (row: Update) => <span className="whitespace-nowrap text-[12px] text-muted">{(row.state === "rolling" ? t("updates.notFinished") : t("updates.waiting", { days: status?.limits.updateWindowDays ?? "…" }))}</span>;
 
   return (
@@ -122,7 +128,7 @@ export default function SearchConsoleUpdatesPage() {
       <PageHeader icon={<CalendarClock className="h-5 w-5 text-brand" />} title={t("updates.title")} description={t("updates.description", { days: status?.limits.updateWindowDays ?? "…" })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="updates" seen={seen} data={rows ? { updates: rows, days: days.figures ?? null } : undefined} />
+          <SearchConsoleSees screen="updates" seen={seen} data={seesData} />
           <ResultKindSwitch />
           {chartProblem ? (
             <LiveProblem problem={chartProblem} retry={problem ? live.retry : days.retry} />

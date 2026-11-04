@@ -1,13 +1,16 @@
 "use client";
 
+import { useMemo } from "react";
+import { useQuery } from "convex/react";
 import { LineChart } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { SearchConsoleChart } from "../_components/SearchConsoleChart";
 import { SearchConsoleFigures, useSiteFiguresFor } from "../_components/SearchConsoleFigures";
 import { LiveProblem, NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../_components/SearchConsoleNotices";
-import { useResultKind, useSearchConsoleCountry, periodArg, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
+import { countryArg, useResultKind, useSearchConsoleCountry, periodArg, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
 import { SearchConsoleSees } from "../_components/SearchConsoleSees";
 import { performanceSees } from "@/convex/utils/sees/searchConsoleScreens";
 
@@ -30,6 +33,27 @@ export default function SearchConsolePerformancePage() {
     status && hasFigures(status) ? { siteId, searchType: kind, from: range.from, to: range.to, ...periodArg(range) } : null,
   );
   const totals = performance?.totals ?? null;
+  // Brand searches against the rest, the dates and the span before, for the eye alone (ask-hakken-every-chart-page-plan-
+  // 2026-11-03.md, section 6: "the brand split"): from the chart's own days, the lightest read that keeps them.
+  const brandAsk = status && hasFigures(status) && range.period !== "custom" ? { siteId, searchType: kind, ...countryArg(country), step: range.step } : null;
+  const brandNow = useQuery(api.searchConsolePeriods.searchConsoleChartFigures, brandAsk ? { ...brandAsk, from: range.from, to: range.to } : "skip");
+  const { from: beforeFrom, to: beforeTo } = range.before;
+  const brandBefore = useQuery(api.searchConsolePeriods.searchConsoleChartFigures, brandAsk ? { ...brandAsk, from: beforeFrom, to: beforeTo } : "skip");
+  const seesData = useMemo(() => {
+    if (!performance || problem) return undefined;
+    const split = (figures: typeof brandNow) => (figures && !figures.notReady && !figures.preparing && !figures.notBuilt
+      ? { brandClicks: figures.periods.reduce((sum, period) => sum + period.brandClicks, 0), nonBrandClicks: figures.periods.reduce((sum, period) => sum + period.otherClicks, 0), days: figures.periods.reduce((sum, period) => sum + period.days, 0) }
+      : null);
+    const [now, before] = [split(brandNow), split(brandBefore)];
+    const beforeDays = Math.round((Date.parse(`${beforeTo}T00:00:00Z`) - Date.parse(`${beforeFrom}T00:00:00Z`)) / 86_400_000) + 1;
+    return {
+      ...performance,
+      dates: { from: range.from, to: range.to, days: range.days, beforeDays },
+      // Only where the chart holds every day of both spans: a book waiting on its rebuild holds fewer.
+      ...(now && before ? { brandDays: { now, before } } : {}),
+      names: { brand: t("filters.brandYes"), other: t("filters.brandNo") },
+    };
+  }, [performance, problem, brandNow, brandBefore, range.from, range.to, range.days, beforeFrom, beforeTo, t]);
   // Google's sixteen months still coming in for the country read, and where its days start until then
   // (search-console-first-collection-plan.md, SF5): the website's own run fills them straight after its 90 days.
   const kept = country ? status?.connection?.countriesNewest.find((held) => held.country === country) : undefined;
@@ -42,7 +66,7 @@ export default function SearchConsolePerformancePage() {
       <PageHeader icon={<LineChart className="h-5 w-5 text-brand" />} title={t("performance.title")} description={t("performance.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="performance" seen={performance && !problem ? (range.period === "custom" ? null : performanceSees(totals, performance.previous, range.period)) : null} data={problem ? undefined : performance} />
+          <SearchConsoleSees screen="performance" seen={performance && !problem ? (range.period === "custom" ? null : performanceSees(totals, performance.previous, range.period)) : null} data={seesData} />
           <ResultKindSwitch />
           {problem ? (
             <LiveProblem problem={problem} retry={retry} />

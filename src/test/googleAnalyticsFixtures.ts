@@ -113,11 +113,12 @@ export const ROW = {
 export const CHANNEL = { ...ROW, key: "Organic Search", label: "Organic Search", visits: 1104, conversions: 11, value: 220_000, conversionRate: 11 / 1104 };
 
 /** One server page of a list, with the screen's What Hakken sees (none unless given) and a channel's own figures. */
-export function list(rows: unknown[], extra: { seen?: Seen; figures?: unknown; moves?: unknown } = {}) {
+export function list(rows: unknown[], { seen, figures, moves, ...rest }: { seen?: Seen; figures?: unknown; moves?: unknown; [field: string]: unknown } = {}) {
   return {
     rows, total: rows.length, page: 1, pages: 1, size: 25, cut: null,
     live: false, preparing: false, from: "2026-09-09", to: "2026-10-08", folded: false, thresholded: false, longer: false, groups: null,
-    seen: extra.seen ?? NO_BOX, figures: extra.figures ?? null, untagged: null, moves: extra.moves ?? null,
+    seen: seen ?? NO_BOX, figures: figures ?? null, untagged: null, moves: moves ?? null,
+    ...rest,
   };
 }
 
@@ -192,13 +193,13 @@ export const OVERVIEW_PANELS = {
     { kind: "browser" as const, label: "Chrome", share: 0.66, shareBefore: 0.65 as number | null },
     { kind: "system" as const, label: "Windows", share: 0.44, shareBefore: 0.46 as number | null },
   ] as Array<{ kind: "visitorType" | "device" | "age" | "gender" | "interest" | "browser" | "system"; label: string; share: number; shareBefore: number | null }>,
-  shop: null as null | { rows: Array<{ key: string; name: string; looks: number; basket: number; bought: number; revenue: number }>; count: number; basket: number; bought: number; revenue: number },
+  shop: null as null | { rows: Array<{ key: string; name: string; looks: number; basket: number; bought: number }>; count: number; basket: number; bought: number },
 };
 
 export const CHART = {
   points: Array.from({ length: 30 }, (_, index) => ({
     day: new Date(Date.UTC(2026, 8, 9 + index)).toISOString().slice(0, 10),
-    visits: 80 + (index % 7) * 5, engaged: 40, views: 200 + (index % 7) * 9, conversions: index % 3 === 0 ? 1 : 0, value: index % 3 === 0 ? 25_000 : 0, events: [index % 3 === 0 ? 1 : 0, 0, 0],
+    visits: 80 + (index % 7) * 5, engaged: 40, views: 200 + (index % 7) * 9, conversions: index % 3 === 0 ? 1 : 0, events: [index % 3 === 0 ? 1 : 0, 0, 0],
   })),
   events: ["generate_lead", "click_tel", "click_email"],
 };
@@ -221,9 +222,10 @@ const CONVERSION_KINDS = {
   visits: 2412,
   visitsBefore: 2225,
   kinds: [
-    { eventName: "generate_lead", count: 14, countBefore: 11, each: 25_000, setIn: "HAKKEN" as "ANALYTICS" | "HAKKEN" | "REVENUE" | null, value: 350_000 as number | null, valueBefore: 275_000 as number | null },
-    { eventName: "click_tel", count: 6, countBefore: 5, each: 15_000, setIn: "HAKKEN" as "ANALYTICS" | "HAKKEN" | "REVENUE" | null, value: 90_000 as number | null, valueBefore: 75_000 as number | null },
-    { eventName: "click_email", count: 3, countBefore: 3, each: null, setIn: null as "ANALYTICS" | "HAKKEN" | "REVENUE" | null, value: null as number | null, valueBefore: null as number | null },
+    // Each kind's value is Ask Hakken's alone: no screen shows it (Anthony, 2026-11-03: "Take money off").
+    { eventName: "generate_lead", count: 14, countBefore: 11, value: 350_000 as number | null },
+    { eventName: "click_tel", count: 6, countBefore: 5, value: 90_000 as number | null },
+    { eventName: "click_email", count: 3, countBefore: 3, value: null as number | null },
   ],
   shop: null,
   fired: [] as Array<{ eventName: string; count: number }>,
@@ -243,22 +245,22 @@ const CONVERSION_KINDS = {
       { kind: "NO_PAGE", name: null as string | null, visits: 212, conversions: 0, more: 0 },
     ],
     endings: [
-      { key: "generate_lead", counted: true, count: 14, revenue: 0 },
-      { key: "click_tel", counted: true, count: 6, revenue: 0 },
-      { key: "click_email", counted: true, count: 3, revenue: 0 },
-      { key: "~left", counted: false, count: 2389, revenue: 0 },
+      { key: "generate_lead", counted: true, count: 14 },
+      { key: "click_tel", counted: true, count: 6 },
+      { key: "click_email", counted: true, count: 3 },
+      { key: "~left", counted: false, count: 2389 },
     ],
     routes: [
-      { from: "c:Organic Search", to: "k:svc", visits: 1200, conversions: 10, revenue: 0, channels: ["c:Organic Search"] },
-      { from: "c:Organic Search", to: "k:NOT_SORTED", visits: 600, conversions: 2, revenue: 0, channels: ["c:Organic Search"] },
-      { from: "c:Direct", to: "k:NOT_SORTED", visits: 200, conversions: 6, revenue: 0, channels: ["c:Direct"] },
-      { from: "c:Direct", to: "k:svc", visits: 200, conversions: 2, revenue: 0, channels: ["c:Direct"] },
-      { from: "c:~more", to: "k:NO_PAGE", visits: 212, conversions: 3, revenue: 0, channels: ["c:~more"] },
-      { from: "k:svc", to: "e:generate_lead", visits: 10, conversions: 10, revenue: 0, channels: ["c:Organic Search", "c:Direct"] },
-      { from: "k:NOT_SORTED", to: "e:click_tel", visits: 6, conversions: 6, revenue: 0, channels: ["c:Direct"] },
-      { from: "k:svc", to: "e:~left", visits: 1385, conversions: 0, revenue: 0, channels: ["c:Organic Search", "c:Direct"] },
-      { from: "k:NOT_SORTED", to: "e:~left", visits: 792, conversions: 0, revenue: 0, channels: ["c:Organic Search", "c:Direct"] },
-      { from: "k:NO_PAGE", to: "e:~left", visits: 212, conversions: 0, revenue: 0, channels: ["c:~more"] },
+      { from: "c:Organic Search", to: "k:svc", visits: 1200, conversions: 10, channels: ["c:Organic Search"] },
+      { from: "c:Organic Search", to: "k:NOT_SORTED", visits: 600, conversions: 2, channels: ["c:Organic Search"] },
+      { from: "c:Direct", to: "k:NOT_SORTED", visits: 200, conversions: 6, channels: ["c:Direct"] },
+      { from: "c:Direct", to: "k:svc", visits: 200, conversions: 2, channels: ["c:Direct"] },
+      { from: "c:~more", to: "k:NO_PAGE", visits: 212, conversions: 3, channels: ["c:~more"] },
+      { from: "k:svc", to: "e:generate_lead", visits: 10, conversions: 10, channels: ["c:Organic Search", "c:Direct"] },
+      { from: "k:NOT_SORTED", to: "e:click_tel", visits: 6, conversions: 6, channels: ["c:Direct"] },
+      { from: "k:svc", to: "e:~left", visits: 1385, conversions: 0, channels: ["c:Organic Search", "c:Direct"] },
+      { from: "k:NOT_SORTED", to: "e:~left", visits: 792, conversions: 0, channels: ["c:Organic Search", "c:Direct"] },
+      { from: "k:NO_PAGE", to: "e:~left", visits: 212, conversions: 0, channels: ["c:~more"] },
     ],
     grid: {
       kinds: [{ kind: "svc", name: "Services" as string | null }, { kind: "NOT_SORTED", name: null as string | null }, { kind: "NO_PAGE", name: null as string | null }],
@@ -272,8 +274,8 @@ const CONVERSION_KINDS = {
     collecting: boolean; everyDevice: boolean; visits: number;
     channels: Array<{ key: string; visits: number; conversions: number; more: number }>;
     kinds: Array<{ kind: string; name: string | null; visits: number; conversions: number; more: number }>;
-    endings: Array<{ key: string; counted: boolean; count: number; revenue: number }>;
-    routes: Array<{ from: string; to: string; visits: number; conversions: number; revenue: number; channels: string[] }>;
+    endings: Array<{ key: string; counted: boolean; count: number }>;
+    routes: Array<{ from: string; to: string; visits: number; conversions: number; channels: string[] }>;
     grid: { kinds: Array<{ kind: string; name: string | null }>; rows: Array<{ eventName: string; counted: boolean; count: number; cells: number[] }> };
   } | null,
   /** What people did before converting, over 12 months (CV4). */

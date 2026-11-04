@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -24,6 +25,7 @@ import { formatPercent, pathOf } from "../../../_components/analyticsFormat";
 import { backTarget } from "../../../_components/analyticsBack";
 import { COLUMNS, useColumnName } from "../../../_components/ConversionsCards";
 import { useEventName } from "../../../_components/useEventName";
+import { useEyeNames } from "../../../_components/useEyeFigures";
 import { periodWord, useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
 
 type Answer = FunctionReturnType<typeof api.googleAnalyticsConversionsMap.analyticsConversionsPages>;
@@ -74,6 +76,9 @@ function Body({ status }: { status: AnalyticsStatus }) {
   const columnName = useColumnName(by, [{ kind: key, name: answer?.name ?? null }], choices?.main ?? null);
   const [search, setSearch, term] = useSiteSearch();
   const rows = answer?.rows;
+  // What the eye reads: the square's pages, with the names its findings use, in the reader's words.
+  const eyeNames = useEyeNames();
+  const seesData = useMemo(() => (answer ? { ...answer, names: eyeNames } : answer), [answer, eyeNames]);
   const nameFor = (row: Row) => (row.address === "(not set)" ? t("noPage") : row.title ?? pathOf(row.address));
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(nameFor(row)) || matches(pathOf(row.address)));
@@ -88,7 +93,7 @@ function Body({ status }: { status: AnalyticsStatus }) {
         title={t("title", { event: nameOf(event), kind: columnName(key) })}
         description={t("description", { period: periodName })}
       />
-      <AnalyticsSees screen="conversionPages" seen={answer?.seen} currency={status.connection?.currency} data={answer} />
+      <AnalyticsSees screen="conversionPages" seen={answer?.seen} currency={status.connection?.currency} data={seesData} />
       {answer?.everyDevice ? <Notice>{t("everyDevice")}</Notice> : null}
       {answer?.cut ? <Notice>{t("cut", { count: answer.rows.length })}</Notice> : null}
       <DataTable

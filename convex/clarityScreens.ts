@@ -34,6 +34,12 @@ type HoldId = Id<"companyWebsites">;
 
 const nullableNumber = v.union(v.number(), v.null());
 const screenArgs = { siteId: v.id("companyWebsites"), period: clarityPeriodArgValidator, device: v.optional(v.string()) };
+/**
+ * The screens' arguments past the website: each screen's read is a function of its own (`overviewOf`, `pagesListOf`,
+ * `pageOf`, `errorsOf`) over a hold already checked as the caller's, so the eye's checks of every period read the very
+ * figures a screen draws (ask-hakken-every-chart-page-plan-2026-11-03.md, checklist 2a).
+ */
+type ScreenRead = { period: ClarityPeriodArg; device?: string };
 
 /** The days a screen's figures cover, and the same number of days before them, as Clarity recorded them. */
 const spanValidator = v.object({ from: v.string(), to: v.string(), days: v.number() });
@@ -143,8 +149,13 @@ const pageLineValidator = v.object({
   now: clarityMeasuresValidator,
   scrollBefore: nullableNumber,
   visitsBefore: v.number(),
+  /**
+   * Its visits with an error the span before, null without one (ask-hakken-every-chart-page-plan-2026-11-03.md,
+   * section 8: "each page's errors before", worked out from the span before already read, for new errors on a page).
+   */
+  errorsBefore: nullableNumber,
 });
-type PageLine = { page: string; title: string | null; kind: string; kindName: string | null; now: ClarityMeasures; scrollBefore: number | null; visitsBefore: number };
+type PageLine = { page: string; title: string | null; kind: string; kindName: string | null; now: ClarityMeasures; scrollBefore: number | null; visitsBefore: number; errorsBefore: number | null };
 
 async function pageLines(ctx: Reader, holdId: HoldId, now: ClarityPeriodRead | null, before: ClarityPeriodRead | null, device: string | undefined): Promise<PageLine[]> {
   const classifier = await classifierFor(ctx, holdId);
@@ -155,7 +166,7 @@ async function pageLines(ctx: Reader, holdId: HoldId, now: ClarityPeriodRead | n
       const kind = classifier.kindOf(page);
       const was = earlier.get(page);
       const then = was ? measuresOf(was) : null;
-      return { page, title: null, kind, kindName: classifier.nameOf(kind), now: measuresOf(totals), scrollBefore: then?.scroll ?? null, visitsBefore: then?.visits ?? 0 };
+      return { page, title: null, kind, kindName: classifier.nameOf(kind), now: measuresOf(totals), scrollBefore: then?.scroll ?? null, visitsBefore: then?.visits ?? 0, errorsBefore: before ? then?.errors ?? 0 : null };
     })
     .sort((a, b) => b.now.visits - a.now.visits || a.page.localeCompare(b.page));
 }
@@ -177,14 +188,34 @@ const daysOf = (read: ClarityPeriodRead | null, device: string | undefined) => {
   });
 };
 
-/** A split's rows — a device, a source, a browser — each with its measures, the most visits first. */
-const splitLineValidator = v.object({ name: v.string(), now: clarityMeasuresValidator, scrollBefore: nullableNumber });
+/** A split's rows — a device, a source, a browser — each with its measures, the most visits first, and its scroll and visits the span before (null without one). */
+const splitLineValidator = v.object({ name: v.string(), now: clarityMeasuresValidator, scrollBefore: nullableNumber, visitsBefore: nullableNumber });
 function splitLines(rows: readonly ClarityTotalsRow[], nameOf: (row: ClarityTotalsRow) => string | null, before: readonly ClarityTotalsRow[] = []) {
   const earlier = addUpBy(before, nameOf);
   return [...addUpBy(rows, nameOf)]
     .filter(([, totals]) => totals.visits > 0)
-    .map(([name, totals]) => ({ name, now: measuresOf(totals), scrollBefore: earlier.has(name) ? measuresOf(earlier.get(name)!).scroll : null }))
+    .map(([name, totals]) => ({ name, now: measuresOf(totals), scrollBefore: earlier.has(name) ? measuresOf(earlier.get(name)!).scroll : null, visitsBefore: before.length > 0 ? earlier.get(name)?.visits ?? 0 : null }))
     .sort((a, b) => b.now.visits - a.now.visits || a.name.localeCompare(b.name));
+}
+
+/** A page group as the Overview's chart and Pages' eye read it: its pages added up, now and the span before. */
+const groupLineValidator = v.object({ kind: v.string(), name: v.union(v.string(), v.null()), now: clarityMeasuresValidator, scrollBefore: nullableNumber, visitsBefore: v.number() });
+
+/** Each page group's pages added up, the most visits first: what Hakken sees of a group's scroll beside the website's. */
+function groupLines(lines: readonly PageLine[], now: ClarityPeriodRead | null, before: ClarityPeriodRead | null, device: string | undefined) {
+  const groups = new Map<string, { kind: string; name: string | null; now: ClarityTotals; before: ClarityTotals }>();
+  const earlier = pagesOf(before, device);
+  const lineOf = new Map(lines.map((line) => [line.page, line]));
+  for (const [page, totals] of pagesOf(now, device)) {
+    const line = lineOf.get(page);
+    if (!line) continue;
+    const held = groups.get(line.kind) ?? { kind: line.kind, name: line.kindName, now: sumTotals([]), before: sumTotals([]) };
+    groups.set(line.kind, { ...held, now: sumTotals([held.now, totals]), before: sumTotals([held.before, earlier.get(page) ?? sumTotals([])]) });
+  }
+  return [...groups.values()]
+    .filter((group) => group.now.visits > 0)
+    .map((group) => ({ kind: group.kind, name: group.name, now: measuresOf(group.now), scrollBefore: group.before.visits > 0 ? measuresOf(group.before).scroll : null, visitsBefore: group.before.visits }))
+    .sort((a, b) => b.now.visits - a.now.visits);
 }
 
 /** Where a page's errors mostly happen: the browser and device with the most visits with an error on it, from the browsers by page. */
@@ -262,65 +293,58 @@ export const clarityOverview = tenantQuery({
     byDay: v.array(dayValidator),
     beforeByDay: v.array(dayValidator),
     pages: v.object({ count: v.number(), low: v.number(), few: v.number(), top: v.array(pageLineValidator), worst: v.union(pageLineValidator, v.null()) }),
-    groups: v.array(v.object({ kind: v.string(), name: v.union(v.string(), v.null()), now: clarityMeasuresValidator, scrollBefore: nullableNumber })),
+    groups: v.array(groupLineValidator),
     devices: v.array(splitLineValidator),
     sources: v.union(v.null(), v.object({ days: v.number(), rows: v.array(splitLineValidator) })),
+    /** The website by browser, for the eye: a browser where far more visits hit an error (plan section 8, "Browsers"). */
+    browsers: v.union(v.null(), v.object({ days: v.number(), rows: v.array(splitLineValidator) })),
     errors: v.object({ pages: v.array(v.object({ line: pageLineValidator, mostly: v.union(v.null(), v.object({ browser: v.string(), device: v.string() })), recording: v.union(v.string(), v.null()) })), pageCount: v.number() }),
-    stuck: v.object({ quickBackPage: v.union(v.null(), v.object({ page: v.string(), visits: v.number() })) }),
+    /** The page with the most quick backs, with its own visits: for the eye, its share of them against its share of the visits. */
+    stuck: v.object({ quickBackPage: v.union(v.null(), v.object({ page: v.string(), visits: v.number(), pageVisits: v.number() })) }),
     recordings: v.object({ total: v.number(), top: v.array(recordingValidator) }),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const now = await readClarityPeriod(ctx, holdId, args.period);
-    const before = await readBefore(ctx, holdId, args.period, now);
-    const sources = await readClarityPeriod(ctx, holdId, args.period, { kind: "SOURCES", withPages: false });
-    const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS" });
-    const lines = await pageLines(ctx, holdId, now, before, args.device);
-    const judged = lines.filter((line) => line.now.visits >= CLARITY_FEW_VISITS && line.now.scroll !== null);
-    const worst = [...judged].sort((a, b) => (a.now.scroll ?? 0) - (b.now.scroll ?? 0))[0] ?? null;
-    const groups = new Map<string, { kind: string; name: string | null; now: ClarityTotals; before: ClarityTotals }>();
-    const earlier = pagesOf(before, args.device);
-    const lineOf = new Map(lines.map((line) => [line.page, line]));
-    for (const [page, totals] of pagesOf(now, args.device)) {
-      const line = lineOf.get(page);
-      if (!line) continue;
-      const held = groups.get(line.kind) ?? { kind: line.kind, name: line.kindName, now: sumTotals([]), before: sumTotals([]) };
-      groups.set(line.kind, { ...held, now: sumTotals([held.now, totals]), before: sumTotals([held.before, earlier.get(page) ?? sumTotals([])]) });
-    }
-    const mostly = mostlyOn(browsers, args.device);
-    const errorLines = lines.filter((line) => line.now.errors + line.now.errorClicks > 0).sort((a, b) => b.now.errors + b.now.errorClicks - (a.now.errors + a.now.errorClicks));
-    const quickest = [...lines].sort((a, b) => b.now.quickBack - a.now.quickBack)[0];
-    const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
-    const recordings = await recordingsOf(ctx, holdId, span.from, span.to);
-    const shown = await titled(ctx, holdId, [...lines.slice(0, 4), ...(worst ? [worst] : []), ...errorLines.slice(0, 5)]);
-    const titleOf = new Map(shown.map((line) => [line.page, line.title]));
-    const withTitle = (line: PageLine): PageLine => ({ ...line, title: titleOf.get(line.page) ?? null });
-    return {
-      period: await periodOf(ctx, holdId, args.period, now, before),
-      now: websiteOf(now, args.device),
-      before: before ? websiteOf(before, args.device) : null,
-      byDay: daysOf(now, args.device),
-      beforeByDay: daysOf(before, args.device),
-      pages: {
-        count: lines.length,
-        low: judged.filter((line) => (line.now.scroll ?? 100) < 25).length,
-        few: lines.length - lines.filter((line) => line.now.visits >= CLARITY_FEW_VISITS).length,
-        top: lines.slice(0, 4).map(withTitle),
-        worst: worst ? withTitle(worst) : null,
-      },
-      groups: [...groups.values()]
-        .filter((group) => group.now.visits > 0)
-        .map((group) => ({ kind: group.kind, name: group.name, now: measuresOf(group.now), scrollBefore: group.before.visits > 0 ? measuresOf(group.before).scroll : null }))
-        .sort((a, b) => b.now.visits - a.now.visits),
-      devices: splitLines(now ? unpackTotals(now.first.site) : [], (row) => row.device, before ? unpackTotals(before.first.site) : []),
-      sources: sources ? { days: sources.first.days, rows: splitLines(unpackTotals(sources.first.site).filter(onDevice(args.device)), (row) => row.split ?? null) } : null,
-      errors: { pages: errorLines.slice(0, 5).map((line) => ({ line: withTitle(line), mostly: mostly.get(line.page) ?? null, recording: errorRecordingOf(recordings, line.page) })), pageCount: errorLines.length },
-      stuck: { quickBackPage: quickest && quickest.now.quickBack > 0 ? { page: quickest.page, visits: quickest.now.quickBack } : null },
-      recordings: { total: recordings.length, top: recordings.slice(0, 3) },
-    };
-  },
+  handler: async (ctx, args) => await overviewOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args),
 });
+
+/** The Overview's figures for a hold the caller holds (`clarityOverview`). */
+export async function overviewOf(ctx: Reader, holdId: HoldId, args: ScreenRead) {
+  const now = await readClarityPeriod(ctx, holdId, args.period);
+  const before = await readBefore(ctx, holdId, args.period, now);
+  const sources = await readClarityPeriod(ctx, holdId, args.period, { kind: "SOURCES", withPages: false });
+  const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS" });
+  const lines = await pageLines(ctx, holdId, now, before, args.device);
+  const judged = lines.filter((line) => line.now.visits >= CLARITY_FEW_VISITS && line.now.scroll !== null);
+  const worst = [...judged].sort((a, b) => (a.now.scroll ?? 0) - (b.now.scroll ?? 0))[0] ?? null;
+  const mostly = mostlyOn(browsers, args.device);
+  const errorLines = lines.filter((line) => line.now.errors + line.now.errorClicks > 0).sort((a, b) => b.now.errors + b.now.errorClicks - (a.now.errors + a.now.errorClicks));
+  const quickest = [...lines].sort((a, b) => b.now.quickBack - a.now.quickBack)[0];
+  const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
+  const recordings = await recordingsOf(ctx, holdId, span.from, span.to);
+  const shown = await titled(ctx, holdId, [...lines.slice(0, 4), ...(worst ? [worst] : []), ...errorLines.slice(0, 5)]);
+  const titleOf = new Map(shown.map((line) => [line.page, line.title]));
+  const withTitle = (line: PageLine): PageLine => ({ ...line, title: titleOf.get(line.page) ?? null });
+  return {
+    period: await periodOf(ctx, holdId, args.period, now, before),
+    now: websiteOf(now, args.device),
+    before: before ? websiteOf(before, args.device) : null,
+    byDay: daysOf(now, args.device),
+    beforeByDay: daysOf(before, args.device),
+    pages: {
+      count: lines.length,
+      low: judged.filter((line) => (line.now.scroll ?? 100) < 25).length,
+      few: lines.length - lines.filter((line) => line.now.visits >= CLARITY_FEW_VISITS).length,
+      top: lines.slice(0, 4).map(withTitle),
+      worst: worst ? withTitle(worst) : null,
+    },
+    groups: groupLines(lines, now, before, args.device),
+    devices: splitLines(now ? unpackTotals(now.first.site) : [], (row) => row.device, before ? unpackTotals(before.first.site) : []),
+    sources: sources ? { days: sources.first.days, rows: splitLines(unpackTotals(sources.first.site).filter(onDevice(args.device)), (row) => row.split ?? null) } : null,
+    browsers: browsers ? { days: browsers.first.days, rows: splitLines(unpackTotals(browsers.first.site).filter(onDevice(args.device)), (row) => row.split ?? null) } : null,
+    errors: { pages: errorLines.slice(0, 5).map((line) => ({ line: withTitle(line), mostly: mostly.get(line.page) ?? null, recording: errorRecordingOf(recordings, line.page) })), pageCount: errorLines.length },
+    stuck: { quickBackPage: quickest && quickest.now.quickBack > 0 ? { page: quickest.page, visits: quickest.now.quickBack, pageVisits: quickest.now.visits } : null },
+    recordings: { total: recordings.length, top: recordings.slice(0, 3) },
+  };
+}
 
 // ---------------------------------------------------------------- Pages (CS4)
 
@@ -347,6 +371,9 @@ const pageListArgs = {
   direction: sortDirectionArg,
 };
 
+/** Pages' filters and order, as `pageListArgs` take them. */
+type PageListRead = { q?: string; group?: string; scrolled?: "LOW"; sort?: PageSort; direction?: "asc" | "desc" };
+
 /** The pages a search, a page group and "scrolled less than a quarter" leave, in the order a heading asked for, over the whole list. */
 function listedPages(lines: readonly PageLine[], args: { q?: string; group?: string; scrolled?: "LOW"; sort?: PageSort; direction?: "asc" | "desc" }): PageLine[] {
   const matches = args.q ? wordStartMatcher(args.q.toLowerCase()) : null;
@@ -370,33 +397,70 @@ export const clarityPagesList = tenantQuery({
     furthest: v.union(pageLineValidator, v.null()),
     worst: v.union(pageLineValidator, v.null()),
     busiest: v.array(pageLineValidator),
+    /**
+     * For the eye, over every page whatever the filters (ask-hakken-every-chart-page-plan-2026-11-03.md, section 8: "The
+     * eye gets only the filtered page of rows. Group averages."): every page's visits and those on pages scrolled less
+     * than a quarter of the way, now and the span before; the pages whose scroll fell and rose most; each page group.
+     */
+    summary: v.object({
+      allVisits: v.number(),
+      lowVisits: v.number(),
+      allVisitsBefore: nullableNumber,
+      lowVisitsBefore: nullableNumber,
+      scrollFell: v.array(pageLineValidator),
+      scrollRose: v.array(pageLineValidator),
+    }),
+    groups: v.array(groupLineValidator),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const now = await readClarityPeriod(ctx, holdId, args.period);
-    const before = await readBefore(ctx, holdId, args.period, now);
-    const lines = await pageLines(ctx, holdId, now, before, args.device);
-    const judged = lines.filter((line) => line.now.visits >= CLARITY_FEW_VISITS && line.now.scroll !== null);
-    const lowLines = judged.filter((line) => (line.now.scroll ?? 100) < 25);
-    const page = pageOfList(listedPages(lines, args), args.page, args.rows);
-    const furthest = [...judged].sort((a, b) => (b.now.scroll ?? 0) - (a.now.scroll ?? 0))[0] ?? null;
-    const worst = [...judged].sort((a, b) => (a.now.scroll ?? 0) - (b.now.scroll ?? 0))[0] ?? null;
-    return {
-      ...page,
-      rows: await titled(ctx, holdId, page.rows),
-      period: await periodOf(ctx, holdId, args.period, now, before),
-      website: websiteOf(now, args.device),
-      count: lines.length,
-      low: lowLines.length,
-      few: lines.filter((line) => line.now.visits < CLARITY_FEW_VISITS).length,
-      lowest: lowLines.slice(0, 2).map((line) => line.page),
-      furthest,
-      worst,
-      busiest: lines.slice(0, BUSIEST),
-    };
-  },
+  handler: async (ctx, args) => await pagesListOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args),
 });
+
+/** Pages' list for a hold the caller holds (`clarityPagesList`): the page of rows asked for, and what the screen says above it. */
+export async function pagesListOf(ctx: Reader, holdId: HoldId, args: ScreenRead & PageListRead & { page: number; rows: number }) {
+  const now = await readClarityPeriod(ctx, holdId, args.period);
+  const before = await readBefore(ctx, holdId, args.period, now);
+  const lines = await pageLines(ctx, holdId, now, before, args.device);
+  const judged = lines.filter((line) => line.now.visits >= CLARITY_FEW_VISITS && line.now.scroll !== null);
+  const lowLines = judged.filter((line) => (line.now.scroll ?? 100) < 25);
+  const page = pageOfList(listedPages(lines, args), args.page, args.rows);
+  const furthest = [...judged].sort((a, b) => (b.now.scroll ?? 0) - (a.now.scroll ?? 0))[0] ?? null;
+  const worst = [...judged].sort((a, b) => (a.now.scroll ?? 0) - (b.now.scroll ?? 0))[0] ?? null;
+  return {
+    ...page,
+    rows: await titled(ctx, holdId, page.rows),
+    period: await periodOf(ctx, holdId, args.period, now, before),
+    website: websiteOf(now, args.device),
+    count: lines.length,
+    low: lowLines.length,
+    few: lines.filter((line) => line.now.visits < CLARITY_FEW_VISITS).length,
+    lowest: lowLines.slice(0, 2).map((line) => line.page),
+    furthest,
+    worst,
+    busiest: lines.slice(0, BUSIEST),
+    summary: summaryOf(lines, before, args.device),
+    groups: groupLines(lines, now, before, args.device),
+  };
+}
+
+/** Pages whose scroll moved most, each way, for the eye: the biggest moves on pages with visits to judge both spans. */
+const MOVED_PAGES = 3;
+
+/** Pages' summary for the eye (`clarityPagesList`): over every page, whatever the filters. */
+function summaryOf(lines: readonly PageLine[], before: ClarityPeriodRead | null, device: string | undefined) {
+  const low = (visits: number, scroll: number | null) => visits >= CLARITY_FEW_VISITS && scroll !== null && scroll < 25;
+  const earlier = before ? [...pagesOf(before, device)].filter(([page, totals]) => page !== "" && totals.visits > 0).map(([, totals]) => measuresOf(totals)) : null;
+  const moved = lines
+    .filter((line) => line.now.visits >= CLARITY_FEW_VISITS && line.visitsBefore >= CLARITY_FEW_VISITS && line.now.scroll !== null && line.scrollBefore !== null)
+    .map((line) => ({ line, weight: (line.now.scroll! - line.scrollBefore!) * Math.sqrt(Math.min(line.now.visits, line.visitsBefore)) }));
+  return {
+    allVisits: lines.reduce((sum, line) => sum + line.now.visits, 0),
+    lowVisits: lines.filter((line) => low(line.now.visits, line.now.scroll)).reduce((sum, line) => sum + line.now.visits, 0),
+    allVisitsBefore: earlier ? earlier.reduce((sum, one) => sum + one.visits, 0) : null,
+    lowVisitsBefore: earlier ? earlier.filter((one) => low(one.visits, one.scroll)).reduce((sum, one) => sum + one.visits, 0) : null,
+    scrollFell: moved.filter((one) => one.weight < 0).sort((a, b) => a.weight - b.weight).slice(0, MOVED_PAGES).map((one) => one.line),
+    scrollRose: moved.filter((one) => one.weight > 0).sort((a, b) => b.weight - a.weight).slice(0, MOVED_PAGES).map((one) => one.line),
+  };
+}
 
 /** Every page the list shows, for its download: the same pages in the same order, without titles, which are read a page at a time. */
 export const clarityPagesAll = tenantQuery({
@@ -427,52 +491,58 @@ export const clarityPage = tenantQuery({
     errors: v.array(splitLineValidator),
     browsersDays: v.union(v.number(), v.null()),
     devices: v.array(splitLineValidator),
+    /** The whole website by device, to set the page's phones and computers beside (plan section 8, "The website's device split"). */
+    websiteDevices: v.array(splitLineValidator),
     sources: v.union(v.null(), v.object({ days: v.number(), rows: v.array(splitLineValidator), cutDays: v.number() })),
     recordings: v.array(recordingValidator),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    // Every page of the period, for the page's group beside it; everything else is the page's own rows, each read from the part that holds them.
-    const now = await readClarityPeriod(ctx, holdId, args.period);
-    const before = await readBefore(ctx, holdId, args.period, now, false);
-    const lines = await pageLines(ctx, holdId, now, null, args.device);
-    const classifier = await classifierFor(ctx, holdId);
-    const kind = lines.find((one) => one.page === args.page)?.kind ?? classifier.kindOf(args.page);
-    const others = lines.filter((one) => one.kind === kind && one.page !== args.page);
-    const ownOn = (rows: readonly ClarityTotalsRow[]) => rows.filter(onDevice(args.device));
-    const totalsNow = pagesOf(now, args.device);
-    const beforeRows = before ? ownOn(await readPageRows(ctx, holdId, "PERIOD_BEFORE", undefined, periodKeyOf(args.period), args.page)) : [];
-    const websiteDays = daysOf(now, args.device);
-    const byDay = [];
-    for (const day of websiteDays) {
-      const measures = measuresOf(sumTotals(ownOn(await readPageRows(ctx, holdId, "DAY", undefined, day.day, args.page))));
-      byDay.push({ day: day.day, page: measures.scroll, website: day.scroll, visits: measures.visits });
-    }
-    const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS", withPages: false });
-    const sources = await readClarityPeriod(ctx, holdId, args.period, { kind: "SOURCES", withPages: false });
-    const browserRows = browsers ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "BROWSERS", periodKeyOf(args.period), args.page)) : [];
-    const sourceRows = sources ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "SOURCES", periodKeyOf(args.period), args.page)) : [];
-    const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
-    return {
-      period: await periodOf(ctx, holdId, args.period, now, before),
-      title: (await titlesOf(ctx, holdId, [args.page])).get(args.page) ?? null,
-      kind,
-      kindName: classifier.nameOf(kind),
-      now: measuresOf(totalsNow.get(args.page) ?? sumTotals([])),
-      before: before && beforeRows.length > 0 ? measuresOf(sumTotals(beforeRows)) : null,
-      website: websiteOf(now, args.device),
-      group: others.length > 0 ? measuresOf(sumTotals(others.flatMap((one) => totalsNow.get(one.page) ?? []))) : null,
-      byDay,
-      errors: splitLines(browserRows, (row) => `${row.split ?? "Other"}|${row.device}`).filter((row) => row.now.errors + row.now.errorClicks > 0),
-      browsersDays: browsers ? browsers.first.days : null,
-      // Every device on the page, whichever is chosen: this is the comparison of them.
-      devices: splitLines((now?.pages ?? []).filter((row) => row.page === args.page), (row) => row.device),
-      sources: sources ? { days: sources.first.days, rows: splitLines(sourceRows, (row) => row.split ?? null), cutDays: sources.first.cutDays ?? 0 } : null,
-      recordings: await recordingsOf(ctx, holdId, span.from, span.to, args.page),
-    };
-  },
+  handler: async (ctx, args) => await pageOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args),
 });
+
+/** A page's own figures for a hold the caller holds (`clarityPage`). */
+export async function pageOf(ctx: Reader, holdId: HoldId, args: ScreenRead & { page: string }) {
+  // Every page of the period, for the page's group beside it; everything else is the page's own rows, each read from the part that holds them.
+  const now = await readClarityPeriod(ctx, holdId, args.period);
+  const before = await readBefore(ctx, holdId, args.period, now, false);
+  const lines = await pageLines(ctx, holdId, now, null, args.device);
+  const classifier = await classifierFor(ctx, holdId);
+  const kind = lines.find((one) => one.page === args.page)?.kind ?? classifier.kindOf(args.page);
+  const others = lines.filter((one) => one.kind === kind && one.page !== args.page);
+  const ownOn = (rows: readonly ClarityTotalsRow[]) => rows.filter(onDevice(args.device));
+  const totalsNow = pagesOf(now, args.device);
+  // The page's rows the span before on every device: its devices set against their own, and the page on the device chosen.
+  const beforeAll = before ? await readPageRows(ctx, holdId, "PERIOD_BEFORE", undefined, periodKeyOf(args.period), args.page) : [];
+  const beforeRows = ownOn(beforeAll);
+  const websiteDays = daysOf(now, args.device);
+  const byDay = [];
+  for (const day of websiteDays) {
+    const measures = measuresOf(sumTotals(ownOn(await readPageRows(ctx, holdId, "DAY", undefined, day.day, args.page))));
+    byDay.push({ day: day.day, page: measures.scroll, website: day.scroll, visits: measures.visits });
+  }
+  const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS", withPages: false });
+  const sources = await readClarityPeriod(ctx, holdId, args.period, { kind: "SOURCES", withPages: false });
+  const browserRows = browsers ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "BROWSERS", periodKeyOf(args.period), args.page)) : [];
+  const sourceRows = sources ? ownOn(await readPageRows(ctx, holdId, "PERIOD", "SOURCES", periodKeyOf(args.period), args.page)) : [];
+  const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
+  return {
+    period: await periodOf(ctx, holdId, args.period, now, before),
+    title: (await titlesOf(ctx, holdId, [args.page])).get(args.page) ?? null,
+    kind,
+    kindName: classifier.nameOf(kind),
+    now: measuresOf(totalsNow.get(args.page) ?? sumTotals([])),
+    before: before && beforeRows.length > 0 ? measuresOf(sumTotals(beforeRows)) : null,
+    website: websiteOf(now, args.device),
+    group: others.length > 0 ? measuresOf(sumTotals(others.flatMap((one) => totalsNow.get(one.page) ?? []))) : null,
+    byDay,
+    errors: splitLines(browserRows, (row) => `${row.split ?? "Other"}|${row.device}`).filter((row) => row.now.errors + row.now.errorClicks > 0),
+    browsersDays: browsers ? browsers.first.days : null,
+    // Every device on the page, whichever is chosen: this is the comparison of them.
+    devices: splitLines((now?.pages ?? []).filter((row) => row.page === args.page), (row) => row.device, beforeAll),
+    websiteDevices: splitLines(now ? unpackTotals(now.first.site) : [], (row) => row.device),
+    sources: sources ? { days: sources.first.days, rows: splitLines(sourceRows, (row) => row.split ?? null), cutDays: sources.first.cutDays ?? 0 } : null,
+    recordings: await recordingsOf(ctx, holdId, span.from, span.to, args.page),
+  };
+}
 
 // ---------------------------------------------------------------- Errors (CS6)
 
@@ -486,30 +556,45 @@ export const clarityErrors = tenantQuery({
     browsers: v.union(v.null(), v.object({ days: v.number(), rows: v.array(splitLineValidator), cutDays: v.number() })),
     pages: v.array(v.object({ line: pageLineValidator, mostly: v.union(v.null(), v.object({ browser: v.string(), device: v.string() })), recording: v.union(v.string(), v.null()) })),
     pagesWithVisits: v.number(),
+    /**
+     * Pages with an error now and the span before, those new to it and those clear of it now: for new errors on a page
+     * (plan section 8), worked out from the span before already read; null without one.
+     */
+    errorPages: v.union(v.null(), v.object({ now: v.number(), before: v.number(), gained: v.number(), lost: v.number() })),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const now = await readClarityPeriod(ctx, holdId, args.period);
-    const before = await readBefore(ctx, holdId, args.period, now);
-    const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS" });
-    const lines = await pageLines(ctx, holdId, now, before, args.device);
-    const errorLines = lines.filter((line) => line.now.errors + line.now.errorClicks > 0).sort((a, b) => b.now.errors + b.now.errorClicks - (a.now.errors + a.now.errorClicks));
-    const mostly = mostlyOn(browsers, args.device);
-    const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
-    const recordings = await recordingsOf(ctx, holdId, span.from, span.to);
-    const shown = await titled(ctx, holdId, errorLines);
-    return {
-      period: await periodOf(ctx, holdId, args.period, now, before),
-      now: websiteOf(now, args.device),
-      before: before ? websiteOf(before, args.device) : null,
-      byDay: daysOf(now, args.device),
-      browsers: browsers ? { days: browsers.first.days, rows: splitLines(unpackTotals(browsers.first.site).filter(onDevice(args.device)), (row) => row.split ?? null), cutDays: browsers.first.cutDays ?? 0 } : null,
-      pages: shown.map((line) => ({ line, mostly: mostly.get(line.page) ?? null, recording: errorRecordingOf(recordings, line.page) })),
-      pagesWithVisits: lines.length,
-    };
-  },
+  handler: async (ctx, args) => await errorsOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args),
 });
+
+/** Errors' figures for a hold the caller holds (`clarityErrors`). */
+export async function errorsOf(ctx: Reader, holdId: HoldId, args: ScreenRead) {
+  const now = await readClarityPeriod(ctx, holdId, args.period);
+  const before = await readBefore(ctx, holdId, args.period, now);
+  const browsers = await readClarityPeriod(ctx, holdId, args.period, { kind: "BROWSERS" });
+  const lines = await pageLines(ctx, holdId, now, before, args.device);
+  const errorLines = lines.filter((line) => line.now.errors + line.now.errorClicks > 0).sort((a, b) => b.now.errors + b.now.errorClicks - (a.now.errors + a.now.errorClicks));
+  const mostly = mostlyOn(browsers, args.device);
+  const span = recordingSpan(now, args.period, await newestOf(ctx, holdId));
+  const recordings = await recordingsOf(ctx, holdId, span.from, span.to);
+  const shown = await titled(ctx, holdId, errorLines);
+  return {
+    period: await periodOf(ctx, holdId, args.period, now, before),
+    now: websiteOf(now, args.device),
+    before: before ? websiteOf(before, args.device) : null,
+    byDay: daysOf(now, args.device),
+    browsers: browsers ? { days: browsers.first.days, rows: splitLines(unpackTotals(browsers.first.site).filter(onDevice(args.device)), (row) => row.split ?? null), cutDays: browsers.first.cutDays ?? 0 } : null,
+    pages: shown.map((line) => ({ line, mostly: mostly.get(line.page) ?? null, recording: errorRecordingOf(recordings, line.page) })),
+    pagesWithVisits: lines.length,
+    errorPages: before ? errorPagesOf(errorLines, before, args.device) : null,
+  };
+}
+
+/** Pages with an error now and the span before: how many, those new to it, and those clear of it now. */
+function errorPagesOf(errorLines: readonly PageLine[], before: ClarityPeriodRead, device: string | undefined) {
+  const hit = (totals: ClarityTotals) => totals.errors + totals.errorClicks > 0;
+  const earlier = new Set([...pagesOf(before, device)].filter(([page, totals]) => page !== "" && hit(totals)).map(([page]) => page));
+  const now = new Set(errorLines.map((line) => line.page));
+  return { now: now.size, before: earlier.size, gained: [...now].filter((page) => !earlier.has(page)).length, lost: [...earlier].filter((page) => !now.has(page)).length };
+}
 
 // ---------------------------------------------------------------- Recordings (CM2)
 

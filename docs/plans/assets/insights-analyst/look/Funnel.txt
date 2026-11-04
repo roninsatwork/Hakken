@@ -3,7 +3,7 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Funnel
 chart-card: Each step's share, last # days
-chart-card: Visits that enquired, by kind of page
+chart-card: Visits that enquired, by classification
 search: Find a step
 table: Step | Last # days | Last year | Change | Source
   table-bar: Visitors from Google, the last # days

@@ -28,7 +28,7 @@ export function campaignsSees(rows: readonly ListRowFacts[], untagged: number): 
   if (tagged === 0) return seen([{ code: "none", a: untagged }], [tagLinks]);
   const all = tagged + untagged;
   const few = tagged / all < FEW_TAGGED_SHARE;
-  const best = [...rows].filter((row) => row.conversions > 0).sort((left, right) => right.conversions - left.conversions || right.value - left.value)[0] ?? null;
+  const best = [...rows].filter((row) => row.conversions > 0).sort((left, right) => right.conversions - left.conversions || right.visits - left.visits)[0] ?? null;
   const quiet = [...rows].filter((row) => row.visits >= QUIET_CAMPAIGN_VISITS && row.conversions === 0).sort((left, right) => right.visits - left.visits)[0] ?? null;
   return seen([
     few ? { code: "fewTagged", a: tagged, b: all, c: untagged } : { code: "tagged", a: tagged, b: tagged / all },

@@ -12,6 +12,7 @@ import { seen } from "./utils/hakkenSees";
 import { movesSees } from "./utils/sees/google";
 import { keywordsSees, pagesSees, sectionsSees } from "./utils/sees/organic";
 import { readPageKinds } from "./pageKinds";
+import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import {
   kdBandValidator,
   pageTypeValidator,
@@ -485,4 +486,136 @@ export const listSections = tenantQuery({
     }));
     return { rows, cut: read.length > MAX_SECTIONS ? rows.length : null };
   }, (result) => sectionsSees(result.rows)),
+});
+
+/** A search's figures for the eye: where it stood and stands, and what it brings. */
+const movedSearch = v.object({ keyword: v.string(), position: v.number(), before: v.number(), volume: v.union(v.number(), v.null()), traffic: v.union(v.number(), v.null()) });
+const searchesShape = v.object({ searches: v.number(), traffic: v.number(), volume: v.number() });
+/** Places a reader knows, for a move worth weighing: the top hundred. */
+const PLACES_KNOWN = 100;
+
+/**
+ * Every search the site ranks for now, summed for the eye on Keywords (ask-hakken-every-chart-page-plan-2026-11-03.md,
+ * section 10: "Searches that fell carried 1,240 estimated visitors; those that rose 310. Moves out of page one beat moves
+ * in 3 to 1"): the table shows one page of thousands, so its rules' sums are worked out here, over the whole list, as
+ * the table counts it (the searches the newest check found). Searches and estimated visitors only, never what a click
+ * costs (Anthony, 2026-11-03: "Yes, all of it").
+ */
+export const keywordFigures = tenantQuery({
+  args: { siteId: v.id("companyWebsites") },
+  returns: v.union(v.null(), v.object({
+    day: v.union(v.string(), v.null()),
+    searches: v.number(),
+    traffic: v.number(),
+    /** Monthly searches across them all. */
+    volume: v.number(),
+    top3: v.number(),
+    pageOne: v.number(),
+    /** Searches the newest check found new, up, down and the same, with their visits and monthly searches. */
+    statuses: v.object({ NEW: searchesShape, UP: searchesShape, DOWN: searchesShape, SAME: searchesShape }),
+    /** Searches that moved onto Google's first page at the newest check, and off it. */
+    intoPageOne: searchesShape,
+    outOfPageOne: searchesShape,
+    /** Searches by what the searcher wants, with their visits. */
+    intents: v.array(v.object({ intent: v.string(), searches: v.number(), traffic: v.number() })),
+    /** The biggest climbs and drops, weighed by how often the search is made: a few each way. */
+    climbs: v.array(movedSearch),
+    drops: v.array(movedSearch),
+    /** The search bringing the most estimated visitors: how much of them all rests on one search. */
+    topSearch: v.union(v.null(), v.object({ keyword: v.string(), position: v.number(), volume: v.union(v.number(), v.null()), traffic: v.number() })),
+  })),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const copy = await readKeywordCopy(ctx, site.website._id, site.place);
+    if (!copy) return null;
+    const current = copy.rows.filter((row) => keywordStanding(row, copy.latestCheckDay) === "current" && row.position !== null);
+    const sum = (rows: readonly KeywordCopyRow[]) => ({
+      searches: rows.length,
+      traffic: Math.round(rows.reduce((total, row) => total + (row.traffic ?? 0), 0)),
+      volume: rows.reduce((total, row) => total + (row.volume ?? 0), 0),
+    });
+    const before = (row: KeywordCopyRow) => (row.position ?? 0) + row.change;
+    const moved = current.filter((row) => (row.status === "UP" || row.status === "DOWN") && row.change !== 0 && row.position! <= PLACES_KNOWN && before(row) <= PLACES_KNOWN);
+    const weight = (row: KeywordCopyRow) => Math.min(10, Math.abs(row.change)) * Math.sqrt(row.volume ?? 0);
+    const shape = (row: KeywordCopyRow) => ({ keyword: row.keyword, position: row.position!, before: before(row), volume: row.volume, traffic: row.traffic === null ? null : Math.round(row.traffic) });
+    const intents = new Map<string, { intent: string; searches: number; traffic: number }>();
+    for (const row of current) {
+      const held = intents.get(row.intent) ?? { intent: row.intent, searches: 0, traffic: 0 };
+      held.searches += 1;
+      held.traffic += row.traffic ?? 0;
+      intents.set(row.intent, held);
+    }
+    return {
+      day: copy.latestCheckDay ?? copy.rankingDay,
+      ...sum(current),
+      top3: current.filter((row) => row.position! <= 3).length,
+      pageOne: current.filter((row) => row.position! <= 10).length,
+      statuses: {
+        NEW: sum(current.filter((row) => row.status === "NEW")),
+        UP: sum(current.filter((row) => row.status === "UP")),
+        DOWN: sum(current.filter((row) => row.status === "DOWN")),
+        SAME: sum(current.filter((row) => row.status === "SAME")),
+      },
+      intoPageOne: sum(current.filter((row) => row.status === "UP" && row.position! <= 10 && before(row) > 10)),
+      outOfPageOne: sum(current.filter((row) => row.status === "DOWN" && row.position! > 10 && before(row) <= 10)),
+      intents: [...intents.values()].map((one) => ({ ...one, traffic: Math.round(one.traffic) })).sort((left, right) => right.traffic - left.traffic),
+      climbs: moved.filter((row) => row.change > 0).sort((left, right) => weight(right) - weight(left)).slice(0, 3).map(shape),
+      drops: moved.filter((row) => row.change < 0).sort((left, right) => weight(right) - weight(left)).slice(0, 3).map(shape),
+      topSearch: (() => {
+        const top = [...current].sort((left, right) => (right.traffic ?? 0) - (left.traffic ?? 0))[0];
+        return top && (top.traffic ?? 0) > 0 ? { keyword: top.keyword, position: top.position!, volume: top.volume, traffic: Math.round(top.traffic ?? 0) } : null;
+      })(),
+    };
+  },
+});
+
+/**
+ * Every page the site ranks with, summed for the eye on Top pages: the page bringing the most estimated visitors and its
+ * share of them all, and each kind of page (the company's classifications once it has any, else Hakken's page types)
+ * with its pages, searches and visitors, over the whole list rather than the page on screen. Pages not sorted yet are
+ * marked so, as housekeeping no finding names (Anthony, 2026-11-03, on the Visits eye).
+ */
+export const pageFigures = tenantQuery({
+  args: { siteId: v.id("companyWebsites") },
+  returns: v.union(v.null(), v.object({
+    pages: v.number(),
+    searches: v.number(),
+    traffic: v.number(),
+    /** Pages ranking for searches that bring next to no one: under one estimated visitor a month. */
+    quietPages: v.number(),
+    /** The five pages bringing the most visitors, together; and the pages ranking for one search only. */
+    topFiveTraffic: v.number(),
+    oneSearchPages: v.number(),
+    top: v.union(v.null(), v.object({ page: v.string(), traffic: v.number(), searches: v.number() })),
+    kinds: v.array(v.object({ kind: v.string(), classified: v.boolean(), sorted: v.boolean(), pages: v.number(), searches: v.number(), traffic: v.number() })),
+  })),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const [copy, pageKinds] = await Promise.all([
+      readListCopy(ctx, "pages", pagesCopyKey(site.website._id, site.place), PAGE_COPY_FIELDS),
+      readPageKinds(ctx, site.hold._id),
+    ]);
+    if (!copy) return null;
+    const rows = copy.rows.map(([, path, , pageType, keywords, traffic]) => ({ path: path as string, pageType: pageType as string, keywords: keywords as number, traffic: (traffic as number | null) ?? 0 }));
+    const kinds = new Map<string, { kind: string; classified: boolean; sorted: boolean; pages: number; searches: number; traffic: number }>();
+    for (const row of rows) {
+      const kind = pageKinds ? pageKinds.kindOf(row.path) : row.pageType;
+      const held = kinds.get(kind) ?? { kind, classified: pageKinds !== null, sorted: kind !== NOT_SORTED_KIND, pages: 0, searches: 0, traffic: 0 };
+      held.pages += 1;
+      held.searches += row.keywords;
+      held.traffic += row.traffic;
+      kinds.set(kind, held);
+    }
+    const top = [...rows].sort((left, right) => right.traffic - left.traffic)[0];
+    return {
+      pages: rows.length,
+      searches: rows.reduce((total, row) => total + row.keywords, 0),
+      traffic: Math.round(rows.reduce((total, row) => total + row.traffic, 0)),
+      quietPages: rows.filter((row) => row.traffic < 1).length,
+      topFiveTraffic: Math.round([...rows].sort((left, right) => right.traffic - left.traffic).slice(0, 5).reduce((total, row) => total + row.traffic, 0)),
+      oneSearchPages: rows.filter((row) => row.keywords === 1).length,
+      top: top ? { page: top.path, traffic: Math.round(top.traffic), searches: top.keywords } : null,
+      kinds: [...kinds.values()].map((one) => ({ ...one, traffic: Math.round(one.traffic) })).sort((left, right) => right.traffic - left.traffic),
+    };
+  },
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -24,15 +25,11 @@ import { sharedSiteQuery } from "../../../../_components/useSiteParam";
 import { useSite, useSiteId } from "../../../../_components/useSite";
 import { pageRecordSees } from "@/convex/utils/sees/organic";
 import { SiteSees } from "../../../../_components/SiteSees";
+import { withoutGuessedMoney } from "../../_components/keywordSees";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";
 import { isPartHeld } from "../../../../_components/SiteCoverage";
 import { usePageKinds } from "../../../../../_components/usePageKinds";
-
-/** Dollars, whole: what visits would cost as adverts. */
-function formatUsd(value: number | null): string {
-  return value === null ? "–" : `$${formatNumber(value)}`;
-}
 
 /**
  * The page's keywords sort as Keywords does (docs/plans/active/
@@ -51,6 +48,11 @@ const KEYWORD_SORTS = { keyword: "asc", position: "asc", change: "desc", volume:
  * — and Back returns to where it was opened from, as it was left. Its
  * searches are the All keywords list narrowed to the page, paged on the
  * server; each opens its own screen.
+ *
+ * No worth of the page's visits under its figures (Anthony, 2026-11-03, on
+ * every guessed money figure: "Yes, all of it"): what those visits would cost
+ * as adverts is our data supplier's guess, not money anyone measured. It
+ * stays in what is stored.
  */
 export default function SitePageRecordPage() {
   const t = useTranslations("sites.pageRecord");
@@ -78,6 +80,8 @@ export default function SitePageRecordPage() {
     asked ? { siteId, path: asked, sort: order.key, direction: order.direction } : "skip",
     [{ siteId, list: "keywords" }],
   );
+  // The record and its searches for the eye, without the guessed money they carry, which the page no longer shows.
+  const sees = useMemo(() => record && withoutGuessedMoney({ record, keywords: table.result }), [record, table.result]);
 
   if (!asked) {
     return <DetailHeader back={back} icon={<FileText className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
@@ -166,7 +170,7 @@ export default function SitePageRecordPage() {
         ) : undefined}
         action={address ? <ExternalUrlCell url={address} label={`${t("openPage")} ↗`} /> : undefined}
       />
-      <SiteSees screen="pageRecord" seen={record && pageRecordSees(record, problemLabel)} data={record && { record, keywords: table.result }} />
+      <SiteSees screen="pageRecord" seen={record && pageRecordSees(record, problemLabel)} data={sees} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />
@@ -187,9 +191,6 @@ export default function SitePageRecordPage() {
               <Figure
                 label={t("figures.traffic")}
                 value={formatNumber(rank?.traffic)}
-                detail={rank?.trafficValue !== null && rank?.trafficValue !== undefined
-                  ? <span className="text-muted">{t("figures.worth", { value: formatUsd(rank.trafficValue) })}</span>
-                  : undefined}
               />
               <Figure
                 label={t("figures.linking")}

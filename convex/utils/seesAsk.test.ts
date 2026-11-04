@@ -68,6 +68,38 @@ describe("the eye's ask", () => {
     });
   });
 
+  test("every fault is named at once for the rewrite; after it a sentence with a fault is left off, never the whole bubble (Anthony, 2026-11-03: \"this is really poor from the ai\")", () => {
+    const facts = factsByKey(factsOf(ask));
+    const long = "Even though people browse a great deal deeper when they stay, [[conv.total.now]] conversions came, against [[conv.total.before]] for the month before that one.";
+    const answer = { says: ["Conversions fell to [[conv.total.now]] from [[conv.total.before]].", "[[conv.baskets.left]] baskets were left.", long], steps: [{ words: "Check checkout on phones.", link: 0 }, { words: "Grow sales.", link: 7 }] };
+    // The first check names all three faults, so the one rewrite can mend them all.
+    const first = seesFrom(answer, facts, links);
+    expect(first.ok).toBe(false);
+    if (!first.ok) for (const fault of ["neither on the page nor read", "ran past 20 words", "link was not one of the page's"]) expect(first.why).toContain(fault);
+    // After the rewrite the sound sentence and step stand; the run's log is told what was left off.
+    const kept = seesFrom(answer, facts, links, { salvage: true });
+    expect(kept).toMatchObject({ ok: true, says: ["Conversions fell to 28,623 from 31,880."], steps: [{ words: "Check checkout on phones.", link: "Tracking health" }] });
+    expect(kept.ok && kept.left).toHaveLength(3);
+    // A first sentence with no figure is left off and the next one leads; nothing sound at all still goes back.
+    expect(seesFrom({ says: ["Nothing much happened here.", "Conversions fell to [[conv.total.now]]."], steps: [] }, facts, links, { salvage: true })).toMatchObject({ ok: true, says: ["Conversions fell to 28,623."] });
+    expect(seesFrom({ says: ["3 in 4 baskets were left."], steps: [] }, facts, links, { salvage: true })).toMatchObject({ ok: false, why: expect.stringContaining("Every sentence had a fault") });
+  });
+
+  test("a sentence never names a part of the page: a leading one is cut off, any other goes back (the Visits eye, 2026-11-03)", () => {
+    const facts = factsByKey(factsOf(ask));
+    expect(seesFrom({ says: ["In the table, [[conv.total.now]] conversions came last month."], steps: [] }, facts, links)).toMatchObject({ ok: true, says: ["28,623 conversions came last month."] });
+    expect(seesFrom({ says: ["Conversions fell to [[conv.total.now]], as the chart shows clearly."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("named a part of the page") });
+    // A place on Google Maps is a figure of its own, never a part of the page.
+    expect(seesFrom({ says: ["Your place on the map fell, with [[conv.total.now]] conversions."], steps: [] }, facts, links)).toMatchObject({ ok: true });
+    expect(seesFrom({ says: ["Conversions on the chart fell to [[conv.total.now]]."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("named a part of the page") });
+  });
+
+  test("a sentence starts with a capital, but a name that starts small keeps its spelling (the Visits eye, 2026-11-04: \"IOS led\")", () => {
+    const facts = factsByKey(factsOf(ask));
+    expect(seesFrom({ says: ["iOS led with [[conv.total.now]] conversions."], steps: [] }, facts, links)).toMatchObject({ ok: true, says: ["iOS led with 28,623 conversions."] });
+    expect(seesFrom({ says: ["conversions came to [[conv.total.now]]."], steps: [] }, facts, links)).toMatchObject({ ok: true, says: ["Conversions came to 28,623."] });
+  });
+
   test("the Editor sends back a typed number, a figure neither on the page nor read, a long sentence, a stray link (S5, S7)", () => {
     const facts = factsByKey(factsOf(ask));
     expect(seesFrom({ says: ["3 in 4 baskets were left without buying."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("typed a number") });
@@ -82,7 +114,9 @@ describe("the eye's ask", () => {
 
   test("the screen list names each page's writer, every section by its own specialist (sees-every-page-plan)", () => {
     expect(writerFor("googleAnalytics.conversions", [])).toBe("INSIGHTS_CONVERSION");
-    expect(writerFor("googleAnalytics.trackingHealth", [])).toBe("INSIGHTS_MEASUREMENT");
+    // Tracking health has no eye since 2026-11-04 (Anthony: "We dont need the eye on non website data related pages"):
+    // Visits names its own writer instead of the section's.
+    expect(writerFor("googleAnalytics.visitors", [])).toBe("INSIGHTS_BEHAVIOUR");
     expect(writerFor("searchConsole.keywords", [])).toBe("INSIGHTS_SEARCH");
     expect(writerFor("bing.crawling", [])).toBe("INSIGHTS_TECHNICAL");
     expect(writerFor("clarity.pages", [])).toBe("INSIGHTS_BEHAVIOUR");

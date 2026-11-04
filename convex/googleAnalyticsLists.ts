@@ -701,6 +701,79 @@ export function unpackPart(part: PackedPart): ListRow[] {
   }));
 }
 
+/**
+ * What a read takes of a kept part's rows (`unpackPartOnly`): only the events it names — every one the part keeps when
+ * null — each event's visits and times only when it says `units`, and only the rows whose key `keep` names. An event's
+ * count or value of nought is left out of its row unless it says `zeros` — every read takes a missing one as nought
+ * (`get(…) ?? 0`) — so only a read that asks whether a list counts an event at all (`has`, `size`) needs them. Every
+ * event, `units` and `zeros` give each row kept whole, as `unpackPart` gives it.
+ */
+export type PartOnly = {
+  events: ReadonlySet<string> | null;
+  units?: boolean;
+  zeros?: boolean;
+  keep?: (key: string) => boolean;
+};
+
+/**
+ * A kept part's rows as `unpackPart` gives them, with only what a read names (`PartOnly`). Each row of a part carries
+ * four maps of every key event, so a long list read whole as rows ran its read out of Convex's 64MB: a year of
+ * landing pages by channel, or every page's, on Last 6 and 12 months on More Handles (2026-11-04).
+ */
+export function unpackPartOnly(part: PackedPart, only: PartOnly): ListRow[] {
+  const kept: number[] = [];
+  part.keys.forEach((key, index) => {
+    if (!only.keep || only.keep(key)) kept.push(index);
+  });
+  if (kept.length === 0) return [];
+  const column = (packed: string | undefined) => (packed ? unpackNumbers(packed) : null);
+  const visits = unpackNumbers(part.visits);
+  const engaged = unpackNumbers(part.engaged);
+  const seconds = unpackNumbers(part.seconds);
+  const views = unpackNumbers(part.views);
+  const purchases = unpackNumbers(part.purchases);
+  const revenue = unpackNumbers(part.revenue);
+  const people = column(part.people);
+  const newPeople = column(part.newPeople);
+  const length = column(part.length);
+  const times = column(part.times);
+  const basket = column(part.basket);
+  const converting = column(part.converting);
+  // The named events' columns only, as the part holds them: an event the part does not hold stays missing.
+  const named = part.events.flatMap((event, at) => (only.events === null || only.events.has(event) ? [{ event, at }] : []));
+  const counts = named.map(({ at }) => unpackNumbers(part.counts[at]));
+  const values = named.map(({ at }) => unpackNumbers(part.values[at]));
+  const eventVisits = only.units && part.eventVisits ? named.map(({ at }) => unpackNumbers(part.eventVisits![at])) : null;
+  const eventTimes = only.units && part.eventTimes ? named.map(({ at }) => unpackNumbers(part.eventTimes![at])) : null;
+  const eventsOf = (columns: number[][], index: number, zeros: boolean) => {
+    const out = new Map<string, number>();
+    named.forEach(({ event }, at) => {
+      const value = columns[at][index] ?? 0;
+      if (zeros || value !== 0) out.set(event, value);
+    });
+    return out;
+  };
+  return kept.map((index) => ({
+    key: part.keys[index],
+    visits: visits[index] ?? 0,
+    engaged: engaged[index] ?? 0,
+    seconds: seconds[index] ?? 0,
+    views: views[index] ?? 0,
+    purchases: purchases[index] ?? 0,
+    revenue: revenue[index] ?? 0,
+    people: people?.[index] ?? 0,
+    newPeople: newPeople?.[index] ?? 0,
+    length: length?.[index] ?? 0,
+    ...(times ? { times: times[index] ?? 0 } : {}),
+    ...(basket ? { basket: basket[index] ?? 0 } : {}),
+    ...(converting ? { converting: converting[index] ?? 0 } : {}),
+    counts: eventsOf(counts, index, only.zeros === true),
+    values: eventsOf(values, index, only.zeros === true),
+    // Each named event's visits and times, every one of them as `unpackPart` keeps them, nought or not.
+    ...(only.units ? { eventVisits: eventVisits ? eventsOf(eventVisits, index, true) : new Map(), eventTimes: eventTimes ? eventsOf(eventTimes, index, true) : new Map() } : {}),
+  }));
+}
+
 /** Whether two builds of a list hold the same figures: an unchanged list is not written again (GA23). */
 export function samePacked(left: readonly PackedPart[], right: readonly PackedPart[]): boolean {
   return JSON.stringify(left) === JSON.stringify(right);

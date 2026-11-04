@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { LogIn } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -7,10 +8,11 @@ import { api } from "@/convex/_generated/api";
 import { Select } from "@/src/ui/components/screens/Select";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { useSiteParam } from "../../../sites/_components/useSiteParam";
-import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
+import { AnalyticsListScreen, type ListPageAnswer } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { LandingFlowCard } from "../../_components/LandingFlow";
-import { useAnalyticsSiteId, useAnalyticsStatus, usePageHref } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, usePageHref } from "../../_components/useAnalytics";
+import { useEyeNames, useWebsiteForEye } from "../../_components/useEyeFigures";
 
 const VIEWS = ["pages", "groups"] as const;
 type View = (typeof VIEWS)[number];
@@ -54,7 +56,7 @@ export default function AnalyticsLandingPagesPage() {
       header={{ icon: <LogIn className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
       head={(answer) => (
         <>
-          <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} data={answer} />
+          <FunnelSees answer={answer} currency={currency} />
           <LandingFlowCard />
         </>
       )}
@@ -68,4 +70,24 @@ export default function AnalyticsLandingPagesPage() {
       emptyLabel={t("empty")}
     />
   );
+}
+
+/**
+ * The page's eye: the table's page as shown, the whole website's figures (`website`) to set each landing page or group
+ * beside, and the share of every landing page's visits that left without seeing another page (`landingAll`, Overview's
+ * own figure), as no one page of the table holds every landing page (ask-hakken-every-chart-page-plan-2026-11-03.md).
+ */
+function FunnelSees({ answer, currency }: { answer: ListPageAnswer | undefined; currency: string | null }) {
+  const args = useAnalyticsArgs();
+  const status = useAnalyticsStatus();
+  const names = useEyeNames();
+  const website = useWebsiteForEye();
+  const panels = useQuery(api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels, status?.connection?.newestDay ? args : "skip");
+  const left = panels?.landing?.left ?? null;
+  const data = useMemo(() => (answer ? {
+    ...answer, names, ...(website ? { website } : {}),
+    // As a percentage already, so `pageData.ts` turns it round once only.
+    ...(left !== null ? { landingAll: { leftPercent: Math.round(left * 1000) / 10 } } : {}),
+  } : answer), [answer, names, website, left]);
+  return <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} data={data} />;
 }

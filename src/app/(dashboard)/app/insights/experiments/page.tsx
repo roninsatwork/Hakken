@@ -19,7 +19,7 @@ import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
 
 const STATUSES = ["READY", "RUNNING", "DONE"] as const;
 const TONE = { READY: "info", RUNNING: "warning", DONE: "success" } as const;
@@ -38,6 +38,8 @@ export default function InsightsExperimentsPage() {
   const tVerdict = usePlatformTranslations("insights.verdicts");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
   const start = useMutation(api.insightsConversion.startExperiment);
   const action = useAdminAction({ scope: "insight-experiment" });
@@ -66,7 +68,7 @@ export default function InsightsExperimentsPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} page={{ screen: "insights.experiments", siteId: site, data }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.experiments", siteId: eyeSite, data }} />
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.experimentId}

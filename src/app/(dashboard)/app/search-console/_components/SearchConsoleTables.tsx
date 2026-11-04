@@ -239,6 +239,8 @@ export function useSearchConsoleList(options: {
     ? (tracksOnly && listedLive ? { ...live.answer.summary, ...figuresOf(listedLive, live.answer.comparable) } : live.answer.summary)
     : null;
   const summary = isLive ? liveSummary : (server.result?.summary ?? null);
+  const shownRows = table.pageRows ?? null;
+  const pageData = useMemo(() => (summary ? { summary, rows: shownRows, picked: true } : undefined), [summary, shownRows]);
   return {
     summary,
     siteId,
@@ -263,9 +265,11 @@ export function useSearchConsoleList(options: {
     liveRows: isLive ? (liveOrder.rows ?? null) : null,
     /**
      * What the page draws from, for the eye (sees-every-page-plan-2026-10-31.md): the list's figures and the rows on
-     * screen — nothing until the figures are in.
+     * screen — nothing until the figures are in. The rows are a page of a longer list (`picked`), so no rule reads 25 of
+     * 24,000 searches as the whole (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 4); the whole list's own
+     * figures are the summary's (`wholeList`: its bands' clicks, the searches into and out of the top 3, the biggest movers).
      */
-    pageData: summary ? { summary, rows: table.pageRows ?? null } : undefined,
+    pageData,
   };
 }
 

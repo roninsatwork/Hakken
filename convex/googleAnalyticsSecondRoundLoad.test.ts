@@ -11,7 +11,7 @@ import { readPageMain, readPageStoryPart } from "./googleAnalyticsPageReads";
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { productChart, productList, readProducts, shownProductList } from "./googleAnalyticsProductReads";
 import { readListPage } from "./googleAnalyticsReads";
-import { readVisitors } from "./googleAnalyticsVisitorReads";
+import { readVisitorDays, readVisitors } from "./googleAnalyticsVisitorReads";
 import type { AnalyticsList, DayFactList } from "./googleAnalyticsSchema";
 
 /**
@@ -129,8 +129,11 @@ describe("a large website's second-round Google Analytics", () => {
     expect(event?.points.some((point) => point.lastDay)).toBe(true);
     const campaigns = await measured("Campaigns", (ctx) => readListPage(ctx, { ...args, list: "campaign", page: 1, rows: 25 }));
     expect(campaigns.total).toBe(CAMPAIGNS);
-    const visitors = await measured("Visitors", (ctx) => readVisitors(ctx, args));
-    expect(visitors?.points.filter((point) => !point.lastDay)).toHaveLength(92);
+    const visits = await measured("Visits", (ctx) => readVisitors(ctx, args));
+    expect(visits?.figures).not.toBeNull();
+    // Its days are their own read beside it (visits-redo-plan-2026-11-03.md), each a day for 92 days, then a week.
+    const days = await measured("Visits' days", (ctx) => readVisitorDays(ctx, args));
+    expect(days?.points.filter((point) => !point.lastDay)).toHaveLength(92);
     const products = await measured("Products", (ctx) => readProducts(ctx, args));
     expect(products?.shop).toBe(true);
     const hold = (await t.run(async (ctx) => await ctx.db.get(siteId)))!;

@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { beforeAll, describe, expect, test } from "vitest";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { readList } from "./bingWebmasterReads";
+import { readList, readListSeen } from "./bingWebmasterReads";
 import { packBingRows } from "./utils/bingWebmasterWeeks";
 import { BING_BOOK_CHUNK } from "./bingWebmasterBook";
 import { packNumbers } from "./utils/searchConsolePacks";
@@ -68,6 +68,11 @@ describe.skipIf(ON_GITHUB)("Bing Webmaster at five times morehandles.co.uk", () 
           builtAt: BUILT,
         });
       }
+      // The span before, as long again: the eye's whole list reads both (`readListSeen`), the clicks shifted so every row moved.
+      const before = rows.map((row) => ({ ...row, clicks: row.key % 7 === 0 ? row.clicks + 5 : Math.max(0, row.clicks - 3) }));
+      for (const [part, packed] of packBingRows(before).entries()) {
+        await ctx.db.insert("bingPeriods", { companyWebsiteId: hold, list: "query", period: "last3Months", which: "BEFORE", part, from: "2026-03-30", to: "2026-06-28", ...packed, builtAt: BUILT });
+      }
       return hold;
     });
   });
@@ -93,6 +98,20 @@ describe.skipIf(ON_GITHUB)("Bing Webmaster at five times morehandles.co.uk", () 
     const read = await reads({ list: "query", period: "last3Months", q: "brass lever" });
     expect(read.bytes).toBeLessThan(THREE_QUARTERS);
     expect(read.holds).toBeLessThan(THREE_QUARTERS_MEMORY);
+  });
+
+  test("the eye's whole list for last quarter, against the span before — within half the limit", async () => {
+    // ask-hakken-every-chart-page-plan-2026-11-03.md, section 7: one read of both spans serves Keywords and Bing against Google.
+    const read = await t.run(async (ctx) => {
+      const meter = metered(ctx.db);
+      const seen = await readListSeen({ db: meter.db }, holdId, "query", "last3Months");
+      expect(seen?.before?.rows).toBe(KEYWORDS);
+      expect(seen?.up.length).toBeGreaterThan(0);
+      const held = await heldBy(async () => await readListSeen(ctx, holdId, "query", "last3Months"));
+      return { bytes: meter.bytes(), holds: held.bytes };
+    });
+    expect(read.bytes).toBeLessThan(HALF);
+    expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 
   test("Bing against Google, by the widest gap — within half the limit", async () => {

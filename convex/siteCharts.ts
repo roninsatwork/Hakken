@@ -1,7 +1,8 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { listHold, myRivals, requireMySite } from "./siteAccess";
-import { checkStarts, dayBefore, latestBands, latestFigures, linkingWebsitesOf, overlayListAi, pointValidator, searchTotalOf, seriesFor, stepValidator } from "./siteFigures";
+import { listHold, myRivals, requireMySite, type SiteReader } from "./siteAccess";
+import { checkStarts, dayBefore, latestBands, latestFigures, linkingWebsitesOf, overlayListAi, pointValidator, searchTotalOf, seriesFor, stepValidator, type Step } from "./siteFigures";
 
 /**
  * The figures behind the Sites charts: a site over time and its rivals beside it.
@@ -36,52 +37,55 @@ export const siteSeries = tenantQuery({
     withRivals: v.optional(v.boolean()),
   },
   returns: v.array(lineValidator),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // Whose questions the AI figures come from: this company's own list for
-    // the owned site. The owned site's line is its answers; every other
-    // website's is how often those answers named it (D17).
-    const holdId = listHold(site);
-    const pointsFor = async (websiteId: typeof site.website._id) => {
-      const starts = await checkStarts(ctx, websiteId, site.place);
-      const points = await seriesFor(ctx, websiteId, site.place, args.from, args.to, args.step, starts);
-      return await overlayListAi(ctx, points, holdId, websiteId, site.place, args.from, args.to, args.step);
-    };
-    const lines = [{
-      websiteId: site.website._id,
-      host: site.website.displayHost,
-      isYou: true,
-      points: await pointsFor(site.website._id),
-      before: await dayBefore(ctx, site.website._id, site.place, args.from),
-    }];
-    if (!args.withRivals) return lines;
-
-    // Each rival from the place this site is read from: it is collected there,
-    // on this site's day, so the lines compare like with like. A group of
-    // more than five draws the five with the most traffic at their newest
-    // check, and the chart says so (4.11).
-    const group = await myRivals(ctx, site);
-    const rivals = group.length <= MAX_OVERLAY_RIVALS
-      ? group
-      : (await Promise.all(group.map(async (rival) => ({
-        rival,
-        traffic: (await latestFigures(ctx, rival.website._id, site.place)).metrics?.estimatedTraffic ?? -1,
-      }))))
-        .sort((left, right) => right.traffic - left.traffic || left.rival.website.host.localeCompare(right.rival.website.host))
-        .slice(0, MAX_OVERLAY_RIVALS)
-        .map((entry) => entry.rival);
-    for (const rival of rivals) {
-      lines.push({
-        websiteId: rival.website._id,
-        host: rival.website.displayHost,
-        isYou: false,
-        points: await pointsFor(rival.website._id),
-        before: await dayBefore(ctx, rival.website._id, site.place, args.from),
-      });
-    }
-    return lines;
-  },
+  handler: async (ctx, args) => await readSiteSeries(ctx, args),
 });
+
+/** siteSeries's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readSiteSeries(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; from: string; to: string; step: Step; withRivals?: boolean }) {
+  const site = await requireMySite(ctx, args.siteId);
+  // Whose questions the AI figures come from: this company's own list for
+  // the owned site. The owned site's line is its answers; every other
+  // website's is how often those answers named it (D17).
+  const holdId = listHold(site);
+  const pointsFor = async (websiteId: typeof site.website._id) => {
+    const starts = await checkStarts(ctx, websiteId, site.place);
+    const points = await seriesFor(ctx, websiteId, site.place, args.from, args.to, args.step, starts);
+    return await overlayListAi(ctx, points, holdId, websiteId, site.place, args.from, args.to, args.step);
+  };
+  const lines = [{
+    websiteId: site.website._id,
+    host: site.website.displayHost,
+    isYou: true,
+    points: await pointsFor(site.website._id),
+    before: await dayBefore(ctx, site.website._id, site.place, args.from),
+  }];
+  if (!args.withRivals) return lines;
+
+  // Each rival from the place this site is read from: it is collected there,
+  // on this site's day, so the lines compare like with like. A group of
+  // more than five draws the five with the most traffic at their newest
+  // check, and the chart says so (4.11).
+  const group = await myRivals(ctx, site);
+  const rivals = group.length <= MAX_OVERLAY_RIVALS
+    ? group
+    : (await Promise.all(group.map(async (rival) => ({
+      rival,
+      traffic: (await latestFigures(ctx, rival.website._id, site.place)).metrics?.estimatedTraffic ?? -1,
+    }))))
+      .sort((left, right) => right.traffic - left.traffic || left.rival.website.host.localeCompare(right.rival.website.host))
+      .slice(0, MAX_OVERLAY_RIVALS)
+      .map((entry) => entry.rival);
+  for (const rival of rivals) {
+    lines.push({
+      websiteId: rival.website._id,
+      host: rival.website.displayHost,
+      isYou: false,
+      points: await pointsFor(rival.website._id),
+      before: await dayBefore(ctx, rival.website._id, site.place, args.from),
+    });
+  }
+  return lines;
+}
 
 const figuresValidator = v.object({
   websiteId: v.id("websites"),
@@ -100,26 +104,29 @@ const figuresValidator = v.object({
 export const siteAndRivals = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(figuresValidator),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const everyone = [
-      { website: site.website, isYou: true },
-      ...(await myRivals(ctx, site)).map((rival) => ({ website: rival.website, isYou: false })),
-    ];
-    return await Promise.all(everyone.map(async ({ website, isYou }) => {
-      const latest = await latestFigures(ctx, website._id, site.place);
-      return {
-        websiteId: website._id,
-        host: website.displayHost,
-        isYou,
-        day: latest.lastDay,
-        keywords: searchTotalOf(latest),
-        top3: latestBands(latest)?.p01_03 ?? null,
-        estimatedTraffic: latest.metrics?.estimatedTraffic ?? null,
-        backlinks: latest.links?.backlinks ?? null,
-        referringDomains: linkingWebsitesOf(latest.links),
-        domainRank: latest.links?.domainRank ?? null,
-      };
-    }));
-  },
+  handler: async (ctx, args) => await readSiteAndRivals(ctx, args),
 });
+
+/** siteAndRivals's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readSiteAndRivals(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const everyone = [
+    { website: site.website, isYou: true },
+    ...(await myRivals(ctx, site)).map((rival) => ({ website: rival.website, isYou: false })),
+  ];
+  return await Promise.all(everyone.map(async ({ website, isYou }) => {
+    const latest = await latestFigures(ctx, website._id, site.place);
+    return {
+      websiteId: website._id,
+      host: website.displayHost,
+      isYou,
+      day: latest.lastDay,
+      keywords: searchTotalOf(latest),
+      top3: latestBands(latest)?.p01_03 ?? null,
+      estimatedTraffic: latest.metrics?.estimatedTraffic ?? null,
+      backlinks: latest.links?.backlinks ?? null,
+      referringDomains: linkingWebsitesOf(latest.links),
+      domainRank: latest.links?.domainRank ?? null,
+    };
+  }));
+}

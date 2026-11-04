@@ -17,7 +17,7 @@ change-bars
 chart-card: Each source a day
 search: Find a source…
 choice: Show: Landing pages | Classifications | Key events | Sources
-table: Source | Visits | Engaged | Conversions | Value | Change
+table: Source | Visits | Engaged | Conversions | Change
   table-bar
     download: Download CSV
   table-footer

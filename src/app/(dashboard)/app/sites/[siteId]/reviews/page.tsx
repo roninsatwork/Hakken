@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useSiteDrafts } from "../../_components/useSiteDrafts";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,7 @@ import { formatDay, toCsv } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { SiteSees } from "../../_components/SiteSees";
+import { reviewsSeen } from "../../_components/siteSeesData";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -80,6 +82,20 @@ export default function YourReviewsPage() {
     && (!answer || (answer === "waiting" ? !row.replyDay : Boolean(row.replyDay))));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "date", name: idOf });
   const pager = useSitePager(sorted, { isLoading: data === undefined });
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the boxes, and from the reviews held
+  // the stars they gave, the low ones and the days a reply took, in the dates and in the span before them.
+  const te = useTranslations("sites.reviews.yours.eye");
+  const { from: spanFrom, to: spanTo } = range;
+  const { from: beforeFrom, to: beforeTo } = range.before;
+  const seen = useMemo(() => {
+    if (!data) return undefined;
+    const before = tp(`before.${period}`);
+    const office = officeId ? data.offices.find((entry) => entry.listingId === officeId)?.name : undefined;
+    return reviewsSeen(data, { from: spanFrom, to: spanTo, before: { from: beforeFrom, to: beforeTo } }, {
+      business: office ?? data.offices[0]?.name ?? site?.host ?? "", stars: te("stars", { period: tp(period) }), before: before.charAt(0).toUpperCase() + before.slice(1),
+      waiting: t("figures.waiting"), low: t("stars.low"), reply: t("figures.daysToAnswer"),
+    });
+  }, [data, spanFrom, spanTo, beforeFrom, beforeTo, period, officeId, site?.host, t, tp, te]);
   const figures = data?.figures;
   const today = new Date().toISOString().slice(0, 10);
   const fileBase = `${site?.host ?? "site"}-reviews`;
@@ -93,7 +109,7 @@ export default function YourReviewsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={officeId ?? null} allOffices /> : undefined}
       />
-      <SiteSees screen="reviews" seen={data?.seen} data={data} />
+      <SiteSees screen="reviews" seen={data?.seen} data={seen} />
       {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
       {drafts.shown ? (
         <>

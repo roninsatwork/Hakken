@@ -1,8 +1,9 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { listHold, listWebsiteId, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { asOfListCheck, searchStats, type StandingStats } from "./siteGoogle";
 import { serpPagesKeptFrom } from "./seoCollectionPolicy";
 import { holdSearches } from "./holdLists";
@@ -109,49 +110,52 @@ export const listAbove = tenantQuery({
     /** False when the newest check's full page is past the 90 days it is kept. */
     pageKept: v.boolean(),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const host = site.website.host;
-    const rivals = await rivalHosts(ctx, site);
-    const keptFrom = serpPagesKeptFrom(site.today);
-    const rows = await Promise.all((await latestPages(ctx, site)).map(async ({ keyword, isActive, page }) => {
-      if (!page) {
-        const stats = await keptStanding(ctx, site, keyword);
-        if (stats && stats.lastCheckedDay < keptFrom) {
-          return {
-            keyword, isActive, day: stats.lastCheckedDay, position: stats.lastPosition ?? null, url: null,
-            above: [], rivalsAbove: 0, results: 0, pageKept: false,
-          };
-        }
-      }
-      const mine = page?.results.find((result) => isHost(result.domain, host)) ?? null;
-      const above = (page?.results ?? [])
-        .filter((result) => !isHost(result.domain, host) && (mine === null ? result.position <= PAGE_ONE : result.position < mine.position))
-        .map((result) => ({
-          position: result.position,
-          domain: bare(result.domain),
-          url: result.url ?? null,
-          isRival: [...rivals].some((rival) => isHost(result.domain, rival)),
-        }));
-      return {
-        keyword,
-        isActive,
-        day: page?.day ?? null,
-        position: mine?.position ?? null,
-        url: mine?.url ?? null,
-        above,
-        rivalsAbove: above.filter((result) => result.isRival).length,
-        results: page?.results.length ?? 0,
-        pageKept: true,
-      };
-    }));
-    // Searches with most to win first: on the page but beaten, then not on it.
-    return rows.sort((left, right) =>
-      Number(right.isActive) - Number(left.isActive)
-      || (left.position ?? 999) - (right.position ?? 999)
-      || left.keyword.localeCompare(right.keyword));
-  },
+  handler: async (ctx, args) => await readListAbove(ctx, args),
 });
+
+/** listAbove's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readListAbove(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const host = site.website.host;
+  const rivals = await rivalHosts(ctx, site);
+  const keptFrom = serpPagesKeptFrom(site.today);
+  const rows = await Promise.all((await latestPages(ctx, site)).map(async ({ keyword, isActive, page }) => {
+    if (!page) {
+      const stats = await keptStanding(ctx, site, keyword);
+      if (stats && stats.lastCheckedDay < keptFrom) {
+        return {
+          keyword, isActive, day: stats.lastCheckedDay, position: stats.lastPosition ?? null, url: null,
+          above: [], rivalsAbove: 0, results: 0, pageKept: false,
+        };
+      }
+    }
+    const mine = page?.results.find((result) => isHost(result.domain, host)) ?? null;
+    const above = (page?.results ?? [])
+      .filter((result) => !isHost(result.domain, host) && (mine === null ? result.position <= PAGE_ONE : result.position < mine.position))
+      .map((result) => ({
+        position: result.position,
+        domain: bare(result.domain),
+        url: result.url ?? null,
+        isRival: [...rivals].some((rival) => isHost(result.domain, rival)),
+      }));
+    return {
+      keyword,
+      isActive,
+      day: page?.day ?? null,
+      position: mine?.position ?? null,
+      url: mine?.url ?? null,
+      above,
+      rivalsAbove: above.filter((result) => result.isRival).length,
+      results: page?.results.length ?? 0,
+      pageKept: true,
+    };
+  }));
+  // Searches with most to win first: on the page but beaten, then not on it.
+  return rows.sort((left, right) =>
+    Number(right.isActive) - Number(left.isActive)
+    || (left.position ?? 999) - (right.position ?? 999)
+    || left.keyword.localeCompare(right.keyword));
+}
 
 /**
  * Which features Google shows on each of the site's searches — an AI
@@ -173,44 +177,47 @@ export const listFeatures = tenantQuery({
     totals: v.array(v.object({ feature: v.string(), searches: v.number(), withSite: v.union(v.number(), v.null()) })),
     checked: v.number(),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const host = site.website.host;
-    const checked = (await latestPages(ctx, site)).filter((row) => row.page !== null);
-    const searches = checked.map(({ keyword, isActive, page }) => ({
-      keyword,
-      isActive,
-      day: page!.day,
-      features: page!.features,
-      inAiOverview: page!.aiOverviewDomains.some((domain) => isHost(domain, host)),
-      inLocalPack: page!.localPackDomains.some((domain) => isHost(domain, host)),
-      hasFeaturedSnippet: page!.featuredSnippetDomain !== undefined && isHost(page!.featuredSnippetDomain, host),
-    }));
-
-    // How many searches show each feature, and — for the three that name
-    // websites — on how many of them the site is one of those named.
-    const totals = new Map<string, { feature: string; searches: number; withSite: number | null }>();
-    for (const row of searches) {
-      for (const feature of row.features) {
-        const held = totals.get(feature) ?? {
-          feature,
-          searches: 0,
-          withSite: ["ai_overview", "local_pack", "featured_snippet"].includes(feature) ? 0 : null,
-        };
-        held.searches += 1;
-        if (feature === "ai_overview" && row.inAiOverview) held.withSite! += 1;
-        if (feature === "local_pack" && row.inLocalPack) held.withSite! += 1;
-        if (feature === "featured_snippet" && row.hasFeaturedSnippet) held.withSite! += 1;
-        totals.set(feature, held);
-      }
-    }
-    return {
-      searches: searches.sort((left, right) => right.features.length - left.features.length || left.keyword.localeCompare(right.keyword)),
-      totals: [...totals.values()].sort((left, right) => right.searches - left.searches || left.feature.localeCompare(right.feature)),
-      checked: searches.length,
-    };
-  },
+  handler: async (ctx, args) => await readListFeatures(ctx, args),
 });
+
+/** listFeatures's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readListFeatures(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const host = site.website.host;
+  const checked = (await latestPages(ctx, site)).filter((row) => row.page !== null);
+  const searches = checked.map(({ keyword, isActive, page }) => ({
+    keyword,
+    isActive,
+    day: page!.day,
+    features: page!.features,
+    inAiOverview: page!.aiOverviewDomains.some((domain) => isHost(domain, host)),
+    inLocalPack: page!.localPackDomains.some((domain) => isHost(domain, host)),
+    hasFeaturedSnippet: page!.featuredSnippetDomain !== undefined && isHost(page!.featuredSnippetDomain, host),
+  }));
+
+  // How many searches show each feature, and — for the three that name
+  // websites — on how many of them the site is one of those named.
+  const totals = new Map<string, { feature: string; searches: number; withSite: number | null }>();
+  for (const row of searches) {
+    for (const feature of row.features) {
+      const held = totals.get(feature) ?? {
+        feature,
+        searches: 0,
+        withSite: ["ai_overview", "local_pack", "featured_snippet"].includes(feature) ? 0 : null,
+      };
+      held.searches += 1;
+      if (feature === "ai_overview" && row.inAiOverview) held.withSite! += 1;
+      if (feature === "local_pack" && row.inLocalPack) held.withSite! += 1;
+      if (feature === "featured_snippet" && row.hasFeaturedSnippet) held.withSite! += 1;
+      totals.set(feature, held);
+    }
+  }
+  return {
+    searches: searches.sort((left, right) => right.features.length - left.features.length || left.keyword.localeCompare(right.keyword)),
+    totals: [...totals.values()].sort((left, right) => right.searches - left.searches || left.feature.localeCompare(right.feature)),
+    checked: searches.length,
+  };
+}
 
 /**
  * "People also ask" questions and related searches from the site's searches'

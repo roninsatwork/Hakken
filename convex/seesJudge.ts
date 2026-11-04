@@ -119,6 +119,43 @@ export async function judgeWords(ctx: ActionCtx, run: JudgeRun, prepared: Prepar
   }
 }
 
+/**
+ * Jev's check on the words that will be shown, after the rewrite: each sentence that states a reason the figures don't
+ * show as fact, and each step that would fit any website, by its place, to be left off (Anthony, 2026-11-03, on the
+ * Visits eye: "this is really poor from the ai" — "likely hitting a dead end" stood, as Jev saw only the first draft).
+ * Each is asked under its own subject, apart from the first draft's. Jev unreachable: nothing is left off.
+ */
+export async function judgeLeftOff(ctx: ActionCtx, run: JudgeRun, prepared: PreparedDecisions, host: string, says: readonly string[], steps: readonly string[], figures: ReadonlyArray<{ what: string; value: number }>): Promise<{ says: number[]; steps: number[] }> {
+  const flagged = { says: [] as number[], steps: [] as number[] };
+  try {
+    for (const [at, sentence] of says.entries()) {
+      const results = await runDecisions(ctx, {
+        companyId: run.companyId,
+        subject: { kind: "seesSentence", id: `${run.runId}:shown:${at}` },
+        state: { sentence, figures },
+        requests: [{ key: "sees.guess-as-fact", fallback: () => ({ kind: "yes-no" as const, yes: false }) }],
+        links: { agentRunId: run.runId },
+        prepared,
+      });
+      if (yes(results["sees.guess-as-fact"])) flagged.says.push(at);
+    }
+    for (const [at, step] of steps.entries()) {
+      const results = await runDecisions(ctx, {
+        companyId: run.companyId,
+        subject: { kind: "seesStep", id: `${run.runId}:shown:${at}` },
+        state: { step, website: host },
+        requests: [{ key: "sees.generic-step", fallback: () => ({ kind: "yes-no" as const, yes: false }) }],
+        links: { agentRunId: run.runId },
+        prepared,
+      });
+      if (yes(results["sees.generic-step"])) flagged.steps.push(at);
+    }
+  } catch {
+    return { says: [], steps: [] };
+  }
+  return flagged;
+}
+
 /** The eval set graded by Jev: each of the notes found or missed. Null when the Decision is off or unsure throughout. */
 export async function judgePoints(ctx: ActionCtx, run: JudgeRun, prepared: PreparedDecisions, points: readonly string[], bubble: { says: readonly string[]; steps: readonly string[] }): Promise<{ score: number; notes: string[] } | null> {
   try {

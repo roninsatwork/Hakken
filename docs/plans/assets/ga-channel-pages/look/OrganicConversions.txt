@@ -18,7 +18,7 @@ chart-card: Key events a day
 search: Find a key event…
 filter: Key events
 choice: Show: Landing pages | Classifications | Key events | Sources
-table: Key event | Conversion | Times | Change | Value | Landed on
+table: Key event | Conversion | Times | Change | Landed on
   table-bar
     download: Download CSV
   table-footer

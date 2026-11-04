@@ -68,6 +68,8 @@ export async function askWithTools(
     /** What its reads' keys start with, then the read's number: `r` unless agents reading side by side need their own. */
     prefix?: string;
     limitMs?: number;
+    /** Says what the agent is doing as it happens: reading a screen (how many so far), writing, or writing again. */
+    onStage?: (stage: "screens" | "writing" | "rewriting", count?: number) => Promise<void>;
   } = {},
 ): Promise<ToolAnswer> {
   const model = await modelFor(ctx, run, member);
@@ -86,6 +88,7 @@ export async function askWithTools(
       return { problem: `There is no read called ${name}. The reads are: ${[...byName.keys()].join(", ")}.` };
     }
     readCount += 1;
+    await options.onStage?.("screens", readCount);
     try {
       const result = await tool.read(ctx, args, `${options.prefix ?? "r"}${readCount}`);
       if ("problem" in result) {
@@ -118,6 +121,7 @@ export async function askWithTools(
     if (spend.limitReached) throw appError("CONFLICT", `The run reached its spend limit ($${spend.spentUsd.toFixed(2)}), so ${what} stopped.`);
     const left = deadline - Date.now();
     if (left <= 5_000) break;
+    await options.onStage?.(sentBackTimes > 0 ? "rewriting" : "writing");
     let response;
     let failed = false;
     let failure = "";

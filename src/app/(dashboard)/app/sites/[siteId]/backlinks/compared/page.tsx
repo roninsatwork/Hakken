@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -17,6 +18,7 @@ import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { comparedSees } from "@/convex/utils/sees/backlinks";
+import { comparedSees as comparedFigures } from "../_components/linkSees";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -50,6 +52,8 @@ export default function SiteBacklinksComparedPage() {
   const siteId = useSiteId();
   const site = useSite();
   const rows = useQuery(api.siteCharts.siteAndRivals, { siteId });
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(() => comparedFigures(rows, { rivals: tn("rivals") }), [rows, tn]);
   const [search, setSearch, settled] = useSiteSearch();
   const lower = settled.toLowerCase();
   const matches = wordStartMatcher(lower);
@@ -70,7 +74,7 @@ export default function SiteBacklinksComparedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Scale className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksCompared" seen={rows && comparedSees(rows)} data={rows} />
+      <SiteSees screen="backlinksCompared" seen={rows && comparedSees(rows)} data={sees} />
 
       <SiteChartCard
         dated={false}

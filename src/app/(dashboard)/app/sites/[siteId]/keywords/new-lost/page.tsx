@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -22,6 +23,7 @@ import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFo
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { newLostSees } from "../_components/keywordSees";
 import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSiteListPage, useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSort, useSiteSortedList } from "../../../_components/useSiteSort";
@@ -94,6 +96,11 @@ export default function SiteNewLostPage() {
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
   const checks = useQuery(api.siteChecks.siteChecks, { siteId, from: range.from, to: range.to, step: range.step });
+  // For the eye alone (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the checks of the span before, for new
+  // against lost beside it, and each website's searches at its newest check, for yours beside your rivals'.
+  const checksBefore = useQuery(api.siteChecks.siteChecks, { siteId, from: range.before.from, to: range.before.to, step: range.step });
+  const lines = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
+  const tn = useTranslations("sites.seesNames");
   const coverage = site?.coverage;
   const partHeld = isPartHeld(coverage);
   const directions = partHeld ? HELD_DIRECTIONS : WHOLE_DIRECTIONS;
@@ -110,6 +117,11 @@ export default function SiteNewLostPage() {
     api.siteKeywords.listMoves,
     checks !== undefined && (newest === null || newestIsStart) ? "skip" : { siteId, status: direction, sort: order.key, direction: order.direction },
     [{ siteId, list: "keywords" }],
+  );
+
+  const sees = useMemo(
+    () => newLostSees(checks, checksBefore, moves.result, site?.coverage?.moves, lines, { rivals: tn("rivals"), rose: tn("rose"), fell: tn("fell") }),
+    [checks, checksBefore, moves.result, site?.coverage?.moves, lines, tn],
   );
 
   const steps = checks?.steps ?? [];
@@ -147,7 +159,8 @@ export default function SiteNewLostPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowUpDown className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="googleMoves" seen={moves.result?.seen} data={checks && { checks, moves: moves.result }} />
+      {/* Wins and losses' words in the box, its own key in the eye: a page of its own, with its own rules (plan section 10). */}
+      <SiteSees screen="googleMoves" eye="keywordsNewLost" seen={moves.result?.seen} data={sees} />
 
       {newest ? (
         <div className="flex flex-wrap items-center gap-3">

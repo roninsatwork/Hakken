@@ -86,7 +86,7 @@ export type GroupsView = {
 };
 
 /** Columns that are no group a person can act on: drawn in shares as part of "every other", never on their own. */
-const NOT_A_GROUP = new Set(["no page recorded", "other kinds of page", "unclassified", "(not set)", "(other)"]);
+const NOT_A_GROUP = new Set(["no page recorded", "other classifications", "unclassified", "(not set)", "(other)"]);
 /** Groups a chart draws at most, by kind; a share's smaller groups go together as one. */
 const MOST: Record<GroupChartKind, number> = { bars: 10, stacked: 5, pie: 5, scatter: 20, grid: 12 };
 /** Conversions a grid's rows hold at most: the main one first. */

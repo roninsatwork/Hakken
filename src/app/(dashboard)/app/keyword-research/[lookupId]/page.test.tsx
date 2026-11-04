@@ -102,7 +102,9 @@ describe("a lookup's Overview", () => {
 
     const volume = screen.getByText("keywordResearch.overview.volume").closest("[data-part='figure']") as HTMLElement;
     expect(within(volume).getByText("3,600")).toBeInTheDocument();
-    expect(within(volume).getByText("keywordResearch.overview.volumeDetail United Kingdom $6.20")).toBeInTheDocument();
+    // The country only: no cost per click (Anthony, 2026-11-03, on every guessed money figure: "Yes, all of it").
+    expect(within(volume).getByText("keywordResearch.overview.volumeDetail United Kingdom")).toBeInTheDocument();
+    expect(within(volume).queryByText(/\$6\.20/)).not.toBeInTheDocument();
     const difficulty = screen.getByText("keywordResearch.overview.difficulty").closest("[data-part='figure']") as HTMLElement;
     expect(within(difficulty).getByText("keywordResearch.difficulty.hard")).toBeInTheDocument();
     expect(within(difficulty).getByText("keywordResearch.overview.difficultyDetail 180")).toBeInTheDocument();

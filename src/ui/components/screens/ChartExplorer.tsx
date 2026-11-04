@@ -16,6 +16,27 @@ export type ExplorerControl =
   | { kind: "select"; key: string; label: string; value: string; options: ReadonlyArray<{ value: string; label: string }>; onChange: (value: string) => void }
   | { kind: "ticks"; key: string; label: string; everyWord: string; choices: ReadonlyArray<{ key: string; label: string }>; ticked: readonly string[]; onChange: (next: string[]) => void };
 
+/** The toolbar of dropdowns, in a chart's card: every chip the same, the words saying the choice. `PageMap`'s card uses it too. */
+export function ExplorerToolbar({ controls }: { controls: readonly ExplorerControl[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {controls.map((control) => (control.kind === "select" ? (
+        <Select
+          key={control.key}
+          aria-label={control.label}
+          value={control.value}
+          onChange={control.onChange}
+          chip={{ label: control.label, choice: control.options.find((option) => option.value === control.value)?.label ?? null, changed: false }}
+        >
+          {control.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </Select>
+      ) : (
+        <TickSelect key={control.key} label={control.label} everyWord={control.everyWord} choices={control.choices} ticked={control.ticked} onChange={control.onChange} changed={false} />
+      )))}
+    </div>
+  );
+}
+
 /**
  * A configurable chart: the style every chart a reader can explore takes (docs/developer/screen-kit.md, "Configurable
  * charts"; built for a page's "Visits needed for one conversion, by channel" and locked in 2026-10-20, Anthony: "I
@@ -36,7 +57,7 @@ export type ExplorerControl =
  * this page", page-visitors-explorer-plan.md): bars along, each saying its figure, the same toolbar and hover table,
  * and no scorecard — a span's totals have no steps to set against each other.
  */
-export function ChartExplorer({ title, hint, exportName, csv, host, from, to, step, waiting, controls, nothingTicked, data, series, readout, anything, empty, scores, bars }: {
+export function ChartExplorer({ title, hint, exportName, csv, host, from, to, step, waiting, controls, nothingTicked, data, series, readout, anything, empty, scores, bars, height }: {
   /** What the chart shows and what each line is, as the dropdowns set them: "Conversions, by channel". */
   title: string;
   hint: string;
@@ -63,6 +84,8 @@ export function ChartExplorer({ title, hint, exportName, csv, host, from, to, st
   scores?: { rows: readonly ExplorerScore[]; figure: (value: number | null) => string; fewerIsBetter: boolean; withYear: boolean };
   /** Draw bars along rather than lines over time: each bar's own words, stacked for a split. */
   bars?: { labels: (value: number, key: string, row: Record<string, unknown>) => string | null; stacked?: boolean };
+  /** The lines' height, where the chart sits over a long table and should stay short: All pages' Views each day. */
+  height?: number;
 }) {
   const t = useTranslations("ui.chartExplorer");
   const verdict = (now: number | null, then: number | null) => {
@@ -78,26 +101,12 @@ export function ChartExplorer({ title, hint, exportName, csv, host, from, to, st
     <SearchConsoleChartCard title={title} hint={hint} exportName={exportName} csv={csv} host={host} from={from} to={to} step={step}>
       {waiting === undefined ? null : waiting !== null ? <p className="py-10 text-center text-[12px] text-muted">{waiting}</p> : (
         <div className="flex flex-col gap-5">
-          <div className="flex flex-wrap items-center gap-2">
-            {controls.map((control) => (control.kind === "select" ? (
-              <Select
-                key={control.key}
-                aria-label={control.label}
-                value={control.value}
-                onChange={control.onChange}
-                chip={{ label: control.label, choice: control.options.find((option) => option.value === control.value)?.label ?? null, changed: false }}
-              >
-                {control.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </Select>
-            ) : (
-              <TickSelect key={control.key} label={control.label} everyWord={control.everyWord} choices={control.choices} ticked={control.ticked} onChange={control.onChange} changed={false} />
-            )))}
-          </div>
+          <ExplorerToolbar controls={controls} />
           {nothingTicked !== null ? <p className="py-10 text-center text-[13px] text-muted">{nothingTicked}</p> : (
             <>
               {!anything ? <p className="py-10 text-center text-[12px] text-muted">{empty}</p>
                 : bars ? <SiteBarChart horizontal data={data} series={series} stacked={bars.stacked} labels={bars.labels} readout={table} />
-                  : <SiteLineChart data={data} series={series} sharedScale readout={table} keepEmptyRows breakGaps />}
+                  : <SiteLineChart data={data} series={series} height={height} sharedScale readout={table} keepEmptyRows breakGaps />}
               {scores ? <CompactList
                 rows={[...scores.rows]}
                 rowKey={(score) => score.key}

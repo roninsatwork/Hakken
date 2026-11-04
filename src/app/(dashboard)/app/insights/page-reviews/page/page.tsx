@@ -22,7 +22,8 @@ import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
-import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../../_components/useInsights";
+import { pageReviewNames, pageReviewSees } from "../../_components/insightsSees";
 import { useCitedPagesTable } from "../../../sites/_components/useCitedPagesTable";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
@@ -47,6 +48,8 @@ export default function InsightsPageReviewPage() {
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const path = useSearchParams().get("page") ?? "/";
   const data = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
   const service = useQuery(api.insightsReads.insightsService, data ? { siteId: data.siteId, page: path } : "skip");
@@ -57,7 +60,8 @@ export default function InsightsPageReviewPage() {
   const tcp = useTranslations("sites.citedPages");
   const citedRows = useQuery(api.siteRivalCited.pageRivalCitedPages, data ? { siteId: data.siteId, page: path } : "skip");
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ review: data?.pages.find((row) => row.page === path), service, cited: citedRows }), [data, path, service, citedRows]);
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => pageReviewSees(data?.pages.find((row) => row.page === path), service, citedRows, pageReviewNames(tAll)), [data, path, service, citedRows, tAll]);
   const cited = useCitedPagesTable(citedRows, { fileName: `${data?.host ?? "site"}-rival-pages-ai-cites`, withHost: true, table: "cited" });
   // Where its visitors were just before (I36), from the week's ask of Analytics.
   const recordHref = useSiteRecordHref(data?.siteId ?? "");
@@ -102,7 +106,7 @@ export default function InsightsPageReviewPage() {
         pills={<TagLabel className="text-foreground">{tVerdict(review.verdict)}</TagLabel>}
         action={<PagePrimaryAction variant="brand" onClick={toTasks}>{t("toTasks")}</PagePrimaryAction>}
       />
-      <HakkenSees says={says} steps={review.steps.map((step) => ({ words: step, link: t("seeExperiments"), href: href("experiments") }))} page={{ screen: "insights.pageReview", siteId: site, data: seesData }} />
+      <HakkenSees says={says} steps={review.steps.map((step) => ({ words: step, link: t("seeExperiments"), href: href("experiments") }))} page={{ screen: "insights.pageReview", siteId: eyeSite, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.perEnquiry")} value={formatNumber(now)} detail={<span className="text-secondary">{t("figures.yearBefore", { value: formatNumber(before) })}</span>} />
         <Figure label={t("figures.enquiries")} value={formatNumber(review.enquiries)} detail={<span className="text-secondary">{moved(review.enquiries, review.enquiriesBefore) === null ? t("figures.twelveMonths") : t("figures.against", { by: formatNumber(moved(review.enquiries, review.enquiriesBefore)), before: formatNumber(review.enquiriesBefore) })}</span>} />

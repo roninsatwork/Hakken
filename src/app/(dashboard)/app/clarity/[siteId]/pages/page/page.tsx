@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -19,7 +20,8 @@ import { usePageKinds } from "../../../../_components/usePageKinds";
 import { SiteLineChart } from "../../../../sites/_components/SiteCharts";
 import { datedRow } from "../../../../sites/_components/datedRows";
 import { formatNumber, toCsv } from "../../../../sites/_components/siteFormat";
-import { HeatmapLink, Judged, Moved, wayOf, WatchLink, changeOf, duration, growthOf, mono, percent, tooFew, useBeforeWords, useClarityLinks, useDeviceName, usePeriodWords, useSourceName, useWaitingWords } from "../../../_components/ClarityParts";
+import { HeatmapLink, Judged, Moved, wayOf, WatchLink, changeOf, duration, growthOf, mono, percent, tooFew, useBeforeWords, useClarityLinks, useClaritySeesWords, useDeviceName, usePeriodWords, useSourceName, useWaitingWords } from "../../../_components/ClarityParts";
+import { pageSees } from "../../../_components/claritySees";
 import { RecordingsList } from "../../../_components/RecordingsList";
 import { useClarityArgs, useClarityQuery, useClaritySiteId, useClarityStatus, useClarityChosen } from "../../../_components/useClarity";
 
@@ -50,6 +52,11 @@ export default function ClarityPageScreen() {
   const kinds = usePageKinds(siteId);
   const { platformName } = useSystemSettings();
   const data = useQuery(api.clarityScreens.clarityPage, { ...args, page: path });
+  // What the eye reads: the answer, its devices, sources and browsers in the screen's own words (claritySees.ts).
+  const seesWords = useClaritySeesWords(chosen);
+  const locale = useLocale();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const seen = useMemo(() => (data ? pageSees(data, path, seesWords) : undefined), [data, path, chosen, status?.host, locale]);
   const header = (
     <DetailHeader
       back={{ label: t("back"), href: `/app/clarity/${siteId}/pages${query}` }}
@@ -100,7 +107,7 @@ export default function ClarityPageScreen() {
     <>
       {header}
       {waiting ? <Notice>{waiting}</Notice> : null}
-      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.page", siteId, data }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.page", siteId, data: seen }} />
       <FigureRow columns={4}>
         <Figure label={t("figures.visits")} value={formatNumber(now.visits)} detail={<span className="flex flex-col">{before ? <Moved by={growthOf(now.visits, before.visits)}>{tc("percentOn", { way: wayOf(growthOf(now.visits, before.visits)), value: Math.abs(growthOf(now.visits, before.visits) ?? 0).toFixed(1), against })}</Moved> : <span className="text-muted">{against}</span>}<span className="text-secondary">{phones ? t("figures.onPhones", { count: phones.now.visits }) : span}</span></span>} />
         <Figure label={t("figures.scroll")} value={percent(now.scroll)} detail={<span className="flex flex-col">{before ? <Moved by={changeOf(now.scroll, before.scroll)}>{tc("pointsOn", { way: wayOf(changeOf(now.scroll, before.scroll)), value: Math.abs(changeOf(now.scroll, before.scroll) ?? 0).toFixed(1), against })}</Moved> : null}<span className="text-secondary">{t("figures.website", { value: percent(website.scroll) })}</span></span>} />

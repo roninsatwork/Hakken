@@ -10,7 +10,8 @@ import { ChangeLine } from "@/src/ui/components/screens/Change";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { MAIN_LEAGUES } from "@/convex/utils/insightLeagues";
 import { LeagueCard, leagueName, type LeagueData } from "../_components/LeagueCard";
-import { useInsightsBox, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsLeagues, useInsightsShownSite } from "../_components/useInsights";
+import { leaderboardsNames, leaderboardsSees } from "../_components/insightsSees";
 import { boxedSays } from "../_components/insightBoxSays";
 import { formatNumber } from "../../sites/_components/siteFormat";
 
@@ -32,9 +33,11 @@ export default function InsightsLeaderboardsPage() {
   const tMenu = usePlatformTranslations("insights.menu.pages");
   const href = useInsightsHref();
   const data = useInsightsLeagues();
-  const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ leagues: data, box }), [data, box]);
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => leaderboardsSees(data, box, leaderboardsNames(tAll)), [data, box, tAll]);
 
   const header = <PageHeader icon={<Trophy className="h-5 w-5 text-brand" />} title={t("title")} description={data ? t("description", { rivals: data.rivals }) : t("descriptionLoading")} />;
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
@@ -73,7 +76,7 @@ export default function InsightsLeaderboardsPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.leaderboards", siteId: site, data: seesData }} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.leaderboards", siteId: eyeSite, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.lead")} value={t("figures.leadValue", { count: led.length, total: leagues.length })} detail={<span className="text-secondary">{led.length > 0 ? names(led) : t("figures.leadNone")}</span>} />
         <Figure label={t("figures.best")} value={ord(best)} detail={<span className="text-secondary">{names(bestLeagues)}</span>} />

@@ -81,7 +81,9 @@ describe("a lookup's Keyword ideas", () => {
     const rows = bodyRows();
     expect(rows[0]).toHaveTextContent("web design agency near me");
     expect(rows[0]).toHaveTextContent("2,900");
-    expect(rows[0]).toHaveTextContent("$7.10");
+    // No cost per click (Anthony, 2026-11-03, on every guessed money figure: "Yes, all of it").
+    expect(rows[0]).not.toHaveTextContent("$7.10");
+    expect(screen.queryByRole("columnheader", { name: "keywordResearch.columns.cpc" })).not.toBeInTheDocument();
     expect(rows[0]).toHaveTextContent("keywordResearch.ideas.noPage");
     expect(rowOf("web design agency london")).toHaveTextContent("/web-design-london/");
     expect(screen.getByText("ui.tableBar.ideas 4")).toBeInTheDocument();

@@ -1,4 +1,5 @@
 import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
+import { waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAction, useMutation, useQuery } from "convex/react";
 
@@ -31,7 +32,7 @@ import InsightsCannibalisationPage from "./cannibalisation/page";
 import InsightsCompetingGroupPage from "./cannibalisation/group/page";
 import InsightsAiSearchPage from "./ai-search/page";
 import InsightsFindingsSectionPage from "./findings/sections/[section]/page";
-import { openHakkenSees } from "@/src/test/openHakkenSees";
+import { findSaid, openHakkenSees, saidInPanel } from "@/src/test/openHakkenSees";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -278,7 +279,7 @@ describe("Insights' looks", () => {
     answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME });
     const { container } = render(<InsightsLeaderboardsPage />);
     await openHakkenSees();
-    await screen.findByText(/In the four main leagues you're 5th for domain authority/);
+    await findSaid(/In the four main leagues you're 5th for domain authority/);
     await expectApprovedLook(container, PLAN, "Leagues", "Insights → Leaderboards");
   });
 
@@ -288,7 +289,7 @@ describe("Insights' looks", () => {
     answer({ "insightsReads:insightsLeagues": LEAGUES, "insightsReads:insightsHome": HOME });
     const { container } = render(<InsightsLeaguePage />);
     await openHakkenSees();
-    await screen.findByText(/You're 5th of 5 with 290/);
+    await findSaid(/You're 5th of 5 with 290/);
     await expectApprovedLook(container, PLAN, "LeagueStrength", "Insights → Domain authority league");
   });
 
@@ -357,7 +358,10 @@ describe("Insights' looks", () => {
     answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsLatestReport": MONTH_REPORT });
     const { container } = render(<InsightsYourMonthPage />);
     await openHakkenSees();
-    await screen.findByText(/Enquiries grew to 10 in September/);
+    // The eye finds its own in the report's figures and no longer repeats the report's words as its own: they go to the
+    // writer as advice (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 2).
+    await waitFor(() => expect(document.querySelector('[data-part="sees-findings"]')?.textContent).toMatch(/September 2026: enquiries up 42\.9%, to 10 from 7/));
+    expect(document.querySelector('[data-part="sees-means"]')?.textContent).not.toMatch(/Enquiries grew to 10 in September/);
     await expectApprovedLook(container, PLAN, "Month", "Insights → Your month");
   });
 
@@ -509,8 +513,8 @@ describe("Insights' looks", () => {
     answer({ "insightsReads:insightsHome": HOME, "insightsConversion:insightsConversion": CONVERSION, "insightsPeriod:insightsPeriodView": ENQUIRY_VIEW, "insightBoxes:insightsScreenBox": BOX(["The chain is weakest at the click: 1% of times shown."], "INSIGHTS_CONVERSION") });
     render(<InsightsFunnelPage />);
     await openHakkenSees();
-    await screen.findByText(/The chain is weakest at the click: 1% of times shown\./);
-    expect(screen.getByText(/The Conversion specialist wrote this for the week of/)).toBeTruthy();
+    await findSaid(/The chain is weakest at the click: 1% of times shown\./);
+    await findSaid(/The Conversion specialist wrote this for the week of/);
   });
 
   it("32b · Page decisions' box, as the Page decisions specialist wrote it, with who decided the pages", async () => {
@@ -518,8 +522,8 @@ describe("Insights' looks", () => {
     answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsPlan": PLAN_DATA, "insightDecisions:insightsPageDecisions": DECISIONS, "insightBoxes:insightsScreenBox": BOX(["Merge the chatbot pages first."], "INSIGHTS_PAGE_DECISIONS") });
     render(<InsightsPagePlanPage />);
     await openHakkenSees();
-    await screen.findByText(/Merge the chatbot pages first\./);
-    expect(screen.getByText(/The Page decisions specialist wrote this for the week of/)).toBeTruthy();
+    await findSaid(/Merge the chatbot pages first\./);
+    await findSaid(/The Page decisions specialist wrote this for the week of/);
   });
 
   it("24b · Track record's box, as the Head of Strategy wrote it", async () => {
@@ -531,8 +535,8 @@ describe("Insights' looks", () => {
     });
     render(<InsightsTrackRecordPage />);
     await openHakkenSees();
-    await screen.findByText(/Two of three findings checked were right\./);
-    expect(screen.getByText(/The Head of Strategy wrote this for the week of/)).toBeTruthy();
+    await findSaid(/Two of three findings checked were right\./);
+    await findSaid(/The Head of Strategy wrote this for the week of/);
   });
 
   it("34 · Page reviews", async () => {
@@ -601,9 +605,9 @@ describe("Insights' looks", () => {
     answer({ "insightsReads:insightsHome": HOME, "insightCompeting:insightsCompetingGroup": { siteId: "site_1", host: "ronins.co.uk", kept: decided, finding: null } });
     render(<InsightsCompetingGroupPage />);
     await openHakkenSees();
-    await screen.findByText(/Three AI pages split 120 of your searches\./);
-    expect(screen.getByText(/The Keyword cannibalisation specialist decided these on/)).toBeTruthy();
-    expect(screen.queryByText(/hasn't looked at this group yet/)).toBeNull();
+    await findSaid(/Three AI pages split 120 of your searches\./);
+    await findSaid(/The Keyword cannibalisation specialist decided these on/);
+    expect(saidInPanel().join(" ")).not.toMatch(/hasn't looked at this group yet/);
     nav.search = "";
   });
 

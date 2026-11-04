@@ -291,6 +291,30 @@ const PARTS: Part[] = [
     ),
   },
   {
+    id: "page-map",
+    name: "A map of pages, and its menus",
+    source: "src/ui/components/screens/PageMap.tsx (boxes from SiteTreemap), its menus from ExplorerToolbar in ChartExplorer.tsx",
+    use: "Each box a page, the bigger the more it had. Orange went up and grey went down, deeper for a bigger move, with the arrow saying it too: \"▲ 492 · 9,665 views\". The box under the mouse lights up with an outline and the rest step back; its figures follow the mouse. Boxes need a real chart: render PageMap in jsdom, as board Way 6 does (docs/plans/assets/all-pages-way-6/Way6.dc.html).",
+    render: () => (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value="views" onChange={noop} chip={{ label: "Count", choice: "Views", changed: false }}><option value="views">Views</option></Select>
+        <Select value="left" onChange={noop} chip={{ label: "Classification", choice: "All but search and basket", changed: false }}><option value="left">All but search and basket</option></Select>
+        <Select value="views" onChange={noop} chip={{ label: "Colour shows", choice: "Views", changed: false }}><option value="views">Views</option></Select>
+      </div>
+    ),
+  },
+  {
+    id: "dot-groups",
+    name: "Dots in four named groups, and their menu",
+    source: "src/ui/components/screens/DotGroups.tsx (dots from SiteScatterChart, scale=\"tight\"), its menu from ExplorerToolbar",
+    use: "Each dot a page. The further right, the more of one figure; the higher, the more of the other. Four groups named in the key, and a few dots naming themselves, which stay out of the key. Dots need a real chart: render DotGroups in jsdom, as board Way 4 does.",
+    render: () => (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value="basket" onChange={noop} chip={{ label: "Show", choice: "Added to basket", changed: false }}><option value="basket">Added to basket</option></Select>
+      </div>
+    ),
+  },
+  {
     id: "chart-toolbar",
     name: "A configurable chart's toolbar",
     source: "src/ui/components/screens/ChartExplorer.tsx (Select chips and TickSelects, changed={false})",

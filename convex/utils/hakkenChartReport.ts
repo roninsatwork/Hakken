@@ -50,7 +50,7 @@ export function chartReportFigures(points: readonly Day[], before: readonly Day[
 }
 
 const BY_WORDS: Record<GroupChartBy, string> = {
-  channel: "channel", kind: "kind of page", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
+  channel: "channel", kind: "classification", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
   source: "source", browser: "browser", website: "website", position: "Google position", product: "product",
   age: "age", gender: "gender", weekday: "day of the week",
 };

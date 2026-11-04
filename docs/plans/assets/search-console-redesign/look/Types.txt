@@ -8,7 +8,7 @@ figures
   figure: Clicks from service pages
   figure: Clicks from brand searches
   figure: Clicks from commercial searches
-chart-card: Pages by kind
+chart-card: Pages by classification
   checkbox: Pages
   checkbox: Clicks
 chart-card: Keywords by what they want

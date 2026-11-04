@@ -85,9 +85,16 @@ export async function readKeywordCopy(ctx: QueryCtx, websiteId: Id<"websites">, 
   const copy = await readListCopy(ctx, "keywords", keywordsCopyKey(websiteId, locationCode), KEYWORD_COPY_FIELDS);
   if (!copy) return null;
   const rankingDay = typeof copy.meta.rankingDay === "string" ? copy.meta.rankingDay : null;
-  const latestCheckDay = typeof copy.meta.latestCheckDay === "string" ? copy.meta.latestCheckDay : null;
-  const previousCheckDay = typeof copy.meta.previousCheckDay === "string" ? copy.meta.previousCheckDay : null;
-  return { rows: copy.rows.map(decode), rankingDay, latestCheckDay, previousCheckDay };
+  const kept = typeof copy.meta.latestCheckDay === "string" ? copy.meta.latestCheckDay : null;
+  const rows = copy.rows.map(decode);
+  // The latest check is never past the newest search the copy holds: a copy built while a list that kept only its last,
+  // empty page counted as the latest (`listDayReach`, 2026-11-03) called every search "older", and the Keywords page
+  // listed none. Read as the check its searches came from, and the check before it as none of its own.
+  const newest = rows.reduce<string | null>((latest, row) => (latest === null || row.day > latest ? row.day : latest), null);
+  const latestCheckDay = kept !== null && newest !== null && newest < kept ? newest : kept;
+  const previous = typeof copy.meta.previousCheckDay === "string" ? copy.meta.previousCheckDay : null;
+  const previousCheckDay = previous !== null && latestCheckDay !== null && previous >= latestCheckDay ? null : previous;
+  return { rows, rankingDay, latestCheckDay, previousCheckDay };
 }
 
 /**

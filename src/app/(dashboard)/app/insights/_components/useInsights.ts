@@ -92,6 +92,17 @@ export function useInsightsPeriodView() {
   return useQuery(api.insightsPeriod.insightsPeriodView, { ...(site ? { siteId: site } : {}), ...(period ? { period } : {}) });
 }
 
+/**
+ * The website Insights shows: the one in the address, else the one its period view opened on (the company's first own
+ * website). What Hakken sees is pressed for it: since 2026-11-03 each page hands the eye its figures as built for it,
+ * which name no website, so a page opened without one in its address pressed nothing.
+ */
+export function useInsightsShownSite(): Id<"companyWebsites"> | undefined {
+  const site = useInsightsSite();
+  const view = useInsightsPeriodView();
+  return site ?? view?.siteId ?? undefined;
+}
+
 /** The section's frame, shared by the layout and the pages: one subscription. */
 export function useInsightsHome() {
   return useQuery(api.insightsReads.insightsHome, {});

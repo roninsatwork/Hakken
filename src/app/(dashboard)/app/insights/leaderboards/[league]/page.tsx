@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Trophy } from "lucide-react";
@@ -13,7 +14,8 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { LeagueCard, leagueName, type LeagueData } from "../../_components/LeagueCard";
-import { isLeague, useInsightsHref, useInsightsLeagues, useInsightsSite } from "../../_components/useInsights";
+import { isLeague, useInsightsHref, useInsightsLeagues, useInsightsShownSite } from "../../_components/useInsights";
+import { leagueNames, leagueSees } from "../../_components/insightsSees";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
@@ -44,8 +46,12 @@ export default function InsightsLeaguePage() {
   const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const data = useInsightsLeagues();
-  const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const league = data?.leagues.find((entry) => entry.id === id) ?? null;
+  // The eye's figures: the league, with the reader's words its rules name.
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => leagueSees(data === undefined ? undefined : league, leagueNames(tAll, id)), [data, league, tAll, id]);
   const [search, setSearch, term] = useSiteSearch();
   const rows: Row[] | undefined = league?.rows.map((row, index) => ({
     ...row,
@@ -79,7 +85,7 @@ export default function InsightsLeaguePage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={[{ words: t("sees.allLeagues"), link: t("seeAll"), href: href("leaderboards") }]} page={{ screen: "insights.leaderboard", siteId: site, data: league }} />
+      <HakkenSees says={says} steps={[{ words: t("sees.allLeagues"), link: t("seeAll"), href: href("leaderboards") }]} page={{ screen: "insights.leaderboard", siteId: eyeSite, data: seesData }} />
       <FigureRow>
         <Figure
           label={t("figures.place")}

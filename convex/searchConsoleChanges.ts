@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { internalQuery } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -6,12 +6,12 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { tenantAction, tenantQuery } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
 import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { searchTypeValidator, seenType, type SearchType } from "./searchConsoleSchema";
 import { askLive, checkedRange, countryFilters, daysOf } from "./searchConsoleReads";
-import { addUp, historyLimitDay, shiftDay, type Figures } from "./searchConsoleDays";
+import { addUp, beforeOf, historyLimitDay, shiftDay, type Figures } from "./searchConsoleDays";
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
 import { chartStepValidator } from "./searchConsolePeriods";
 import { curveRows, keywordFiguresOf } from "./searchConsoleKeywordList";
@@ -163,8 +163,7 @@ const watchedFrom = (oldestDay: string, limits: ConsoleLimits) => shiftDay(oldes
  * built run by run, so Google cannot be asked for it — and one just added,
  * before its first collection, is `preparing`.
  */
-export const searchConsoleNewLost = tenantQuery({
-  args: {
+const readNewLostArgs = {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,
     from: v.string(),
@@ -179,7 +178,10 @@ export const searchConsoleNewLost = tenantQuery({
     sort: v.optional(v.union(v.literal("key"), v.literal("status"), v.literal("when"), v.literal("clicks"), v.literal("impressions"), v.literal("position"))),
     direction: sortDirectionArg,
     ...listPageArgs,
-  },
+  };
+
+export const searchConsoleNewLost = tenantQuery({
+  args: readNewLostArgs,
   returns: v.object({
     rows: v.array(changeValidator),
     preparing: v.boolean(),
@@ -189,6 +191,10 @@ export const searchConsoleNewLost = tenantQuery({
     size: v.number(),
     cut: v.union(v.number(), v.null()),
     counts: v.object({ newKeywords: v.number(), lostKeywords: v.number(), newPages: v.number(), lostPages: v.number() }),
+    /** The same counts the span before, where the website was watched for all of it: for What Hakken sees. */
+    countsBefore: v.optional(v.union(v.null(), v.object({ newKeywords: v.number(), lostKeywords: v.number(), newPages: v.number(), lostPages: v.number() }))),
+    /** How many new and lost keywords sit in each band of Google's places, of those read: for What Hakken sees. */
+    bands: v.optional(v.union(v.null(), v.object({ new: v.record(v.string(), v.number()), lost: v.record(v.string(), v.number()) }))),
     /** The chart: keywords gained and lost in each day, week or month of the dates, oldest first — the same keywords the counts and list hold. */
     periods: v.array(v.object({ start: v.string(), lastDay: v.string(), gained: v.number(), lost: v.number() })),
     /** The first day a keyword can count as new: the website watched long enough by then (`consoleNewAfterDays`). */
@@ -198,126 +204,171 @@ export const searchConsoleNewLost = tenantQuery({
     /** Another kind of result than web, or one country: New and lost is kept for web search, all countries (store less round two, F). */
     notKept: v.optional(v.boolean()),
   }),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const limits = await consoleLimitsOf(ctx, site.hold);
-    checkedLongest(args.from, args.to, limits);
-    const lostAfter = limits.lostAfterDays;
-    const most = limits.newLostRows;
-    const connection = await connectionOf(ctx, holdId);
-    const empty = { counts: { newKeywords: 0, lostKeywords: 0, newPages: 0, lostPages: 0 }, periods: [], watchedFrom: null, notKept: false };
-    const nothing = (preparing: boolean, notReady: boolean) => ({ ...pageOfList([] as Change[], args.page, args.rows, null), preparing, notReady, ...empty });
-    // Kept for web search, in each home country (search-console-home-countries-plan.md).
-    if (args.searchType !== "web") return { ...nothing(false, false), notKept: true };
-    const scope = await countryScope(ctx, site.hold, connection, args.country);
-    if (scope.read === "LIVE") return nothing(scope.kept, !scope.kept);
-    const country = scope.read === "KEPT" ? scope.country : undefined;
-    const held = scope.read === "KEPT" ? scope : connection;
-    if (!held?.newestDay || !held.oldestDay) return nothing(false, false);
-    const newest = held.newestDay;
-    const oldest = held.oldestDay;
-    const watched = watchedFrom(oldest, limits);
-    // The last day a keyword can have been shown and count as lost by now.
-    const lastLost = shiftDay(newest, -lostAfter);
-    const newFrom = args.from > watched ? args.from : watched;
-    const lostFrom = shiftDay(args.from, -lostAfter);
-    const lostTo = shiftDay(args.to, -lostAfter) < lastLost ? shiftDay(args.to, -lostAfter) : lastLost;
-    const read = async (kind: "query" | "page") => ({
-      gained: await seenBetween(ctx, holdId, country, args.searchType, kind, "first", newFrom, args.to, most),
-      // Lost in the dates: last shown the lost days before a day in them, and not since.
-      lost: await seenBetween(ctx, holdId, country, args.searchType, kind, "last", lostFrom, lostTo, most),
-    });
-    const keywords = await read("query");
-    const pages = await read("page");
-
-    // Each keyword's figures over the date menu's period (calendar-periods-plan.md, phase 4), read a keyword at a time
-    // (step 4b): other dates read the last 3 months, which hold every keyword shown in them.
-    const ninety = await keywordFiguresOf(ctx, holdId, args.searchType, periodOf(args.from, args.to, newest, ukDay(), args.period) ?? "last3Months", country);
-    // The 90 days keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1): each new or
-    // lost keyword looked up by its text, the book's records read once however many ask.
-    const names = ninety?.book ? new BookNames(ctx, ninety.book) : null;
-    const tokens = new Map<string, string>();
-    if (names) for (const entry of [...keywords.gained, ...keywords.lost]) tokens.set(entry.key, await names.tokenOf("query", entry.key));
-    const rowOf = (entry: Seen, status: "new" | "lost"): Change => {
-      const at = ninety ? ninety.rowOf(tokens.get(entry.key) ?? entry.key) : -1;
-      const known = ninety && at !== -1 ? { clicks: ninety.clicks(at), impressions: ninety.impressions(at), positionSum: ninety.positionSum(at) } : null;
-      const position = known && known.impressions > 0 ? known.positionSum / known.impressions : null;
-      return {
-        key: entry.key,
-        status,
-        when: status === "new" ? entry.firstDay : shiftDay(entry.lastDay, lostAfter),
-        clicks: status === "new" ? (known?.clicks ?? 0) : 0,
-        impressions: status === "new" ? (known?.impressions ?? 0) : 0,
-        position,
-        band: position === null ? null : bandOf(position),
-      };
-    };
-    const all = [...keywords.gained.map((entry) => rowOf(entry, "new")), ...keywords.lost.map((entry) => rowOf(entry, "lost"))];
-    const matches = wordStartMatcher(args.q?.trim().toLowerCase());
-    const kept = all
-      .filter((row) => (!matches || matches(row.key)) && (!args.what || row.status === args.what) && (!args.band || row.band === args.band))
-      .sort(listOrder(CHANGE_SORTS, args.sort ?? "when", args.direction, (row) => row.key));
-    const cut = keywords.gained.length >= most || keywords.lost.length >= most ? most : null;
-
-    // Every one gained and lost in the dates, by the day it was gained or lost, from the register's
-    // counts kept after each collection (2026-10-04: the lists above read at most `most` of each).
-    // Until the first collection that counts them, the lists themselves.
-    const register = { companyWebsiteId: holdId, country, searchType: args.searchType };
-    const countedBy = async (kind: "query" | "page", list: { gained: Seen[]; lost: Seen[] }) => {
-      const byDay = await seenDaysBetween(ctx, register, kind, lostFrom < newFrom ? lostFrom : newFrom, args.to);
-      const gained = new Map<string, number>();
-      const lost = new Map<string, number>();
-      const add = (into: Map<string, number>, day: string, count: number) => into.set(day, (into.get(day) ?? 0) + count);
-      if (!byDay) {
-        for (const entry of list.gained) add(gained, entry.firstDay, 1);
-        for (const entry of list.lost) add(lost, shiftDay(entry.lastDay, lostAfter), 1);
-      } else {
-        for (const [day, counts] of byDay) {
-          if (counts.first > 0 && day >= newFrom && day <= args.to) add(gained, day, counts.first);
-          if (counts.last > 0 && day >= lostFrom && day <= lostTo) add(lost, shiftDay(day, lostAfter), counts.last);
-        }
-      }
-      const total = (days: Map<string, number>) => [...days.values()].reduce((sum, count) => sum + count, 0);
-      return { gained, lost, newCount: total(gained), lostCount: total(lost) };
-    };
-    const keywordsBy = await countedBy("query", keywords);
-    const pagesBy = await countedBy("page", pages);
-
-    // The chart: the keywords gained and lost in the dates, in each day, week or month of them
-    // (Anthony, 2026-10-04: it had always drawn the last 16 weeks).
-    const first = args.from > oldest ? args.from : oldest;
-    const periods = new Map<string, { start: string; lastDay: string; gained: number; lost: number }>();
-    for (let start = stepStart(first, args.step); start <= args.to; start = shiftDay(stepEnd(start, args.step), 1)) {
-      const end = stepEnd(start, args.step);
-      periods.set(start, { start, lastDay: end < args.to ? end : args.to, gained: 0, lost: 0 });
-    }
-    for (const [day, count] of keywordsBy.gained) {
-      const period = periods.get(stepStart(day, args.step));
-      if (period) period.gained += count;
-    }
-    for (const [day, count] of keywordsBy.lost) {
-      const period = periods.get(stepStart(day, args.step));
-      if (period) period.lost += count;
-    }
-
-    return {
-      ...pageOfList(kept, args.page, args.rows, cut),
-      preparing: false,
-      notReady: false,
-      notKept: false,
-      counts: {
-        newKeywords: keywordsBy.newCount,
-        lostKeywords: keywordsBy.lostCount,
-        newPages: pagesBy.newCount,
-        lostPages: pagesBy.lostCount,
-      },
-      periods: [...periods.values()],
-      watchedFrom: watched,
-    };
-  },
+  handler: async (ctx, args) => await readNewLost(ctx, args),
 });
+
+/** New and lost's figures: the one read the screen and Ask Hakken both make (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6). */
+export async function readNewLost(ctx: SiteReader, args: ObjectType<typeof readNewLostArgs>) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const limits = await consoleLimitsOf(ctx, site.hold);
+  checkedLongest(args.from, args.to, limits);
+  const lostAfter = limits.lostAfterDays;
+  const most = limits.newLostRows;
+  const connection = await connectionOf(ctx, holdId);
+  const empty = { counts: { newKeywords: 0, lostKeywords: 0, newPages: 0, lostPages: 0 }, countsBefore: null, bands: null, periods: [], watchedFrom: null, notKept: false };
+  const nothing = (preparing: boolean, notReady: boolean) => ({ ...pageOfList([] as Change[], args.page, args.rows, null), preparing, notReady, ...empty });
+  // Kept for web search, in each home country (search-console-home-countries-plan.md).
+  if (args.searchType !== "web") return { ...nothing(false, false), notKept: true };
+  const scope = await countryScope(ctx, site.hold, connection, args.country);
+  if (scope.read === "LIVE") return nothing(scope.kept, !scope.kept);
+  const country = scope.read === "KEPT" ? scope.country : undefined;
+  const held = scope.read === "KEPT" ? scope : connection;
+  if (!held?.newestDay || !held.oldestDay) return nothing(false, false);
+  const newest = held.newestDay;
+  const oldest = held.oldestDay;
+  const watched = watchedFrom(oldest, limits);
+  // The last day a keyword can have been shown and count as lost by now.
+  const lastLost = shiftDay(newest, -lostAfter);
+  const newFrom = args.from > watched ? args.from : watched;
+  const lostFrom = shiftDay(args.from, -lostAfter);
+  const lostTo = shiftDay(args.to, -lostAfter) < lastLost ? shiftDay(args.to, -lostAfter) : lastLost;
+  // Gained and lost read side by side (2026-11-03: the read took 1.7 to 2.7 seconds on morehandles.co.uk's Last month
+  // and longer, reading 15,000 to 21,000 records one list after another).
+  const read = async (kind: "query" | "page") => {
+    const [gained, lost] = await Promise.all([
+      seenBetween(ctx, holdId, country, args.searchType, kind, "first", newFrom, args.to, most),
+      // Lost in the dates: last shown the lost days before a day in them, and not since.
+      seenBetween(ctx, holdId, country, args.searchType, kind, "last", lostFrom, lostTo, most),
+    ]);
+    return { gained, lost };
+  };
+  const register = { companyWebsiteId: holdId, country, searchType: args.searchType };
+  const countsFrom = lostFrom < newFrom ? lostFrom : newFrom;
+  // The span before, for What Hakken sees (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6: "the span
+  // before's counts"): counted from the register's days alone, where the website was watched for all of it.
+  const before = beforeOf(args.from, args.to, args.period);
+  const beforeWatched = before.from >= watched;
+  const lostBefore = { from: shiftDay(before.from, -lostAfter), to: shiftDay(before.to, -lostAfter) };
+  // Each keyword's figures over the date menu's period (calendar-periods-plan.md, phase 4), read a keyword at a time
+  // (step 4b): other dates read the last 3 months, which hold every keyword shown in them.
+  const [keywords, keywordDays, pageDays, ninety, keywordDaysBefore, pageDaysBefore] = await Promise.all([
+    read("query"),
+    seenDaysBetween(ctx, register, "query", countsFrom, args.to),
+    seenDaysBetween(ctx, register, "page", countsFrom, args.to),
+    keywordFiguresOf(ctx, holdId, args.searchType, periodOf(args.from, args.to, newest, ukDay(), args.period) ?? "last3Months", country),
+    beforeWatched ? seenDaysBetween(ctx, register, "query", lostBefore.from, before.to) : null,
+    beforeWatched ? seenDaysBetween(ctx, register, "page", lostBefore.from, before.to) : null,
+  ]);
+  // Pages are only counted on this page: their own lists are read only until the register counts them by day, as it
+  // has after each collection since 2026-10-04 (before, every page gained and lost was read to be counted and dropped).
+  const pages = pageDays ? { gained: [], lost: [] } : await read("page");
+  // The 90 days keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1): each new or
+  // lost keyword looked up by its text, the book's records read once however many ask.
+  const names = ninety?.book ? new BookNames(ctx, ninety.book) : null;
+  // Looked up side by side: the book holds each record's read, so two keywords in one record read it once.
+  const tokens = new Map<string, string>(names
+    ? await Promise.all([...new Set([...keywords.gained, ...keywords.lost].map((entry) => entry.key))].map(async (key) => [key, await names.tokenOf("query", key)] as const))
+    : []);
+  const rowOf = (entry: Seen, status: "new" | "lost"): Change => {
+    const at = ninety ? ninety.rowOf(tokens.get(entry.key) ?? entry.key) : -1;
+    const known = ninety && at !== -1 ? { clicks: ninety.clicks(at), impressions: ninety.impressions(at), positionSum: ninety.positionSum(at) } : null;
+    const position = known && known.impressions > 0 ? known.positionSum / known.impressions : null;
+    return {
+      key: entry.key,
+      status,
+      when: status === "new" ? entry.firstDay : shiftDay(entry.lastDay, lostAfter),
+      clicks: status === "new" ? (known?.clicks ?? 0) : 0,
+      impressions: status === "new" ? (known?.impressions ?? 0) : 0,
+      position,
+      band: position === null ? null : bandOf(position),
+    };
+  };
+  const all = [...keywords.gained.map((entry) => rowOf(entry, "new")), ...keywords.lost.map((entry) => rowOf(entry, "lost"))];
+  const matches = wordStartMatcher(args.q?.trim().toLowerCase());
+  const kept = all
+    .filter((row) => (!matches || matches(row.key)) && (!args.what || row.status === args.what) && (!args.band || row.band === args.band))
+    .sort(listOrder(CHANGE_SORTS, args.sort ?? "when", args.direction, (row) => row.key));
+  const cut = keywords.gained.length >= most || keywords.lost.length >= most ? most : null;
+
+  // Every one gained and lost in the dates, by the day it was gained or lost, from the register's
+  // counts kept after each collection (2026-10-04: the lists above read at most `most` of each).
+  // Until the first collection that counts them, the lists themselves.
+  const countedBy = (byDay: Map<string, { first: number; last: number }> | null, list: { gained: Seen[]; lost: Seen[] }) => {
+    const gained = new Map<string, number>();
+    const lost = new Map<string, number>();
+    const add = (into: Map<string, number>, day: string, count: number) => into.set(day, (into.get(day) ?? 0) + count);
+    if (!byDay) {
+      for (const entry of list.gained) add(gained, entry.firstDay, 1);
+      for (const entry of list.lost) add(lost, shiftDay(entry.lastDay, lostAfter), 1);
+    } else {
+      for (const [day, counts] of byDay) {
+        if (counts.first > 0 && day >= newFrom && day <= args.to) add(gained, day, counts.first);
+        if (counts.last > 0 && day >= lostFrom && day <= lostTo) add(lost, shiftDay(day, lostAfter), counts.last);
+      }
+    }
+    const total = (days: Map<string, number>) => [...days.values()].reduce((sum, count) => sum + count, 0);
+    return { gained, lost, newCount: total(gained), lostCount: total(lost) };
+  };
+  const keywordsBy = countedBy(keywordDays, keywords);
+  const pagesBy = countedBy(pageDays, pages);
+  // The span before's counts, by the same rule from its own days (lost: last shown the lost days before a day in it).
+  const countedBefore = (byDay: Map<string, { first: number; last: number }> | null) => {
+    if (!byDay) return null;
+    let gained = 0;
+    let lost = 0;
+    for (const [day, counts] of byDay) {
+      if (day >= before.from && day <= before.to) gained += counts.first;
+      if (day >= lostBefore.from && day <= lostBefore.to) lost += counts.last;
+    }
+    return { gained, lost };
+  };
+  const keywordsBefore = countedBefore(keywordDaysBefore);
+  const pagesBefore = countedBefore(pageDaysBefore);
+  // Where the new and lost keywords sit on Google, every one read (at most `most` of each): for What Hakken sees.
+  const bandCounts = (status: "new" | "lost") => {
+    const counts: Record<string, number> = Object.fromEntries(BANDS.map((band) => [band, 0]));
+    for (const row of all) if (row.status === status && row.band) counts[row.band] += 1;
+    return counts;
+  };
+
+  // The chart: the keywords gained and lost in the dates, in each day, week or month of them
+  // (Anthony, 2026-10-04: it had always drawn the last 16 weeks).
+  const first = args.from > oldest ? args.from : oldest;
+  const periods = new Map<string, { start: string; lastDay: string; gained: number; lost: number }>();
+  for (let start = stepStart(first, args.step); start <= args.to; start = shiftDay(stepEnd(start, args.step), 1)) {
+    const end = stepEnd(start, args.step);
+    periods.set(start, { start, lastDay: end < args.to ? end : args.to, gained: 0, lost: 0 });
+  }
+  for (const [day, count] of keywordsBy.gained) {
+    const period = periods.get(stepStart(day, args.step));
+    if (period) period.gained += count;
+  }
+  for (const [day, count] of keywordsBy.lost) {
+    const period = periods.get(stepStart(day, args.step));
+    if (period) period.lost += count;
+  }
+
+  return {
+    ...pageOfList(kept, args.page, args.rows, cut),
+    preparing: false,
+    notReady: false,
+    notKept: false,
+    counts: {
+      newKeywords: keywordsBy.newCount,
+      lostKeywords: keywordsBy.lostCount,
+      newPages: pagesBy.newCount,
+      lostPages: pagesBy.lostCount,
+    },
+    countsBefore: keywordsBefore && pagesBefore
+      ? { newKeywords: keywordsBefore.gained, lostKeywords: keywordsBefore.lost, newPages: pagesBefore.gained, lostPages: pagesBefore.lost }
+      : null,
+    bands: { new: bandCounts("new"), lost: bandCounts("lost") },
+    periods: [...periods.values()],
+    watchedFrom: watched,
+  };
+}
 
 const figuresValidator = v.union(v.null(), v.object({ clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() }));
 
@@ -402,8 +453,10 @@ async function withFigures(
  * In one country kept ready, from its own days. Any other country is `live`
  * with nothing read: the page asks Google (`searchConsoleLiveUpdates`).
  */
+const readUpdatesArgs = { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, language: v.string(), country: v.optional(v.string()), from: v.string(), to: v.string() };
+
 export const searchConsoleUpdates = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, language: v.string(), country: v.optional(v.string()), from: v.string(), to: v.string() },
+  args: readUpdatesArgs,
   returns: v.object({
     from: v.union(v.string(), v.null()),
     to: v.union(v.string(), v.null()),
@@ -413,35 +466,38 @@ export const searchConsoleUpdates = tenantQuery({
     /** What Hakken sees (search-console-volatility-plan.md §4.2): the newest update in the dates, and what it did. */
     seen: v.optional(seenValidator),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const limits = await consoleLimitsOf(ctx, site.hold);
-    const connection = await connectionOf(ctx, holdId);
-    const scope = await countryScope(ctx, site.hold, connection, args.country);
-    if (!connection?.newestDay || !connection.oldestDay) return { from: null, to: null, updates: [], live: false };
-    if (scope.read === "LIVE") return { from: null, to: null, updates: [], live: true };
-    const country = scope.read === "KEPT" ? scope.country : undefined;
-    // The main country's days begin at Google's sixteen-month line once fetched back (phase 9).
-    const oldest = scope.read === "KEPT" ? scope.oldestDay : connection.daysFrom ?? connection.oldestDay;
-    const newest = scope.read === "KEPT" ? scope.newestDay : connection.newestDay;
-    checkedRange(args.from, args.to);
-    const shown = within(args, oldest, newest);
-    if (!shown) return { from: null, to: null, updates: [], live: false };
-    const figured = await withFigures(
-      await updatesIn(ctx, shown.from, shown.to, args.language, limits.updatesListed),
-      oldest,
-      newest,
-      limits.updateWindowDays,
-      async (from, to) => addUp(await daysOf(ctx, holdId, args.searchType, from, to, country)),
-    );
-    // Each update's volatility, from the web day scores (search-console-volatility-plan.md §2.2).
-    const days = figured.length > 0 ? await dayRowsOf(ctx, holdId, country, shiftDay(newest, 1 - DAYS_READ)) : [];
-    const complete = completeDays(days);
-    const updates = figured.map((update) => ({ ...update, volatility: updateVolatility(days, update, newest, complete) }));
-    return { ...shown, updates, live: false, seen: updatesSees(newestUpdateFacts(updates), newest) };
-  },
+  handler: async (ctx, args) => await readUpdates(ctx, args),
 });
+
+/** Google updates' figures: the one read the screen and Ask Hakken both make (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6). */
+export async function readUpdates(ctx: SiteReader, args: ObjectType<typeof readUpdatesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const limits = await consoleLimitsOf(ctx, site.hold);
+  const connection = await connectionOf(ctx, holdId);
+  const scope = await countryScope(ctx, site.hold, connection, args.country);
+  if (!connection?.newestDay || !connection.oldestDay) return { from: null, to: null, updates: [], live: false };
+  if (scope.read === "LIVE") return { from: null, to: null, updates: [], live: true };
+  const country = scope.read === "KEPT" ? scope.country : undefined;
+  // The main country's days begin at Google's sixteen-month line once fetched back (phase 9).
+  const oldest = scope.read === "KEPT" ? scope.oldestDay : connection.daysFrom ?? connection.oldestDay;
+  const newest = scope.read === "KEPT" ? scope.newestDay : connection.newestDay;
+  checkedRange(args.from, args.to);
+  const shown = within(args, oldest, newest);
+  if (!shown) return { from: null, to: null, updates: [], live: false };
+  const figured = await withFigures(
+    await updatesIn(ctx, shown.from, shown.to, args.language, limits.updatesListed),
+    oldest,
+    newest,
+    limits.updateWindowDays,
+    async (from, to) => addUp(await daysOf(ctx, holdId, args.searchType, from, to, country)),
+  );
+  // Each update's volatility, from the web day scores (search-console-volatility-plan.md §2.2).
+  const days = figured.length > 0 ? await dayRowsOf(ctx, holdId, country, shiftDay(newest, 1 - DAYS_READ)) : [];
+  const complete = completeDays(days);
+  const updates = figured.map((update) => ({ ...update, volatility: updateVolatility(days, update, newest, complete) }));
+  return { ...shown, updates, live: false, seen: updatesSees(newestUpdateFacts(updates), newest) };
+}
 
 /** What a live Google updates answer needs: the connection, the days held for all countries, and the updates in them. */
 export const liveUpdatesTarget = internalQuery({
@@ -569,25 +625,41 @@ export const searchConsoleBrandWords = tenantQuery({
  * kept ready. Other dates, and any other country, are `live`: worked out on
  * the page from Google's answer (`searchConsoleLiveList`), by the same rule.
  */
+const readCurveArgs = { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), country: v.optional(v.string()) };
+
 export const searchConsoleCurve = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), country: v.optional(v.string()) },
+  args: readCurveArgs,
   returns: v.object({
     live: v.boolean(),
     preparing: v.boolean(),
     points: v.array(v.object({ position: v.number(), keywords: v.number(), impressions: v.number(), clicks: v.number(), ctr: v.number() })),
+    /** The same curve over the span before, where it is kept: for What Hakken sees (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6). */
+    before: v.optional(v.union(v.null(), v.array(v.object({ position: v.number(), keywords: v.number(), impressions: v.number(), clicks: v.number(), ctr: v.number() })))),
   }),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    const limits = await consoleLimitsOf(ctx, site.hold);
-    checkedLongest(args.from, args.to, limits);
-    const connection = await connectionOf(ctx, site.hold._id);
-    const scope = await countryScope(ctx, site.hold, connection, args.country);
-    const period = scope.read === "LIVE" ? null : periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection?.newestDay);
-    if (!period) return { live: Boolean(connection?.newestDay), preparing: false, points: [] };
-    const keywords = await keywordFiguresOf(ctx, site.hold._id, args.searchType, period, scope.read === "KEPT" ? scope.country : undefined);
-    if (!keywords) return { live: false, preparing: true, points: [] };
-    // A keyword at a time, never a row object for each (step 4b).
-    return { live: false, preparing: false, points: ctrCurve(curveRows(keywords), limits.curvePositions) };
-  },
+  handler: async (ctx, args) => await readCurve(ctx, args),
 });
+
+/** Click rate by position's figures: the one read the screen and Ask Hakken both make (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6). */
+export async function readCurve(ctx: SiteReader, args: ObjectType<typeof readCurveArgs>) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  const limits = await consoleLimitsOf(ctx, site.hold);
+  checkedLongest(args.from, args.to, limits);
+  const connection = await connectionOf(ctx, site.hold._id);
+  const scope = await countryScope(ctx, site.hold, connection, args.country);
+  const period = scope.read === "LIVE" ? null : periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection?.newestDay);
+  if (!period) return { live: Boolean(connection?.newestDay), preparing: false, points: [] };
+  const kept = scope.read === "KEPT" ? scope.country : undefined;
+  const [keywords, earlier] = await Promise.all([
+    keywordFiguresOf(ctx, site.hold._id, args.searchType, period, kept),
+    keywordFiguresOf(ctx, site.hold._id, args.searchType, period, kept, "BEFORE"),
+  ]);
+  if (!keywords) return { live: false, preparing: true, points: [] };
+  // A keyword at a time, never a row object for each (step 4b).
+  return {
+    live: false,
+    preparing: false,
+    points: ctrCurve(curveRows(keywords), limits.curvePositions),
+    before: earlier ? ctrCurve(curveRows(earlier), limits.curvePositions) : null,
+  };
+}

@@ -92,7 +92,10 @@ describe("paid search", () => {
 
     const asAcme = await member(t, acme);
     const list = await asAcme.query(api.sitePaid.listPaidKeywords, { siteId: own.holdId, page: 1, rows: 25 });
-    expect(list.rows.map((row) => [row.keyword, row.page, row.trafficCost, row.day])).toEqual([["new advert", "/offer", 140, "2026-09-08"]]);
+    expect(list.rows.map((row) => [row.keyword, row.page, row.day])).toEqual([["new advert", "/offer", "2026-09-08"]]);
+    // What the visits would cost stays stored, and is never handed to the screen (decision 4, 2026-11-03).
+    expect(list.rows[0]).not.toHaveProperty("trafficCost");
+    expect(list.rows[0]).not.toHaveProperty("cpc");
     // The organic search is a ranking, and only a ranking.
     const ranks = await t.run(async (ctx) => await ctx.db.query("siteKeywordRanks").collect());
     expect(ranks.map((row) => row.keyword)).toEqual(["organic search"]);

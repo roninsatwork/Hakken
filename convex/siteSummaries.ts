@@ -453,14 +453,25 @@ export const completeRankedDay = internalQuery({
 const LIST_REACH_DAYS = 14;
 
 /**
- * How far one day's pages of a keyword list reached, in rows: to the end of
- * the site's list when a page came back short, else as far as its pages went.
- * Unknown for pages filed before they recorded their figures.
+ * How far one day's pages of a keyword list reached, in rows, unbroken from
+ * the first: to the end of the site's list when a page came back short, else
+ * as far as its pages went. Unknown for pages filed before they recorded their
+ * figures.
+ *
+ * Unbroken (2026-11-03): More Handles' 15 October list kept only its last
+ * page, empty at row 6,000, and that short page read as the whole list — so
+ * the day became the latest check, no search was seen on it, and the Keywords
+ * page listed none of its 6,355. Pages past a gap reach nothing.
  */
 export function listDayReach(pages: ListPageFigures[]): number | null {
   if (pages.length === 0) return null;
-  if (pages.some((page) => page.listItems < page.listLimit)) return Number.POSITIVE_INFINITY;
-  return Math.max(...pages.map((page) => page.listOffset + page.listItems));
+  let reached = 0;
+  for (const page of [...pages].sort((left, right) => left.listOffset - right.listOffset)) {
+    if (page.listOffset > reached) break;
+    if (page.listItems < page.listLimit) return Number.POSITIVE_INFINITY;
+    reached = Math.max(reached, page.listOffset + page.listItems);
+  }
+  return reached;
 }
 
 /**

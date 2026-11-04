@@ -157,4 +157,20 @@ describe("a search's own page, as a fan-out query", () => {
     open(null);
     expect(screen.queryByText("sites.keywordRecord.fromAi.title")).not.toBeInTheDocument();
   });
+
+  // Every guessed money figure off (Anthony, 2026-11-03: "Yes, all of it"): what a click costs, and what the ranking
+  // page's visits would be worth as ads, are our data supplier's guesses. They stay stored; the page shows neither.
+  it("shows no cost per click and no worth of the ranking page's visits", () => {
+    const rank = {
+      band: "p11_20", change: 0, competitionLevel: "HIGH", cpc: 0.97, day: "2026-10-05", difficulty: 3, firstSeenDay: "2026-10-05",
+      intent: "BUYING", page: "/door-handles.html", pageBacklinks: 3, pageRank: 187, pageReferringDomains: 1, position: 12,
+      previousDay: null, previousPage: null, previousPosition: null, resultsCount: 206, searchIntent: "transactional", serpFeatures: [],
+      status: "NEW", traffic: 224.8, trafficValue: 218.02, trend: [49500], url: "https://www.morehandles.co.uk/door-handles.html", volume: 49500,
+    };
+    open(null, { ...RECORD, checkedOnce: null, rank, search: { competitionLevel: "HIGH", cpc: 0.97, difficulty: 3, intent: "BUYING", resultsCount: 206, searchIntent: "transactional", serpFeatures: [], trend: [49500], volume: 49500 } });
+    expect(screen.getByText("sites.keywordRecord.rankingPage.linkingWebsites")).toBeInTheDocument();
+    expect(screen.queryByText("sites.keywordRecord.figures.cpc")).not.toBeInTheDocument();
+    expect(screen.queryByText("sites.keywordRecord.rankingPage.value")).not.toBeInTheDocument();
+    expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
+  });
 });

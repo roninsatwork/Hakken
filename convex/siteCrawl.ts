@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, type ActionCtx } from "./_generated/server";
 import { noteWebsitePagesChanged } from "./holdPages";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { placesWatching } from "./siteRankings";
 import { tenantQuery } from "./tenantFunctions";
 import { getErrorMessage } from "./utils/lang";
@@ -257,29 +257,32 @@ export const siteAudit = tenantQuery({
       severity: v.union(v.literal("ERROR"), v.literal("WARNING"), v.literal("NOTICE")),
     })),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const newest = await ctx.db
-      .query("siteCrawls")
-      .withIndex("by_site_day", (q) => q.eq("websiteId", site.website._id))
-      .order("desc")
-      .first();
-    if (!newest) return null;
-    return {
-      day: newest.day,
-      pagesCrawled: newest.pagesCrawled,
-      maxPages: newest.maxPages ?? null,
-      pagesFound: newest.pagesInQueue !== undefined ? newest.pagesCrawled + newest.pagesInQueue : null,
-      onPageScore: newest.onPageScore ?? null,
-      linksInternal: newest.linksInternal ?? null,
-      linksExternal: newest.linksExternal ?? null,
-      cms: newest.cms ?? null,
-      server: newest.server ?? null,
-      turnedAway: turnedAwayOf(newest),
-      issues: newest.issues.flatMap((issue) => {
-        const severity = CRAWL_ISSUES[issue.check];
-        return severity ? [{ ...issue, severity }] : [];
-      }),
-    };
-  },
+  handler: async (ctx, args) => await readSiteAudit(ctx, args),
 });
+
+/** siteAudit's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readSiteAudit(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const newest = await ctx.db
+    .query("siteCrawls")
+    .withIndex("by_site_day", (q) => q.eq("websiteId", site.website._id))
+    .order("desc")
+    .first();
+  if (!newest) return null;
+  return {
+    day: newest.day,
+    pagesCrawled: newest.pagesCrawled,
+    maxPages: newest.maxPages ?? null,
+    pagesFound: newest.pagesInQueue !== undefined ? newest.pagesCrawled + newest.pagesInQueue : null,
+    onPageScore: newest.onPageScore ?? null,
+    linksInternal: newest.linksInternal ?? null,
+    linksExternal: newest.linksExternal ?? null,
+    cms: newest.cms ?? null,
+    server: newest.server ?? null,
+    turnedAway: turnedAwayOf(newest),
+    issues: newest.issues.flatMap((issue) => {
+      const severity = CRAWL_ISSUES[issue.check];
+      return severity ? [{ ...issue, severity }] : [];
+    }),
+  };
+}

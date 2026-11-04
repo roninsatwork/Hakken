@@ -26,7 +26,8 @@ import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { LABEL } from "../_components/StrategyNote";
-import { useInsightsBox, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { pagePlanNames, pagePlanSees } from "../_components/insightsSees";
 import { boxedSays } from "../_components/insightBoxSays";
 
 /** Each verdict's colour on the chart by kind of page: improve in orange, the page's own action; keep quiet grey. */
@@ -63,10 +64,13 @@ export default function InsightsPagePlanPage() {
   // The Page decisions specialist's summary of its decisions, when it wrote one this week; else the screen's own sentences.
   const box = useInsightsBox("PAGE_DECISIONS");
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightsReads.insightsPlan, site ? { siteId: site } : {});
   const decided = useQuery(api.insightDecisions.insightsPageDecisions, site ? { siteId: site } : {});
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ plan: data, decisions: decided, box }), [data, decided, box]);
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => pagePlanSees(data, decided, box, pagePlanNames(tAll), tDecide("notSorted")), [data, decided, box, tAll, tDecide]);
   const [search, setSearch, term] = useSiteSearch();
   const [action, setAction] = useSiteParam<string>("action", "");
   const [pageSearch, setPageSearch, pageTerm] = useSiteSearch("pq", "every");
@@ -129,7 +133,7 @@ export default function InsightsPagePlanPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} page={{ screen: "insights.pagePlan", siteId: site, data: seesData }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.pagePlan", siteId: eyeSite, data: seesData }} />
       {decisions.length > 0 ? (
         <>
           <FigureRow>

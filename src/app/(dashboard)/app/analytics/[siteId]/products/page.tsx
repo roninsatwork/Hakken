@@ -92,13 +92,22 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
   // What the eye reads: the boxes and the steps as shown, the same object until the figures or the pick change. The
   // events' words change only with the language, which reloads the page.
   const seesData = useMemo(
-    () => (answer ? productsSeesData(answer, picked ?? { steps: answer.choice.steps, sale: answer.choice.sale }, nameOf) : undefined),
+    () => (answer ? productsSeesData(answer, picked ?? { steps: answer.choice.steps, sale: answer.choice.sale }, nameOf, t("neverBought")) : undefined),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [answer, picked],
   );
+  // Where the team's "Do first" steps may send the reader: a product's page among All pages, and how people reach the shop.
+  const hrefFor = useAnalyticsHref(args.siteId);
+  const tm = useTranslations("googleAnalytics.menu");
+  const links = useMemo(() => [
+    { label: tm("allPages"), href: hrefFor("all-pages") },
+    { label: tm("landingPages"), href: hrefFor("funnel") },
+    { label: tm("channels"), href: hrefFor("channels") },
+    { label: tm("conversions"), href: hrefFor("conversions") },
+  ], [hrefFor, tm]);
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="products" seen={answer?.seen} currency={null} data={seesData} />
+      <AnalyticsSees screen="products" seen={answer?.seen} currency={null} data={seesData} links={links} />
       {answer?.preparing ? <Notice>{t("preparing")}</Notice> : null}
       {answer && choice ? (
         <>
@@ -118,7 +127,7 @@ function ProductsBody({ status }: { status: AnalyticsStatus }) {
  * before; the steps the shop picked, a funnel and never a whole (`picked`). The charts and the table hand their own
  * rows (`useSeesPart`). Visits, items and products, never money; never every event the shop records.
  */
-function productsSeesData(answer: Answer, choice: ShopChoice, nameOf: (eventName: string) => string) {
+function productsSeesData(answer: Answer, choice: ShopChoice, nameOf: (eventName: string) => string, neverBoughtName: string) {
   const figureOf = eventFigures(answer);
   const steps = choice.steps.map(figureOf).sort((left, right) => right.visits - left.visits);
   const sale = choice.sale ? figureOf(choice.sale) : null;
@@ -136,11 +145,11 @@ function productsSeesData(answer: Answer, choice: ShopChoice, nameOf: (eventName
       ...(baskets ? { basketsLeft: baskets.now, basketsLeftBefore: baskets.before } : {}),
       ...(checkouts ? { checkoutsLeft: checkouts.now, checkoutsLeftBefore: checkouts.before } : {}),
       ...(sale ? { sale: nameOf(sale.eventName), visitsThatBought: sale.visits, visitsThatBoughtBefore: sale.visitsBefore } : {}),
-      productsNeverBought: answer.neverBought.count, productsNeverBoughtBefore: answer.neverBought.countBefore, productsAdded: answer.neverBought.of,
+      productsNeverBought: answer.neverBought.count, productsNeverBoughtBefore: answer.neverBought.countBefore, productsAdded: answer.neverBought.of, neverBoughtName,
     },
     steps: {
       picked: true,
-      rows: steps.map((step) => ({ name: nameOf(step.eventName), visits: step.visits, visitsThatBought: sale ? Math.min(sale.visits, step.visits) : 0, visitsLeft: sale ? Math.max(0, step.visits - sale.visits) : step.visits })),
+      rows: steps.map((step) => ({ name: nameOf(step.eventName), visits: step.visits, visitsBefore: step.visitsBefore, visitsThatBought: sale ? Math.min(sale.visits, step.visits) : 0, visitsLeft: sale ? Math.max(0, step.visits - sale.visits) : step.visits })),
     },
   };
 }
@@ -219,7 +228,9 @@ function ProductsTable({ categories, host }: { categories: readonly string[]; ho
   const paged = useSiteListPage(api.googleAnalyticsProductReads.analyticsProductList, listArgs);
   // Its own query, so the page's eye is handed its rows here (sees-every-page-plan-2026-10-31.md): the page on screen,
   // picked from every product by its sort, so never "holds most of the list".
-  const seen = useMemo(() => (paged.pageRows ? { picked: true, rows: paged.pageRows } : undefined), [paged.pageRows]);
+  // The rest of the table by its name in the reader's words, for the eye's "left in baskets far more than the others".
+  const othersName = t("eyeOthers");
+  const seen = useMemo(() => (paged.pageRows ? { picked: true, rows: paged.pageRows, othersName } : undefined), [paged.pageRows, othersName]);
   useSeesPart("productsTable", seen);
   const bar = [tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase()].join(" · ");
   const most = Math.max(0, ...(paged.pageRows ?? []).map((row) => row.share));

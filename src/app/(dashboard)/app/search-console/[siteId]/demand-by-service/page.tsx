@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { useQuery } from "convex/react";
@@ -62,12 +63,13 @@ export default function SearchConsoleDemandPage() {
   const data = useQuery(api.searchConsoleDemand.searchConsoleDemand, status?.connection?.newestDay && readyMade ? { siteId, period, ...countryArg(country) } : "skip");
   const [search, setSearch, term] = useSiteSearch();
   // A service by its page's title before any "|", as Insights' Strategy names it; the home page by name.
-  const nameOf = (row: { id: string; name: string | null; kind: string }) => {
+  const classified = data?.classified ?? false;
+  const nameOf = useCallback((row: { id: string; name: string | null; kind: string }) => {
     if (row.kind === "GUIDES") return t("guides");
-    if (row.kind === "OTHER") return t(data?.classified ? "notSorted" : "other");
+    if (row.kind === "OTHER") return t(classified ? "notSorted" : "other");
     if (row.kind === "SERVICE" && row.id === "/") return t("home");
     return (row.kind === "SERVICE" ? row.name?.split("|")[0].trim() : row.name) || row.id;
-  };
+  }, [t, classified]);
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = data?.services.filter((row) => !matches || matches(nameOf(row)));
   const { rows, tableSort } = useSiteSortedList(matching, SORTS, { opening: "shown", name: nameOf });
@@ -79,6 +81,18 @@ export default function SearchConsoleDemandPage() {
     return <Change by={Math.round(((now - before) / before) * 100)} same={now === before} format={(value) => `${formatNumber(value)}%`} />;
   };
   const bars = (data?.services ?? []).slice(0, 10).map((row) => ({ label: nameOf(row), before: row.shownBefore ?? 0, now: row.shown }));
+  // The eye's figures: each service by the name the table shows, never the page's raw title ("Title | Brand") or an id
+  // (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6), as times shown and clicks; pages not sorted yet are
+  // in the totals and never named (Anthony, 2026-11-03: Hakken's own housekeeping is never a finding).
+  const tw = useTranslations("searchConsole.sees");
+  const seesData = useMemo(() => (data
+    ? {
+      services: data.services.map((row) => ({ name: nameOf(row), impressions: row.shown, impressionsBefore: row.shownBefore, clicks: row.clicks, clicksBefore: row.clicksBefore, sorted: row.kind !== "OTHER" })),
+      from: data.from,
+      to: data.to,
+      names: { others: tw("others") },
+    }
+    : undefined), [data, nameOf, tw]);
   const csv = () => toCsv([t("columns.service"), t("chart.before"), t("chart.now")], bars.map((row) => [row.label, row.before, row.now]));
 
   return (
@@ -87,7 +101,7 @@ export default function SearchConsoleDemandPage() {
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           {!readyMade ? <Notice>{t("readyMade")}</Notice> : null}
-          <SearchConsoleSees screen="services" seen={data ? servicesSees(data.services.map((row) => ({ ...row, name: nameOf(row), service: row.kind === "SERVICE" }))) : null} data={data} />
+          <SearchConsoleSees screen="services" seen={data ? servicesSees(data.services.map((row) => ({ ...row, name: nameOf(row), service: row.kind === "SERVICE" }))) : null} data={seesData} />
           <SearchConsoleChartCard
             title={t("chart.title")}
             hint={t("chart.hint", { name: periodWords.name, before: periodWords.before })}

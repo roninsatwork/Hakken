@@ -76,6 +76,10 @@ export const bingWebmasterInternal = internalQuery({
           : null,
         bingShareOfSearchClicksPercent: percent(share),
         weeks: figures.weeks.slice(-13),
+        // The span before, as the eye sets the screen against it (ask-hakken-every-chart-page-plan-2026-11-03.md, section 7).
+        before: figures.before
+          ? { from: figures.before.from, to: figures.before.to, bing: figures.before.totals, google: figures.before.google }
+          : null,
       };
     }
 
@@ -89,9 +93,14 @@ export const bingWebmasterInternal = internalQuery({
         pagesRead: crawling.totals.crawled,
         errors: crawling.totals.errors,
         blockedByRobotsTxt: crawling.totals.blocked,
+        before: crawling.before
+          ? { from: crawling.before.from, to: crawling.before.to, pagesRead: crawling.before.totals.crawled, errors: crawling.before.totals.errors, blockedByRobotsTxt: crawling.before.totals.blocked, pagesInBingsIndex: crawling.before.inIndex }
+          : null,
+        // Google's index beside Bing's, as the screen shows it: the read left it off (the plan's section 7, Crawling).
         moneyPages: crawling.pages.map((page) => ({
           page: page.title ? `${page.title} — ${page.page}` : page.page,
           inBingsIndex: page.inIndex,
+          inGooglesIndex: page.googleIndexed,
           lastReadByBing: page.lastRead,
           lastReadByGoogle: page.googleLastRead,
         })),

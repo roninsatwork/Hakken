@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { Waypoints } from "lucide-react";
@@ -20,11 +20,13 @@ import { formatNumber, toCsv } from "../../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../../sites/_components/useSiteParam";
 import { useSiteSortedList } from "../../../../sites/_components/useSiteSort";
-import { FigureCell, MoneyCell } from "../../../_components/AnalyticsCells";
+import { FigureCell } from "../../../_components/AnalyticsCells";
 import { pathOf } from "../../../_components/analyticsFormat";
 import { useEventName } from "../../../_components/useEventName";
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { AnalyticsGate } from "../../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../../_components/AnalyticsSees";
+import { useEyeNames } from "../../../_components/useEyeFigures";
 import { AnalyticsTable } from "../../../_components/AnalyticsListScreen";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, periodWord } from "../../../_components/useAnalytics";
 import { ChannelDayChart, ChannelFigures, ChannelKindBars, ChannelMovers, useKindName, type ChannelDays, type ChannelTop } from "../_components/ChannelParts";
@@ -58,6 +60,9 @@ export default function AnalyticsChannelPage() {
   const kindName = useKindName(top?.kinds);
   const kinds = new Set((top?.kinds ?? []).map((kind) => kind.kind));
   const title = assistants ? t("assistantsTitle") : channel;
+  // What the eye reads: the channel's own read and its days, with the names its findings use, the channel by its title.
+  const eyeNames = useEyeNames();
+  const seesData = useMemo(() => ({ figures: top, days, names: { ...eyeNames, channel: title } }), [top, days, eyeNames, title]);
   return (
     <div className="flex flex-col gap-6">
       <DetailHeader
@@ -69,7 +74,7 @@ export default function AnalyticsChannelPage() {
       {status ? (
         <AnalyticsGate status={status} siteId={siteId}>
           <div className="flex flex-col gap-4">
-            <AnalyticsSees screen="channelPage" seen={top?.seen} currency={currency} names={(value) => (kinds.has(value) ? kindName(value) : null)} data={{ figures: top, days }} />
+            <AnalyticsSees screen="channelPage" seen={top?.seen} currency={currency} names={(value) => (kinds.has(value) ? kindName(value) : null)} data={seesData} />
             <ChannelFigures figures={top?.figures ?? null} assistants={assistants} />
             {assistants ? (
               // AI assistants by assistant over time, where they land, and how Google filed each (CH8).
@@ -145,6 +150,7 @@ function ChannelTableViews({ channel, top, days, kindName }: {
         {assistants ? null : <SourcesDailyChart channel={channel} days={days} />}
         <AnalyticsTable
           key="sources"
+          seesPart="channelTable"
           list="source"
           channel={channel}
           {...(assistants && filed !== EVERY ? { filed } : {})}
@@ -166,6 +172,7 @@ function ChannelTableViews({ channel, top, days, kindName }: {
     return (
       <AnalyticsTable
         key="groups"
+        seesPart="channelTable"
         list="groups"
         channel={channel}
         ofChannel={ofChannel}
@@ -181,6 +188,7 @@ function ChannelTableViews({ channel, top, days, kindName }: {
   return (
     <AnalyticsTable
       key="pages"
+      seesPart="channelTable"
       list="landing"
       channel={channel}
       ofChannel={ofChannel}
@@ -207,6 +215,10 @@ function useEventRows(channel: string) {
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const answer = useQuery(api.googleAnalyticsChannelReads.analyticsChannelEvents, status?.connection?.newestDay ? { ...args, channel } : "skip");
+  // The eye reads every key event the channel brought, by its own name, whichever view the table shows.
+  const nameOf = useEventName();
+  const seen = useMemo(() => (answer ? { rows: answer.rows.map((row) => ({ name: nameOf(row.eventName), counted: row.counted, times: row.count, timesBefore: row.countBefore })) } : undefined), [answer, nameOf]);
+  useSeesPart("keyEvents", seen);
   return answer?.rows;
 }
 
@@ -214,14 +226,13 @@ const EVENT_SORTS = {
   name: { value: (row: EventRow & { name: string }) => row.name, first: "asc" as const },
   times: { value: (row: EventRow) => row.count, first: "desc" as const },
   change: { value: (row: EventRow) => (row.countBefore === null ? null : row.count - row.countBefore), first: "desc" as const },
-  value: { value: (row: EventRow) => row.value, first: "desc" as const },
 };
 
 /**
  * Every key event of the property for the channel (CH7): counted as a
  * conversion or not, with zeros shown — its times, the move on the span
- * before, the value of those counted, and the pages those visits landed on
- * most — under "Key events a day".
+ * before, and the pages those visits landed on most — under "Key events a
+ * day". Never money (Anthony, 2026-11-03: "Take money off").
  */
 function KeyEventsTable({ channel, counted, setCounted, filters, days }: {
   channel: string;
@@ -233,8 +244,6 @@ function KeyEventsTable({ channel, counted, setCounted, filters, days }: {
   const t = useTranslations("googleAnalytics.channelPage.table");
   const tf = useTranslations("googleAnalytics.filters");
   const nameOf = useEventName();
-  const status = useAnalyticsStatus();
-  const currency = status?.connection?.currency ?? null;
   const [period] = usePeriod();
   const [search, setSearch, settled] = useSiteSearch();
   const all = useEventRows(channel);
@@ -251,8 +260,8 @@ function KeyEventsTable({ channel, counted, setCounted, filters, days }: {
     </Select>
   );
   const csv = () => toCsv(
-    [t("columns.event"), t("columns.conversion"), t("columns.times"), t("columns.before"), t("columns.value")],
-    (sorted.rows ?? []).map((row) => [row.name, row.counted ? t("isCounted") : t("notCounted"), row.count, row.countBefore, row.value / 100]),
+    [t("columns.event"), t("columns.conversion"), t("columns.times"), t("columns.before")],
+    (sorted.rows ?? []).map((row) => [row.name, row.counted ? t("isCounted") : t("notCounted"), row.count, row.countBefore]),
   );
   return (
     <div className="flex flex-col gap-4">
@@ -275,7 +284,6 @@ function KeyEventsTable({ channel, counted, setCounted, filters, days }: {
           { key: "conversion", header: t("columns.conversion"), cell: (row) => <StatusLabel tone={row.counted ? "success" : "neutral"}>{row.counted ? t("isCounted") : t("notCounted")}</StatusLabel> },
           { key: "times", header: t("columns.times"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.count} /> },
           { key: "change", header: t("columns.change"), align: "right", sortable: true, cell: (row) => <Change by={row.countBefore === null || (row.count === 0 && row.countBefore === 0) ? null : row.count - row.countBefore} /> },
-          { key: "value", header: t("columns.value"), align: "right", sortable: true, cell: (row) => <MoneyCell value={row.counted ? row.value : null} currency={currency} /> },
           {
             key: "landed",
             header: t("columns.landed"),

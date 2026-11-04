@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { Split } from "lucide-react";
@@ -22,7 +23,8 @@ import { formatDay, formatNumber, toCsv } from "../../../sites/_components/siteF
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../../_components/useInsights";
+import { competingGroupNames, competingGroupSees } from "../../_components/insightsSees";
 
 /**
  * One group of competing pages (insights-intelligence-plan.md phase 3): the
@@ -38,6 +40,8 @@ export default function InsightsCompetingGroupPage() {
   const t = usePlatformTranslations("insights.cannibalisation");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const key = useSearchParams().get("key") ?? "";
   const data = useQuery(api.insightCompeting.insightsCompetingGroup, { key, ...(site ? { siteId: site } : {}) });
   const [pageSearch, setPageSearch, pageTerm] = useSiteSearch("pq", "pages");
@@ -49,6 +53,9 @@ export default function InsightsCompetingGroupPage() {
   const searches = group?.searches.filter((row) => !searchMatches || searchMatches(row.search));
   const pagePager = useSitePager(data === undefined ? undefined : pages ?? [], { isLoading: data === undefined, table: "pages" });
   const searchPager = useSitePager(data === undefined ? undefined : searches ?? [], { isLoading: data === undefined, table: "searches" });
+  // The eye's figures: the group's pages and searches, with the reader's words its rules name.
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => competingGroupSees(data, competingGroupNames(tAll)), [data, tAll]);
   const back = { href: href("cannibalisation"), label: t("back") };
   if (data === undefined) return <><DetailHeader back={back} icon={<Split className="h-5 w-5 text-brand" />} title={t("title")} /><div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
   if (!data?.kept || !group) return <><DetailHeader back={back} icon={<Split className="h-5 w-5 text-brand" />} title={t("title")} /><HakkenEmptyState icon={Split} title={t("group.emptyTitle")} description={t("group.emptyDescription")} /></>;
@@ -97,7 +104,7 @@ export default function InsightsCompetingGroupPage() {
   return (
     <>
       <DetailHeader back={back} icon={<Split className="h-5 w-5 text-brand" />} title={group.name} description={t("group.description", { count: group.pages.length, ...span })} pills={<StatusLabel tone={group.sure === "LIKELY" ? "info" : "neutral"}>{t(`sure.${group.sure}`)}</StatusLabel>} />
-      <HakkenSees says={says} steps={steps} page={{ screen: "insights.cannibalisationGroup", siteId: site, data }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.cannibalisationGroup", siteId: eyeSite, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.split")} value={formatNumber(group.split)} detail={<span className="text-secondary">{t("figures.shared", { count: formatNumber(group.shared) })}</span>} />
         <Figure label={t("figures.shown")} value={formatNumber(group.shown)} detail={<span className="text-secondary">{t("figures.span", span)}</span>} />

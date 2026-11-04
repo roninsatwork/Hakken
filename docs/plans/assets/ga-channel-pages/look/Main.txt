@@ -10,7 +10,7 @@ figures
 chart-card: Visits a day by channel
 chart-card: Where each channel lands, by page classification
 channel-map
-chart-card: What a visit is worth, by channel
+chart-card: How often a visit converts, by channel
 search: Find a channel…
 filter: Lands most on
 table: Channel | Visits | Dwell time | Conversions | Started | Change | Lands most on

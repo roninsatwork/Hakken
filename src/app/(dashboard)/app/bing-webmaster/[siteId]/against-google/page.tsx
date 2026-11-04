@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { ArrowLeftRight } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -7,9 +8,10 @@ import { api } from "@/convex/_generated/api";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { formatPosition } from "../../../search-console/_components/searchConsoleFormat";
-import { BingSees, formatShare } from "../../_components/BingParts";
+import { BingSees, formatShare, useBingEyeNames } from "../../_components/BingParts";
+import { eyeWords, listSeen, performanceSeen } from "../../_components/bingSeesData";
 import { BingShareChart } from "../../_components/BingCharts";
-import { BingListScreen } from "../../_components/BingListTable";
+import { BingListScreen, useWholeListLinks } from "../../_components/BingListTable";
 import { useBingHref, useBingSiteId, useBingStatus, useBingDates } from "../../_components/useBing";
 
 /**
@@ -29,6 +31,12 @@ export default function BingVersusPage() {
   const hrefFor = useBingHref(siteId);
   const { period } = useBingDates();
   const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, period } : "skip");
+  // The eye reads the whole keyword list beside the table's page, the same read Keywords hands (bingSeesData.ts).
+  const whole = useQuery(api.bingWebmasterReads.bingListSeen, status?.connection?.newestWeek ? { siteId, list: "query", period } : "skip");
+  const names = useBingEyeNames();
+  const seenFigures = useMemo(() => performanceSeen(figures, names), [figures, names]);
+  const words = useMemo(() => eyeWords(names), [names]);
+  const links = useWholeListLinks(whole, "keywords/keyword");
   const bing = figures?.totals ?? null;
   const google = figures?.google ?? null;
   const share = bing && google && bing.clicks + google.clicks > 0 ? bing.clicks / (bing.clicks + google.clicks) : null;
@@ -44,7 +52,8 @@ export default function BingVersusPage() {
             {summary && bing ? (
               <BingSees
                 screen="versus"
-                data={{ figures, list: answer }}
+                data={listSeen(seenFigures, answer, whole, words)}
+                links={links}
                 says={[
                   google && tw("share", { share: formatShare(share), bing: formatNumber(bing.clicks), total: formatNumber(bing.clicks + google.clicks) }),
                   summary.onBoth > 0 && tw("both", { count: formatNumber(summary.onBoth), higher: formatNumber(summary.bingHigher) }),

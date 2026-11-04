@@ -22,7 +22,8 @@ import { ReportDownloadAction } from "../_components/ReportDownload";
 import { RankDots } from "../_components/RankDots";
 import { ScorecardRows } from "../_components/ScorecardRows";
 import { LABEL, StrategyNote, WorkLog, type WorkLine } from "../_components/StrategyNote";
-import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsPeriodView, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { summaryNames, summarySees } from "../_components/insightsSees";
 import { WhyTheyMoved } from "../_components/WhyTheyMoved";
 import { WhatMoved } from "../_components/PeriodCharts";
 import { monthsWords, periodWords } from "../_components/insightPeriodWords";
@@ -56,13 +57,16 @@ export default function InsightsSummaryPage() {
   const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const home = useInsightsHome();
   const leagues = useInsightsLeagues();
   const week = useQuery(api.insightsReads.insightsThisWeek, site ? { siteId: site } : {});
   const board = useQuery(api.insightsReads.insightsLatestReport, site ? { kind: "BOARD", siteId: site } : { kind: "BOARD" });
   const conversion = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ period: view, week, leagues, conversion, board }), [view, week, leagues, conversion, board]);
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => summarySees(view, week, leagues, conversion, board, summaryNames(tAll), formatMonth), [view, week, leagues, conversion, board, tAll]);
   const newest = week?.weeks.find((entry) => !site || entry.siteId === site) ?? week?.weeks[0] ?? null;
   const competing = newest?.summary?.competing ?? null;
   const scorecard = newest?.summary?.scorecard ?? [];
@@ -154,7 +158,7 @@ export default function InsightsSummaryPage() {
         description={home ? (chosen ? t("descriptionPeriod", { company: home.company, period: nowWords }) : t("description", { company: home.company })) : undefined}
         action={<ReportDownloadAction report={board} label={t("downloadBoard")} />}
       />
-      <HakkenSees says={[]} steps={[]} page={{ screen: "insights.summary", siteId: site, data: seesData }} />
+      <HakkenSees says={[]} steps={[]} page={{ screen: "insights.summary", siteId: eyeSite, data: seesData }} />
       {newest ? (
         <StrategyNote verdict={newest.verdict} paragraphs={newest.summary?.paragraphs ?? []} writtenAt={newest.createdAt} points={findings.filter((finding) => finding.headline !== newest.verdict)} href={href} />
       ) : week !== undefined ? <Notice>{t("noWeek")}</Notice> : null}

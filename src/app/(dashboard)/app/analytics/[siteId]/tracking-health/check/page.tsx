@@ -12,11 +12,10 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDateTime } from "@/src/lib/dates";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { HEALTH_CHECKS_WITH_STEPS, trackingCheckSees } from "@/convex/utils/sees/analytics";
+import { HEALTH_CHECKS_WITH_STEPS } from "@/convex/utils/sees/analytics";
 import { formatNumber } from "../../../../sites/_components/siteFormat";
 import { AnalyticsGate } from "../../../_components/AnalyticsNotices";
 import { AnalyticsPanel } from "../../../_components/AnalyticsPanels";
-import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { choosableHere, useHealthWords } from "../../../_components/useHealthWords";
 import { useEventName } from "../../../_components/useEventName";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, type AnalyticsStatus } from "../../../_components/useAnalytics";
@@ -72,8 +71,6 @@ function CheckBody({ status }: { status: AnalyticsStatus }) {
       />
       {!health ? <Notice>{t("notYet")}</Notice> : !check || !known ? <Notice>{t("screen.unknown", { platformName })}</Notice> : (
         <>
-          {/* The page's own box keeps the advice: a check's is worked out from the same checks, never saved twice. */}
-          <AnalyticsSees screen="trackingHealth" seen={trackingCheckSees(check, status.host)} currency={status.connection?.currency} keep={false} data={{ check, checkedAt: health.checkedAt }} />
           {fixable && status.canManage ? (
             <div>
               <Button variant="quiet" className="px-3 py-2 text-[12px]" onClick={() => router.push(hrefFor("connection", { change: "1" }))}>

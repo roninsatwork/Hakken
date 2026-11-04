@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useConvex } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { CLARITY_FEW_VISITS } from "@/convex/utils/clarityRows";
@@ -24,7 +25,8 @@ import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
 import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../../sites/_components/useSiteSort";
-import { HeatmapLink, Judged, Points, duration, mono, percent, tooFew, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
+import { HeatmapLink, Judged, Points, duration, mono, percent, tooFew, useClaritySeesWords, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
+import { pageLinks, pagesSees } from "../../_components/claritySees";
 import { useClarityArgs, useClarityDevice, useClarityPageHref, useClaritySiteId, useClarityStatus, useClarityChosen } from "../../_components/useClarity";
 
 type Sort = "page" | "visits" | "scroll" | "change" | "time" | "quickBack" | "errors";
@@ -66,6 +68,11 @@ export default function ClarityPagesPage() {
   const chosen = useClarityChosen();
   const span = periodWords(answer?.period, chosen, "pages");
   const waiting = waitingWords(answer?.period, chosen);
+  // What the eye reads: the table's page, the chart's busiest and the summary over every page, in the screen's words.
+  const seesWords = useClaritySeesWords(chosen, kinds);
+  const locale = useLocale();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const seen = useMemo(() => (answer ? pagesSees(answer, seesWords) : undefined), [answer, chosen, kinds.choices, status?.host, locale]);
 
   const says = !answer
     ? [t("sees.loading")]
@@ -94,7 +101,7 @@ export default function ClarityPagesPage() {
     <>
       <PageHeader icon={<FileText className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       {waiting ? <Notice>{waiting}</Notice> : null}
-      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.pages", siteId, data: answer }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.pages", siteId, data: seen, links: pageLinks([answer?.summary.scrollFell[0]?.page, answer?.summary.scrollRose[0]?.page, answer?.worst?.page], pageHref) }} />
       <ChartCard
         title={t("chart.title")}
         hint={t("chart.hint", { few: CLARITY_FEW_VISITS, website: percent(answer?.website.scroll ?? null) })}

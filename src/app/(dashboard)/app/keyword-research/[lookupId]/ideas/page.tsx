@@ -20,7 +20,7 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { ExternalUrlCell, PositionCell } from "../../../sites/_components/SiteCells";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
-import { formatCpc, formatNumber } from "../../../sites/_components/siteFormat";
+import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
@@ -44,13 +44,16 @@ import { ideasSees } from "@/convex/utils/sees/research";
 
 type Row = LookupIdeas["rows"][number];
 
-/** The most searched first, as it opens; a keyword A to Z; the easiest; the dearest; the best position. */
-const SORTS: SiteSortColumns<Row, "keyword" | "intent" | "volume" | "difficulty" | "cpc" | "position"> = {
+/**
+ * The most searched first, as it opens; a keyword A to Z; the easiest; the best position. No cost per click, nor its
+ * sort or column in the download (Anthony, 2026-11-03, on every guessed money figure: "Yes, all of it"): it is our data
+ * supplier's guess at what advertisers pay. It stays in what is stored.
+ */
+const SORTS: SiteSortColumns<Row, "keyword" | "intent" | "volume" | "difficulty" | "position"> = {
   keyword: { value: (row) => row.keyword, first: "asc" },
   intent: { value: (row) => row.intent, first: "asc" },
   volume: { value: (row) => row.volume, first: "desc" },
   difficulty: { value: (row) => row.difficulty, first: "asc" },
-  cpc: { value: (row) => row.cpc, first: "desc" },
   position: { value: (row) => row.position, first: "asc" },
 };
 const keywordOf = (row: Row) => row.keyword;
@@ -153,7 +156,6 @@ export default function LookupIdeasPage() {
     { key: "intent", header: tc("intent"), sortable: true, cell: (row) => <IntentWord intent={row.intent} /> },
     { key: "volume", header: tc("volume"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.volume} /> },
     { key: "difficulty", header: tc("difficulty"), align: "right", sortable: true, cell: (row) => <DifficultyCell value={row.difficulty} /> },
-    { key: "cpc", header: tc("cpc"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.cpc} text={formatCpc(row.cpc)} /> },
     {
       key: "position",
       header: tc("position"),
@@ -253,7 +255,6 @@ export default function LookupIdeasPage() {
                     { header: tc("intent"), value: (row) => (isIntent(row.intent) ? tk(`intents.${row.intent}`) : row.intent) },
                     { header: tc("volume"), value: (row) => row.volume },
                     { header: tc("difficulty"), value: (row) => row.difficulty },
-                    { header: tc("cpc"), value: (row) => row.cpc },
                     { header: tc("position"), value: (row) => row.position },
                     { header: tc("yourPage"), value: (row) => row.page },
                   ]}

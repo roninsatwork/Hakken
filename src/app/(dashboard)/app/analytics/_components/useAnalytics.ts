@@ -39,8 +39,8 @@ export const ANALYTICS_PAGES = [
   { id: "conversions", segment: "conversions", group: "figures" },
   // A shop's products (GA34): listed only for a website that is a shop.
   { id: "products", segment: "products", group: "figures", shopOnly: true },
-  // Who visited (GA24).
-  { id: "visitors", segment: "visitors", group: "figures" },
+  // Who visited (GA24), called Visits since 2026-11-03 (visits-redo-plan-2026-11-03.md): `/visitors` forwards here.
+  { id: "visitors", segment: "visits", group: "figures" },
   { id: "trackingHealth", segment: "tracking-health", group: "settings" },
   { id: "connection", segment: "connection", group: "settings" },
 ] as const satisfies readonly { id: string; segment: string; group: AnalyticsGroup; shopOnly?: boolean }[];

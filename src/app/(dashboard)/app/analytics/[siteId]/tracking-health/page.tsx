@@ -12,13 +12,12 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { formatDateTime } from "@/src/lib/dates";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { inCheckOrder, trackingHealthSees } from "@/convex/utils/sees/analytics";
+import { inCheckOrder } from "@/convex/utils/sees/analytics";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { AnalyticsGate } from "../../_components/AnalyticsNotices";
-import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { formatPercent } from "../../_components/analyticsFormat";
 import { useHealthWords } from "../../_components/useHealthWords";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, type AnalyticsStatus } from "../../_components/useAnalytics";
@@ -91,7 +90,6 @@ function HealthBody({ status }: { status: AnalyticsStatus }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <AnalyticsSees screen="trackingHealth" seen={trackingHealthSees({ checks })} currency={status.connection?.currency} data={status.connection?.health} />
       <HealthFigures checks={checks} />
       <DataTable
         rows={pager.pageRows}

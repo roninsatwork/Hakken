@@ -13,18 +13,18 @@ import { productsSees } from "@/convex/utils/sees/analyticsProducts";
 import { liveSees } from "@/convex/utils/sees/analyticsLive";
 import AnalyticsEventScreen from "./[siteId]/events/event/page";
 import AnalyticsCampaignsPage from "./[siteId]/campaigns/page";
-import AnalyticsVisitorsPage from "./[siteId]/visitors/page";
+import AnalyticsVisitsPage from "./[siteId]/visits/page";
 import AnalyticsProductsPage from "./[siteId]/products/page";
 import AnalyticsPageScreen from "./[siteId]/all-pages/page/page";
 import AnalyticsLivePage from "./[siteId]/live/page";
 import { AnalyticsFilters } from "./_components/AnalyticsFilters";
-import { openHakkenSees } from "@/src/test/openHakkenSees";
+import { findSaid, openHakkenSees } from "@/src/test/openHakkenSees";
 
 /**
  * The second round's screens hold to the looks drawn and agreed on
  * 2026-10-11 (docs/plans/active/google-analytics-plan.md §18.2; a picture of
  * each in docs/plans/assets/google-analytics/round-2/): Live, Campaigns,
- * a page's own screen, Events and an event's own screen, Visitors and
+ * a page's own screen, Events and an event's own screen, Visits and
  * Products. Each screen, rendered with sample figures in English, reads as
  * the outline saved in docs/plans/assets/google-analytics/look/, as the first
  * round's do (`googleAnalyticsLook.test.tsx`).
@@ -86,7 +86,7 @@ describe("Google Analytics' second-round looks", () => {
     const { container } = render(<AnalyticsLivePage />);
     await screen.findByText("AI Agency | Agent Automation Company");
     await openHakkenSees();
-    await screen.findByText(/4 people are on the website now/);
+    await findSaid(/4 people are on the website now/);
     // Every country counts: no country named on the figures (Anthony, 2026-10-13).
     await screen.findByText("In the last 5 minutes");
     await expectApprovedLook(container, PLAN, "Live", "Google Analytics → Live");
@@ -115,7 +115,7 @@ describe("Google Analytics' second-round looks", () => {
     const { container } = render(<AnalyticsCampaignsPage />);
     await screen.findAllByText("ai-agents-launch");
     await openHakkenSees();
-    await screen.findByText(/Only 7 of the 799 visits came from a link you tagged/);
+    await findSaid(/Only 7 of the 799 visits came from a link you tagged/);
     await expectApprovedLook(container, PLAN, "Campaigns", "Google Analytics → Campaigns");
   });
 
@@ -237,35 +237,47 @@ describe("Google Analytics' second-round looks", () => {
     await expectApprovedLook(container, PLAN, "AnEvent", "Google Analytics → an event's own screen");
   });
 
-  // Redrawn and approved 2026-10-14 (ga-conversions-visitors-plan.md CV7): where each kind of visitor lands.
-  it("15 · Visitors", async () => {
-    at("/app/analytics/site_1/visitors");
+  // Visits (was Visitors), drawn and approved 2026-11-03 (visits-redo-plan-2026-11-03.md, board 2 of
+  // docs/plans/assets/visits-redo/): every figure in visits, the line to compare, what people looked at, who visits.
+  it("15 · Visits", async () => {
+    at("/app/analytics/site_1/visits");
     const group = { ...ROW, key: "new", label: "new", visits: 700, people: 589, newPeople: 589, bounceRate: 0.48, pagesPerVisit: 2, lengthPerVisit: 90, conversions: 7, landsMost: { kind: "svc", name: "Services", share: 0.42 } };
-    const facts = {
-      people: 671, visits: 808, engaged: 418, newPeople: 589, newVisitors: { visits: 700, conversions: 7 }, returning: { visits: 108, conversions: 5 },
-      browsers: [{ label: "Chrome", visits: 498, engaged: 261 }], signals: "off" as const, thresholded: false,
-    };
+    const facts = { visits: 808, newVisits: 700, engaged: 418, browsers: [{ label: "Chrome", visits: 498, engaged: 261 }], signals: "off" as const, thresholded: false };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsVisitorReads:analyticsVisitors": {
-        preparing: false, missing: [], figures: { people: 671, peopleBefore: 615, visits: 808, visitsBefore: 744, newPeople: 589, returningPeople: 82 },
-        points: DAYS.map((day, at) => ({ day, new: 20, returning: 3, newConversions: at === 1 ? 1 : 0, returningConversions: 0 })), signals: "off", thresholded: false, seen: visitorsSees(facts),
+        preparing: false, missing: [], span: { from: "2026-10-01", to: "2026-10-31" }, spanBefore: { from: "2026-09-01", to: "2026-09-30" },
+        figures: { visits: 808, visitsBefore: 744, newVisits: 700, newVisitsBefore: 650, returningVisits: 108, returningVisitsBefore: 94, people: 671, peopleBefore: 615 },
+        signals: "off", thresholded: false, seen: visitorsSees(facts),
       },
-      "googleAnalyticsConversionReads:analyticsVisitorMap": {
-        collecting: false, thresholded: false, conversions: true,
-        kinds: [{ kind: "svc", name: "Services" }, { kind: "NOT_SORTED", name: null }],
-        rows: [
-          { key: "new", visits: 700, cells: [{ visits: 294, conversions: 5 }, { visits: 406, conversions: 2 }], lands: { kind: "NOT_SORTED", share: 0.58 } },
-          { key: "returning", visits: 108, cells: [{ visits: 60, conversions: 5 }, { visits: 48, conversions: 0 }], lands: { kind: "svc", share: 0.56 } },
-        ],
+      "googleAnalyticsVisitorReads:analyticsVisitorDays": {
+        points: DAYS.map((day) => ({ day, new: 20, returning: 3 })),
+        pointsBefore: DAYS.map((day) => ({ day: day.replace("-10-", "-09-"), new: 18, returning: 4 })),
+      },
+      "googleAnalyticsVisitorReads:analyticsVisitorBars": {
+        waiting: false, thresholded: false,
+        rows: [{ key: "new", visits: 700, visitsBefore: 650 }, { key: "returning", visits: 108, visitsBefore: 94 }],
+      },
+      "googleAnalyticsPageKindViews:analyticsPageKindViews": {
+        waiting: false, sorted: true, views: 2400, unplaced: 0,
+        kinds: [{ kind: "svc", name: "Services", views: 1500, pages: 12 }, { kind: "NOT_SORTED", name: null, views: 880, pages: 40 }, { kind: "blog", name: "Blog", views: 20, pages: 3 }],
       },
       "googleAnalyticsReads:analyticsListPage": list([group]),
     });
-    const { container } = render(<AnalyticsVisitorsPage />);
-    await screen.findAllByText("New");
-    await screen.findByText("Where each kind of visitor lands, by page classification");
+    const { container } = render(<AnalyticsVisitsPage />);
+    await screen.findByText("New and returning visits by day");
+    await screen.findByText("What people looked at, by classification");
+    await screen.findByText("New and returning visits");
+    // Each box against September by its name (the plan's question 3: on this page only).
+    expect(await screen.findAllByText(/fewer than September|more than September|The same as September/)).not.toHaveLength(0);
+    // The page group too small to label is named under the treemap (question 4).
+    screen.getByText(/Also: Blog 20 views/);
+    // Never people as a box, and no squares.
+    for (const gone of ["People", "New visitors", "Returning visitors", "Where each kind of visitor lands, by page classification"]) {
+      expect(screen.queryByText(gone, { selector: "[data-part-title]" })).toBeNull();
+    }
     await screen.findByText(/Google signals is switched on/);
-    await expectApprovedLook(container, "ga-conversions-visitors", "Visitors", "Google Analytics → Visitors");
+    await expectApprovedLook(container, "visits-redo", "Visits", "Google Analytics → Visits");
   });
 
   it("25 · Products, for a shop", async () => {
@@ -291,7 +303,7 @@ describe("Google Analytics' second-round looks", () => {
     const { container } = render(<AnalyticsProductsPage />);
     await screen.findAllByText("Brass lever handle");
     await openHakkenSees();
-    await screen.findByText(/of the 412 visits that added to the basket left without buying/);
+    await findSaid(/of the 412 visits that added to the basket left without buying/);
     // The baskets left behind, of the visits that added something, in points on the period before; no money anywhere.
     await screen.findByText("Baskets left behind");
     await screen.findByText(/71.4% of visits that added something didn't buy/);

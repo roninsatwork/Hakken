@@ -5,11 +5,13 @@ import type { ReactNode } from "react";
 import { ArrowUpRight, PlayCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CLARITY_FEW_VISITS, type ClarityMeasures } from "@/convex/utils/clarityRows";
-import { assistantOf } from "@/convex/utils/aiAssistants";
 import { Change, ChangeLine } from "@/src/ui/components/screens/Change";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatDateTime } from "@/src/lib/dates";
 import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
+import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
+import type { PageKindsView } from "../../_components/usePageKinds";
+import { sourceNameOf, type ClaritySeesWords } from "./claritySees";
 import { useClarityStatus, type ClarityChosen } from "./useClarity";
 import { unitOf } from "@/convex/utils/calendarPeriods";
 
@@ -84,15 +86,7 @@ export function useDeviceName(): (device: string) => string {
 export function useSourceName(): (source: string) => string {
   const t = useTranslations("clarity.sources");
   const status = useClarityStatus();
-  const own = (status?.host ?? "").replace(/^www\./, "").toLowerCase();
-  return (source) => {
-    const host = source.trim().toLowerCase().replace(/^www\./, "");
-    if (!host || host === "direct" || host === "(direct)") return t("direct");
-    if (own && (host === own || host.endsWith(`.${own}`))) return t("own");
-    const assistant = assistantOf(host);
-    if (assistant) return assistant;
-    return /^[a-z]+$/.test(host) ? host[0].toUpperCase() + host.slice(1) : host;
-  };
+  return (source) => sourceNameOf(source, status?.host ?? "", { direct: t("direct"), own: t("own") });
 }
 
 /**
@@ -188,6 +182,32 @@ export function useBeforeName(): (chosen: ClarityChosen, capital?: boolean) => s
   return (chosen, capital = false) => {
     const words = tp(`before.${chosen}`);
     return capital ? `${words.charAt(0).toUpperCase()}${words.slice(1)}` : words;
+  };
+}
+
+/**
+ * The words a Clarity screen hands its eye beside its figures (`claritySees.ts`; ask-hakken-every-chart-page-plan-2026-11-03.md,
+ * section 8): every name as the screen itself says it. `kinds`: the screen's page groups, where it shows them; pages
+ * not sorted yet go unnamed, as Hakken's housekeeping is never news.
+ */
+export function useClaritySeesWords(chosen: ClarityChosen, kinds?: PageKindsView): ClaritySeesWords {
+  const t = useTranslations("clarity.common");
+  const sources = useTranslations("clarity.sources");
+  const deviceName = useDeviceName();
+  const sourceName = useSourceName();
+  const beforeName = useBeforeName();
+  return {
+    website: t("eye.website"),
+    before: beforeName(chosen, true),
+    device: deviceName,
+    source: sourceName,
+    ownSource: sources("own"),
+    group: (kind, name) => name ?? (kind === NOT_SORTED_KIND || !kinds ? null : kinds.label(kind)),
+    low: t("eye.low"),
+    otherSources: t("eye.otherSources"),
+    day: formatDay,
+    days: t("eye.days", { from: "{from}", to: "{to}" }),
+    where: (browser, device) => t("browserOn", { browser, device: deviceName(device).toLowerCase() }),
   };
 }
 

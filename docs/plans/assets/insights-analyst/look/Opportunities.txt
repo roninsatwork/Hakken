@@ -3,11 +3,11 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Opportunities
 chart-card: Your opportunities by place and how often they're shown
-chart-card: Searches within reach, by kind of page
+chart-card: Searches within reach, by classification
 search: Find a search
 filter: Service
 filter: Place
-table: Search | Your place | Searches a month | Shown, # days | Page | Kind of page | Page converts
+table: Search | Your place | Searches a month | Shown, # days | Page | Classification | Page converts
   table-bar: # searches · Worth most first
     download: Download CSV
   table-footer

@@ -11,13 +11,28 @@ export const ANALYTICS_SCREENS = [
 export type AnalyticsScreen = (typeof ANALYTICS_SCREENS)[number];
 
 /** Every further read a screen may have, each asked on its own after the screen's first. */
-export const ANALYTICS_PARTS = ["pages", "boxes", "story"] as const;
+export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website"] as const;
+
+/**
+ * The orders Ask Hakken can read All pages in, each as the screen's own headings sort it (Anthony, 2026-11-04): read only
+ * by most views, it could miss the pages that fell most when they weren't among the most viewed.
+ */
+export const ALL_PAGES_ORDERS = {
+  mostViews: { sort: "views", direction: "desc" },
+  mostVisits: { sort: "visits", direction: "desc" },
+  lostMostViews: { sort: "viewsChange", direction: "asc" },
+  gainedMostViews: { sort: "viewsChange", direction: "desc" },
+  lostMostConversions: { sort: "conversionsChange", direction: "asc" },
+  gainedMostConversions: { sort: "conversionsChange", direction: "desc" },
+} as const;
+export type AllPagesOrder = keyof typeof ALL_PAGES_ORDERS;
+export const ALL_PAGES_ORDER_NAMES = Object.keys(ALL_PAGES_ORDERS) as AllPagesOrder[];
 
 /**
  * The further reads a screen's figures come in, each with Convex's second to itself: overview's page panels
  * (calendar-periods audit, 2026-10-21), and a page's four boxes and its story (page-screen-redo-plan-2026-11-03.md),
- * as its screen reads them. Read whole, a page ran past the second.
+ * as its screen reads them, and All pages' whole website. Read whole, a page ran past the second.
  */
 export function analyticsPartsOf(screen: string): ReadonlyArray<(typeof ANALYTICS_PARTS)[number]> {
-  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : [];
+  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : [];
 }

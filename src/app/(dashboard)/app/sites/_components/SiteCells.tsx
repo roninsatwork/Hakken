@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -103,7 +103,8 @@ export function TrendCell({ trend, label }: { trend: number[]; label: string }) 
 /** A results-page feature's name: ours where we have one, else DataForSEO's own, made readable. */
 export function useFeatureLabel(): (feature: string) => string {
   const t = useTranslations("sites.common.features");
-  return (feature) => (t.has(feature) ? t(feature) : feature.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase()));
+  // The same function while the words are: a page builds the eye's figures with it once, not on every draw.
+  return useCallback((feature: string) => (t.has(feature) ? t(feature) : feature.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase())), [t]);
 }
 
 /** The features on a search's results page: how many, and which, on hover and for a screen reader. */

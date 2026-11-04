@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -20,6 +21,7 @@ import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { featuresSees } from "@/convex/utils/sees/google";
 import { SiteSees } from "../../../_components/SiteSees";
+import { featuresSeen } from "../../../_components/siteSeesData";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -60,6 +62,9 @@ export default function SiteFeaturesPage() {
   // searches on its list: the newest check's figures from the day summaries.
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const across = [...(series?.[0]?.points ?? [])].reverse().find((point) => point.aiOverviewRefs !== undefined) ?? null;
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the boxes against the check before
+  // the dates, and the chart's features by their names on screen, each against the searches checked.
+  const seen = useMemo(() => (data ? featuresSeen(data, series?.[0], label, { host: site?.host ?? "", withSite: t("seriesWithSite") }) : undefined), [data, series, site?.host, label, t]);
   // DataForSEO's counts across everything the site ranks for open the
   // searches behind them only when the keyword list holds them all
   // (docs/plans/active/sites-audit-fixes-plan.md, 1.3).
@@ -88,7 +93,7 @@ export default function SiteFeaturesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="googleFeatures" seen={data && featuresSees(data, label)} data={data && { features: data, series }} />
+      <SiteSees screen="googleFeatures" seen={data && featuresSees(data, label)} data={seen} />
 
       {across ? (
         <section aria-label={t("acrossAll")} className="flex flex-col gap-2">

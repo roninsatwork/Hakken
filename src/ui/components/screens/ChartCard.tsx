@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import { cn } from "@/src/ui/lib/utils";
+import { useSeesChart } from "./hakkenSeesStore";
 
 const FRAME = "rounded-2xl border border-border-dim bg-card/40 p-5";
 
@@ -50,6 +51,10 @@ export function ChartCard({
   children: ReactNode;
 }) {
   const t = useTranslations("ui.chart");
+  // The chart's title and its download's figures, for Ask Hakken to redraw from when a conversation starts on this
+  // page (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 9): every chart in the app, read only when asked.
+  const id = useId();
+  useSeesChart(id, useMemo(() => (csv && enoughData ? { title, csv } : null), [title, csv, enoughData]));
   const head = (
     <div data-part="chart-card" className={exportName ? "flex flex-col gap-3 pr-28" : "flex flex-col gap-3"}>
       <div>

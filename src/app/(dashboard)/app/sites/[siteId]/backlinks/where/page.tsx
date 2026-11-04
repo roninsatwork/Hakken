@@ -18,6 +18,7 @@ import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteChar
 import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { whereLinksSees } from "@/convex/utils/sees/backlinks";
+import { whereSees } from "../_components/linkSees";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -59,11 +60,19 @@ export default function SiteLinkSourcesPage() {
   const site = useSite();
   const drafts = useSiteDrafts(siteId, "LINKS", site?.host ?? "site");
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
+  // Each rival's newest summary beside yours, for the eye alone (ask-hakken-every-chart-page-plan-2026-11-03.md, section
+  // 10: "18% of links from your own country against 55% for rivals"), every breakdown the picker offers.
+  const profiles = useQuery(api.siteLinks.linkProfilesAgainstRivals, { siteId });
+  const tn = useTranslations("sites.seesNames");
   const [breakdown, setBreakdown] = useSiteParam<Breakdown>("by", "countries", BREAKDOWNS);
   const [search, setSearch, term] = useSiteSearch();
 
   const linkGroupName = useLinkGroupName();
   const nameOf = useCallback((key: string) => linkGroupName(breakdown, key), [breakdown, linkGroupName]);
+  const sees = useMemo(
+    () => whereSees(profiles, linkGroupName, (entry) => t(`breakdowns.${entry}`), { rivals: tn("rivals") }),
+    [profiles, linkGroupName, t, tn],
+  );
 
   const groups = profile ? profile[breakdown] : [];
   // A share is of every link (docs/plans/active/sites-audit-fixes-plan.md,
@@ -98,7 +107,7 @@ export default function SiteLinkSourcesPage() {
           ? <span className="text-[12px] text-secondary">{overlapping ? t("overlapping", { links: formatNumber(profile.backlinks) }) : t("largestOnly", { count: KEPT })}</span>
           : null}
       />
-      <SiteSees screen="backlinksWhere" seen={profile === undefined ? undefined : whereLinksSees({ breakdown, groups, total }, nameOf)} data={profile} />
+      <SiteSees screen="backlinksWhere" seen={profile === undefined ? undefined : whereLinksSees({ breakdown, groups, total }, nameOf)} data={sees} />
       {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
       {drafts.shown ? (
         <>

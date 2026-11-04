@@ -6,7 +6,7 @@ chart-card: Visits from tagged links a day
 chart-card: Visits by campaign
 search: Find a campaign…
 choice: Showing: Campaigns | Ad keywords
-table: Campaign | Source | Visits | Engaged | Conversions | Value | Change
+table: Campaign | Source | Visits | Engaged | Conversions | Change
   table-bar
     download: Download CSV
   table-footer

@@ -13,13 +13,13 @@ figures
   figure: Conversions →
 chart-card: Page views and visits a day
 chart-card: Where visits came from
-compact-list: Channel | Visits | Change | Conversions | Value
+compact-list: Channel | Visits | Change | Conversions
 chart-card: Pages by classification
 compact-list: Page classification | Visits | Change | Left from it | Conversions
 chart-card: Where visits landed
 compact-list: Landing page | Visits | Change | Left from it | Conversions
 chart-card: Conversions
-compact-list: Key event | Times | Value | Change | Counted
+compact-list: Key event | Times | Change | Counted
 chart-card: Who visited
 compact-list: Kind | Most of them | Share | Change
 chart-card: Tracking health

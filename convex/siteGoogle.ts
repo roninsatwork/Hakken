@@ -3,7 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { pointsBetween } from "./positionHistory";
 import { tenantQuery } from "./tenantFunctions";
-import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
+import { listHold, listWebsiteId, requireMySite, type SiteReader } from "./siteAccess";
 import { holdFirstCheck, holdSearch, holdSearches } from "./holdLists";
 import { searchVerdict, searchVerdictValidator } from "./utils/trackingVerdicts";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
@@ -124,27 +124,30 @@ export const listSearches = tenantQuery({
     firstCheckedDay: v.union(v.string(), v.null()),
     lastCheckedDay: v.union(v.string(), v.null()),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const rows = await searchStandings(ctx, site);
-    return rows
-      .map(({ keyword, isActive, fromFanOut, stats }) => ({
-        keyword,
-        isActive,
-        fromFanOut,
-        verdict: searchVerdict(stats, site.today),
-        lastPosition: stats?.lastPosition ?? null,
-        previousPosition: stats?.previousPosition ?? null,
-        bestPosition: stats?.bestPosition ?? null,
-        firstCheckedDay: stats?.firstCheckedDay ?? null,
-        lastCheckedDay: stats?.lastCheckedDay ?? null,
-      }))
-      .sort((left, right) =>
-        Number(right.isActive) - Number(left.isActive)
-        || (left.lastPosition ?? 999) - (right.lastPosition ?? 999)
-        || left.keyword.localeCompare(right.keyword));
-  },
+  handler: async (ctx, args) => await readListSearches(ctx, args),
 });
+
+/** listSearches's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readListSearches(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const rows = await searchStandings(ctx, site);
+  return rows
+    .map(({ keyword, isActive, fromFanOut, stats }) => ({
+      keyword,
+      isActive,
+      fromFanOut,
+      verdict: searchVerdict(stats, site.today),
+      lastPosition: stats?.lastPosition ?? null,
+      previousPosition: stats?.previousPosition ?? null,
+      bestPosition: stats?.bestPosition ?? null,
+      firstCheckedDay: stats?.firstCheckedDay ?? null,
+      lastCheckedDay: stats?.lastCheckedDay ?? null,
+    }))
+    .sort((left, right) =>
+      Number(right.isActive) - Number(left.isActive)
+      || (left.lastPosition ?? 999) - (right.lastPosition ?? 999)
+      || left.keyword.localeCompare(right.keyword));
+}
 
 /**
  * Where the site stood on each of these searches between two days, a point

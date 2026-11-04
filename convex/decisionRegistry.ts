@@ -748,7 +748,7 @@ export const DECISIONS: readonly DecisionDefinition[] = [
         task: "Decide whether this step would fit almost any website, saying nowhere which page, channel, device, step or product it is about.",
         context: "`step` is one thing to do, written for the owner of the website named in `website`.",
         yes: "It is advice anyone could give without seeing the figures (\"improve your checkout\", \"review your landing pages\").",
-        no: "It names where: a kind of page, a channel, a device, a step of the shop or a product.",
+        no: "It names where: a classification, a channel, a device, a step of the shop or a product.",
       },
     },
     describeAction: (answer) => (answer.kind === "yes-no" && answer.yes ? "sent the words back for a step that would fit any website" : null),

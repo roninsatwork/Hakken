@@ -8,6 +8,6 @@ answer-chart: Visits by device
   pie-chart
     pie-ring
     pie-legend
-answer-chart: Visits against the share that made a purchase, by kind of page
-answer-chart: Share of visits that did each step, by kind of page
+answer-chart: Visits against the share that made a purchase, by classification
+answer-chart: Share of visits that did each step, by classification
   channel-map

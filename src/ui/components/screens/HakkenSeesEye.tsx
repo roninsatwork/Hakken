@@ -19,7 +19,7 @@ import { pageFindings } from "@/convex/utils/sees/pageFindings";
 import { seesScreenFor, seesWrites } from "@/convex/utils/sees/screens";
 import type { SeesAsk } from "./HakkenSees";
 import type { Id } from "@/convex/_generated/dataModel";
-import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen, useSeesParts, withSeesParts } from "./hakkenSeesStore";
+import { claimEye, closeSees, forgetSeesThreads, noteAsked, toggleSees, useDrawsEye, useSectionLinks, useSeesAsked, useSeesBox, useSeesNew, useSeesOpen, useSeesParts, withSeesParts } from "./hakkenSeesStore";
 
 /**
  * The eye in the top bar that opens What Hakken sees — option 7 on the
@@ -36,7 +36,7 @@ import { claimEye, closeSees, noteAsked, toggleSees, useDrawsEye, useSeesAsked, 
  *
  * A page that hands over its figures (`SeesBox.ask`) has them sent to the
  * Insights team when the bubble opens (sees-conversion-specialist-plan-2026-10-30.md
- * S2, S11, S12): the bubble says "Hakken is researching…" while the team
+ * S2, S11, S12): the panel shows what the press is doing while the team
  * writes, then the team's words, kept three hours; a team that could not
  * answer leaves the rule's words standing. Every other page shows the
  * rule's words at once.
@@ -56,6 +56,7 @@ export function HakkenSeesEye() {
   const fresh = useSeesNew();
   const holder = useRef<HTMLSpanElement>(null);
   const askSees = useMutation(api.seesAsk.askSees);
+  const refreshSees = useMutation(api.seesAsk.refreshSees);
   const pathname = usePathname() ?? "";
   // The screen's address with the record it is about (`?key=~fu`): each page's own screen keeps its own answer, and the
   // chat knows which page it is on. Read as the eye draws, as a page changing only its record republishes its box.
@@ -65,6 +66,8 @@ export function HakkenSeesEye() {
   const page = box?.page;
   // Its panels that read their own figures (a table, a chart) add them under their names.
   const held = useSeesParts();
+  // The section's own pages, from its menu: somewhere for every page's "Do first" steps to point (shared work 6).
+  const section = useSectionLinks();
   const data = useMemo(() => withSeesParts(page?.data, held), [page?.data, held]);
   const pageData = useMemo(() => (data !== undefined ? pageDataFor(data, page?.screen) : null), [data, page?.screen]);
   // The website: the page's, else the one its figures are of (Insights opens on a website without naming it).
@@ -74,12 +77,14 @@ export function HakkenSeesEye() {
     const links = new Map<string, { label: string; href: string }>();
     for (const step of box?.steps ?? []) if (step.href.startsWith("/app/") && !step.external) links.set(step.href, { label: step.link, href: step.href });
     for (const link of page.links ?? []) links.set(link.href, { label: link.label, href: link.href });
+    // Then the section's other pages, after the page's own, which know best where each thing gets looked into.
+    for (const link of section) if (!links.has(link.href) && link.href.startsWith("/app/")) links.set(link.href, { label: link.label, href: link.href });
     const dates = datesOf(page);
     return {
       siteId, screen: page.screen, about: "", path: here, ...dates,
-      facts: [], links: [...links.values()].slice(0, 12), data: pageData,
+      facts: [], links: [...links.values()].slice(0, MOST_LINKS), data: pageData,
     };
-  }, [page, siteId, pageData, here, box?.steps]);
+  }, [page, siteId, pageData, here, box?.steps, section]);
   const ask = box?.ask ?? derivedAsk;
   const key = ask ? seesKey(ask) : null;
   // What the team said when asked for this key (the store's, outside React): "RESEARCHING" until its answer is saved,
@@ -92,6 +97,7 @@ export function HakkenSeesEye() {
     // A press that is refused, or answers nothing at all, reads as no team to ask.
     Promise.resolve(askSees(ask)).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
   }, [open, key, asked?.key, ask, askSees]);
+  const viewer = useQuery(api.users.getMe, open ? {} : "skip");
   const noCredits = Boolean(ask && asked?.key === key && asked.status === "NO_CREDITS");
   const answer = useQuery(api.seesAsk.seesAnswer, open && ask && key && asked?.key === key && asked.status !== "FAILED" && !noCredits ? { siteId: ask.siteId, key } : "skip");
   // The panel closes itself: Escape, its close button, or a click on the page behind it (SidePanel).
@@ -121,6 +127,16 @@ export function HakkenSeesEye() {
       ...(figures.length > 0 ? { figures } : {}),
     },
   });
+  // A super admin's refresh writes the words again now (`seesAsk.refreshSees`), on the page and dates in front of them,
+  // and starts a new chat under them: the last one was about the old words, and stays in Ask Hakken's list.
+  const refresh = viewer?.role === "SUPER_ADMIN" && ask && key
+    ? () => {
+      noteAsked(key, "RESEARCHING");
+      forgetSeesThreads();
+      chat.setDraft("");
+      Promise.resolve(refreshSees(ask)).catch(() => null).then((reply) => noteAsked(key, reply?.status ?? "FAILED"));
+    }
+    : undefined;
   if (!draws || !box) return null;
   // The team's words when it has written them; "researching" while it writes; the rule's words otherwise.
   const team = answer?.status === "WRITTEN" ? answer : null;
@@ -135,7 +151,7 @@ export function HakkenSeesEye() {
       count={box.steps.length}
       onClick={toggleSees}
       bubbleId={`${id}-bubble`}
-      bubble={<SeesPanel id={`${id}-bubble`} open={open} onClose={closeSees} says={says} steps={steps} researching={researching} noCredits={noCredits} written={Boolean(team)} {...(box.name ? { name: box.name } : {})} {...(findings ? { findings } : {})} chat={<SeesChatLog chat={chat} />} foot={<SeesChatFoot chat={chat} />} onAskAbout={(words) => chat.setDraft(words)} />}
+      bubble={<SeesPanel id={`${id}-bubble`} open={open} onClose={closeSees} says={says} steps={steps} researching={researching} {...(answer?.stages ? { stages: answer.stages } : {})} {...(refresh ? { onRefresh: refresh } : {})} noCredits={noCredits} written={Boolean(team)} {...(team && LIVE.test(page?.screen ?? box.screen) ? { writtenAt: team.writtenAt } : {})} {...(box.name ? { name: box.name } : {})} {...(findings ? { findings } : {})} chat={<SeesChatLog chat={chat} />} foot={<SeesChatFoot chat={chat} />} onAskAbout={(words) => chat.setDraft(words)} />}
     />
   );
 }
@@ -160,6 +176,12 @@ function siteIdIn(data: unknown): Id<"companyWebsites"> | undefined {
   look(data, 0);
   return named.size === 1 ? ([...named][0] as Id<"companyWebsites">) : undefined;
 }
+
+/** A page whose figures change by the minute: its written words say when they were written (decision 3, Live). */
+const LIVE = /^googleAnalytics\.live$/;
+
+/** Places a press may point its steps at: the page's own, then its section's pages (Visibility's menu holds 30). */
+const MOST_LINKS = 36;
 
 /** The sections whose screens carry the dates menu, each opening on Last month (calendar-periods-plan.md rule 6). */
 const DATED = /^(googleAnalytics|searchConsole|bing|clarity|visibility)\./;

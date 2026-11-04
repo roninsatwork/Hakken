@@ -8,18 +8,21 @@ import type { Seen, SeenPhrase } from "@/convex/utils/hakkenSees";
  * Every sentence and step of a Google Analytics What Hakken sees box has its
  * words in English and Italian (`googleAnalytics.seen.<screen>`), and every
  * step's link its name (`googleAnalytics.seen.links`), and each formats with
- * the values `AnalyticsSees` gives it — numbers, money, shares, plurals and a
- * conversion's own name — as Visibility's `expectWords` holds its boxes: a code
- * without words would show its key on screen, and a slot the screen does not
- * fill would fail there.
+ * the values `AnalyticsSees` gives it — numbers, shares, plurals and a
+ * conversion's own name, never money (Anthony, 2026-11-03: "Take money off") —
+ * as Visibility's `expectWords` holds its boxes: a code without words would
+ * show its key on screen, and a slot the screen does not fill would fail there.
+ * Only Connection's words, where each conversion is given its worth (a
+ * setting, and a page with no box since 2026-10-31), are offered money.
  */
 export function expectAnalyticsWords(screen: string, box: Seen) {
   for (const [locale, messages] of [["en", en], ["it", it]] as const) {
     const seen = (messages.googleAnalytics as unknown as { seen: Record<string, Record<string, unknown> | undefined> }).seen;
     const t = createTranslator({ locale, messages, onError: (error) => { throw error; } }) as unknown as (key: string, values?: Record<string, string | number>) => string;
-    const values = (phrase: SeenPhrase) => ({
+    const money: Record<string, string> = screen === "connection" ? { aMoney: "£1", bMoney: "£2", cMoney: "£3" } : {};
+    const values = (phrase: SeenPhrase): Record<string, string | number> => ({
       a: String(phrase.a ?? 0), b: String(phrase.b ?? 0), c: String(phrase.c ?? 0),
-      aMoney: "£1", bMoney: "£2", cMoney: "£3", aRate: "1%", bRate: "2%", cRate: "3%",
+      ...money, aRate: "1%", bRate: "2%", cRate: "3%",
       count: phrase.a ?? 0, countB: phrase.b ?? 0, countC: phrase.c ?? 0,
       text: phrase.text ?? "", more: phrase.more ?? "", event: phrase.text ?? "",
     });

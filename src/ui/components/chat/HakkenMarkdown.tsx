@@ -34,6 +34,25 @@ interface HakkenMarkdownProps {
   citations?: readonly string[];
 }
 
+type MdNode = { type: string; value?: string; children?: MdNode[] };
+
+/**
+ * A remark step that turns a `<br>` a writer put in an answer into a line break. Models put them in table cells, where a
+ * new line can't go; nothing else written as HTML is drawn as HTML, so without this the words "<br>" showed on screen.
+ */
+function lineBreaks() {
+  const walk = (node: MdNode) => {
+    for (const child of node.children ?? []) {
+      if (child.type === "html" && /^<br\s*\/?>$/i.test((child.value ?? "").trim())) {
+        child.type = "break";
+        delete child.value;
+      }
+      walk(child);
+    }
+  };
+  return (tree: MdNode) => walk(tree);
+}
+
 type HastNode = { type: string; value?: string; tagName?: string; properties?: Record<string, unknown>; children?: HastNode[] };
 
 /** A rehype step that wraps each occurrence of the words in a `mark`, outside code; `others` are marked as such. */
@@ -151,7 +170,7 @@ export function HakkenMarkdown({ content, highlight, highlightOthers, variant = 
 
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, lineBreaks]}
       rehypePlugins={[
         numberColumns(),
         ...((citations?.length ?? 0) > 0 ? [linkCitations(citations ?? [])] : []),

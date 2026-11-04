@@ -25,7 +25,8 @@ import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../sites/_components/useSiteParam";
 import { LABEL } from "../_components/StrategyNote";
 import { monthsWords } from "../_components/insightPeriodWords";
-import { useInsightsBox, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { aiSearchNames, aiSearchSees } from "../_components/insightsSees";
 import { boxedSays } from "../_components/insightBoxSays";
 
 /** Your own figures in orange; the rivals and assistants away from it, none near your orange (Anthony is colour blind). */
@@ -60,10 +61,17 @@ export default function InsightsAiSearchPage() {
   const tBox = usePlatformTranslations("insights.box");
   const tPeriod = usePlatformTranslations("insights.period");
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const engineName = useEngineLabel();
   const data = useQuery(api.insightAiSearch.insightsAiSearch, site ? { siteId: site } : {});
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ aiSearch: data, box }), [data, box]);
+  const tAll = usePlatformTranslations("insights");
+  // Each AI engine by the name the page shows it by, for the rules that set the website against the best rival on each.
+  // Kept by the names themselves: the engines' words come back as a new function on every draw.
+  const engineWords = ENGINE_SCREEN_ORDER.map(engineName).join("\u0000");
+  const engineNames = useMemo(() => Object.fromEntries(ENGINE_SCREEN_ORDER.map((engine, at) => [engine, engineWords.split("\u0000")[at]])), [engineWords]);
+  const seesData = useMemo(() => aiSearchSees(data, box, aiSearchNames(tAll, engineNames)), [data, box, tAll, engineNames]);
   const [assistantSearch, setAssistantSearch, assistantTerm] = useSiteSearch("aq", "assistants");
   const [engineSearch, setEngineSearch, engineTerm] = useSiteSearch("eq", "engines");
   const [pageSearch, setPageSearch, pageTerm] = useSiteSearch("pq", "cited");
@@ -140,7 +148,7 @@ export default function InsightsAiSearchPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={[]} page={{ screen: "insights.aiSearch", siteId: site, data: seesData }} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={[]} page={{ screen: "insights.aiSearch", siteId: eyeSite, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.visits", { period: nowWords })} value={formatNumber(now?.visits ?? 0)} detail={<ChangeLine by={thenVisits === null ? null : (now?.visits ?? 0) - thenVisits}>{t("figures.against", { then: thenVisits === null ? "–" : formatNumber(thenVisits), period: compareWords })}</ChangeLine>} />
         <Figure label={t("figures.enquiries", { period: nowWords })} value={formatNumber(now?.enquiries ?? 0)} detail={<ChangeLine by={thenEnquiries === null ? null : (now?.enquiries ?? 0) - thenEnquiries}>{t("figures.against", { then: thenEnquiries === null ? "–" : formatNumber(thenEnquiries), period: compareWords })}</ChangeLine>} />

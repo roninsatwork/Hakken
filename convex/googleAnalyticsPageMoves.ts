@@ -51,6 +51,8 @@ export async function withQuietPages(
   earlier: readonly ListRow[] | null,
   counted: readonly Counted[],
   addresses: Map<string, string>,
+  /** Only the website's own pages this keeps: one classification's, or all but search, basket and account. */
+  keep: (address: string) => boolean = () => true,
 ): Promise<{ rows: ShownRow[]; moves: PageMoves }> {
   const viewed = new Set(rows.map((row) => row.key));
   const gone = (earlier ?? []).filter((row) => !viewed.has(row.key) && row.views > 0).map((row) => shown(blank(row.key), row, counted, true));
@@ -70,6 +72,7 @@ export async function withQuietPages(
     if (listed.has(path)) continue;
     listed.add(path);
     const address = /^https?:\/\//i.test(page.page) ? page.page : `${origin}${page.page}`;
+    if (!keep(address)) continue;
     quiet.push(shown(blank(address), null, counted, earlier !== null));
   }
   const all = [...named, ...quiet];

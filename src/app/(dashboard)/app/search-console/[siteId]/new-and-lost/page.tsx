@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useConvex } from "convex/react";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
@@ -89,6 +90,26 @@ export default function SearchConsoleNewLostPage() {
   const counts = list.result?.counts ?? null;
   const host = status?.host ?? "";
   const periods = list.result?.periods ?? [];
+  // The eye's figures: the four counts against the span before's, where on Google the new and lost sit, and the chart's
+  // days, weeks or months (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6).
+  const tw = useTranslations("searchConsole.sees");
+  const result = list.result;
+  const shown = list.pageRows ?? null;
+  const step = range.step;
+  const seesData = useMemo(() => (result
+    ? {
+      counts: result.counts,
+      countsBefore: result.countsBefore ?? null,
+      watchedFrom: result.watchedFrom,
+      bands: result.bands ?? null,
+      // Each day, week or month named as the chart names it, so a day that lost far more than the rest is said by its date.
+      // By their first day (`day`) too, so the eye keeps a month's newest days, never its oldest 25.
+      periods: result.periods.map((period) => ({ ...period, day: period.start, name: step === "month" ? formatMonth(period.start.slice(0, 7)) : formatShortDay(period.start) })),
+      rows: shown,
+      picked: true,
+      names: { lostFirstPage: tw("lostFirstPage"), newFirstPage: tw("newFirstPage") },
+    }
+    : undefined), [result, shown, step, tw]);
   // Each day, week or month dated by its days, so the chart marks the Google updates inside them.
   const steps = periods.map((period) => {
     const dated = datedRow({ day: period.start, lastDay: period.lastDay }, {}, range.step === "month" ? formatMonth(period.start.slice(0, 7)) : formatShortDay(period.start));
@@ -106,7 +127,7 @@ export default function SearchConsoleNewLostPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("newLost.title")} description={t("newLost.description", { days: status?.limits.lostAfterDays ?? "…" })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="newLost" seen={counts ? (range.period === "custom" ? null : newLostSees(counts, range.period)) : null} data={list.result ? { counts, periods, rows: list.pageRows ?? null } : undefined} />
+          <SearchConsoleSees screen="newLost" seen={counts ? (range.period === "custom" ? null : newLostSees(counts, range.period)) : null} data={seesData} />
           <ResultKindSwitch />
           {list.result?.notKept ? <p className="text-[13px] text-secondary">{t("newLost.notKept")}</p> : country && list.result?.notReady ? <CountryNotReady country={country} /> : (
             <>

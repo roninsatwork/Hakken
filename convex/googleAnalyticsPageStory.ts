@@ -249,9 +249,11 @@ function storyFromShared(shared: Shared, page: string, own: ListRow | null, page
 
 export async function readPageStory(ctx: Reader, input: StoryInput): Promise<PageStory> {
   const { holdId, page, period, device, country, counted } = input;
-  // Visits that started here, kept with the landing pages; the website's, with its totals (PS1, PS5).
-  const landingNow = await readFor(ctx, holdId, "landing", period, "NOW", device, undefined, country);
-  const landingBefore = await readFor(ctx, holdId, "landing", period, "BEFORE", device, undefined, country);
+  // Visits that started here, kept with the landing pages; the website's, with its totals (PS1, PS5). Each landing page
+  // with only the counted events, read a part at a time: read whole as rows, the year's ran the story out of its 64MB
+  // on More Handles (2026-11-04).
+  const countedOnly = { events: new Set(counted.map((event) => event.eventName)) };
+  const landingNow = await readFor(ctx, holdId, "landing", period, "NOW", device, undefined, country, countedOnly);
   const landing = landingNow && landingNow !== "LIVE" ? landingNow.rows : [];
   // Every landing page and page by its address, for its page group — and which landing page it is: its own number, or
   // its address without the trailing slash's, as Analytics names landing pages (`landingKeyAmong`).
@@ -261,6 +263,8 @@ export async function readPageStory(ctx: Reader, input: StoryInput): Promise<Pag
   const addressOfRef = new Map(groupRefs.map((ref, at) => [ref, groupAddresses[at]]));
   const landingRefs = leagueRows.map((row) => row.key);
   const landed = landingKeyAmong(page, input.address, landingRefs, landingRefs.map((ref) => addressOfRef.get(ref) ?? ref));
+  // The span before's row for it alone.
+  const landingBefore = await readFor(ctx, holdId, "landing", period, "BEFORE", device, undefined, country, { ...countedOnly, keep: (key) => key === landed });
 
   const shared = await sharedLists(ctx, input, landed);
   const lists = shared ? storyFromShared(shared, page, input.pages.find((row) => row.key === page) ?? null, input.pages, counted) : new Map<StoryList, Held>();

@@ -61,8 +61,8 @@ const SCREENS_IN_WORDS = [
   "landingPages: each page visits land on, with its conversions; landingPage (key: the page's path): where its visits came from",
   "allPages: each page's views; page (key: the page's path): the page before, where people went next, its sources",
   "events: every event; event (key: Google's event name): what it was about, the pages it happened on",
-  "conversions: each conversion counted, how visits reached them by channel and by kind of page, each event by kind of page, what people did before converting",
-  "conversionsBy (columns: kind, channel, device or country): the Conversions page's map — for each conversion, the visits that did it, the visits it took for one, and each page kind's, channel's, device's or country's rate in every hundred of its visits, against the span before",
+  "conversions: each conversion counted, how visits reached them by channel and by classification, each event by classification, what people did before converting",
+  "conversionsBy (columns: kind, channel, device or country): the Conversions page's map — for each conversion, the visits that did it, the visits it took for one, and each classification's, channel's, device's or country's rate in every hundred of its visits, against the span before",
   "visitors (list: visitorType, browser, system, age, gender or interest): who visited and who converted",
   "products: a shop's steps (looked, added to basket, checkout, bought) with the baskets and checkouts left, and each product",
 ].join("; ");

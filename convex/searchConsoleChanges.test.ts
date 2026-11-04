@@ -307,6 +307,8 @@ describe("Click rate by position and brand words", () => {
         { position: 1, keywords: 2, impressions: 200, clicks: 20, ctr: 0.1 },
         { position: 7, keywords: 1, impressions: 50, clicks: 1, ctr: 0.02 },
       ],
+      // The same curve over the span before, for What Hakken sees: none is kept here.
+      before: null,
     });
     expect(await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-09-01", to: "2026-09-10" })).toMatchObject({ live: true, points: [] });
   });

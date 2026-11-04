@@ -8,7 +8,7 @@ import { slotKey } from "./googleAnalyticsCollect";
 import { decodePages } from "./holdPageRefs";
 import { readPageKinds } from "./pageKinds";
 import { titlesOf } from "./pageTitles";
-import { landingByChannel } from "./googleAnalyticsChannelReads";
+import { eachLandingByChannel } from "./googleAnalyticsChannelReads";
 import { EVERY_DEVICE, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { connectionOf, countedOf, readSlot } from "./googleAnalyticsRows";
@@ -270,18 +270,27 @@ export async function readConversionsPages(ctx: SiteReader, args: { siteId: Id<"
   const connection = await connectionOf(ctx, holdId);
   const none = { collecting: true, everyDevice: false, name: null, cut: false, visits: 0, seen: conversionPagesSees([]), rows: [] };
   if (!connection?.newestDay) return none;
+  const event = args.eventName;
+  const unitsOf = (row: ListRow) => {
+    const count = row.counts.get(event) ?? 0;
+    return { did: row.eventVisits?.get(event) ?? count, times: row.eventTimes?.get(event) ?? count };
+  };
   let pages: Array<{ page: string; row: ListRow }> = [];
   let everyDevice = false;
   let name: string | null = null;
+  // A channel's landing pages: each one's visits and the conversion's two units alone, read a part at a time (2026-11-04:
+  // read whole as rows, the year's landing pages by channel ran this out of its 64MB on More Handles).
+  let channelPages: Array<{ page: string; visits: number; did: number; times: number }> | null = null;
   if (args.columns === "channel") {
-    const held = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
+    const mine: Array<{ page: string; visits: number; did: number; times: number }> = [];
+    const held = await eachLandingByChannel(ctx, holdId, args.period, "NOW", country, args.device, { events: new Set([event]), units: true }, (row) => {
+      const { channel: page, source: channel } = splitChannelKey(row.key);
+      if (channel === args.key) mine.push({ page, visits: row.visits, ...unitsOf(row) });
+    });
     if (!held) return none;
     everyDevice = held.everyDevice;
     name = args.key;
-    for (const row of held.rows) {
-      const { channel: page, source: channel } = splitChannelKey(row.key);
-      if (channel === args.key) pages.push({ page, row });
-    }
+    channelPages = mine;
   } else {
     // A device's column reads that device's landing pages; a country's, that country's; a kind's, the ones shown.
     const device = args.columns === "device" ? args.key : args.device;
@@ -304,23 +313,18 @@ export async function readConversionsPages(ctx: SiteReader, args: { siteId: Id<"
       pages = slot.rows.map((row) => ({ page: row.key, row }));
     }
   }
-  const event = args.eventName;
-  const unitsOf = (row: ListRow) => {
-    const count = row.counts.get(event) ?? 0;
-    return { did: row.eventVisits?.get(event) ?? count, times: row.eventTimes?.get(event) ?? count };
-  };
-  const visits = pages.reduce((sum, one) => sum + one.row.visits, 0);
-  const converted = pages
-    .map((one) => ({ ...one, ...unitsOf(one.row) }))
+  const listed = channelPages ?? pages.map((one) => ({ page: one.page, visits: one.row.visits, ...unitsOf(one.row) }));
+  const visits = listed.reduce((sum, one) => sum + one.visits, 0);
+  const converted = listed
     .filter((one) => one.did > 0 || one.times > 0)
-    .sort((left, right) => right.did - left.did || right.times - left.times || right.row.visits - left.row.visits || left.page.localeCompare(right.page));
+    .sort((left, right) => right.did - left.did || right.times - left.times || right.visits - left.visits || left.page.localeCompare(right.page));
   const kept = converted.slice(0, MOST_SQUARE_PAGES);
   const addresses = await decodePages(ctx, holdId, kept.map((one) => one.page));
   const titles = await titlesOf(ctx, holdId, addresses);
   const rows = kept.map((one, at) => {
     const address = addresses[at] ?? one.page;
     const title = titles.get(address);
-    return { page: one.page, address, ...(title ? { title } : {}), visits: one.row.visits, did: one.did, times: one.times };
+    return { page: one.page, address, ...(title ? { title } : {}), visits: one.visits, did: one.did, times: one.times };
   });
   return {
     collecting: false,

@@ -23,7 +23,8 @@ import { formatPosition } from "../../search-console/_components/searchConsoleFo
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsBox, useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { opportunitiesNames, opportunitiesSees } from "../_components/insightsSees";
 import { boxedSays } from "../_components/insightBoxSays";
 
 /** The places a search can be filtered to, each "from-to". */
@@ -45,9 +46,12 @@ export default function InsightsOpportunitiesPage() {
   const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightsReads.insightsPlan, site ? { siteId: site } : {});
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ plan: data, box }), [data, box]);
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => opportunitiesSees(data, box, opportunitiesNames(tAll), tAll("opportunities.notSorted")), [data, box, tAll]);
   const [search, setSearch, term] = useSiteSearch();
   const [service, setService] = useSiteParam<string>("service", "");
   const [places, setPlaces] = useSiteParam<string>("place", "4-30");
@@ -89,7 +93,7 @@ export default function InsightsOpportunitiesPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.opportunities", siteId: site, data: seesData }} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.opportunities", siteId: eyeSite, data: seesData }} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint", { rate: formatPosition(rate) })} exportName={`${data.host}-opportunities`} csv={csv} enoughData={dots.length > 1}>
         <SiteScatterChart groups={groups} xLabel={t("chart.x")} yLabel={t("chart.y")} readout={{ x: t("columns.place"), y: t("columns.shown") }} />
       </ChartCard>

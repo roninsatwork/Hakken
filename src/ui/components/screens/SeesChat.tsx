@@ -11,7 +11,8 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { noteSeesThread, useSeesThread } from "./hakkenSeesStore";
+import { tableFromCsv, type PageChartTable } from "@/convex/utils/assistantPageCharts";
+import { noteSeesThread, seesCharts, useSeesThread } from "./hakkenSeesStore";
 import { Button } from "./Button";
 
 // Ask Hakken's own message, charts and suggested tasks included: the panel draws no second kind.
@@ -40,7 +41,9 @@ export function useSeesChat({ pageKey, siteId, startedOn }: { pageKey: string | 
     // A refusal is said, and the box keeps the words: nothing is lost.
     await sendAction.run(
       async () => {
-        const id = threadId ?? await createThread({ ...(siteId ? { forWebsiteId: siteId } : {}), startedOn });
+        // The page's charts as they stand when the conversation starts, for Ask Hakken to redraw (shared work 9).
+        const charts = pageCharts();
+        const id = threadId ?? await createThread({ ...(siteId ? { forWebsiteId: siteId } : {}), startedOn: { ...startedOn, ...(charts.length > 0 ? { charts } : {}) } });
         if (!threadId) noteSeesThread(pageKey, id);
         await sendMessage({ threadId: id, content });
         setDraft("");
@@ -51,6 +54,18 @@ export function useSeesChat({ pageKey, siteId, startedOn }: { pageKey: string | 
   // Waiting on an answer: the last line is the person's, and no answer has begun.
   const waiting = sending || (messages?.length ? messages[messages.length - 1].role === "user" : false);
   return { threadId, messages: messages ?? [], draft, setDraft, send, sending, waiting };
+}
+
+/** Every chart drawn on the page now, read back from the figures its download holds; a chart that fails to read is left out. */
+function pageCharts(): PageChartTable[] {
+  return seesCharts().flatMap((chart) => {
+    try {
+      const table = tableFromCsv(chart.title, chart.csv());
+      return table ? [table] : [];
+    } catch {
+      return [];
+    }
+  });
 }
 
 type Chat = ReturnType<typeof useSeesChat>;

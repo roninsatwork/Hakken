@@ -1,13 +1,17 @@
 "use client";
 
+import { useMemo } from "react";
+import { useQuery } from "convex/react";
 import { Megaphone } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { api } from "@/convex/_generated/api";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { useSiteParam } from "../../../sites/_components/useSiteParam";
-import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
+import { AnalyticsListScreen, type ListPageAnswer } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { CampaignsDailyChart, ListTopBars } from "../../_components/AnalyticsChart";
-import { useAnalyticsStatus, usePeriod, periodWord } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, periodWord } from "../../_components/useAnalytics";
+import { useEyeNames } from "../../_components/useEyeFigures";
 
 /** The table's two lists: the campaigns, and the words their links carry. */
 const VIEWS = ["campaign", "adKeyword"] as const;
@@ -31,7 +35,7 @@ export default function AnalyticsCampaignsPage() {
       header={{ icon: <Megaphone className="h-5 w-5 text-brand" />, title: t("title"), description: t("description", { before: tf(`before.${periodWord(period)}`) }) }}
       head={(answer) => (
         <>
-          <AnalyticsSees screen="campaigns" seen={answer?.seen} currency={currency} data={answer} />
+          <CampaignsSees answer={answer} currency={currency} />
           <CampaignsDailyChart />
           <ListTopBars list="campaign" sort="visits" bars="campaigns" />
         </>
@@ -44,4 +48,20 @@ export default function AnalyticsCampaignsPage() {
       emptyLabel={t(view === "campaign" ? "empty" : "emptyKeywords")}
     />
   );
+}
+
+/** Every campaign the eye weighs, from the busiest, however the table is paged: a website with more is cut here. */
+const EYE_CAMPAIGNS = 100;
+
+/**
+ * The page's eye: the table's page as shown, and every campaign (`campaignsAll`) for its rules to weigh each against
+ * all campaign visits together, whichever list the table shows (ask-hakken-every-chart-page-plan-2026-11-03.md, section 5).
+ */
+function CampaignsSees({ answer, currency }: { answer: ListPageAnswer | undefined; currency: string | null }) {
+  const args = useAnalyticsArgs();
+  const status = useAnalyticsStatus();
+  const names = useEyeNames();
+  const every = useQuery(api.googleAnalyticsReads.analyticsListPage, status?.connection?.newestDay ? { ...args, list: "campaign", sort: "visits", direction: "desc", page: 1, rows: EYE_CAMPAIGNS } : "skip");
+  const data = useMemo(() => (answer ? { ...answer, ...(every ? { campaignsAll: every } : {}), names } : answer), [answer, every, names]);
+  return <AnalyticsSees screen="campaigns" seen={answer?.seen} currency={currency} data={data} />;
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAction } from "convex/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { Radio } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -30,6 +30,7 @@ import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { TopBars } from "../../_components/AnalyticsChart";
 import { useEventName } from "../../_components/useEventName";
 import { CHECK_EVERY_MS, liveStep } from "../../_components/liveTiming";
+import { useEyeNames } from "../../_components/useEyeFigures";
 import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, type AnalyticsStatus } from "../../_components/useAnalytics";
 
 const LISTS = ["pages", "places", "devices", "events"] as const;
@@ -162,6 +163,17 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
   const conversions = answer?.conversions ?? null;
   const chart = (answer?.minutes ?? []).map((people, at, all) => ({ label: t("minutesAgo", { count: all.length - 1 - at }), people }));
   const bar = [t("lastThirty"), tf(`devices.${device}`).toLowerCase(), list === "pages" ? t("byTitle") : null].filter(Boolean).join(" · ");
+  // What the eye reads: right now, the list on screen by its name, and a usual half hour last month worked out from the
+  // figures Hakken keeps, never a second ask of Google (decision 3, Anthony, 2026-11-03: "Yes, write one").
+  const usual = useQuery(api.googleAnalyticsLiveUsual.analyticsLiveUsual, { siteId: args.siteId, device: args.device });
+  const eyeNames = useEyeNames();
+  const seesData = useMemo(() => {
+    if (!answer) return answer;
+    // The minute it was asked is the page's own clock, never a figure.
+    const { askedAt: _askedAt, ...now } = answer;
+    void _askedAt;
+    return { ...now, list, ...(usual ? { usual } : {}), names: eyeNames };
+  }, [answer, list, usual, eyeNames]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -178,7 +190,7 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
       ) : null}
       {problem ? <Notice tone="warning">{t(problem === "NOT_CONNECTED" ? "notConnected" : "busy")}</Notice> : null}
       {/* Worked out each minute and never kept: not saved as advice. */}
-      <AnalyticsSees screen="live" seen={answer?.seen} currency={status.connection?.currency} keep={false} data={answer} />
+      <AnalyticsSees screen="live" seen={answer?.seen} currency={status.connection?.currency} keep={false} data={seesData} />
       {answer ? (
         <FigureRow columns={4}>
           <Figure label={t("now")} value={formatNumber(answer.now)} detail={<span className="text-secondary">{t("lastFive")}</span>} />

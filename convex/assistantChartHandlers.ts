@@ -4,6 +4,7 @@ import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
 import { ANALYTICS_CHART_MEASURES, CHART_MARK, analyticsChartValues, mainConversionAt, chartPoints, type AnalyticsChartMeasure, type AnswerChart, type ChartMeasure } from "./utils/assistantCharts";
 import { isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
+import { VISIBILITY_LINE_MEASURES } from "./utils/visibilityAskScreens";
 import { CLARITY_GROUP_MEASURES, GROUP_CHART_BY, GROUP_CHART_KINDS, PRODUCT_GROUP_MEASURES, SEARCH_GROUP_MEASURES, VISIBILITY_GROUP_MEASURES, groupsChartLines, type GroupChartBy, type GroupChartKind, type GroupMeasure, type GroupSource, type GroupsChart } from "./utils/assistantGroupCharts";
 
 /**
@@ -71,6 +72,27 @@ export const ASSISTANT_CHART_HANDLERS: Record<string, (input: ToolHandlerExecuti
       return { ok: false, problem: "Charts draw from search_console (visitors, impressions), google_analytics (visits, conversions, conversionRate), bing (clicks, impressions), clarity (visits, scroll, quickBacks, rageClicks, deadClicks, errors) or visibility (estimatedVisitors, searches, topThree, linkingWebsites)." };
     }
     if (lookup === "google_analytics") return await analyticsChart(input);
+    // Visibility over time (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the website against a rival, a
+    // line over the period's checks, as a page's chart draws two lines; its groups at the newest check otherwise.
+    if (lookup === "visibility" && text(input.args, "kind") === "line") {
+      const website = text(input.args, "website");
+      if (!website) return { ok: false, problem: "Say which of the company's websites to chart." };
+      const said = text(input.args, "measure") ?? "estimatedVisitors";
+      const measure = said === "visitors" ? "estimatedVisitors" : said;
+      if (!(VISIBILITY_LINE_MEASURES as readonly string[]).includes(measure)) return { ok: false, problem: `A Visibility line draws one of: ${VISIBILITY_LINE_MEASURES.join(", ")}.` };
+      const rival = text(input.args, "rival");
+      const periodSaid = text(input.args, "period");
+      const drawn = await input.ctx.runQuery(internal.assistantVisibilityReads.visibilityLineInternal, {
+        companyId: input.companyId, website, measure: measure as (typeof VISIBILITY_LINE_MEASURES)[number],
+        period: periodSaid && isCalendarPeriod(periodSaid) ? periodSaid : "last12Months", ...(rival ? { rival } : {}),
+      });
+      if (!drawn.ok) return drawn;
+      return {
+        ok: true, website, measure, rival: drawn.chart.against ?? null, checks: drawn.figures, link: drawn.chart.link,
+        note: `The chart is drawn under your answer from these figures, with a link to the screen: the website's line, and the rival's beside it. Visibility checks each website about once a month, so each point is a check. Write ${CHART_MARK} on a line of its own where it belongs, after the sentences it illustrates; don't list the checks or describe the chart.`,
+        chart: drawn.chart,
+      };
+    }
     if (GROUPS_ONLY[lookup]) {
       const groups = await analyticsGroupsChartFor(input);
       return groups.ok ? groups.answer : groups;

@@ -1,4 +1,5 @@
 import { v, type Infer } from "convex/values";
+import { pageChartLines, pageChartTableValidator } from "./assistantPageCharts";
 
 /**
  * The page an Ask Hakken conversation started on, from the eye's panel (sees-side-panel-plan-2026-10-31.md, phase
@@ -21,14 +22,23 @@ export const startedOnValidator = v.object({
    * read (sees-every-page-plan-2026-10-31.md, phase 1).
    */
   figures: v.optional(v.array(v.string())),
+  /**
+   * The charts the page drew, each its title and its download's figures (ask-hakken-every-chart-page-plan-2026-11-03.md,
+   * shared work 9): for Ask Hakken to redraw any of them another way (`redraw_page_chart`), from these figures alone.
+   */
+  charts: v.optional(v.array(pageChartTableValidator)),
 });
 
 export type StartedOn = Infer<typeof startedOnValidator>;
 
 /** Most findings and sentences kept: the panel's own. */
 const MOST = 12;
-/** Most of the page's figures kept: its first screen. */
-export const MOST_FIGURES = 60;
+/**
+ * Most of the page's figures kept: every figure a page hands the eye, a 90-day chart's days and its tables' rows
+ * (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 8). It was 60, the page's first screen, so "why did this
+ * fall?" about a chart's last weeks had nothing to answer from. About 5,000 words at most, told once a reply.
+ */
+export const MOST_FIGURES = 400;
 
 /** The page as Ask Hakken is told it, below the website it is about. */
 export function startedOnLines(page: StartedOn): string {
@@ -40,6 +50,9 @@ export function startedOnLines(page: StartedOn): string {
   if (page.said.length > 0) lines.push("", "What the eye's panel said about the page:", ...page.said.slice(0, MOST).map((line) => `- ${line}`));
   if (page.figures && page.figures.length > 0) {
     lines.push("", "The page's own figures, as it showed them to the person (where no tool of yours reads this page, these are its figures, and you may give them):", ...page.figures.slice(0, MOST_FIGURES).map((line) => `- ${line}`));
+  }
+  if (page.charts && page.charts.length > 0) {
+    lines.push("", "The charts on the page. Asked to show one another way (bars, a pie, a line, the top ten, against the period before), redraw it with redraw_page_chart by its number:", ...pageChartLines(page.charts));
   }
   return lines.join("\n");
 }

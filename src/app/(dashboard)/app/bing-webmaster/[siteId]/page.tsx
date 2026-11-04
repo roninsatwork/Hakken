@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { ChartLine } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -7,7 +8,8 @@ import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { BingGate } from "../_components/BingNotices";
-import { BingFigures, BingSees, formatCtr, formatShare } from "../_components/BingParts";
+import { BingFigures, BingSees, formatCtr, formatShare, useBingEyeNames } from "../_components/BingParts";
+import { performanceSeen } from "../_components/bingSeesData";
 import { BingClicksChart, BingShareChart, BingVersusChart } from "../_components/BingCharts";
 import { useBingHref, useBingSiteId, useBingStatus, useBingDates, useStep, type BingStatus } from "../_components/useBing";
 
@@ -43,6 +45,9 @@ function PerformanceBody({ status }: { status: BingStatus }) {
   const { period } = useBingDates();
   const [step] = useStep(period);
   const figures = useQuery(api.bingWebmasterReads.bingPerformance, { siteId, period });
+  // The eye reads the same answer with the span before, each week named in the reader's words (bingSeesData.ts).
+  const names = useBingEyeNames();
+  const seen = useMemo(() => performanceSeen(figures, names), [figures, names]);
   const bing = figures?.totals ?? null;
   const google = figures?.google ?? null;
   const share = bing && google && bing.clicks + google.clicks > 0 ? bing.clicks / (bing.clicks + google.clicks) : null;
@@ -52,7 +57,7 @@ function PerformanceBody({ status }: { status: BingStatus }) {
       {bing ? (
         <BingSees
           screen="performance"
-          data={figures}
+          data={seen}
           says={[
             tw("says", { impressions: formatNumber(bing.impressions), clicks: formatNumber(bing.clicks) }),
             google && tw("share", { share: formatShare(share), google: formatNumber(google.clicks) }),

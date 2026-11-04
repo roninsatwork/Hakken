@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,7 @@ import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { structureSees } from "../_components/keywordSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -65,6 +67,9 @@ export default function SiteStructurePage() {
   const siteId = useSiteId();
   const site = useSite();
   const answer = useQuery(api.siteKeywords.listSections, { siteId });
+  // Each section's share of the searches and visitors, worked out over every section before the eye keeps its first rows.
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(() => structureSees(answer, { itsSearches: tn("itsSearches"), wholeWebsite: tn("wholeWebsite") }), [answer, tn]);
   const sections = answer?.rows;
   const [search, setSearch, term] = useSiteSearch();
   const [measure, setMeasure] = useSiteParam<Measure>("size", "traffic", MEASURES);
@@ -114,7 +119,7 @@ export default function SiteStructurePage() {
           </span>
         ) : null}
       />
-      <SiteSees screen="keywordsStructure" seen={answer?.seen} data={answer} />
+      <SiteSees screen="keywordsStructure" seen={answer?.seen} data={sees} />
       {partHeld ? (
         <div className="flex flex-col gap-1">
           <HeldLine coverage={coverage} />

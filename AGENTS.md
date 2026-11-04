@@ -232,6 +232,12 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   `vitest.setup.ts` (ten seconds here, a minute on GitHub) — it lasts only as
   long as it must. Never give one a `{ timeout }` of its own; never use
   `vi.waitFor`, which the default does not reach.
+- **A sentence in the eye's panel is read with `findSaid`** (2026-11-04,
+  `src/test/openHakkenSees.ts`). The panel's words come in one at a time, each
+  in a piece of its own, so `findByText` can't find a sentence with every word
+  on screen: fifteen look tests failed that way when the words began to come in
+  like a teleprompter. `src/test-time-limits-drift.test.ts` fails the old way
+  right after `openHakkenSees`.
 - **Keep days away from midnight.** A test that works out "today" or
   "yesterday" from the clock calls `useMiddayUtc()` before each test and
   `vi.useRealTimers()` after, or fixes the date with `vi.setSystemTime`.
@@ -377,6 +383,31 @@ to get this right when we come to build this across every screen"). It holds
 the eight rounds the Conversions bubble went through and the rules each left:
 the agent reads the screen's own saved data, every number keyed and checked,
 no checklist of findings, nothing the screen doesn't speak about.
+
+**The eye is the app's USP: it is never weak, empty or broken on any page,
+for any dates** (Anthony, 2026-11-03, after Visits found two things on Last 3
+months and failed to load on 6 and 12: "we have a date selection picker FFS …
+please add this to your tests and your rules … this is the USP for the app so
+it cannot be weak or poor"). A page's eye is done only when all of these hold:
+
+- **Its own findings, ranked, for whatever dates are chosen.** Rules pick the
+  biggest things on the page (the headline change, the biggest mover, the
+  biggest gap); a bar only keeps out what is too small to trust, never a
+  "quiet" period. `convex/utils/sees/pageOwnFindings.ts`.
+- **Tested on every period the date menu offers**, this week to the last 12
+  months, on More Handles' saved figures (`src/test/fixtures/`,
+  `convex/utils/sees/pageFindingsPeriods.test.ts`): each finds the page's
+  headline and at least four things. Read a fixture with `readFixture`
+  (`src/test/readFixture.ts`), never import it as JSON: 1.3MB imported took the
+  type check past its 4GB.
+- **Every read the page makes loads on every period**, checked against the dev
+  deployment with `npx convex run … --identity` before handing back. A year of
+  a long list read whole runs a query out of its 64MB: read such a list a part
+  at a time with only the figures needed (`eachSlotRow`).
+- **One real press read**, its words and its run log (`seesAnswers` →
+  `agentRunSteps`), with the cost said first. A press that was thrown away, or
+  a piece that guesses, is fixed in the shared checker (`seesFrom`,
+  `judgeLeftOff`), never page by page.
 
 ## Drawing And Building Screens
 

@@ -425,3 +425,87 @@ describe("the eye on every page (sees-every-page-plan-2026-10-31.md, phase 1)", 
     await expect(user.mutation(api.seesAsk.askSees, { ...keywordsPage(siteId), screen: "somewhere.else" })).rejects.toThrow("no eye");
   });
 });
+
+describe("what a press is doing, and a super admin's refresh (Anthony, 2026-11-04)", () => {
+  const head = { specialist: "INSIGHTS_CONVERSION", why: "It is about conversions." };
+  const good = { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [{ words: "Find why [[conv.total.now]] conversions hold so few purchases.", link: 0 }] };
+  const stagesOf = async (t: Harness) => (await t.run(async (ctx) => await ctx.db.query("seesAnswers").first()))!.stages?.map((row) => row.stage);
+
+  test("a press saves each stage as it starts, and the answer says them only while it writes", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    answers(head, good);
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "RESEARCHING", stages: [{ stage: "reading" }] });
+    await finishScheduled(t);
+    expect(await stagesOf(t)).toEqual(["reading", "finding", "screens", "writing", "checking"]);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).not.toHaveProperty("stages");
+  });
+
+  test("words the Editor sends back say so, and are checked again; a stage only ever says what happened", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    answers(head, turns({ says: ["No figure in this sentence at all."], steps: [] }, good));
+    await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(await stagesOf(t)).toEqual(["reading", "finding", "screens", "writing", "checking", "rewriting", "checking"]);
+  });
+
+  test("a page that hands over its own figures says how many, and how many things stood out", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    answers(head, { says: ["Words."], steps: [] });
+    await user.mutation(api.seesAsk.askSees, {
+      siteId, screen: "searchConsole.keywords", about: "", path: "/app/search-console/site/keywords", period: "lastMonth", country: "", device: "", facts: [],
+      links: [{ label: "Pages", href: "/app/search-console/site/pages" }],
+      data: { totals: { clicks: 900, impressions: 20000 }, rows: [{ key: "door handles", clicks: 840, impressions: 12000, ctr: 0.07 }, { key: "hinges", clicks: 60, impressions: 8000, ctr: 0.0075 }] },
+    });
+    await finishScheduled(t);
+    const row = (await t.run(async (ctx) => await ctx.db.query("seesAnswers").first()))!;
+    expect(row.stages?.[0]).toMatchObject({ stage: "reading", count: expect.any(Number) });
+    expect(row.stages?.[0].count).toBeGreaterThan(0);
+    expect(row.stages?.[1]).toMatchObject({ stage: "finding", count: expect.any(Number) });
+    expect(row.stages?.map((stage) => stage.stage)).toContain("writing");
+  });
+
+  test("a stage brings the last line up to date or adds a line, and a run overtaken by a newer press adds nothing", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    await t.withIdentity({ subject: userId }).mutation(api.seesAsk.askSees, ask(siteId));
+    const row = (await t.run(async (ctx) => await ctx.db.query("seesAnswers").first()))!;
+    const note = (stage: "reading" | "writing", count?: number, runId = row.runId!) => t.mutation(internal.seesAsk.noteSeesStage, { answerId: row._id, runId, stage, ...(count !== undefined ? { count } : {}) });
+    await note("reading", 40);
+    await note("writing");
+    const other = await t.run(async (ctx) => await ctx.db.insert("agentRuns", { agentId: (await ctx.db.query("agents").first())!._id, triggerType: "EVENT", objective: "An older press", status: "RUNNING", startedAt: 1, updatedAt: 1 }));
+    await note("reading", 99, other);
+    expect((await t.run(async (ctx) => await ctx.db.get(row._id)))!.stages).toEqual([{ stage: "reading", count: 40 }, { stage: "writing" }]);
+  });
+
+  test("a super admin's refresh writes again inside the three hours and charges nothing; nobody else may press it", async () => {
+    const t = harness();
+    const { companyId, siteId, userId } = await seed(t);
+    const adminId = await t.run(async (ctx) => await ctx.db.insert("users", { name: "Admin", email: "admin@hakken.test", role: "SUPER_ADMIN", companyId, createdAt: 1 }));
+    const user = t.withIdentity({ subject: userId });
+    const admin = t.withIdentity({ subject: adminId });
+    const charges = () => t.run(async (ctx) => (await ctx.db.query("creditCharges").collect()).filter((charge) => charge.kind === "sees").length);
+    answers(head, good);
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(await charges()).toBe(1);
+    await expect(user.mutation(api.seesAsk.refreshSees, ask(siteId))).rejects.toThrow();
+    answers(head, { says: ["[[conv.purchases.now]] purchases last month."], steps: [] });
+    expect(await admin.mutation(api.seesAsk.refreshSees, ask(siteId))).toEqual({ key: first.key, status: "RESEARCHING" });
+    // Pressed again while it writes: the one being written is left to finish.
+    expect(await admin.mutation(api.seesAsk.refreshSees, ask(siteId))).toEqual({ key: first.key, status: "RESEARCHING" });
+    expect(await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect()).length)).toBe(2);
+    await finishScheduled(t);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month."] });
+    expect(await charges()).toBe(1);
+    // The client's next press reads the new words, and pays for nothing.
+    expect(await user.mutation(api.seesAsk.askSees, ask(siteId))).toEqual({ key: first.key, status: "WRITTEN" });
+    expect(await charges()).toBe(1);
+  });
+});

@@ -256,7 +256,7 @@ describe("paid search (2.2)", () => {
   });
 
   const advert = (keyword: string) => ({
-    _id: keyword, keyword, position: 1, url: null, page: "/", volume: null, cpc: null, traffic: null, trafficCost: null, day: "2026-09-25",
+    _id: keyword, keyword, position: 1, url: null, page: "/", volume: null, traffic: null, day: "2026-09-25",
   });
 
   it("Paid keywords says how few of the searches with adverts it holds, and shows unknowns as unknown", () => {
@@ -281,6 +281,25 @@ describe("paid search (2.2)", () => {
     openAt("/app/sites/site_1/paid", "", { "siteCharts:siteSeries": line([point("2026-09-25", { paidKeywords: 0, paidTraffic: 0 })]) });
     render(<SitePaidPage />);
     expect(screen.getByText("sites.paid.notAdvertising")).toBeInTheDocument();
+  });
+
+  // Our data supplier's guess at what the adverts cost is no money anyone measured (ask-hakken-every-chart-page-plan-
+  // 2026-11-03.md, decision 4; Anthony, 2026-11-03: "Take it off", then "Yes, all of it"): no figure, line or column.
+  it("Paid search and Paid keywords show searches and visits, never the guessed spend or what a click costs", () => {
+    openAt("/app/sites/site_1/paid", "", { "siteCharts:siteSeries": line([point("2026-09-25", { paidKeywords: 12, paidTraffic: 340, paidTrafficCost: 1200 })]) });
+    const { unmount } = render(<SitePaidPage />);
+    expect(screen.queryByText(/sites\.paid\.spend/)).toBeNull();
+    expect(screen.queryByText(/paidTrafficCost/)).toBeNull();
+    expect(document.body.textContent).not.toContain("$");
+    unmount();
+
+    openAt("/app/sites/site_1/paid/keywords", "", {
+      "sitePaid:listPaidKeywords": { rows: [{ _id: "carp rods", keyword: "carp rods", position: 1, url: null, page: "/", volume: 900, traffic: 40, day: "2026-09-25" }], total: 1, pages: 1, page: 1, size: 25, cut: null, preparing: false },
+    });
+    render(<SitePaidKeywordsPage />);
+    expect(screen.queryByText("sites.paidKeywords.columns.cpc")).toBeNull();
+    expect(screen.queryByText("sites.paidKeywords.columns.cost")).toBeNull();
+    expect(screen.getByText("sites.paidKeywords.columns.traffic")).toBeInTheDocument();
   });
 });
 
@@ -473,6 +492,27 @@ describe("nothing known yet, and a competitor's AI (4.8, 4.9, 4.11)", () => {
     expect(screen.queryByText(/panels\.ai\.namedOf/)).toBeNull();
     // ChatGPT links to two of its pages; Perplexity has not answered, so none are counted.
     expect(screen.getByText("2")).toBeTruthy();
+  });
+
+  // Decision 4 of ask-hakken-every-chart-page-plan-2026-11-03.md (Anthony, 2026-11-03: "Yes, all of it").
+  it("the Overview's Search panel shows visits, never what they would be worth or the adverts' guessed cost", () => {
+    openAt("/app/sites/site_1", "", { "sites:getMySite": { ...SITE, counts: {} } });
+    const point = {
+      day: "2026-09-25", lastDay: "2026-09-25", rankedUp: 0, rankedDown: 0, rankedNew: 0, rankedLost: 0, ai: [],
+      estimatedTraffic: 11820, trafficValue: 12055, paidKeywords: 4, paidTraffic: 30, paidTrafficCost: 90,
+    };
+    const extras = {
+      homePageRank: null, aiOverviewPages: 0, aiOverviewCapped: false, assistants: [],
+      pages: { total: 0, visits: 0, capped: false, kinds: [], visitBands: [] },
+      competitors: { found: 0, you: { keywords: null, visits: null }, rivals: [] },
+    } as unknown as Parameters<typeof OverviewPanels>[0]["extras"];
+    render(<OverviewPanels latest={point} before={null} extras={extras} />);
+
+    expect(screen.queryByText(/panels\.search\.(worth|cost)/)).toBeNull();
+    expect(document.body.textContent).not.toContain("$");
+    const paidVisits = screen.getAllByRole("link").map((link) => link.getAttribute("href") ?? "").filter((href) => href.includes("paid/keywords"));
+    expect(paidVisits.some((href) => href.includes("sort=cost"))).toBe(false);
+    expect(paidVisits.some((href) => href.includes("sort=traffic"))).toBe(true);
   });
 
   it("Mentions shows no count before an engine has answered, and the count once it has", () => {

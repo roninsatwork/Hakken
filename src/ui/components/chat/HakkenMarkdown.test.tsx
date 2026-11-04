@@ -130,3 +130,16 @@ describe("a table in a chat answer (ask-hakken-every-chart-plan-2026-10-31.md, Â
     expect(screen.getByText("Channel").className).not.toContain("text-right");
   });
 });
+
+describe("a line break a writer put in a table", () => {
+  test("is a line break, never the words <br>", () => {
+    const { container } = render(<HakkenMarkdown content={"| Page | Views |\n|---|---|\n| Door Handles<br>/door-handles.html | 12 |\n"} />);
+    expect(container.textContent).not.toContain("<br>");
+    expect(container.querySelector("td br")).not.toBeNull();
+  });
+
+  test("anything else written as HTML still isn't drawn as HTML", () => {
+    const { container } = render(<HakkenMarkdown content={"A <b>bold</b> word"} />);
+    expect(container.querySelector("b")).toBeNull();
+  });
+});

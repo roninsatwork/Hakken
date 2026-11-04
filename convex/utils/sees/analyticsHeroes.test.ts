@@ -8,9 +8,10 @@ import { landingPageSees } from "./analyticsHeroes";
  * first, and that every sentence and step has its words in English and Italian.
  */
 
-const visits = (count: number, conversions = 0, engaged = Math.round(count / 2)) => ({ visits: count, engaged, conversions, value: conversions * 2_000 });
+const visits = (count: number, conversions = 0, engaged = Math.round(count / 2)) => ({ visits: count, engaged, conversions });
 
 describe("a landing page's own box", () => {
+  // Counts only, never money (Anthony, 2026-11-03: "Take money off").
   const journey = {
     page: "/",
     consoleAddress: "https://www.ronins.co.uk/",
@@ -18,13 +19,13 @@ describe("a landing page's own box", () => {
     visits: visits(141, 4),
     visitsBefore: visits(115, 7),
     hero: true,
-    problems: [] as Array<{ kind: "convert"; worth: number; gain: number }>,
-    website: { value: 24_000 },
+    problems: [] as Array<{ kind: "convert" }>,
   };
 
-  test("what it makes, where its conversions came from, where it sits in Google, how its conversions moved", () => {
+  test("the conversions it brought, where they came from, where it sits in Google, how its conversions moved", () => {
     const box = landingPageSees(journey, [{ label: "Direct", visits: 75, conversions: 3 }, { label: "Organic Search", visits: 37, conversions: 0 }], { console: "/app/search-console/x/pages/page?key=y", page: "https://www.ronins.co.uk/" });
-    expect(box.says.map((phrase) => phrase.code)).toEqual(["makes", "noneFromGoogle", "inGoogle"]);
+    expect(box.says.map((phrase) => phrase.code)).toEqual(["converts", "noneFromGoogle", "inGoogle"]);
+    expect(box.says[0]).toEqual({ code: "converts", text: "/", a: 4, b: 141 });
     expect(box.steps.map((step) => step.code)).toEqual(["whatChanged", "hero"]);
     // A hero's step opens Landing pages, where the website's other pages are.
     expect(box.steps[1]).toEqual({ code: "hero", link: "landingPages", to: { segment: "funnel" } });
@@ -32,9 +33,9 @@ describe("a landing page's own box", () => {
   });
 
   test("a page with a problem leads with its fix, linked where it is done", () => {
-    const box = landingPageSees({ ...journey, hero: false, visits: visits(188, 0, 81), visitsBefore: null, problems: [{ kind: "convert", worth: 5_460, gain: 2.7 }] }, null, { console: null, page: "https://www.ronins.co.uk/guide/" });
+    const box = landingPageSees({ ...journey, hero: false, visits: visits(188, 0, 81), visitsBefore: null, problems: [{ kind: "convert" }] }, null, { console: null, page: "https://www.ronins.co.uk/guide/" });
     expect(box.says.map((phrase) => phrase.code)).toEqual(["makesNothing", "inGoogle"]);
-    expect(box.steps[0]).toMatchObject({ code: "fixConvert", a: 5_460, to: { url: "https://www.ronins.co.uk/guide/" } });
+    expect(box.steps[0]).toEqual({ code: "fixConvert", link: "openPage", to: { url: "https://www.ronins.co.uk/guide/" } });
     expectAnalyticsWords("landingPage", box);
   });
 });

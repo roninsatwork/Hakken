@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
@@ -7,10 +8,12 @@ import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { HakkenSees, type SeesPage } from "@/src/ui/components/screens/HakkenSees";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
-import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { formatMonth, formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { monthRow } from "../../sites/_components/datedRows";
 import type { ReportView } from "./ReportPdf";
 import { useInsightsHref } from "./useInsights";
+import { reportAdvice, reportNames, reportSees } from "./insightsSees";
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 
 /** A report's rows of words, section by section: what the report's table lists. */
 export function reportLines(report: ReportView, t: (key: string) => string): Array<{ key: string; section: string; words: string }> {
@@ -27,12 +30,20 @@ export function reportLines(report: ReportView, t: (key: string) => string): Arr
 
 /**
  * The top of a report as written (insights-analyst-plan.md §4.1, Reports and
- * Your month): its summary in the What Hakken sees box with what to do next,
- * its figures against the period before, and its enquiries a month — all as
- * they were the day it was written.
+ * Your month): its figures against the period before and its enquiries a
+ * month — all as they were the day it was written. The eye (decision 2 of
+ * ask-hakken-every-chart-page-plan-2026-11-03.md; Anthony: "replace whatever
+ * has gone before as it's clearly broken") no longer repeats the report's
+ * headline and summary: it finds its own in the report's figures, and the
+ * report's words go to it as advice, so its piece builds on them and never
+ * says something different.
  */
-export function ReportTop({ report, page }: { report: ReportView; page?: SeesPage }) {
+export function ReportTop({ report, page }: { report: ReportView; page?: Omit<SeesPage, "data"> }) {
   const t = usePlatformTranslations("insights.reports");
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => reportSees(report, reportNames(tAll), formatMonth), [report, tAll]);
+  const advice = useMemo(() => reportAdvice(report), [report]);
+  useSeesPart("advice", advice);
   const tm = usePlatformTranslations("insights.summary.measures");
   const href = useInsightsHref();
   const body = report.body;
@@ -46,10 +57,11 @@ export function ReportTop({ report, page }: { report: ReportView; page?: SeesPag
     ]
     : body.scorecard.slice(0, 4).map((score) => ({ label: tm(score.measure), now: score.now, before: score.before }));
   const months = body.enquiriesByMonth;
-  const steps = body.next.slice(0, 3).map((words) => ({ words, link: t("seeThisWeek"), href: href("this-week") }));
+  // Where the piece's first steps may point: the week's findings, every report.
+  const links = [{ label: t("seeThisWeek"), href: href("this-week") }, { label: t("back"), href: href("reports") }];
   return (
     <>
-      <HakkenSees says={[body.headline, body.summary].filter((line, index, all) => line && all.indexOf(line) === index)} steps={steps} page={page} />
+      {page ? <HakkenSees says={[]} steps={[]} page={{ ...page, data: seesData, links }} /> : null}
       {figures.length > 0 ? (
         <FigureRow columns={figures.length === 3 ? 3 : 4}>
           {figures.map((figure) => (

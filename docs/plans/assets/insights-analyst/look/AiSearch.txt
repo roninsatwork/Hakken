@@ -9,7 +9,7 @@ figures
   figure: Your pages cited
 chart-card: Visits from each AI assistant, month by month
 chart-card: Visits from each assistant: Q# # against Q# #
-chart-card: The kinds of page AI visitors land on, Q# #
+chart-card: The classifications AI visitors land on, Q# #
 search: Find an assistant…
 table: Assistant | Last # months | # months before | A year before | Enquiries
   table-bar: Each assistant

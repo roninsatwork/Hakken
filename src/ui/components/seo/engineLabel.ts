@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 
 /**
@@ -20,7 +21,8 @@ export const ENGINE_SCREEN_ORDER: readonly string[] = ["chatgpt", "gemini", "ai_
 
 export function useEngineLabel() {
   const t = useTranslations("aiEngines");
-  return (engine: string) => {
+  // The same function while the words are: a page builds the eye's figures with it once, not on every draw.
+  return useCallback((engine: string) => {
     if (engine === "chatgpt") return t("chatgpt");
     if (engine === "claude") return t("claude");
     if (engine === "gemini") return t("gemini");
@@ -30,5 +32,5 @@ export function useEngineLabel() {
     // Not an engine asked our questions: the searches Google's AI Overviews ran (FA8).
     if (engine === "google_ai_overview") return t("googleAiOverview");
     return engine;
-  };
+  }, [t]);
 }

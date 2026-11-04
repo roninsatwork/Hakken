@@ -1,14 +1,16 @@
 import { renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
-import { fireEvent, waitFor } from "@testing-library/react";
+import { act, fireEvent, waitFor } from "@testing-library/react";
 import { useMutation, useQuery } from "convex/react";
 import { getFunctionName } from "convex/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HakkenSees } from "./HakkenSees";
 import { HakkenSeesEye } from "./HakkenSeesEye";
+import { SeesPanel } from "./SeesPanel";
 import { PageHeader } from "./PageHeader";
 import { SeesStandIn, standInScreen } from "./SeesStandIn";
-import { resetSees, useSeesPart } from "./hakkenSeesStore";
+import { noteSeesThread, resetSees, useSeesPart, useSeesSectionLinks } from "./hakkenSeesStore";
+import { seesKey } from "@/convex/utils/seesAsk";
 import { seenAdvice } from "@/convex/utils/hakkenSees";
 
 vi.mock("next-intl", async () => {
@@ -40,6 +42,10 @@ beforeEach(() => {
 });
 
 const says = ["Google's spam update moved your positions three times as much as usual.", "Your clicks fell 9%."];
+/** The words as the panel shows them: a sentence to a line, its figures in their own font. */
+const sentences = () => [...document.querySelectorAll("[data-part='sees-sentence']")].map((line) => line.textContent);
+/** The list of what a press is doing, while it writes. */
+const working = () => document.querySelector("[data-part='sees-working']");
 const steps = [
   { words: "Hold big changes until 22 October.", link: "See the update", href: "/app/x" },
   { words: "Get listed on clutch.co.", link: "Visit clutch.co", href: "https://clutch.co", external: true },
@@ -72,7 +78,7 @@ describe("HakkenSees and its eye", () => {
     expect(eye()).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(eye());
     expect(eye()).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText(says.join(" "))).toBeInTheDocument();
+    expect(sentences()).toEqual(says);
     expect(screen.getByText("ui.hakkenSees.doFirst")).toBeInTheDocument();
     expect(screen.getByText("1. Hold big changes until 22 October.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "See the update" })).toHaveAttribute("href", "/app/x");
@@ -84,7 +90,7 @@ describe("HakkenSees and its eye", () => {
   it("with nothing to do, shows the sentences alone", () => {
     render(<Screen says={["Nothing here needs you this week."]} steps={[]} advice="calm |" />);
     fireEvent.click(eye());
-    expect(screen.getByText("Nothing here needs you this week.")).toBeInTheDocument();
+    expect(sentences()).toEqual(["Nothing here needs you this week."]);
     expect(screen.queryByText("ui.hakkenSees.doFirst")).toBeNull();
   });
 
@@ -162,7 +168,7 @@ describe("HakkenSees and its eye", () => {
       </>
     );
 
-    it("says it is researching while the team writes, then the team's words with their links", async () => {
+    it("says what the press is doing while the team writes, then the team's words with their links", async () => {
       const askSees = vi.fn(async () => ({ key: "googleAnalytics.conversions|lastMonth|||", status: "RESEARCHING" as const }));
       vi.mocked(useMutation).mockReturnValue(askSees as never);
       let answer: unknown = { status: "RESEARCHING", says: [], steps: [], role: null, writtenAt: null };
@@ -170,13 +176,13 @@ describe("HakkenSees and its eye", () => {
       const view = render(<Asking />);
       fireEvent.click(eye());
       await waitFor(() => expect(askSees).toHaveBeenCalledWith(ask));
-      expect(screen.getByText("ui.hakkenSees.researching Hakken")).toBeInTheDocument();
-      expect(screen.queryByText(says.join(" "))).toBeNull();
+      expect(working()).toHaveTextContent("ui.hakkenSees.working.reading");
+      expect(sentences()).toEqual([]);
       answer = { status: "WRITTEN", says: ["23 conversions last month, down on the month before."], steps: [{ words: "Look at where visits leave.", link: "Funnel", href: "/app/analytics/site_1/funnel" }], role: "INSIGHTS_CONVERSION", writtenAt: 1 };
       view.rerender(<Asking />);
-      expect(screen.getByText("23 conversions last month, down on the month before.")).toBeInTheDocument();
+      expect(sentences()).toEqual(["23 conversions last month, down on the month before."]);
       expect(screen.getByRole("link", { name: "Funnel" })).toHaveAttribute("href", "/app/analytics/site_1/funnel");
-      expect(screen.queryByText("ui.hakkenSees.researching Hakken")).toBeNull();
+      expect(working()).toBeNull();
     });
 
     it("shows what code found at once, and a question asked in the panel starts an Ask Hakken conversation for the page (sees-side-panel plan, phase 3)", async () => {
@@ -214,8 +220,8 @@ describe("HakkenSees and its eye", () => {
       vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "FAILED" as const })) as never);
       render(<Asking />);
       fireEvent.click(eye());
-      await waitFor(() => expect(screen.getByText(says.join(" "))).toBeInTheDocument());
-      expect(screen.queryByText("ui.hakkenSees.researching Hakken")).toBeNull();
+      await waitFor(() => expect(sentences()).toEqual(says));
+      expect(working()).toBeNull();
     });
   });
 
@@ -244,6 +250,23 @@ describe("HakkenSees and its eye", () => {
         links: [{ label: "Keywords", href: "/app/search-console/site_1/keywords" }, { label: "Pages", href: "/app/search-console/site_1/pages" }],
         // The click rate as the page shows it, a percentage.
         data: { rows: [{ key: "door handles", clicks: 840, ctrPercent: 7 }] },
+      })]);
+    });
+
+    it("is pressed with the section's other pages as places to point, after the page's own (shared work 6)", async () => {
+      at.path = "/app/search-console/site_1/keywords";
+      const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
+      vi.mocked(useMutation).mockReturnValue(askSees as never);
+      // The section's menu publishes its pages; the eye adds those it does not already have.
+      const Menu = () => {
+        useSeesSectionLinks([{ label: "Pages", href: "/app/search-console/site_1/pages" }, { label: "Countries", href: "/app/search-console/site_1/countries" }]);
+        return null;
+      };
+      render(<><Menu /><Paged /></>);
+      fireEvent.click(eye());
+      await waitFor(() => expect(askSees).toHaveBeenCalled());
+      expect(askSees.mock.calls[0]).toEqual([expect.objectContaining({
+        links: [{ label: "Keywords", href: "/app/search-console/site_1/keywords" }, { label: "Pages", href: "/app/search-console/site_1/pages" }, { label: "Countries", href: "/app/search-console/site_1/countries" }],
       })]);
     });
 
@@ -295,8 +318,8 @@ describe("HakkenSees and its eye", () => {
       render(<Paged />);
       fireEvent.click(eye());
       await waitFor(() => expect(screen.getByText(/ui\.hakkenSees\.noCredits/)).toBeInTheDocument());
-      expect(screen.getByText(says.join(" "))).toBeInTheDocument();
-      expect(screen.queryByText("ui.hakkenSees.researching Hakken")).toBeNull();
+      expect(sentences()).toEqual(says);
+      expect(working()).toBeNull();
     });
 
     it("a page with nothing to say by its rule still has an eye, and points to the chat", async () => {
@@ -334,7 +357,7 @@ describe("HakkenSees and its eye", () => {
         </>,
       );
       fireEvent.click(eye());
-      expect(screen.getByText(says.join(" "))).toBeInTheDocument();
+      expect(sentences()).toEqual(says);
       expect(askSees).not.toHaveBeenCalled();
     });
   });
@@ -356,7 +379,7 @@ describe("HakkenSees and its eye", () => {
       fireEvent.click(eye());
       view.rerender(<><HakkenSeesEye /><SeesStandIn section="searchConsole" /><HakkenSees says={says} steps={[]} advice="rule" /></>);
       expect(bubble()).not.toBeNull();
-      expect(screen.getByText(says.join(" "))).toBeInTheDocument();
+      expect(sentences()).toEqual(says);
     });
 
     it("is never on a connection page, nor on a website not connected", () => {
@@ -379,5 +402,156 @@ describe("HakkenSees and its eye", () => {
     const box = { says: [{ code: "update", text: "September spam update", a: 5.2 }], steps: [{ code: "hold", link: "seeUpdate", to: { segment: "google-updates" }, a: 22 }] };
     expect(seenAdvice(box)).toBe(seenAdvice({ ...box, says: [{ ...box.says[0], a: 6.1 }] }));
     expect(seenAdvice(box)).not.toBe(seenAdvice({ ...box, says: [{ ...box.says[0], text: "October core update" }] }));
+  });
+});
+
+describe("the panel's note on written words (decision 3: Live, ask-hakken-every-chart-page-plan-2026-11-03.md)", () => {
+  it("says when the words were written where a time is given, and only who wrote them elsewhere", () => {
+    const writtenAt = Date.UTC(2026, 10, 3, 18, 42);
+    const { rerender } = render(<SeesPanel open onClose={() => {}} says={["14 people now."]} steps={[]} researching={false} written writtenAt={writtenAt} />);
+    const time = new Intl.DateTimeFormat("en", { hour: "2-digit", minute: "2-digit" }).format(writtenAt);
+    expect(screen.getByText(`ui.hakkenSees.meansNoteAt Hakken ${time}`)).toBeInTheDocument();
+    rerender(<SeesPanel open onClose={() => {}} says={["14 people now."]} steps={[]} researching={false} written />);
+    expect(screen.getByText("ui.hakkenSees.meansNote Hakken")).toBeInTheDocument();
+  });
+});
+
+describe("what a press is doing, and its words coming in (Anthony, 2026-11-04)", () => {
+  const steps = [{ words: "Look at where visits leave.", link: "Funnel", href: "/app/analytics/site_1/funnel" }];
+  const words = ["One two three.", "Four 5% six."];
+  /** The words that have come in so far. */
+  const cameIn = () => [...document.querySelectorAll("[data-part='sees-sentence'] > span")].filter((word) => !word.classList.contains("opacity-0")).map((word) => word.textContent?.trim());
+  const panel = (props: { open?: boolean; researching?: boolean; written?: boolean } = {}) => <SeesPanel open onClose={() => {}} says={words} steps={steps} researching={false} written {...props} />;
+  const motionAllowed = (allowed: boolean) => vi.stubGlobal("matchMedia", (query: string) => ({ matches: !allowed, media: query }));
+
+  afterEach(() => vi.useRealTimers());
+
+  it("lists what is done, ticked, then what it is doing now, turning, with its counts", () => {
+    render(<SeesPanel open onClose={() => {}} says={[]} steps={[]} researching stages={[{ stage: "reading", count: 40 }, { stage: "finding", count: 6 }, { stage: "writing" }]} />);
+    const lines = [...document.querySelectorAll("[data-part^='sees-working-']")];
+    expect(lines.map((line) => line.getAttribute("data-part"))).toEqual(["sees-working-done", "sees-working-done", "sees-working-now"]);
+    expect(lines[0]).toHaveTextContent("ui.hakkenSees.worked.readingCount 40");
+    expect(lines[1]).toHaveTextContent("ui.hakkenSees.worked.finding 6");
+    expect(lines[2]).toHaveTextContent("ui.hakkenSees.working.writing");
+    expect(lines[2].querySelector("svg")).toHaveClass("animate-spin");
+    expect(lines[0].querySelector("svg")).not.toHaveClass("animate-spin");
+  });
+
+  it("puts each sentence on its own line, the first leading, with its figures in the numbers' font", () => {
+    render(<SeesPanel open onClose={() => {}} says={["108,862 visits came, up 8.2% on GA4's 2nd month, or £40.", "Plain words."]} steps={[]} researching={false} written={false} />);
+    expect(sentences()).toEqual(["108,862 visits came, up 8.2% on GA4's 2nd month, or £40.", "Plain words."]);
+    expect([...document.querySelectorAll("[data-part='sees-sentence'] .font-mono")].map((figure) => figure.textContent)).toEqual(["108,862", "8.2%", "£40"]);
+    const lines = document.querySelectorAll("[data-part='sees-sentence']");
+    expect(lines[0]).toHaveClass("text-foreground");
+    expect(lines[1]).toHaveClass("text-secondary");
+  });
+
+  it("brings the team's words in a word at a time, a beat between sentences, then the steps; once only for each answer", () => {
+    vi.useFakeTimers();
+    motionAllowed(true);
+    const view = render(panel());
+    // Every sentence is there from the start, holding its place and read by a screen reader; only the first word shows.
+    expect(sentences()).toEqual(words);
+    expect(cameIn()).toEqual(["One"]);
+    expect(document.querySelector("[data-part='sees-steps']")).toHaveClass("invisible");
+    act(() => vi.advanceTimersByTime(60));
+    expect(cameIn()).toEqual(["One", "two"]);
+    // The first line is the one being read, then the second.
+    expect(document.querySelectorAll("[data-part='sees-sentence']")[0]).toHaveClass("text-foreground");
+    act(() => vi.advanceTimersByTime(60 * 4));
+    expect(cameIn()).toEqual(["One", "two", "three."]);
+    act(() => vi.advanceTimersByTime(60));
+    expect(cameIn()).toEqual(["One", "two", "three.", "Four"]);
+    expect(document.querySelectorAll("[data-part='sees-sentence']")[1]).toHaveClass("text-foreground");
+    act(() => vi.advanceTimersByTime(60 * 3));
+    expect(cameIn()).toHaveLength(6);
+    expect(document.querySelector("[data-part='sees-steps']")).not.toHaveClass("invisible");
+    // Closed and opened again, the same words are there whole.
+    view.rerender(panel({ open: false }));
+    view.rerender(panel());
+    expect(cameIn()).toHaveLength(6);
+  });
+
+  it("shows them whole at once on a computer set to reduce motion, and a rule's words always", () => {
+    motionAllowed(false);
+    const view = render(panel());
+    expect(cameIn()).toHaveLength(6);
+    expect(document.querySelector("[data-part='sees-steps']")).not.toHaveClass("invisible");
+    view.unmount();
+    motionAllowed(true);
+    render(panel({ written: false }));
+    expect(cameIn()).toHaveLength(6);
+  });
+
+  describe("a super admin's refresh", () => {
+    const ask = {
+      siteId: "site_1" as never, screen: "googleAnalytics.conversions", about: "Conversions", path: "/app/analytics/site_1/conversions",
+      period: "lastMonth", country: "", device: "",
+      facts: [{ key: "conv.total.now", value: 23, unit: "count" as const, label: "conversions last month" }],
+      links: [],
+    };
+    const eyeAndPage = () => (
+      <>
+        <HakkenSeesEye />
+        <HakkenSees says={says} steps={[]} advice="rule" ask={ask} />
+      </>
+    );
+    const written = { status: "WRITTEN", says: ["23 conversions last month."], steps: [], role: "INSIGHTS_CONVERSION", writtenAt: 1 };
+    const refreshButton = () => screen.queryByRole("button", { name: "ui.hakkenSees.refresh" });
+
+    function asViewer(role: string, answer: unknown = written) {
+      const calls: string[] = [];
+      vi.mocked(useMutation).mockImplementation(((reference: unknown) => vi.fn(async () => {
+        calls.push(getFunctionName(reference as never));
+        return { key: "k", status: "RESEARCHING" };
+      })) as never);
+      vi.mocked(useQuery).mockImplementation(((reference: unknown, args: unknown) => {
+        if (args === "skip") return undefined;
+        const name = getFunctionName(reference as never);
+        if (name.includes("getMessages")) return [];
+        return name === "users:getMe" ? { role } : answer;
+      }) as never);
+      return calls;
+    }
+
+    it("writes the words again now, from a button only a super admin has", async () => {
+      const calls = asViewer("SUPER_ADMIN");
+      render(eyeAndPage());
+      fireEvent.click(eye());
+      await waitFor(() => expect(calls).toContain("seesAsk:askSees"));
+      fireEvent.click(refreshButton()!);
+      await waitFor(() => expect(calls).toContain("seesAsk:refreshSees"));
+    });
+
+    it("starts a new chat as it writes again: the panel's is empty, its words too, and the old one stays in Ask Hakken's list", async () => {
+      const calls = asViewer("SUPER_ADMIN");
+      render(eyeAndPage());
+      fireEvent.click(eye());
+      await waitFor(() => expect(calls).toContain("seesAsk:askSees"));
+      act(() => noteSeesThread(seesKey(ask), "thread_1"));
+      expect(screen.getByRole("link", { name: /ui\.hakkenSees\.open/ })).toHaveAttribute("href", "/app/assistant/thread_1");
+      const box = screen.getByRole("textbox", { name: "ui.hakkenSees.askPlaceholder" });
+      fireEvent.change(box, { target: { value: "Half a question" } });
+      fireEvent.click(refreshButton()!);
+      await waitFor(() => expect(calls).toContain("seesAsk:refreshSees"));
+      expect(screen.queryByRole("link", { name: /ui\.hakkenSees\.open/ })).toBeNull();
+      expect(box).toHaveValue("");
+      // Nothing is deleted: a refresh asks for no conversation to go.
+      expect(calls.filter((name) => name.includes("chat:"))).toEqual([]);
+    });
+
+    it("isn't there for anyone else, and can't be pressed again while the words are being written", async () => {
+      asViewer("ADMIN");
+      const view = render(eyeAndPage());
+      fireEvent.click(eye());
+      await waitFor(() => expect(sentences()).toEqual(["23 conversions last month."]));
+      expect(refreshButton()).toBeNull();
+      view.unmount();
+      resetSees();
+      asViewer("SUPER_ADMIN", { status: "RESEARCHING", says: [], steps: [], role: null, writtenAt: null });
+      render(eyeAndPage());
+      fireEvent.click(eye());
+      await waitFor(() => expect(refreshButton()).toBeDisabled());
+    });
   });
 });

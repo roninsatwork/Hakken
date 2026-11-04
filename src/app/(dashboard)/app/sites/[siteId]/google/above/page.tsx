@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -17,6 +18,7 @@ import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { aboveSees } from "@/convex/utils/sees/google";
 import { SiteSees } from "../../../_components/SiteSees";
+import { aboveSeen } from "../../../_components/siteSeesData";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -85,6 +87,11 @@ export default function SiteAbovePage() {
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "position", name: keywordOf, group: pausedLast });
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
 
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): every website above you, counted
+  // over the whole list — rivals and the rest apart, each the most first — and where you stand, in the page's words.
+  const te = useTranslations("sites.googleAbove.eye");
+  const seen = useMemo(() => (rows ? aboveSeen(rows, { aboveYou: te("aboveYou"), first: te("first"), notOnPage: te("notOnPage") }) : undefined), [rows, te]);
+
   const charted = [...(rows ?? [])].filter((row) => row.day !== null && row.pageKept)
     .sort((left, right) => right.above.length - left.above.length)
     .slice(0, CHARTED);
@@ -96,7 +103,7 @@ export default function SiteAbovePage() {
         title={t("title")}
         description={t("description", { place: site?.placeLabel ?? "" })}
       />
-      <SiteSees screen="googleAbove" seen={rows && aboveSees(rows)} data={rows} />
+      <SiteSees screen="googleAbove" seen={rows && aboveSees(rows)} data={seen} />
 
       <SiteChartCard
         dated={false}

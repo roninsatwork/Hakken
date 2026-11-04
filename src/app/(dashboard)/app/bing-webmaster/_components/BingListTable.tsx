@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useConvex } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -32,6 +33,31 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
  */
 
 export type BingListAnswer = FunctionReturnType<typeof api.bingWebmasterReads.bingListPage>;
+type WholeList = FunctionReturnType<typeof api.bingWebmasterReads.bingListSeen>;
+
+/** Own screens the eye's "Do first" steps may open: at most this many. */
+const MOST_ROW_LINKS = 4;
+
+/**
+ * The own screens of the rows the eye reads of a whole list (`bingListSeen`): the engines' widest gaps, the biggest
+ * rise and fall, and the pages Bing sends the most and least of their search clicks — the better place for a step
+ * about one keyword or page than its list (ask-hakken-every-chart-page-plan-2026-11-03.md, checklist 3).
+ */
+export function useWholeListLinks(whole: WholeList | undefined, segment: "keywords/keyword" | "pages/page") {
+  const siteId = useBingSiteId();
+  const hrefFor = useBingHref(siteId);
+  // The home page's path names nothing: it is linked by its words.
+  const home = useTranslations("bingWebmaster.seen.eye")("home");
+  return useMemo(() => {
+    if (!whole) return [];
+    const rows = [whole.bingAhead, whole.googleAhead, whole.up[0], whole.down[0], whole.shareHigh, whole.shareLow].filter((row): row is NonNullable<typeof row> => Boolean(row));
+    const seen = new Set<string>();
+    return rows
+      .filter((row) => !seen.has(row.ref) && Boolean(seen.add(row.ref)))
+      .slice(0, MOST_ROW_LINKS)
+      .map((row) => ({ label: row.name === "/" ? home : row.name, href: hrefFor(segment, { ref: row.ref }) }));
+  }, [whole, hrefFor, segment, home]);
+}
 type Row = BingListAnswer["rows"][number];
 export type BingTableKind = "keywords" | "pages" | "versus";
 

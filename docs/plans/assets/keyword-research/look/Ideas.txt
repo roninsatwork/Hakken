@@ -14,7 +14,7 @@ search: Find an idea…
 filter: Intent
 filter: Difficulty
 filter: You
-table: Tick every idea on this page | Keyword | Intent | Volume | Difficulty | CPC | Position | Your page
+table: Tick every idea on this page | Keyword | Intent | Volume | Difficulty | Position | Your page
   table-bar
     filter: Tick ideas to add them
     download: Download CSV

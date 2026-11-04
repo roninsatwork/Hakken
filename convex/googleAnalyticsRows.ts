@@ -2,8 +2,9 @@ import { v, type Infer } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
+import { unpackNumbers } from "./utils/searchConsolePacks";
 // Only the lists' own module and utilities: every Analytics read imports this one, so it imports none of them.
-import { LIVE_PARTS, emptyRow, slotKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { LIVE_PARTS, emptyRow, slotKey, unpackPart, unpackPartOnly, type ListRow, type PackedPart, type PartOnly } from "./googleAnalyticsLists";
 import type { AnalyticsList, AnalyticsPeriod, AnalyticsWhich } from "./googleAnalyticsSchema";
 
 /**
@@ -104,8 +105,18 @@ export async function connectionOf(ctx: Reader, holdId: Id<"companyWebsites">) {
 
 export type Held = { rows: ListRow[]; from: string; to: string; folded: boolean; thresholded: boolean; cut: boolean };
 
-/** A ready-made list, every part of the build screens read, at one moment. */
-export async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: string): Promise<Held | null> {
+/**
+ * A ready-made list, every part of the build screens read, at one moment. With `only`, each row carries only what the
+ * read names (`PartOnly`), read a part at a time (`eachSlotPart`): a long list read whole ran its read out of its 64MB.
+ */
+export async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: string, only?: PartOnly): Promise<Held | null> {
+  if (only) {
+    const rows: ListRow[] = [];
+    const held = await eachSlotPart(ctx, holdId, key, only, (partRows) => {
+      for (const row of partRows) rows.push(row);
+    });
+    return held ? { ...held, rows } : null;
+  }
   const slot = await ctx.db
     .query("googleAnalyticsPeriodSlots")
     .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key))
@@ -123,6 +134,71 @@ export async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: 
     thresholded: slot.thresholded === true,
     cut: slot.cut === true,
   };
+}
+
+/**
+ * A stored list's rows a part at a time, each with only its key, its visits and the times the named events happened
+ * (ask-hakken-every-chart-page-plan-2026-11-03.md). For a read over a long list that needs no more: a year of landing
+ * pages by new or returning is 30 parts of 2,000 rows, and read whole as rows it ran the Visits page's query out of its
+ * 64MB on Last 6 months and Last 12 months (More Handles, 2026-11-03). Null when the list is not kept.
+ */
+export async function eachSlotRow(
+  ctx: Reader,
+  holdId: Id<"companyWebsites">,
+  key: string,
+  events: readonly string[],
+  visit: (key: string, visits: number, times: number) => void,
+): Promise<{ from: string; to: string; thresholded: boolean } | null> {
+  const slot = await ctx.db
+    .query("googleAnalyticsPeriodSlots")
+    .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key))
+    .first();
+  if (!slot) return null;
+  const wanted = new Set(events);
+  for (let at = 0; at < slot.parts; at += 1) {
+    const part = (await ctx.db
+      .query("googleAnalyticsPeriods")
+      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", holdId).eq("key", key).eq("slot", slot.slot).eq("part", at))
+      .first()) as PackedPart | null;
+    if (!part) continue;
+    const visits = unpackNumbers(part.visits);
+    const columns = part.events.flatMap((event, index) => (wanted.has(event) ? [unpackNumbers(part.counts[index])] : []));
+    part.keys.forEach((rowKey, index) => visit(rowKey, visits[index] ?? 0, columns.reduce((sum, column) => sum + (column[index] ?? 0), 0)));
+  }
+  return { from: slot.from, to: slot.to, thresholded: slot.thresholded === true };
+}
+
+/** A ready-made list's dates and Google's notes on it, without its rows. */
+export type SlotNotes = Omit<Held, "rows">;
+
+/**
+ * A stored list's rows a part at a time, each part's rows let go before the next is read — with only what the read
+ * names (`PartOnly`), or whole as `readSlot` gives them when `only` is null. For a read over a long list that needs a
+ * few figures of every row, or every figure of a few rows: `visit` adds each part's into what the read keeps, and is
+ * handed the part as kept, for what its rows cannot say (the events it counts). A year of landing pages by channel
+ * read whole as rows ran Channels, a channel's page and a page's boxes out of their 64MB on Last 6 and 12 months on
+ * More Handles (2026-11-04). Null when the list is not kept.
+ */
+export async function eachSlotPart(
+  ctx: Reader,
+  holdId: Id<"companyWebsites">,
+  key: string,
+  only: PartOnly | null,
+  visit: (rows: ListRow[], part: PackedPart) => void,
+): Promise<SlotNotes | null> {
+  const slot = await ctx.db
+    .query("googleAnalyticsPeriodSlots")
+    .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key))
+    .first();
+  if (!slot) return null;
+  for (let at = 0; at < slot.parts; at += 1) {
+    const part = (await ctx.db
+      .query("googleAnalyticsPeriods")
+      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", holdId).eq("key", key).eq("slot", slot.slot).eq("part", at))
+      .first()) as PackedPart | null;
+    if (part) visit(only ? unpackPartOnly(part, only) : unpackPart(part), part);
+  }
+  return { from: slot.from, to: slot.to, folded: slot.folded === true, thresholded: slot.thresholded === true, cut: slot.cut === true };
 }
 
 /** A list a screen asked of Google live — an event's funnel, kept a week (ga-stored-figures-plan.md SF8). */
@@ -160,11 +236,13 @@ export async function readFor(
   keep?: { every: Held | null },
   /** The home country, as its lists are named: empty for the main one (§18.6.1). */
   country = "",
+  /** Only what the read names of each row (`PartOnly`), for a long list: every device's too. */
+  only?: PartOnly,
 ): Promise<Held | "LIVE" | null> {
   // One device's list, with every device's read on the way for What Hakken sees to weigh it against.
-  const every = device !== "" ? await readSlot(ctx, holdId, slotKey(list, period, which, "", country)) : null;
+  const every = device !== "" ? await readSlot(ctx, holdId, slotKey(list, period, which, "", country), only) : null;
   if (keep && device !== "") keep.every = every;
-  const own = await readSlot(ctx, holdId, slotKey(list, period, which, device, country));
+  const own = await readSlot(ctx, holdId, slotKey(list, period, which, device, country), only);
   if (own || device === "" || !every) return own;
   return "LIVE";
 }
@@ -205,6 +283,8 @@ export const shownRowValidator = v.object({
   change: v.union(v.number(), v.null()),
   /** Page views in the span before (All pages' Views change and filters); null when there is none to compare. */
   viewsBefore: v.union(v.number(), v.null()),
+  /** All pages' map, when it counts visits. */
+  visitsBefore: v.optional(v.union(v.number(), v.null())),
   /** Conversions and value against the span before, for "What changed most". */
   conversionsBefore: v.union(v.number(), v.null()),
   valueBefore: v.union(v.number(), v.null()),
@@ -256,6 +336,7 @@ export function shown(row: ListRow, before: ListRow | null | undefined, counted:
     revenue: row.revenue,
     change: hadBefore ? (before && before.visits > 0 ? (row.visits - before.visits) / before.visits : null) : null,
     viewsBefore: hadBefore ? (before?.views ?? 0) : null,
+    visitsBefore: hadBefore ? (before?.visits ?? 0) : null,
     conversionsBefore: hadBefore ? (was?.conversions ?? 0) : null,
     valueBefore: hadBefore ? (was?.value ?? 0) : null,
   };

@@ -275,6 +275,16 @@ describe('test time limits', () => {
     ).toEqual([])
   })
 
+  test('a sentence in the eye\'s panel is read through findSaid', () => {
+    const offenders = offendersOf((_, source) => Array.from(source.matchAll(/await openHakkenSees\(\);\s*(?:\/\/[^\n]*\s*)*(?:expect\(\s*)?(?:await\s+)?screen\.(?:findByText|getByText|queryByText)\(\s*\//g))
+      .map((match) => match.index ?? 0))
+    expect(
+      offenders,
+      'The panel\'s words come in one at a time, each in a piece of its own, so `findByText` cannot find a sentence with every word on screen. '
+      + 'Use `findSaid` from src/test/openHakkenSees.ts.',
+    ).toEqual([])
+  })
+
   test('the run is set as measured, and the one default for screens is where it is said to be', () => {
     const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
     expect(config).toMatch(/\.\.\.\(LOCAL_RUN \? \{ maxWorkers: '50%' \} : \{\}\)/)

@@ -482,6 +482,25 @@ export type Summary = {
   kinds: { kind: string; rows: number; clicks: number }[];
   /** The classifications' rows and clicks added up by their type; empty without classifications. */
   types: { type: ClassificationType; rows: number; clicks: number }[];
+  /**
+   * What Hakken sees over the whole list, never only the page of it on screen (ask-hakken-every-chart-page-plan-
+   * 2026-11-03.md, section 6: "non-brand movers over the whole list", "clicks per band, and counts over the whole
+   * list"): each band's clicks now and before, the searches that came into and left Google's top 3 and first page,
+   * and the brand and other searches that gained and lost most clicks. On lists of searches only. Not named `sees`,
+   * which the eye drops as the page's own plumbing (`pageData.ts`).
+   */
+  wholeList?: ListSees;
+};
+
+/** A search that moved, by its key as the list keeps it: a token of the build's book until the read names it (`readList`). */
+export type MovedRow = { key: string; clicks: number; previousClicks: number };
+export type ListSees = {
+  bandClicks: BandCounts;
+  bandClicksBefore: BandCounts | null;
+  /** Searches that came into, and left, the top 3 and Google's first page (1 to 10); null without the days before. */
+  crossed: { top3In: number; top3Out: number; pageOneIn: number; pageOneOut: number } | null;
+  /** The brand searches, and the rest, that gained and lost most clicks; null without the days before. */
+  movers: { brandUp: MovedRow | null; brandDown: MovedRow | null; otherUp: MovedRow | null; otherDown: MovedRow | null } | null;
 };
 
 const emptyBands = (): BandCounts => ({ "1-3": 0, "4-10": 0, "11-20": 0, "21-50": 0, "51+": 0 });
@@ -541,6 +560,8 @@ export function summarise(
     kindType?: (kind: string) => ClassificationType | null;
     /** A list of pages: each type counts a page once, however many of its sections Google listed (2026-10-04). */
     pageList?: boolean;
+    /** The whole list of searches, every one (the "all" rule): What Hakken sees' own figures over it (`Summary.wholeList`). */
+    wholeList?: boolean;
   },
 ): Summary {
   const bands = emptyBands();
@@ -594,6 +615,67 @@ export function summarise(
   }
   if (context.brandWords) {
     summary.brand = { now: brandSplit(all, context.brandWords), before: before ? brandSplit(before, context.brandWords) : null };
+    if (context.wholeList) summary.wholeList = listSeesOf(listed, before);
   }
   return summary;
+}
+
+/** The whole list's figures for What Hakken sees (`Summary.wholeList`), in one pass over its rows and the span before's. */
+function listSeesOf(listed: readonly ListRow[], before: readonly SourceRow[] | null): ListSees {
+  const bandClicks = emptyBands();
+  for (const row of listed) if (row.impressions > 0) bandClicks[row.band] += row.clicks;
+  if (!before) return { bandClicks, bandClicksBefore: null, crossed: null, movers: null };
+  const bandClicksBefore = emptyBands();
+  const placeBefore = new Map<string, number>();
+  for (const row of before) {
+    if (row.impressions <= 0) continue;
+    const position = row.positionSum / row.impressions;
+    bandClicksBefore[bandOf(position)] += row.clicks;
+    placeBefore.set(row.key, position);
+  }
+  const placeNow = new Map<string, number>();
+  const clicked = new Set<string>();
+  for (const row of listed) {
+    if (row.impressions > 0) placeNow.set(row.key, row.position);
+    if (row.clicks > 0) clicked.add(row.key);
+  }
+  for (const row of before) if (row.clicks > 0) clicked.add(row.key);
+  const crossed = crossedOf(placeNow, placeBefore, clicked);
+  const movers: NonNullable<ListSees["movers"]> = { brandUp: null, brandDown: null, otherUp: null, otherDown: null };
+  for (const row of listed) if (row.change !== null) moverInto(movers, row.brand === true, { key: row.key, clicks: row.clicks, previousClicks: row.previousClicks ?? 0 });
+  return { bandClicks, bandClicksBefore, crossed, movers };
+}
+
+/**
+ * The searches that came into and left the top 3 and the first page, from each search's place now and before: only
+ * searches clicked in one span or the other (`clicked`), so thousands shown once or twice never drown the ones that
+ * bring visitors (morehandles.co.uk, September 2026: 2,246 into the top 3 and 2,172 out, nearly all never clicked).
+ */
+export function crossedOf(placeNow: ReadonlyMap<string, number>, placeBefore: ReadonlyMap<string, number>, clicked: ReadonlySet<string>): NonNullable<ListSees["crossed"]> {
+  const crossed = { top3In: 0, top3Out: 0, pageOneIn: 0, pageOneOut: 0 };
+  // Into and out of, as each band reads its places (`bandOf`): 3.4 is in the top 3, 10.7 is off the first page.
+  const top3 = (position: number | undefined) => position !== undefined && bandOf(position) === "1-3";
+  const pageOne = (position: number | undefined) => position !== undefined && (bandOf(position) === "1-3" || bandOf(position) === "4-10");
+  for (const key of clicked) {
+    const now = placeNow.get(key);
+    const then = placeBefore.get(key);
+    if (top3(now) && !top3(then)) crossed.top3In += 1;
+    if (!top3(now) && top3(then)) crossed.top3Out += 1;
+    if (pageOne(now) && !pageOne(then)) crossed.pageOneIn += 1;
+    if (!pageOne(now) && pageOne(then)) crossed.pageOneOut += 1;
+  }
+  return crossed;
+}
+
+/**
+ * A search held as its group's biggest mover where it gained or lost more clicks than the one held — the same, the
+ * one with more clicks now, then the first key — so a list read row by row and one read as columns agree.
+ */
+export function moverInto(movers: NonNullable<ListSees["movers"]>, brand: boolean, moved: MovedRow): void {
+  const change = moved.clicks - moved.previousClicks;
+  if (change === 0) return;
+  const way = brand ? (change > 0 ? "brandUp" : "brandDown") : change > 0 ? "otherUp" : "otherDown";
+  const held = movers[way];
+  const heldChange = held ? Math.abs(held.clicks - held.previousClicks) : -1;
+  if (!held || Math.abs(change) > heldChange || (Math.abs(change) === heldChange && (moved.clicks > held.clicks || (moved.clicks === held.clicks && moved.key < held.key)))) movers[way] = moved;
 }

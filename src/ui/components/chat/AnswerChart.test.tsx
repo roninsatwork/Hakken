@@ -114,7 +114,7 @@ describe("a chart of a website's groups (ask-hakken-every-chart-plan-2026-10-31.
 
   it("a scatter sets each kind of page's visits against the share that bought", () => {
     renderWithProviders(<AnswerChart chart={groups({ kind: "scatter", by: "kind", measure: "conversionRate", event: "purchase", groups: [{ name: "Brand", value: 5.7, visits: 3517 }, { name: "Blog", value: 0.4, visits: 2027 }] })} />);
-    expect(screen.getByRole("figure", { name: "Visits against the share that made a purchase, by kind of page" })).toBeInTheDocument();
+    expect(screen.getByRole("figure", { name: "Visits against the share that made a purchase, by classification" })).toBeInTheDocument();
     expect(screen.getByTestId("scatter")).toHaveAttribute("data-y", "Share that made a purchase (%)");
     expect(screen.getAllByRole("listitem").map((row) => row.textContent)).toEqual(["Brand 3517 5.7", "Blog 2027 0.4"]);
   });
@@ -136,7 +136,7 @@ describe("a chart of a website's groups (ask-hakken-every-chart-plan-2026-10-31.
 
   it("a grid shades each conversion's rate across the kinds of page", () => {
     renderWithProviders(<AnswerChart chart={groups({ kind: "grid", by: "kind", measure: "conversionRate", event: "purchase", groups: [{ name: "Brand", value: 3517 }, { name: "Blog", value: 2027 }], rows: [{ event: "purchase", values: [5.7, 0.4] }, { event: "add_to_cart", values: [18.8, null] }] })} />);
-    expect(screen.getByRole("figure", { name: "Share of visits that did each step, by kind of page" })).toBeInTheDocument();
+    expect(screen.getByRole("figure", { name: "Share of visits that did each step, by classification" })).toBeInTheDocument();
     expect(screen.getByText("Purchase")).toBeInTheDocument();
     expect(screen.getByText("Add to cart")).toBeInTheDocument();
     expect(screen.getByText("5.7%")).toBeInTheDocument();

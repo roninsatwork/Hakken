@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -21,6 +22,7 @@ import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { marketMapSees } from "@/convex/utils/sees/competitors";
 import { SiteSees } from "../../../_components/SiteSees";
+import { marketSeen } from "../../../_components/siteSeesData";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -86,6 +88,13 @@ export default function SiteMarketMapPage() {
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
 
   const plotted = (rows ?? []).filter((row) => inMarket(row) && row.keywords !== null && row.traffic !== null);
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the market as the chart draws it,
+  // worked out over every website in it — the rival and the website you don't watch sharing most of your searches, and
+  // the market's middle — since a long market reaches the eye cut short; then its websites, the most shared first.
+  const te = useTranslations("sites.marketMap.eye");
+  const seen = useMemo(() => (rows
+    ? marketSeen(rows.filter((row) => row.role !== "FOUND" || everything === "1" || row.kind === null || row.kind === "COMPETITOR"), { middle: te("middle"), more: te("more") })
+    : undefined), [rows, everything, te]);
   const colours: Record<Role, string> = { YOU: SITE_SERIES_COLOURS[0], RIVAL: SITE_SERIES_COLOURS[1], FOUND: SITE_SERIES_COLOURS[5] };
   const groups: SiteScatterGroup[] = ROLES.map((entry) => ({
     key: entry,
@@ -97,7 +106,7 @@ export default function SiteMarketMapPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MapIcon className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="competitorsMap" seen={rows && marketMapSees(rows)} data={rows} />
+      <SiteSees screen="competitorsMap" seen={rows && marketMapSees(rows)} data={seen} />
 
       <SiteChartCard
         dated={false}

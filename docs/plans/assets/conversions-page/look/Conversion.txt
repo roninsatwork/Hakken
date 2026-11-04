@@ -8,7 +8,6 @@ figures
   figure: Contact form sent
   figure: Visits that did it
   figure: Conversion rate
-  figure: Worth
 chart-card: Contact form sent, day by day
   filter: Show
   filter: Compare

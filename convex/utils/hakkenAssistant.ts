@@ -44,8 +44,11 @@ export const BING_CONNECTOR_KEY = "assistant-bing";
 /** The connector holding Insights' findings, as written (insights-analyst-plan.md I14, phase 16). */
 export const INSIGHTS_CONNECTOR_KEY = "assistant-insights";
 
+/** The connector holding a chart from the page a conversation started on, redrawn (ask-hakken-every-chart-page-plan-2026-11-03.md). */
+export const PAGE_CHARTS_CONNECTOR_KEY = "assistant-page-charts";
+
 /** Every connector the Assistant carries, installed once and bound to it. */
-export const ASSISTANT_CONNECTOR_KEYS = [COMPANY_FIGURES_CONNECTOR_KEY, TASKS_CONNECTOR_KEY, CHARTS_CONNECTOR_KEY, ADVICE_CONNECTOR_KEY, ANALYTICS_CONNECTOR_KEY, BING_CONNECTOR_KEY, INSIGHTS_CONNECTOR_KEY] as const;
+export const ASSISTANT_CONNECTOR_KEYS = [COMPANY_FIGURES_CONNECTOR_KEY, TASKS_CONNECTOR_KEY, CHARTS_CONNECTOR_KEY, ADVICE_CONNECTOR_KEY, ANALYTICS_CONNECTOR_KEY, BING_CONNECTOR_KEY, INSIGHTS_CONNECTOR_KEY, PAGE_CHARTS_CONNECTOR_KEY] as const;
 
 export type AgentReasoningEffortLevel = "LOW" | "MEDIUM" | "HIGH";
 

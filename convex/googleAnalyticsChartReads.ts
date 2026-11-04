@@ -46,7 +46,6 @@ export const analyticsChart = tenantQuery({
       /** Each counted event's visits and times that day (conversion-charts-plan.md): Google's own count stands in on a day kept before both units were. */
       eventVisits: v.optional(v.array(v.number())),
       eventTimes: v.optional(v.array(v.number())),
-      value: v.number(),
       events: v.array(v.number()),
     })),
     /** The counted events, in the order of each point's `events`. */
@@ -55,7 +54,10 @@ export const analyticsChart = tenantQuery({
   handler: async (ctx, args) => await readChart(ctx, args),
 });
 
-/** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
+/**
+ * Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website
+ * only. Never money (Anthony, 2026-11-03: "Take money off").
+ */
 export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyticsChartArgs>) {
   const site = await requireMySite(ctx, args.siteId);
   const holdId = site.hold._id;
@@ -65,9 +67,9 @@ export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyti
   const events = counted.map((event) => event.eventName);
   if (!connection?.newestDay) return { points: [], events };
   const point = (day: string, row: ListRow, lastDay?: string) => {
-    const { conversions, value } = conversionsOf(row, counted);
+    const { conversions } = conversionsOf(row, counted);
     return {
-      day, ...(lastDay && lastDay !== day ? { lastDay } : {}), visits: row.visits, engaged: row.engaged, views: row.views, conversions, value,
+      day, ...(lastDay && lastDay !== day ? { lastDay } : {}), visits: row.visits, engaged: row.engaged, views: row.views, conversions,
       events: events.map((event) => row.counts.get(event) ?? 0),
       eventVisits: events.map((event) => row.eventVisits?.get(event) ?? row.counts.get(event) ?? 0),
       eventTimes: events.map((event) => row.eventTimes?.get(event) ?? row.counts.get(event) ?? 0),

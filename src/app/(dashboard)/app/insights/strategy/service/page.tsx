@@ -16,7 +16,7 @@ import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDay, formatNumber } from "../../../sites/_components/siteFormat";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
-import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../../_components/useInsights";
 import { percentMoved, useServiceName } from "../../_components/strategyWords";
 
 /**
@@ -32,6 +32,8 @@ export default function InsightsServicePage() {
   const params = useSearchParams();
   const page = params.get("page") ?? "";
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const href = useInsightsHref();
   const name = useServiceName();
   const data = useQuery(api.insightsReads.insightsService, page ? { page, ...(site ? { siteId: site } : {}) } : "skip");
@@ -62,7 +64,7 @@ export default function InsightsServicePage() {
         description={service.kind === "GUIDES" ? t("descriptionGuides", { host: data.host }) : t("description", { page: service.page, host: data.host })}
         pills={<StatusLabel tone={service.verdict === "GROW" ? "success" : service.verdict === "STEADY" ? "neutral" : "warning"}>{ts(`verdicts.${service.verdict}`)}</StatusLabel>}
       />
-      <HakkenSees says={says} steps={[{ words: ts(`do.${service.verdict}`, { service: name(service) }), link: t("seeStrategy"), href: href("strategy") }]} page={{ screen: "insights.strategyService", siteId: site, data }} />
+      <HakkenSees says={says} steps={[{ words: ts(`do.${service.verdict}`, { service: name(service) }), link: t("seeStrategy"), href: href("strategy") }]} page={{ screen: "insights.strategyService", siteId: eyeSite, data }} />
       <FigureRow>
         <Figure label={t("figures.enquiries")} value={formatNumber(service.enquiries)} detail={moved === null ? <span className="text-secondary">{t("figures.noYear")}</span> : <ChangeLine by={moved}>{t("figures.onYear", { percent: Math.abs(moved), before: formatNumber(service.enquiriesBefore ?? 0) })}</ChangeLine>} />
         <Figure label={t("figures.share")} value={share === null ? "–" : `${share}%`} detail={<span className="text-secondary">{t("figures.shareDetail", { clicks: formatNumber(service.clicks) })}</span>} />

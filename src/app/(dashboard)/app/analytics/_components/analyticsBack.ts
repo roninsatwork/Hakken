@@ -24,6 +24,8 @@ export const BACK_SCREENS = {
   // The pages behind a square of the Conversions map (conversion-charts-plan.md).
   "conversions/pages": "conversionPages",
   products: "products",
+  // Visitors is Visits now; an address from before still comes back to it.
+  visits: "visitors",
   visitors: "visitors",
   "tracking-health": "trackingHealth",
 } as const;

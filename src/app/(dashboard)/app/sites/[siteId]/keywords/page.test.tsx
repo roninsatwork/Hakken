@@ -145,9 +145,9 @@ describe("the Keywords page", () => {
 
     expect(lastListArgs()).toMatchObject({ sort: "volume", direction: "asc" });
 
-    fireEvent.click(screen.getByRole("button", { name: "sites.keywords.columns.cpc" }));
+    fireEvent.click(screen.getByRole("button", { name: "sites.keywords.columns.traffic" }));
 
-    expect(lastWrite().get("sort")).toBe("cpc");
+    expect(lastWrite().get("sort")).toBe("traffic");
     expect(lastWrite().has("dir")).toBe(false);
   });
 
@@ -163,13 +163,20 @@ describe("the Keywords page", () => {
     expect(screen.getByRole("columnheader", { name: /sites\.keywords\.columns\.compared/ })).not.toHaveAttribute("aria-sort");
   });
 
-  it("shows what a click costs, in dollars, and a dash where there is no price", () => {
+  // Every guessed money figure off (Anthony, 2026-11-03: "Yes, all of it"): no cost per click, in either view, nor its sort.
+  it("never shows what a click costs, in either view", () => {
     openAt();
+    expect(screen.queryByRole("columnheader", { name: "sites.keywords.columns.cpc" })).not.toBeInTheDocument();
+    expect(screen.queryByText("$11.82")).not.toBeInTheDocument();
+    cleanup();
 
-    const column = screen.getAllByRole("columnheader").findIndex((cell) => cell.textContent === "sites.keywords.columns.cpc");
-    const [first, second] = screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[column]);
-    expect(first).toHaveTextContent("$11.82");
-    expect(second).toHaveTextContent("–");
+    openAt("compare=2026-09-24");
+    expect(screen.queryByRole("columnheader", { name: "sites.keywords.columns.cpc" })).not.toBeInTheDocument();
+    cleanup();
+
+    // An old address sorted by it opens on the list's own order.
+    openAt("sort=cpc");
+    expect(lastListArgs()).toMatchObject({ sort: "position" });
   });
 
   it("shows a visit estimate under one as “<1”, never rounded to 0 (Anthony, 2026-09-30)", () => {

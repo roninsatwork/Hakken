@@ -1,7 +1,9 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { aiEngineValidator, AI_ENGINES } from "./seoAiEngines";
-import { listHold, myRivals, requireMySite } from "./siteAccess";
+import { listHold, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { citedPagesIn, latestFigures, searchTotalOf } from "./siteFigures";
 import { holdAiSummary } from "./holdLists";
 import { pageTypeValidator } from "./utils/siteShapes";
@@ -109,119 +111,123 @@ export const overviewExtras = tenantQuery({
       })),
     }),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const place = site.place;
-
-    const [pageRows, home, aiRows, summary, found, rivals, own, readOf, pageKinds] = await Promise.all([
-      ctx.db
-        .query("sitePageRanks")
-        .withIndex("by_site_keywords", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
-        .order("desc")
-        .take(PAGES_READ),
-      ctx.db
-        .query("sitePageRanks")
-        .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("page", "/"))
-        .first(),
-      ctx.db
-        .query("siteKeywordFeatures")
-        .withIndex("by_site_feature_keyword", (q) =>
-          q.eq("websiteId", websiteId).eq("locationCode", place).eq("feature", "ai_overview_reference"))
-        .take(FEATURE_ROWS_READ),
-      // How many of its pages each assistant links to, from the list's summary.
-      holdAiSummary(ctx, listHold(site), place),
-      ctx.db
-        .query("discoveredCompetitors")
-        .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
-        .take(COMPETITORS_READ),
-      myRivals(ctx, site),
-      latestFigures(ctx, websiteId, place),
-      discoveredTotal(ctx, websiteId, place),
-      // The company's own classifications, by its own hold: another company's never count here.
-      readPageKinds(ctx, site.hold._id),
-    ]);
-
-    const cited = citedPagesIn(summary, websiteId);
-    const answered = new Set(summary?.engines.map((entry) => entry.engine));
-
-    // Pages by kind — or by the company's own classification — and by the visits a month each brings.
-    const kinds = new Map<string, { pageType: NonNullable<(typeof pageRows)[number]["pageType"]> | "UNJUDGED"; pages: number; visits: number }>();
-    const classified = new Map<string, { kind: string; pages: number; visits: number }>();
-    const bands = VISIT_BANDS.map((entry) => ({ band: entry.band, pages: 0, visits: 0 }));
-    let visits = 0;
-    for (const row of pageRows) {
-      const pageType = row.pageType ?? "UNJUDGED";
-      const traffic = row.traffic ?? 0;
-      visits += traffic;
-      const kind = kinds.get(pageType) ?? { pageType, pages: 0, visits: 0 };
-      kind.pages += 1;
-      kind.visits += traffic;
-      kinds.set(pageType, kind);
-      if (pageKinds) {
-        const ownKind = pageKinds.kindOf(row.page);
-        const entry = classified.get(ownKind) ?? { kind: ownKind, pages: 0, visits: 0 };
-        entry.pages += 1;
-        entry.visits += traffic;
-        classified.set(ownKind, entry);
-      }
-      const band = bands[VISIT_BANDS.findIndex((entry) => traffic <= entry.upTo)];
-      band.pages += 1;
-      band.visits += traffic;
-    }
-
-    // Every competitor beside the site, from its own collected figures, as the
-    // Market map reads them. The searches both rank for come from what
-    // discovery found: this site's list first, then the competitor's own list,
-    // since the count is the same either way round. The visits it gets from
-    // them come from this site's list only (the Competitors card's Traffic view).
-    const foundHere = new Map(found.map((row) => [row.host, row]));
-    const rivalRows = await Promise.all(rivals.map(async (rival) => {
-      const mine = foundHere.get(rival.website.host);
-      const [latest, theirs] = await Promise.all([
-        latestFigures(ctx, rival.website._id, place),
-        mine
-          ? null
-          : ctx.db
-            .query("discoveredCompetitors")
-            .withIndex("by_company_website_host", (q) => q.eq("companyWebsiteId", rival.hold._id).eq("host", site.website.host))
-            .first(),
-      ]);
-      return {
-        siteId: rival.hold._id,
-        host: rival.website.displayHost,
-        keywords: searchTotalOf(latest),
-        visits: latest.metrics?.estimatedTraffic ?? null,
-        shared: mine?.intersections ?? theirs?.intersections ?? null,
-        sharedVisits: mine?.estimatedTraffic ?? null,
-      };
-    }));
-
-    return {
-      homePageRank: home?.pageRank ?? null,
-      aiOverviewPages: new Set(aiRows.flatMap((row) => (row.page ? [row.page] : []))).size,
-      aiOverviewCapped: aiRows.length === FEATURE_ROWS_READ,
-      assistants: AI_ENGINES.map((engine) => ({ engine, pages: answered.has(engine) ? cited.engines.get(engine) ?? 0 : null })),
-      pages: {
-        total: pageRows.length,
-        visits,
-        capped: pageRows.length === PAGES_READ,
-        kinds: [...kinds.values()].sort((left, right) => right.pages - left.pages || right.visits - left.visits),
-        classified: pageKinds ? [...classified.values()].sort((left, right) => right.pages - left.pages || right.visits - left.visits) : null,
-        visitBands: bands,
-      },
-      competitors: {
-        found: found.filter((row) => row.host !== site.website.host && row.kind === "COMPETITOR").length,
-        read: found.filter((row) => row.host !== site.website.host).length,
-        readOf,
-        you: {
-          keywords: searchTotalOf(own),
-          visits: own.metrics?.estimatedTraffic ?? null,
-        },
-        // Most searches shared first; those neither list holds after, biggest first.
-        rivals: rivalRows.sort((left, right) =>
-          (right.shared ?? -1) - (left.shared ?? -1) || (right.visits ?? -1) - (left.visits ?? -1)),
-      },
-    };
-  },
+  handler: async (ctx, args) => await readOverviewExtras(ctx, args),
 });
+
+/** overviewExtras's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+// A full query context: `discoveredTotal` reads through one.
+export async function readOverviewExtras(ctx: SiteReader & QueryCtx, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId = site.website._id;
+  const place = site.place;
+
+  const [pageRows, home, aiRows, summary, found, rivals, own, readOf, pageKinds] = await Promise.all([
+    ctx.db
+      .query("sitePageRanks")
+      .withIndex("by_site_keywords", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
+      .order("desc")
+      .take(PAGES_READ),
+    ctx.db
+      .query("sitePageRanks")
+      .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("page", "/"))
+      .first(),
+    ctx.db
+      .query("siteKeywordFeatures")
+      .withIndex("by_site_feature_keyword", (q) =>
+        q.eq("websiteId", websiteId).eq("locationCode", place).eq("feature", "ai_overview_reference"))
+      .take(FEATURE_ROWS_READ),
+    // How many of its pages each assistant links to, from the list's summary.
+    holdAiSummary(ctx, listHold(site), place),
+    ctx.db
+      .query("discoveredCompetitors")
+      .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
+      .take(COMPETITORS_READ),
+    myRivals(ctx, site),
+    latestFigures(ctx, websiteId, place),
+    discoveredTotal(ctx, websiteId, place),
+    // The company's own classifications, by its own hold: another company's never count here.
+    readPageKinds(ctx, site.hold._id),
+  ]);
+
+  const cited = citedPagesIn(summary, websiteId);
+  const answered = new Set(summary?.engines.map((entry) => entry.engine));
+
+  // Pages by kind — or by the company's own classification — and by the visits a month each brings.
+  const kinds = new Map<string, { pageType: NonNullable<(typeof pageRows)[number]["pageType"]> | "UNJUDGED"; pages: number; visits: number }>();
+  const classified = new Map<string, { kind: string; pages: number; visits: number }>();
+  const bands = VISIT_BANDS.map((entry) => ({ band: entry.band, pages: 0, visits: 0 }));
+  let visits = 0;
+  for (const row of pageRows) {
+    const pageType = row.pageType ?? "UNJUDGED";
+    const traffic = row.traffic ?? 0;
+    visits += traffic;
+    const kind = kinds.get(pageType) ?? { pageType, pages: 0, visits: 0 };
+    kind.pages += 1;
+    kind.visits += traffic;
+    kinds.set(pageType, kind);
+    if (pageKinds) {
+      const ownKind = pageKinds.kindOf(row.page);
+      const entry = classified.get(ownKind) ?? { kind: ownKind, pages: 0, visits: 0 };
+      entry.pages += 1;
+      entry.visits += traffic;
+      classified.set(ownKind, entry);
+    }
+    const band = bands[VISIT_BANDS.findIndex((entry) => traffic <= entry.upTo)];
+    band.pages += 1;
+    band.visits += traffic;
+  }
+
+  // Every competitor beside the site, from its own collected figures, as the
+  // Market map reads them. The searches both rank for come from what
+  // discovery found: this site's list first, then the competitor's own list,
+  // since the count is the same either way round. The visits it gets from
+  // them come from this site's list only (the Competitors card's Traffic view).
+  const foundHere = new Map(found.map((row) => [row.host, row]));
+  const rivalRows = await Promise.all(rivals.map(async (rival) => {
+    const mine = foundHere.get(rival.website.host);
+    const [latest, theirs] = await Promise.all([
+      latestFigures(ctx, rival.website._id, place),
+      mine
+        ? null
+        : ctx.db
+          .query("discoveredCompetitors")
+          .withIndex("by_company_website_host", (q) => q.eq("companyWebsiteId", rival.hold._id).eq("host", site.website.host))
+          .first(),
+    ]);
+    return {
+      siteId: rival.hold._id,
+      host: rival.website.displayHost,
+      keywords: searchTotalOf(latest),
+      visits: latest.metrics?.estimatedTraffic ?? null,
+      shared: mine?.intersections ?? theirs?.intersections ?? null,
+      sharedVisits: mine?.estimatedTraffic ?? null,
+    };
+  }));
+
+  return {
+    homePageRank: home?.pageRank ?? null,
+    aiOverviewPages: new Set(aiRows.flatMap((row) => (row.page ? [row.page] : []))).size,
+    aiOverviewCapped: aiRows.length === FEATURE_ROWS_READ,
+    assistants: AI_ENGINES.map((engine) => ({ engine, pages: answered.has(engine) ? cited.engines.get(engine) ?? 0 : null })),
+    pages: {
+      total: pageRows.length,
+      visits,
+      capped: pageRows.length === PAGES_READ,
+      kinds: [...kinds.values()].sort((left, right) => right.pages - left.pages || right.visits - left.visits),
+      classified: pageKinds ? [...classified.values()].sort((left, right) => right.pages - left.pages || right.visits - left.visits) : null,
+      visitBands: bands,
+    },
+    competitors: {
+      found: found.filter((row) => row.host !== site.website.host && row.kind === "COMPETITOR").length,
+      read: found.filter((row) => row.host !== site.website.host).length,
+      readOf,
+      you: {
+        keywords: searchTotalOf(own),
+        visits: own.metrics?.estimatedTraffic ?? null,
+      },
+      // Most searches shared first; those neither list holds after, biggest first.
+      rivals: rivalRows.sort((left, right) =>
+        (right.shared ?? -1) - (left.shared ?? -1) || (right.visits ?? -1) - (left.visits ?? -1)),
+    },
+  };
+}

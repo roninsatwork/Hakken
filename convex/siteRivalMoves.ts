@@ -1,6 +1,7 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { loadRivalHolds } from "./websiteSiteRows";
 import { latestFigures, seriesFor } from "./siteFigures";
 import { calendarPeriodValidator, periodSpan, spanBefore, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
@@ -34,37 +35,40 @@ export const rivalMoves = tenantQuery({
     checked: v.boolean(),
     lastCheck: v.union(v.string(), v.null()),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const today = ukDay();
-    const span = periodSpan(args.period as CalendarPeriod, today, today) ?? { from: today, to: today, whole: false };
-    const priorSpan = spanBefore(args.period as CalendarPeriod, span);
-    const out = [];
-    for (const rival of await loadRivalHolds(ctx, site)) {
-      const website = await ctx.db.get(rival.websiteId);
-      if (!website) continue;
-      const ranks = await ctx.db.query("siteKeywordRanks").withIndex("by_site_volume", (q) => q.eq("websiteId", website._id).eq("locationCode", site.place)).order("desc").take(RANKINGS_READ);
-      // New since the rival's first check, and within the period: a search held from the first check isn't news.
-      const firstCheck = ranks.reduce((earliest, row) => (row.firstSeenDay < earliest ? row.firstSeenDay : earliest), today);
-      const fresh = ranks.filter((row) => row.status !== "LOST" && row.firstSeenDay > firstCheck && row.firstSeenDay >= span.from && row.firstSeenDay <= span.to);
-      const biggest = fresh[0] ?? null;
-      const latest = await latestFigures(ctx, website._id, site.place);
-      // A figure is the newest check's in a span: each month's last, so the span's last month holds it.
-      const within = await seriesFor(ctx, website._id, site.place, span.from, span.to, "month");
-      const before = await seriesFor(ctx, website._id, site.place, priorSpan.from, priorSpan.to, "month");
-      out.push({
-        siteId: rival._id,
-        host: website.displayHost ?? website.host,
-        newSearches: fresh.length,
-        climbed: ranks.filter((row) => row.status === "UP").length,
-        fell: ranks.filter((row) => row.status === "DOWN" || row.status === "LOST").length,
-        biggestNew: biggest ? { keyword: biggest.keyword, position: biggest.position ?? null, volume: biggest.volume } : null,
-        visits: typeof within.at(-1)?.estimatedTraffic === "number" ? Math.round(within.at(-1)!.estimatedTraffic as number) : null,
-        visitsBefore: typeof before.at(-1)?.estimatedTraffic === "number" ? Math.round(before.at(-1)!.estimatedTraffic as number) : null,
-        checked: within.length > 0,
-        lastCheck: latest.lastDay,
-      });
-    }
-    return out.sort((a, b) => b.newSearches - a.newSearches || b.climbed - a.climbed);
-  },
+  handler: async (ctx, args) => await readRivalMoves(ctx, args),
 });
+
+/** rivalMoves's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readRivalMoves(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const today = ukDay();
+  const span = periodSpan(args.period as CalendarPeriod, today, today) ?? { from: today, to: today, whole: false };
+  const priorSpan = spanBefore(args.period as CalendarPeriod, span);
+  const out = [];
+  for (const rival of await loadRivalHolds(ctx, site)) {
+    const website = await ctx.db.get(rival.websiteId);
+    if (!website) continue;
+    const ranks = await ctx.db.query("siteKeywordRanks").withIndex("by_site_volume", (q) => q.eq("websiteId", website._id).eq("locationCode", site.place)).order("desc").take(RANKINGS_READ);
+    // New since the rival's first check, and within the period: a search held from the first check isn't news.
+    const firstCheck = ranks.reduce((earliest, row) => (row.firstSeenDay < earliest ? row.firstSeenDay : earliest), today);
+    const fresh = ranks.filter((row) => row.status !== "LOST" && row.firstSeenDay > firstCheck && row.firstSeenDay >= span.from && row.firstSeenDay <= span.to);
+    const biggest = fresh[0] ?? null;
+    const latest = await latestFigures(ctx, website._id, site.place);
+    // A figure is the newest check's in a span: each month's last, so the span's last month holds it.
+    const within = await seriesFor(ctx, website._id, site.place, span.from, span.to, "month");
+    const before = await seriesFor(ctx, website._id, site.place, priorSpan.from, priorSpan.to, "month");
+    out.push({
+      siteId: rival._id,
+      host: website.displayHost ?? website.host,
+      newSearches: fresh.length,
+      climbed: ranks.filter((row) => row.status === "UP").length,
+      fell: ranks.filter((row) => row.status === "DOWN" || row.status === "LOST").length,
+      biggestNew: biggest ? { keyword: biggest.keyword, position: biggest.position ?? null, volume: biggest.volume } : null,
+      visits: typeof within.at(-1)?.estimatedTraffic === "number" ? Math.round(within.at(-1)!.estimatedTraffic as number) : null,
+      visitsBefore: typeof before.at(-1)?.estimatedTraffic === "number" ? Math.round(before.at(-1)!.estimatedTraffic as number) : null,
+      checked: within.length > 0,
+      lastCheck: latest.lastDay,
+    });
+  }
+  return out.sort((a, b) => b.newSearches - a.newSearches || b.climbed - a.climbed);
+}

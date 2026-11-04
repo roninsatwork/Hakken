@@ -9,6 +9,7 @@ import { analyticsStatusValidator } from "./googleAnalyticsSchema";
 import { decodePages, isPageRef } from "./holdPageRefs";
 import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
+import { SHOP_PAGES_KIND, isShopPage } from "./utils/shopPages";
 import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { AI_ASSISTANTS_CHANNEL, GOOGLE_AI_CHANNEL, assistantOf, channelOf } from "./utils/aiAssistants";
@@ -16,14 +17,15 @@ import { PURCHASE_EVENT } from "./utils/analyticsEvents";
 import { UNTAGGED, VISITOR_LISTS, splitChannelKey, type ListRow, type VisitorList } from "./googleAnalyticsLists";
 import { campaignsSees } from "./utils/sees/analyticsCampaigns";
 import { slotKey } from "./googleAnalyticsCollect";
+import { onwardByGroup, onwardOf, withOnward, type Onward } from "./googleAnalyticsOnward";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { titlesOf, withTitles } from "./pageTitles";
 import { analyticsPeriodValidator, type AnalyticsList, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { searchConsoleMonth, searchConsoleMonthValidator } from "./googleAnalyticsConnect";
 import { seeing, seen, seenValidator, type Seen, type SeenPhrase } from "./utils/hakkenSees";
-import { PAGE_MOVES, moveOf, type PageMove } from "./utils/pageMoves";
+import { PAGE_MOVES, moveOf, type PageMove, busyVisitsFor, pageBandsOf, viewsConcentration, type PageBands, type ViewsConcentration } from "./utils/pageMoves";
 import { moveCountsValidator, withQuietPages, type PageMoves } from "./googleAnalyticsPageMoves";
-import { channelExtras, classifierFor, landingByChannel, landingOf } from "./googleAnalyticsChannelReads";
+import { channelExtras, channelLanding, classifierFor } from "./googleAnalyticsChannelReads";
 import {
   addInto,
   blank,
@@ -176,6 +178,8 @@ const listArgs = {
   direction: sortDirectionArg,
   /** All pages' filters (all-pages-rethink-plan.md AP5): the pages that gained, dropped, stayed static or had no visits. */
   move: v.optional(pageMoveValidator),
+  /** All pages (all-pages-way-6-plan-2026-11-04.md, step 2): without the shop's search, basket and account pages. */
+  leaveOut: v.optional(v.boolean()),
 };
 
 type ListArgs = {
@@ -192,6 +196,8 @@ type ListArgs = {
   sort?: keyof typeof SORTS;
   direction?: "asc" | "desc";
   move?: PageMove | "all";
+  /** All pages: without the shop's search, basket and account pages (`isShopPage`). */
+  leaveOut?: boolean;
   /**
    * All pages whole: the pages viewed only before and the website's own pages
    * nobody viewed join the list, with each filter's count (`withQuietPages`).
@@ -238,6 +244,13 @@ export type ListAnswer = {
   untagged: number | null;
   /** All pages read whole: how many pages each filter holds, and the pages nobody viewed Google sends most clicks. */
   moves: PageMoves | null;
+  /** All pages read whole: its busy and quiet pages, and how few pages make half its views. */
+  bands: PageBands | null;
+  concentration: ViewsConcentration | null;
+  /** All pages, when they were left out or asked for: the shop's search, basket and account pages added up. */
+  shop: { pages: number; views: number; viewsBefore: number | null } | null;
+  /** All pages: the dates the figures are set against, so the page can name them ("September"). */
+  spanBefore: { from: string | null; to: string | null } | null;
   /** Page groups read with `pages`: every landing page, named by its address. */
   pages?: ShownRow[];
 };
@@ -246,7 +259,7 @@ type Figures = ReturnType<typeof figuresOf>;
 
 const EMPTY: Omit<ListAnswer, "live" | "preparing"> = {
   rows: [], from: null, to: null, folded: false, thresholded: false, cut: false, groups: null,
-  every: [], everyDevice: null, totals: null, site: null, counting: false, untagged: null, moves: null,
+  every: [], everyDevice: null, totals: null, site: null, counting: false, untagged: null, moves: null, bands: null, concentration: null, shop: null, spanBefore: null,
 };
 
 /** The display channel of a kept channel row. */
@@ -280,13 +293,20 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     : args.list === "channel" || args.list === "source" ? "channel" : args.list === "page" ? "page" : ofChannel !== null ? "landingChannel" : "landing";
   const device = args.device;
   const kept: { every: Held | null } = { every: null };
+  // Each row with only the counted events, read a part at a time: all a list here reads of a row. Read whole as rows, a
+  // year's pages, or a channel's landing pages, ran this out of its 64MB on More Handles (2026-11-04).
+  const only = { events: new Set(counted.map((event) => event.eventName)) };
   // A channel's pages: each assistant's visits credited to AI assistants once, whichever channel Google filed them under (CH13).
-  const now = ofChannel !== null ? await landingByChannel(ctx, holdId, args.period, "NOW", args.country ?? "", args.device) : await readFor(ctx, holdId, base, args.period, "NOW", device, kept, args.country);
+  const channelPages = async (which: "NOW" | "BEFORE") => (ofChannel !== null ? await channelLanding(ctx, holdId, args.period, which, args.country ?? "", args.device, ofChannel, only.events) : null);
+  const channelNow = await channelPages("NOW");
+  const now = ofChannel !== null ? (channelNow ? { ...channelNow.notes, rows: channelNow.rows } : null) : await readFor(ctx, holdId, base, args.period, "NOW", device, kept, args.country, only);
   if (now === "LIVE") return { ...EMPTY, live: true, preparing: false, counting };
   if (!now) return { ...EMPTY, live: false, preparing: true, counting };
-  const before = ofChannel !== null ? await landingByChannel(ctx, holdId, args.period, "BEFORE", args.country ?? "", args.device) : await readFor(ctx, holdId, base, args.period, "BEFORE", device, undefined, args.country);
+  const channelBefore = await channelPages("BEFORE");
+  const before = ofChannel !== null ? (channelBefore ? { ...channelBefore.notes, rows: channelBefore.rows } : null) : await readFor(ctx, holdId, base, args.period, "BEFORE", device, undefined, args.country, only);
   const beforeRows = before && before !== "LIVE" ? before.rows : null;
-  const site = figuresOf(now.rows, counted);
+  // The whole website's, from every row read: a channel's pages are only some of them.
+  const site = channelNow ? channelNow.site : figuresOf(now.rows, counted);
 
   let rows: ListRow[] = now.rows;
   let earlier: ListRow[] | null = beforeRows;
@@ -304,9 +324,6 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     // Google's "(not set)" and a blank are one Unknown row (ga-conversions-visitors-plan.md CV7, phase 0).
     rows = grouped(rows, (row) => visitorGroupOf(row.key));
     earlier = earlier ? grouped(earlier, (row) => visitorGroupOf(row.key)) : null;
-  } else if (ofChannel !== null) {
-    rows = landingOf(rows, ofChannel);
-    earlier = earlier ? landingOf(earlier, ofChannel) : null;
   } else if (args.list === "source") {
     const channel = args.channel ?? "";
     const filedAs = (row: ListRow) => args.filed === undefined || splitChannelKey(row.key).channel === args.filed;
@@ -327,13 +344,29 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   const kinds = pageList ? await readPageKinds(ctx, holdId) : null;
   // A channel's pages are grouped as its chart groups them (CH5): Hakken's page types while the website has no classifications.
   const classes = ofChannel !== null ? await classifierFor(ctx, holdId) : kinds;
-  const needAll = pageList && (Boolean(args.q?.trim()) || args.list === "groups" || args.group !== undefined || args.sort === "name");
+  const shopSplit = args.list === "page" && (args.leaveOut === true || args.group === SHOP_PAGES_KIND);
+  const needAll = pageList && (Boolean(args.q?.trim()) || args.list === "groups" || args.group !== undefined || args.sort === "name" || shopSplit);
   const addresses = new Map<string, string>();
   const members = new Map<string, number>();
   if (needAll) {
     const keys = [...new Set([...rows, ...(earlier ?? [])].map((row) => row.key))];
     const named = await decodePages(ctx, holdId, keys);
     keys.forEach((key, index) => addresses.set(key, named[index]));
+  }
+  // The shop's own search, basket and account pages: left out, or the only ones asked for. Added up either way.
+  let shop: ListAnswer["shop"] = null;
+  if (shopSplit) {
+    const isShop = (row: ListRow) => isShopPage(addresses.get(row.key) ?? row.key);
+    const shopNow = rows.filter(isShop);
+    const shopBefore = (earlier ?? []).filter(isShop);
+    shop = {
+      pages: new Set([...shopNow, ...shopBefore].map((row) => row.key)).size,
+      views: shopNow.reduce((sum, row) => sum + row.views, 0),
+      viewsBefore: earlier ? shopBefore.reduce((sum, row) => sum + row.views, 0) : null,
+    };
+    const wanted = args.group === SHOP_PAGES_KIND;
+    rows = rows.filter((row) => isShop(row) === wanted);
+    earlier = earlier ? earlier.filter((row) => isShop(row) === wanted) : null;
   }
   // Landing pages' funnel (landing-pages-flow-plan.md LF4): each landing page's visits that went on and the page most
   // opened next, as the collection kept them; added up into page groups below.
@@ -345,7 +378,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   if (pageList && classes && (args.list === "groups" || args.group !== undefined)) {
     const kindOf = (row: ListRow) => classes.kindOf(addresses.get(row.key) ?? row.key);
     if (args.list === "groups" && onward) groupOnward = onwardByGroup(rows, onward, kindOf);
-    if (args.group !== undefined) {
+    if (args.group !== undefined && args.group !== SHOP_PAGES_KIND) {
       rows = rows.filter((row) => kindOf(row) === args.group);
       earlier = earlier ? earlier.filter((row) => kindOf(row) === args.group) : null;
     }
@@ -380,8 +413,13 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     const byKey = groupOnward ?? onward;
     for (const row of out) withOnward(row, byKey.get(row.key), true);
   }
-  if (args.list === "page" && args.quiet && !args.eventName && args.group === undefined) {
-    const whole = await withQuietPages(ctx, holdId, out, earlier, counted, addresses);
+  if (args.list === "page" && args.quiet && !args.eventName) {
+    const keep = (address: string) => {
+      if (args.group === SHOP_PAGES_KIND) return isShopPage(address);
+      if (args.leaveOut && isShopPage(address)) return false;
+      return args.group === undefined || !classes || classes.kindOf(address) === args.group;
+    };
+    const whole = await withQuietPages(ctx, holdId, out, earlier, counted, addresses, keep);
     out = whole.rows;
     moves = whole.moves;
   }
@@ -395,6 +433,8 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     if (args.group !== undefined) out = out.filter((row) => row.landsMost?.kind === args.group);
   }
   const every = out;
+  const bands = moves ? pageBandsOf(every, busyVisitsFor(now.from, now.to)) : null;
+  const concentration = moves ? viewsConcentration(every) : null;
   if (moves && args.move && args.move !== "all") out = out.filter((row) => moveOf(row.views, row.viewsBefore) === args.move);
   // One device's landing pages are weighed against every device's, read on the way (GA20).
   const everyDevice = args.list === "landing" && args.group === undefined && args.device !== "" && kept.every
@@ -421,61 +461,29 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     counting,
     untagged,
     moves,
+    bands,
+    concentration,
+    shop,
+    spanBefore: before && before !== "LIVE" ? { from: before.from ?? null, to: before.to ?? null } : null,
     ...(pages ? { pages } : {}),
   };
 }
 
-/** A landing page's or group's visits that went on, and the page most opened next, as the collection kept them (LF4). */
-function withOnward(row: ShownRow, own: Onward | undefined, kept: boolean): ShownRow {
-  if (!kept) return row;
-  row.onward = own ? Math.min(row.visits, own.on) : 0;
-  row.next = own && own.next && own.on > 0 ? { key: own.next, page: own.next, share: Math.min(1, own.nextVisits / own.on) } : null;
-  return row;
-}
-
-/** The page addresses of the rows a screen shows, and their titles (GA27), read only for them. */
-export async function nameRows(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownRow[]): Promise<ShownRow[]> {
+/** The page addresses of the rows given, read only for them. */
+async function addressRows(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownRow[]): Promise<ShownRow[]> {
   const refs = [...new Set(rows.flatMap((row) => [row.label, ...(row.next ? [row.next.page] : [])]).filter(isPageRef))];
   const named = refs.length > 0 ? await decodePages(ctx, holdId, refs) : [];
   const byRef = new Map(refs.map((ref, index) => [ref, named[index]]));
-  const labelled = rows.map((row) => ({
+  return rows.map((row) => ({
     ...row,
     ...(byRef.has(row.label) ? { label: byRef.get(row.label)! } : {}),
     ...(row.next && byRef.has(row.next.page) ? { next: { ...row.next, page: byRef.get(row.next.page)! } } : {}),
   }));
-  return await withTitles(ctx, holdId, labelled, (row) => row.label);
 }
 
-/** A landing page's onward figures as kept (`landingOnward`): the visits that went on, the page most opened next and its visits. */
-type Onward = { on: number; next: string; nextVisits: number };
-
-/** Each landing page's onward figures for the dates, device and country; null until a collection has kept them. */
-async function onwardOf(ctx: Reader, holdId: Id<"companyWebsites">, period: AnalyticsPeriod, device: string, country: string): Promise<Map<string, Onward> | null> {
-  const kept = await readSlot(ctx, holdId, slotKey("landingOnward", period, "NOW", device, country));
-  if (!kept) return null;
-  const byPage = new Map<string, Onward>();
-  for (const row of kept.rows) {
-    const { channel: page, source: next } = splitChannelKey(row.key);
-    byPage.set(page, { on: row.visits, next, nextVisits: row.times ?? 0 });
-  }
-  return byPage;
-}
-
-/** A page group's onward figures: its pages' visits that went on added up, and the page most of them opened next. */
-function onwardByGroup(rows: readonly ListRow[], onward: ReadonlyMap<string, Onward>, kindOf: (row: ListRow) => string): Map<string, Onward> {
-  const groups = new Map<string, { on: number; nexts: Map<string, number> }>();
-  for (const row of rows) {
-    const own = onward.get(row.key);
-    if (!own) continue;
-    const group = groups.get(kindOf(row)) ?? { on: 0, nexts: new Map() };
-    group.on += own.on;
-    if (own.next) group.nexts.set(own.next, (group.nexts.get(own.next) ?? 0) + own.nextVisits);
-    groups.set(kindOf(row), group);
-  }
-  return new Map([...groups.entries()].map(([group, held]) => {
-    const top = [...held.nexts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0];
-    return [group, { on: held.on, next: top?.[0] ?? "", nextVisits: top?.[1] ?? 0 }];
-  }));
+/** The page addresses of the rows a screen shows, and their titles (GA27), read only for them. */
+export async function nameRows(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownRow[]): Promise<ShownRow[]> {
+  return await withTitles(ctx, holdId, await addressRows(ctx, holdId, rows), (row) => row.label);
 }
 
 /** A channel's landing pages each with its page group (CH7), read only for the rows shown. */
@@ -502,8 +510,11 @@ export async function namedSeen(ctx: Reader, holdId: Id<"companyWebsites">, box:
   return { says: box.says.map(rename), steps: box.steps.map(rename) };
 }
 
-/** A channel's figures above its list (§15, screen 5): its sources added up, and the whole website's engagement. */
-function channelFigures(list: ListAnswer): ChannelFigures | null {
+/**
+ * A channel's figures above its list (§15, screen 5): its sources added up, and the whole website's engagement. Its
+ * value is Ask Hakken's alone (`assistantAnalyticsReads.ts`): the box never weighs money (Anthony, 2026-11-03).
+ */
+function channelFigures(list: ListAnswer): (ChannelFigures & { value: number; valueBefore: number | null }) | null {
   if (!list.totals || !list.site) return null;
   const { now, before } = list.totals;
   return {
@@ -590,9 +601,28 @@ export const analyticsListPage = tenantQuery({
     untagged: v.union(v.number(), v.null()),
     /** All pages: how many pages each filter holds (all-pages-rethink-plan.md AP5); null on any other list. */
     moves: v.union(v.null(), moveCountsValidator),
+    /** All pages: its busy and quiet pages, and how few pages make half its views. */
+    bands: v.union(v.null(), v.object({ busyVisits: v.number(), busy: v.number(), busyFewer: v.number(), quiet: v.number(), quietMore: v.number() })),
+    concentration: v.union(v.null(), v.object({ pagesForHalf: v.union(v.number(), v.null()), pagesForHalfBefore: v.union(v.number(), v.null()), noViews: v.number(), noViewsBefore: v.union(v.number(), v.null()) })),
+    /** All pages: the shop's search, basket and account pages added up, when they were left out or asked for. */
+    shop: v.union(v.null(), v.object({ pages: v.number(), views: v.number(), viewsBefore: v.union(v.number(), v.null()) })),
+    /** All pages: the dates the figures are set against, so the page can name them ("September"). */
+    spanBefore: v.union(v.null(), v.object({ from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()) })),
+    /** One classification's pages added up, with those that went quiet in its figures before; null for a whole list. */
+    groupTotals: v.union(v.null(), v.object({ views: v.number(), viewsBefore: v.union(v.number(), v.null()), conversions: v.number(), conversionsBefore: v.union(v.number(), v.null()) })),
   }),
   handler: async (ctx, args) => await readListPage(ctx, args),
 });
+
+/** A visitor list's rows, each with the classification it lands on most, from Visitors' grid (ga-conversions-visitors-plan.md CV7); any other list's as they are. */
+async function withVisitorLands(ctx: SiteReader, args: ObjectType<typeof listArgs>, list: ListAnswer, rows: ShownRow[]): Promise<ShownRow[]> {
+  if (!isVisitorList(args.list) || list.live || list.preparing) return rows;
+  const map = await readVisitorMap(ctx, { siteId: args.siteId, period: args.period, device: args.device, ...(args.country ? { country: args.country } : {}), list: args.list as VisitorList });
+  if (!map) return rows;
+  const kindNames = new Map(map.kinds.map((kind) => [kind.kind, kind.name]));
+  const lands = new Map(map.rows.flatMap((row) => (row.lands ? [[row.key, { ...row.lands, name: kindNames.get(row.lands.kind) ?? null }] as const] : [])));
+  return rows.map((row) => ({ ...row, landsMost: lands.get(row.key) ?? null }));
+}
 
 /** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
 export async function readListPage(ctx: SiteReader, args: ObjectType<typeof analyticsListPageArgs>) {
@@ -600,15 +630,8 @@ export async function readListPage(ctx: SiteReader, args: ObjectType<typeof anal
   const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page", extras: args.list === "channel" });
   const page = pageOfList(list.rows, args.page, args.rows);
   const named = await nameRows(ctx, site.hold._id, page.rows);
-  // Each visitor group's classification most landed on, from Visitors' grid (ga-conversions-visitors-plan.md CV7).
-  const map = isVisitorList(args.list) && !list.live && !list.preparing
-    ? await readVisitorMap(ctx, { siteId: args.siteId, period: args.period, device: args.device, ...(args.country ? { country: args.country } : {}), list: args.list as VisitorList })
-    : null;
-  const kindNames = new Map((map?.kinds ?? []).map((kind) => [kind.kind, kind.name]));
-  const lands = new Map((map?.rows ?? []).flatMap((row) => (row.lands ? [[row.key, { ...row.lands, name: kindNames.get(row.lands.kind) ?? null }] as const] : [])));
   return {
-    rows: args.list === "landing" && args.channel !== undefined ? await withKinds(ctx, site.hold._id, named)
-      : map ? named.map((row) => ({ ...row, landsMost: lands.get(row.key) ?? null })) : named,
+    rows: args.list === "landing" && args.channel !== undefined ? await withKinds(ctx, site.hold._id, named) : await withVisitorLands(ctx, args, list, named),
     total: page.total,
     page: page.page,
     pages: page.pages,
@@ -626,17 +649,36 @@ export async function readListPage(ctx: SiteReader, args: ObjectType<typeof anal
     figures: args.list === "source" && !list.live && !list.preparing ? channelFigures(list) : null,
     untagged: list.untagged,
     moves: list.moves?.counts ?? null,
+    bands: list.bands,
+    concentration: list.concentration,
+    shop: list.shop,
+    spanBefore: list.spanBefore,
+    groupTotals: args.group !== undefined && list.totals
+      ? { views: list.totals.now.views, viewsBefore: list.totals.before?.views ?? null, conversions: list.totals.now.conversions, conversionsBefore: list.totals.before?.conversions ?? null }
+      : null,
   };
 }
 
-/** Every row of a list, named, in the order on screen: its download. */
+/**
+ * The rows one read of a download answers: inside the 8,192 an answer may hold to a list, and few enough to name and
+ * send in what is left of a query's second once the whole list is read. More Handles' All pages is 13,803 to 21,934
+ * rows: one answer holding all of them, with a read for each page's title, stopped at a query's limits (2026-11-04).
+ */
+export const DOWNLOAD_PART = 4_000;
+
+/**
+ * One part of a list's download, in the order on screen, and how many rows the whole list holds: the browser asks for
+ * each part in turn (`readListInParts`). Each row is named by its address, and not given its title: no file holds one.
+ */
 export const analyticsListAll = tenantQuery({
-args: listArgs,
-returns: v.object({ rows: v.array(shownRowValidator), live: v.boolean() }),
-handler: async (ctx, args) => {
+args: { ...listArgs, part: v.number() },
+returns: v.object({ rows: v.array(shownRowValidator), total: v.number(), live: v.boolean() }),
+handler: async (ctx, { part, ...args }) => {
   const site = await requireMySite(ctx, args.siteId);
   const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page", extras: args.list === "channel" });
-  return { rows: await nameRows(ctx, site.hold._id, list.rows), live: list.live };
+  const start = Math.max(0, Math.floor(part)) * DOWNLOAD_PART;
+  const rows = await addressRows(ctx, site.hold._id, list.rows.slice(start, start + DOWNLOAD_PART));
+  return { rows: await withVisitorLands(ctx, args, list, rows), total: list.rows.length, live: list.live };
 },
 });
 
@@ -800,8 +842,8 @@ export const readOverview = seeing(async (ctx: SiteReader, args: { siteId: Id<"c
 
 /**
  * Conversions' table (§5): each kind of conversion the company counts — how
- * many, the value of each and where it is set, the value, and the change on
- * the span before; for a shop, purchases, revenue and the average order (GA7).
+ * many, and the change on the span before; for a shop, its purchases (GA7).
+ * Each kind's value is kept for Ask Hakken alone.
  */
 export const analyticsConversions = tenantQuery({
   args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
@@ -815,13 +857,10 @@ export const analyticsConversions = tenantQuery({
       eventName: v.string(),
       count: v.number(),
       countBefore: v.union(v.number(), v.null()),
-      /** Each one's value, in hundredths, and where it is set; null with none. */
-      each: v.union(v.number(), v.null()),
-      setIn: v.union(v.literal("ANALYTICS"), v.literal("HAKKEN"), v.literal("REVENUE"), v.null()),
+      /** In hundredths; null with none. Ask Hakken's alone: no screen shows it (Anthony, 2026-11-03: "Take money off"). */
       value: v.union(v.number(), v.null()),
-      valueBefore: v.union(v.number(), v.null()),
     })),
-    shop: v.union(v.null(), v.object({ purchases: v.number(), revenue: v.number(), purchasesBefore: v.union(v.number(), v.null()), revenueBefore: v.union(v.number(), v.null()) })),
+    shop: v.union(v.null(), v.object({ purchases: v.number(), purchasesBefore: v.union(v.number(), v.null()) })),
     /** The property's key events not counted that happened in these dates, most first: what Nothing counted yet offers to tick. */
     fired: v.array(v.object({ eventName: v.string(), count: v.number() })),
     /** How visits reached a conversion, by page classification (ga-conversions-visitors-plan.md CV3); null before landing pages by channel are kept. */
@@ -845,7 +884,7 @@ export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id
     to: null,
     visits: 0,
     visitsBefore: null,
-    kinds: [] as Array<{ eventName: string; count: number; countBefore: number | null; each: number | null; setIn: "ANALYTICS" | "HAKKEN" | "REVENUE" | null; value: number | null; valueBefore: number | null }>,
+    kinds: [] as Array<{ eventName: string; count: number; countBefore: number | null; value: number | null }>,
     shop: null,
     fired: [] as Array<{ eventName: string; count: number }>,
     flow: null as ConversionFlow | null,
@@ -859,12 +898,10 @@ export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id
   for (const row of now.rows) addInto(total, row);
   const was = before ? blank("") : null;
   if (was && before) for (const row of before.rows) addInto(was, row);
-  const valueIn = (row: ListRow, event: Counted) => conversionsOf(row, [event]).value;
+  // Each kind's value is Ask Hakken's alone (`assistantAnalyticsReads.ts`): the screens show no money (Anthony, 2026-11-03).
   const kinds = countedOf(connection).map((event) => {
     const count = total.counts.get(event.eventName) ?? 0;
-    const held = connection.events?.find((one) => one.eventName === event.eventName);
     const purchase = event.eventName === PURCHASE_EVENT;
-    const setIn = purchase ? "REVENUE" as const : event.fromAnalytics ? "ANALYTICS" as const : event.hakken !== null ? "HAKKEN" as const : null;
     const value = purchase ? total.revenue
       : event.fromAnalytics ? total.values.get(event.eventName) ?? 0
       : event.hakken !== null ? Math.round(count * event.hakken * 100) : null;
@@ -872,12 +909,7 @@ export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id
       eventName: event.eventName,
       count,
       countBefore: was ? was.counts.get(event.eventName) ?? 0 : null,
-      each: purchase ? (count > 0 ? Math.round(total.revenue / count) : null)
-        : event.fromAnalytics ? Math.round((held?.analyticsValue ?? 0) * 100)
-        : event.hakken !== null ? Math.round(event.hakken * 100) : null,
-      setIn,
       value,
-      valueBefore: was && setIn !== null ? valueIn(was, event) : null,
     };
   });
   const isShop = total.purchases > 0 || (connection.events ?? []).some((event) => event.eventName === PURCHASE_EVENT && event.counted);
@@ -894,7 +926,7 @@ export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id
     visits: total.visits,
     visitsBefore: was ? was.visits : null,
     kinds,
-    shop: isShop ? { purchases: total.purchases, revenue: total.revenue, purchasesBefore: was ? was.purchases : null, revenueBefore: was ? was.revenue : null } : null,
+    shop: isShop ? { purchases: total.purchases, purchasesBefore: was ? was.purchases : null } : null,
     fired,
     flow: await readConversionFlow(ctx, holdId, connection, args.period, args.device, country),
     before: await readBeforeConverting(ctx, holdId, connection),
@@ -919,17 +951,16 @@ export const analyticsSites = tenantQuery({
     status: v.union(analyticsStatusValidator, v.literal("NOT_CONNECTED")),
     visits: v.union(v.number(), v.null()),
     conversions: v.union(v.number(), v.null()),
-    value: v.union(v.number(), v.null()),
-    currency: v.union(v.string(), v.null()),
     lastCollectedAt: v.union(v.number(), v.null()),
     /**
      * For What Hakken sees (§14, screen 1): the 30 days before — one more
      * small ready-made total each — whether anything counts as a conversion,
      * and tracking health's checks failing of all, with the share of visits of
-     * unknown origin when that check fails.
+     * unknown origin when that check fails. Never money (Anthony, 2026-11-03:
+     * "Take money off").
      */
     visitsBefore: v.union(v.number(), v.null()),
-    valueBefore: v.union(v.number(), v.null()),
+    conversionsBefore: v.union(v.number(), v.null()),
     counting: v.boolean(),
     failing: v.number(),
     checks: v.number(),
@@ -948,7 +979,7 @@ export const analyticsSites = tenantQuery({
       const unknown = checks.find((check) => check.check === "TOO_MUCH_UNKNOWN" && !check.passing);
       return {
         visitsBefore: before?.visits ?? null,
-        valueBefore: before?.value ?? null,
+        conversionsBefore: before?.conversions ?? null,
         counting: connection ? countedOf(connection).length > 0 : false,
         failing: checks.filter((check) => !check.passing).length,
         checks: checks.length,
@@ -959,8 +990,6 @@ export const analyticsSites = tenantQuery({
         status: !connection || connection.status === "CONNECTING" ? ("NOT_CONNECTED" as const) : connection.status,
         visits: figures?.visits ?? null,
         conversions: figures?.conversions ?? null,
-        value: figures?.value ?? null,
-        currency: connection?.currency ?? null,
         lastCollectedAt: connection?.lastCollectedAt ?? null,
       };
     }));

@@ -727,7 +727,7 @@ function BarLineChart({ data, series, line, xKey, height, scale, google, formatV
  * just the powers when the values span more than three of them — and the
  * domain from the power below the smallest value to the one above the largest.
  */
-function logAxis(values: number[]): { ticks: number[]; domain: [number, number] } {
+function logAxis(values: readonly number[]): { ticks: number[]; domain: [number, number] } {
   const positive = values.filter((value) => value > 0);
   if (positive.length === 0) return { ticks: [1, 10], domain: [1, 10] };
   const low = 10 ** Math.floor(Math.log10(Math.min(...positive)));
@@ -738,6 +738,26 @@ function logAxis(values: number[]): { ticks: number[]; domain: [number, number] 
     for (const step of steps) if (decade * step <= high) ticks.push(decade * step);
   }
   return { ticks, domain: [low, high === low ? low * 10 : high] };
+}
+
+/**
+ * A logarithmic axis that stops close to the dots, for figures that sit within a narrow range: the marks of 1, 2 and 5 of
+ * each power of ten, from the one at or below the smallest value to the one at or above the largest. With 230 to 1,273
+ * that's 200 to 2,000, not 100 to 10,000 with every dot bunched in the middle (`scale="tight"`; Anthony, 2026-11-04).
+ */
+export function tightLogAxis(values: readonly number[]): { ticks: number[]; domain: [number, number] } {
+  const positive = values.filter((value) => value > 0);
+  if (positive.length === 0) return { ticks: [1, 10], domain: [1, 10] };
+  const smallest = Math.min(...positive);
+  const largest = Math.max(...positive);
+  const marks: number[] = [];
+  for (let power = Math.floor(Math.log10(smallest)); power <= Math.ceil(Math.log10(largest)); power += 1) {
+    for (const step of [1, 2, 5]) marks.push(step * 10 ** power);
+  }
+  const low = marks.filter((mark) => mark <= smallest).at(-1) ?? marks[0];
+  const high = marks.find((mark) => mark >= largest) ?? marks[marks.length - 1];
+  if (low === high) return { ticks: [low], domain: [low, marks.find((mark) => mark > low) ?? low * 10] };
+  return { ticks: marks.filter((mark) => mark >= low && mark <= high), domain: [low, high] };
 }
 
 /** A slice of a pie: its name, its figure and its colour. */
@@ -790,6 +810,8 @@ export type SiteScatterGroup = {
   colour: string;
   /** Write each point's name beside its dot, on the chart itself: the Overview's competitors. */
   labelled?: boolean;
+  /** Left out of the key, where its dots already say their names: `DotGroups`' named pages. */
+  inKey?: boolean;
   points: Array<{ x: number; y: number; label: string }>;
 };
 
@@ -907,6 +929,7 @@ export function SiteScatterChart({
   yLabel,
   readout,
   height = 340,
+  scale = "wide",
 }: {
   groups: SiteScatterGroup[];
   xLabel: string;
@@ -914,11 +937,14 @@ export function SiteScatterChart({
   /** Short names for the two numbers in the hover readout, where an axis's own name is too long to fit it. */
   readout?: { x: string; y: string };
   height?: number;
+  /** Where the scales stop: at the next power of ten, or close to the dots (`tightLogAxis`). */
+  scale?: "wide" | "tight";
 }) {
   const onChart = (point: { x: number; y: number }) => point.x > 0 && point.y > 0;
   const placed = groups.flatMap((group) => group.points).filter(onChart);
-  const xAxis = logAxis(placed.map((point) => point.x));
-  const yAxis = logAxis(placed.map((point) => point.y));
+  const axisOf = scale === "tight" ? tightLogAxis : logAxis;
+  const xAxis = axisOf(placed.map((point) => point.x));
+  const yAxis = axisOf(placed.map((point) => point.y));
   const named = groups.filter((group) => group.labelled).flatMap((group) => group.points).filter(onChart);
   const legend = groups.some((group) => !group.labelled);
   const shown = groups.map((group) => `${group.key}:${group.points.length}`).join("|");
@@ -955,6 +981,7 @@ export function SiteScatterChart({
               data={group.points.filter(onChart).map((point) => ({ ...point, name: point.label }))}
               fill={group.colour}
               isAnimationActive={false}
+              {...(group.inKey === false ? { legendType: "none" as const } : {})}
             />
           ))}
           {named.length > 0 ? <ScatterLabels points={named} /> : null}

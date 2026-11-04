@@ -16,7 +16,7 @@ import {
 } from "@/src/ui/components/charts/chartPalette";
 import { RecordLinkCell } from "../_components/SiteCells";
 import { Figure } from "@/src/ui/components/screens/Figure";
-import { formatDollars, formatNumber, movement } from "../_components/siteFormat";
+import { formatNumber, movement } from "../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../_components/useSite";
 
@@ -136,7 +136,9 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
             label={t("search.visits")}
             value={formatNumber(latest?.estimatedTraffic)}
             href={listHref("keywords/pages", { sort: "traffic" })}
-            detail={<Detail now={latest?.estimatedTraffic} before={before?.estimatedTraffic} extra={latest?.trafficValue !== undefined ? t("search.worth", { value: formatDollars(latest.trafficValue) }) : undefined} />}
+            // Never what the visits would be worth as adverts: a guess, not money anyone measured (decision 4 of
+            // ask-hakken-every-chart-page-plan-2026-11-03.md; Anthony, 2026-11-03: "Yes, all of it").
+            detail={<Detail now={latest?.estimatedTraffic} before={before?.estimatedTraffic} />}
           />
           <Figure
             framed={false}
@@ -149,8 +151,9 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
             framed={false}
             label={t("search.paidVisits")}
             value={formatNumber(latest?.paidTraffic)}
-            href={listHref("paid/keywords", { sort: "cost" })}
-            detail={<Detail now={latest?.paidTraffic} before={before?.paidTraffic} extra={t("search.cost", { value: latest?.paidTrafficCost ? formatDollars(latest.paidTrafficCost) : "–" })} />}
+            // The adverts by the visits they bring, never by the guessed spend ("Take it off", 2026-11-03).
+            href={listHref("paid/keywords", { sort: "traffic" })}
+            detail={<Detail now={latest?.paidTraffic} before={before?.paidTraffic} />}
           />
         </div>
       </Panel>

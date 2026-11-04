@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -24,6 +25,7 @@ import { ListDownload } from "../../_components/SiteDownloads";
 import { useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { SiteSees } from "../../_components/SiteSees";
+import { radarSeen } from "../../_components/siteSeesData";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { FigureCell } from "../local/_components/LocalParts";
@@ -87,6 +89,10 @@ export default function BrandRadarPage() {
       ...Object.fromEntries((data?.businesses ?? []).map((row) => [row.websiteId, sum > 0 && row.series[at] !== null ? Math.round(((row.series[at] ?? 0) / sum) * 100) : null])),
     };
   });
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): each business's mentions against the
+  // month before, its pages cited and its line of the chart; the questions naming rivals and not you, of all of them.
+  const te = useTranslations("sites.radar.eye");
+  const seen = useMemo(() => (data ? radarSeen(data, { rivalsNotYou: te("rivalsNotYou") }) : undefined), [data, te]);
   const fileBase = `${site?.host ?? "site"}-brand-radar`;
   const nameOf = (row: { host: string; you: boolean }) => (row.you ? t("you", { name: row.host }) : row.host);
   // A business opens One business, yours its Business profile; a question opens One question (discovery-detail-and-hakken-sees-plan.md §4).
@@ -101,7 +107,7 @@ export default function BrandRadarPage() {
         description={t("description")}
         action={site ? <TagLabel>{t("where", { place: site.placeLabel })}</TagLabel> : undefined}
       />
-      <SiteSees screen="radarOverview" seen={data?.seen} data={data} />
+      <SiteSees screen="radarOverview" seen={data?.seen} data={seen} />
 
       {data ? (
         <FigureRow>

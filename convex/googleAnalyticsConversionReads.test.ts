@@ -112,8 +112,9 @@ describe("Conversions and Visitors' pictures", () => {
 
     // What Hakken sees: where the conversions came from, and the form not counted.
     expect(answer.seen.says.map((phrase) => phrase.code)).toEqual(["topKind", "cameMost", "uncounted"]);
-    // The step order: decide on the form, try the kind never seen, value the call clicks.
-    expect(answer.seen.steps.map((step) => step.code)).toEqual(["countUncounted", "trySilent", "setValue"]);
+    // The step order: decide on the form, try the kind never seen; never what a conversion is worth (Anthony, 2026-11-03: "Take money off").
+    expect(answer.seen.steps.map((step) => step.code)).toEqual(["countUncounted", "trySilent"]);
+    expect(flow.routes.every((one) => !("revenue" in one)) && flow.endings.every((one) => !("revenue" in one))).toBe(true);
   });
 
   test("where each kind of visitor lands, and one Unknown in Visitors' table", async () => {
@@ -130,7 +131,39 @@ describe("Conversions and Visitors' pictures", () => {
     // The table reads the same one Unknown.
     const table = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, ...args, list: "visitorType", page: 1, rows: 25 });
     expect(table.rows.map((row) => [row.key, row.visits])).toEqual([["new", 570], ["(not set)", 60]]);
+    // Its download says where each group lands, as the table does.
+    expect(table.rows[0].landsMost).toMatchObject({ kind: NOT_SORTED_KIND });
+    const download = await user.query(api.googleAnalyticsReads.analyticsListAll, { siteId, ...args, list: "visitorType", part: 0 });
+    expect(download.rows.map((row) => row.landsMost)).toEqual(table.rows.map((row) => row.landsMost));
     // Another company's website is never read.
     await expect(rival.query(api.googleAnalyticsConversionReads.analyticsVisitorMap, { siteId, ...args, list: "visitorType" })).rejects.toThrow();
+  });
+
+  // Visits' treemap (visits-redo-plan-2026-11-03.md; Anthony: "this is pages visited by type no where they start").
+  test("what people looked at: every page's views added up by the website's page groups, never asked of Google", async () => {
+    const t = harness();
+    const { siteId, user, google } = await collectedWebsite(t, visits(), encryptConnectorToken);
+    const asked = google.calls.length;
+    const read = async () => (await user.query(api.googleAnalyticsPageKindViews.analyticsPageKindViews, { siteId, ...args }))!;
+    // No page groups yet: nothing to add the views up by.
+    const unsorted = await read();
+    expect(unsorted).toMatchObject({ waiting: false, sorted: false });
+    await t.run(async (ctx) => {
+      const id = await ctx.db.insert("pageClassifications", { companyWebsiteId: siteId, name: "Services", type: "SERVICE", createdAt: 1, updatedAt: 1 });
+      await ctx.db.insert("pageClassificationLines", { companyWebsiteId: siteId, classificationId: id, kind: "STARTS_WITH", value: "/services/", createdAt: 1 });
+    });
+    const looked = await read();
+    expect(looked.sorted).toBe(true);
+    // The service page's six views a day through September; every other page Not sorted.
+    const services = looked.kinds.find((kind) => kind.name === "Services")!;
+    expect(services).toMatchObject({ views: 6 * 30, pages: 1 });
+    const rest = looked.kinds.find((kind) => kind.kind === NOT_SORTED_KIND)!;
+    expect(rest.name).toBeNull();
+    expect(services.views + rest.views + looked.unplaced).toBe(looked.views);
+    expect(looked.kinds.map((kind) => kind.views)).toEqual([...looked.kinds.map((kind) => kind.views)].sort((a, b) => b - a));
+    expect(google.calls.length).toBe(asked);
+    // Another company's website is never read.
+    const rival = t.withIdentity({ subject: "rival|session" });
+    await expect(rival.query(api.googleAnalyticsPageKindViews.analyticsPageKindViews, { siteId, ...args })).rejects.toThrow();
   });
 });

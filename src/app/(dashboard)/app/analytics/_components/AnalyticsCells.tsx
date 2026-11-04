@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Change } from "@/src/ui/components/screens/Change";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatNumber } from "../../sites/_components/siteFormat";
-import { formatMoney, formatPercent, pathOf } from "./analyticsFormat";
+import { formatPercent, pathOf } from "./analyticsFormat";
 import { MOVE_VIEWS } from "@/convex/utils/pageMoves";
 
 /**
@@ -23,11 +23,6 @@ export function FigureCell({ value, quiet = false }: { value: number | null; qui
 export function TextFigure({ text, quiet = true }: { text: string; quiet?: boolean }) {
   if (text === "–") return <NoFigure />;
   return <span className={`font-mono text-[12px] ${quiet ? "text-secondary" : "text-foreground"}`}>{text}</span>;
-}
-
-export function MoneyCell({ value, currency }: { value: number | null; currency: string | null }) {
-  if (!value) return <NoFigure />;
-  return <span className="font-mono text-[12px] text-secondary">{formatMoney(value, currency)}</span>;
 }
 
 /**
@@ -94,12 +89,29 @@ export function NextPageCell({ next }: { next: { page: string; share: number } |
   );
 }
 
-/** The conversions made on a page, with their value beside them ("4 · £80"; All pages, §15): a page with none is quiet. */
-export function ConversionsHereCell({ conversions, value, currency }: { conversions: number; value: number; currency: string | null }) {
+/**
+ * A rate as "per 100 visits": whole from 10 up, to one decimal under it. It counts times, not visits, so a page people
+ * pass through more than once a visit can go over 100 ("302 per 100 visits"), which still makes sense said this way.
+ */
+export function formatPer100(rate: number): string {
+  const per100 = rate * 100;
+  return per100 >= 10 ? formatNumber(Math.round(per100)) : per100.toFixed(1);
+}
+
+/**
+ * The conversions made on a page (All pages), never their money: the count, with the rate under it, greyed from fewer
+ * than 100 visits with the reason on hover. A page with none is quiet and says nothing under it.
+ */
+export function ConversionsHereCell({ conversions, rate, fewVisits }: { conversions: number; rate: number | null; fewVisits: boolean }) {
+  const t = useTranslations("googleAnalytics.table");
   return (
-    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+    <span className="flex flex-col items-end leading-tight">
       <span className={`font-mono text-[12px] ${conversions > 0 ? "text-foreground" : "text-muted"}`}>{formatNumber(conversions)}</span>
-      {value > 0 ? <span className="font-mono text-[12px] text-secondary">· {formatMoney(value, currency)}</span> : null}
+      {conversions > 0 && rate !== null ? (
+        <span className={`whitespace-nowrap text-[11.5px] ${fewVisits ? "text-muted" : "text-secondary"}`} title={fewVisits ? t("fewVisits") : undefined}>
+          {t.rich("per100Visits", { rate: formatPer100(rate), figure: (chunks) => <span className="font-mono">{chunks}</span> })}
+        </span>
+      ) : null}
     </span>
   );
 }

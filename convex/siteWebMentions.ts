@@ -4,7 +4,7 @@ import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { groupOwner, requireMySite } from "./siteAccess";
+import { groupOwner, requireMySite, type SiteReader } from "./siteAccess";
 import { readFanOutLimits } from "./fanOutLimits";
 import { holdBrandNames } from "./holdProfiles";
 import { radarRivals } from "./brandRadar";
@@ -94,19 +94,22 @@ export const webMentions = tenantQuery({
     rows: v.array(mentionRowValidator),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const hold = groupOwner(site);
-    const own = hold ? await ctx.db.get(hold.websiteId) : null;
-    if (!hold || !own) return { names: [], rows: [] };
-    const names = await holdBrandNames(ctx, hold._id);
-    const primary = (names.find((name) => name.isPrimary) ?? names[0])?.name;
-    return {
-      names: [...(primary ? [primary] : []), own.host],
-      rows: (await mentionsOf(ctx, own)).map(({ about: _about, ...row }) => row),
-    };
-  }, (result, args) => webMentionsSees(result, mentionSpans(args.period).span, args.period)),
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod }) => await readWebMentions(ctx, args), (result, args) => webMentionsSees(result, mentionSpans(args.period).span, args.period)),
 });
+
+/** webMentions's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readWebMentions(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const hold = groupOwner(site);
+  const own = hold ? await ctx.db.get(hold.websiteId) : null;
+  if (!hold || !own) return { names: [], rows: [] };
+  const names = await holdBrandNames(ctx, hold._id);
+  const primary = (names.find((name) => name.isPrimary) ?? names[0])?.name;
+  return {
+    names: [...(primary ? [primary] : []), own.host],
+    rows: (await mentionsOf(ctx, own)).map(({ about: _about, ...row }) => row),
+  };
+}
 
 export const mentionsAgainstRivals = tenantQuery({
   args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator, step: stepValidator },
@@ -126,28 +129,31 @@ export const mentionsAgainstRivals = tenantQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod; step: ChartStep }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { span, before } = mentionSpans(args.period);
-    const steps = stepsOf(span, args.step);
-    const businesses = [];
-    for (const { website, you } of await watched(ctx, site)) {
-      const rows = await mentionsOf(ctx, website);
-      const last = rows.filter((row) => inSpan(row.day, span));
-      businesses.push({
-        host: website.displayHost,
-        you,
-        mentions: last.length,
-        before: rows.filter((row) => inSpan(row.day, before)).length,
-        well: last.filter((row) => row.tone === 1).length,
-        badly: last.filter((row) => row.tone === 2).length,
-        noLink: last.filter((row) => row.linked === 0).length,
-        series: steps.map((one) => rows.filter((row) => inSpan(row.day, one)).length),
-      });
-    }
-    return { period: args.period, steps: steps.map((one) => one.key), businesses };
-  }, mentionsRivalsSees),
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod; step: ChartStep }) => await readMentionsAgainstRivals(ctx, args), mentionsRivalsSees),
 });
+
+/** mentionsAgainstRivals's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readMentionsAgainstRivals(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod; step: ChartStep }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { span, before } = mentionSpans(args.period);
+  const steps = stepsOf(span, args.step);
+  const businesses = [];
+  for (const { website, you } of await watched(ctx, site)) {
+    const rows = await mentionsOf(ctx, website);
+    const last = rows.filter((row) => inSpan(row.day, span));
+    businesses.push({
+      host: website.displayHost,
+      you,
+      mentions: last.length,
+      before: rows.filter((row) => inSpan(row.day, before)).length,
+      well: last.filter((row) => row.tone === 1).length,
+      badly: last.filter((row) => row.tone === 2).length,
+      noLink: last.filter((row) => row.linked === 0).length,
+      series: steps.map((one) => rows.filter((row) => inSpan(row.day, one)).length),
+    });
+  }
+  return { period: args.period, steps: steps.map((one) => one.key), businesses };
+}
 
 const placeKindValidator = v.union(v.literal("DIRECTORY"), v.literal("REVIEWS"), v.literal("NEWS"), v.literal("FORUM"), v.literal("VIDEO"), v.literal("REFERENCE"), v.literal("WEBSITE"));
 

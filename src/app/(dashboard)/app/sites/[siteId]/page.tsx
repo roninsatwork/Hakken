@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { LayoutDashboard } from "lucide-react";
@@ -18,16 +18,23 @@ import { ukDay } from "@/convex/utils/calendarPeriods";
 import { useSite, useSiteId } from "../_components/useSite";
 import { overviewSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../_components/SiteSees";
+import { overviewSeen } from "../_components/siteSeesData";
+import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { SiteViewSwitch } from "../_components/SiteViewSwitch";
 import { newestOfEach } from "./newestOfEach";
 import { OverviewPanels } from "./OverviewPanels";
 import { OverviewSections } from "./OverviewSections";
 
-type Measure = "estimatedTraffic" | "trafficValue" | "keywords" | "pages" | "referringDomains" | "backlinks" | "domainRank" | "aiNamed" | "crawledPages";
+type Measure = "estimatedTraffic" | "keywords" | "pages" | "referringDomains" | "backlinks" | "domainRank" | "aiNamed" | "crawledPages";
 type Tab = "metrics" | "competitors" | "years";
 type Point = NonNullable<ReturnType<typeof useSeries>>[number]["points"][number];
 
-const MEASURES: Measure[] = ["estimatedTraffic", "trafficValue", "keywords", "pages", "referringDomains", "backlinks", "domainRank", "aiNamed", "crawledPages"];
+/**
+ * Never what the Google visits would be worth as adverts (`trafficValue`): our data supplier's guess, not money anyone
+ * measured (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 4; Anthony, 2026-11-03: "Yes, all of it"). It
+ * stays stored; only drawing it went.
+ */
+const MEASURES: Measure[] = ["estimatedTraffic", "keywords", "pages", "referringDomains", "backlinks", "domainRank", "aiNamed", "crawledPages"];
 
 const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
 
@@ -82,7 +89,6 @@ export default function SiteOverviewPage() {
   const [tab, setTab] = useState<Tab>("metrics");
   const [shown, setShown] = useState<Record<Measure, boolean>>({
     estimatedTraffic: true,
-    trafficValue: false,
     keywords: true,
     pages: false,
     referringDomains: false,
@@ -106,6 +112,13 @@ export default function SiteOverviewPage() {
   const competitorsHint = everyone !== undefined && (site?.rivals.length ?? 0) > drawn
     ? t("competitorsHintSome", { shown: drawn, total: site?.rivals.length ?? 0 })
     : t("competitorsHint");
+
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the panels' figures at the newest
+  // check against the check before the dates, the assistants' answers naming the website, and the website beside its
+  // rivals as the top competitors chart draws them. Never what visits would be worth or what adverts cost (decision 4).
+  const te = useTranslations("sites.overview.eye");
+  const engineLabel = useEngineLabel();
+  const seen = useMemo(() => overviewSeen(own?.[0], extras, engineLabel, { middle: te("middle"), shared: te("shared") }), [own, extras, engineLabel, te]);
 
   if (own === undefined) {
     return (
@@ -224,7 +237,7 @@ export default function SiteOverviewPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<LayoutDashboard className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="overview" seen={overviewSees(line)} data={{ line, extras }} />
+      <SiteSees screen="overview" seen={overviewSees(line)} data={seen} />
 
       <OverviewPanels latest={latest} before={before} extras={extras} />
 

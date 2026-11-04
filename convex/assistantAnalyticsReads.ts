@@ -9,14 +9,18 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { readConversions, readListPage, readOverview, type ShownRow } from "./googleAnalyticsReads";
 import { readOverviewPagePanels, readOverviewPanels, type OverviewPanels } from "./googleAnalyticsOverviewReads";
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
-import { readVisitors } from "./googleAnalyticsVisitorReads";
+import { readVisitorBars, readVisitors } from "./googleAnalyticsVisitorReads";
+import { readPageKindViews } from "./googleAnalyticsPageKindViews";
 import { productChart, readProducts, shownProductList } from "./googleAnalyticsProductReads";
 import { findPage, readLandingPage, readPageMain, readPageStoryPart } from "./googleAnalyticsPageReads";
 import { readPageBoxes } from "./googleAnalyticsPageBoxes";
 import { LIVE_LISTS, askLiveFigures } from "./googleAnalyticsRealtime";
 import { pathOfAddress } from "./utils/sees/analytics";
-import { MOVE_VIEWS } from "./utils/pageMoves";
-import { ANALYTICS_PARTS, ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
+import { MOVE_VIEWS, PAGE_MOVES } from "./utils/pageMoves";
+import { readPageKinds } from "./pageKinds";
+import { SHOP_PAGES_KIND } from "./utils/shopPages";
+import { ALL_PAGES_ORDERS, ALL_PAGES_ORDER_NAMES, ANALYTICS_PARTS, ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
+import { viewsCountedDifferently } from "./utils/viewsCounted";
 import { readChannelTop, readChannelsTop } from "./googleAnalyticsChannelReads";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { leftWithout } from "./utils/sees/analyticsProducts";
@@ -66,9 +70,10 @@ function overviewPanelParts(panels: Omit<OverviewPanels, "kinds" | "landing">) {
     })),
     whoVisited: panels.who.map((row) => ({ kind: row.kind, biggestGroup: row.label, sharePercent: percent(row.share), sharePercentBefore: percent(row.shareBefore) })),
     ...(panels.shop ? {
+      // Items, never the shop's money (Anthony, 2026-11-03: "Take money off").
       shop: {
-        bought: panels.shop.bought, revenue: money(panels.shop.revenue), addedToBasket: panels.shop.basket,
-        bestSellers: panels.shop.rows.map((row) => ({ product: row.name, viewed: row.looks, addedToBasket: row.basket, bought: row.bought, revenue: money(row.revenue) })),
+        bought: panels.shop.bought, addedToBasket: panels.shop.basket,
+        bestSellers: panels.shop.rows.map((row) => ({ product: row.name, viewed: row.looks, addedToBasket: row.basket, bought: row.bought })),
       },
     } : {}),
   };
@@ -99,11 +104,40 @@ function pageRowOf(row: ShownRow) {
     visits: row.visits,
     pageViews: row.views,
     pageViewsBefore: row.viewsBefore,
+    pageViewsChange: row.viewsBefore === null ? null : row.views - row.viewsBefore,
     secondsEngagedPerVisit: row.timePerVisit === null ? null : Math.round(row.timePerVisit),
     conversionsMadeHere: row.conversions,
-    conversionRatePercent: percent(row.conversionRate),
+    conversionsPer100Visits: percent(row.conversionRate),
     conversionsMadeHereBefore: row.conversionsBefore,
   };
+}
+
+/** What All pages' conversion figure means, so a basket's 302 is never told as 302% (Anthony, 2026-11-04). */
+const PAGE_CONVERSIONS_RULE = "conversionsPer100Visits counts every time something the website counts happened, for every 100 visits to the page. One visit can do several of those things, so a page everyone passes through, like the basket, can show well over 100, such as 302. It is not a percentage of visits or people: never call it a conversion rate of 302%. If someone asks about a high figure, explain this.";
+
+/** Said first when page views look counted differently (`viewsCountedDifferently`), wherever whole-website views are read. */
+function viewsWarning(now: { views: number; visits: number } | null | undefined, before: { views: number; visits: number } | null | undefined) {
+  const counted = now ? viewsCountedDifferently({ views: now.views, viewsBefore: before?.views, visits: now.visits, visitsBefore: before?.visits }) : null;
+  return counted ? {
+    warning: `Say this first, in plain words. Pages a visit went from ${counted.pagesAVisitBefore} to ${counted.pagesAVisit} on these dates. That is too big a jump for people to have changed what they do, and it usually means page views were being counted differently for part of these dates. So page views, and every page's ups and downs in views, may not be real. Use visits to judge how the website did, and never explain these moves in views as something people did.`,
+  } : {};
+}
+
+/** The screen's menu choice for the shop's own pages, in its own words. */
+const SHOP_PAGES_NAME = "Search, basket and account";
+
+/** A classification by the name it was asked for: its id, or the names there are to choose from. */
+async function classificationNamed(ctx: Pick<QueryCtx, "db">, holdId: Id<"companyWebsites">, asked: string): Promise<{ id: string; name: string } | { problem: string }> {
+  const wanted = asked.trim().toLowerCase();
+  if (wanted === "not sorted" || wanted === "not sorted yet") return { id: NOT_SORTED_KIND, name: "Not sorted yet" };
+  const all = (await readPageKinds(ctx, holdId))?.choices ?? [];
+  const found = all.find((one) => one.name.trim().toLowerCase() === wanted);
+  const close = all.filter((one) => one.name.toLowerCase().includes(wanted));
+  const match = found ?? (close.length === 1 ? close[0] : null);
+  if (match) return { id: match.id, name: match.name };
+  // Not a classification, but a choice in the screen's menu all the same.
+  if (/\b(search|basket|cart|checkout|account)/.test(wanted)) return { id: SHOP_PAGES_KIND, name: SHOP_PAGES_NAME };
+  return { problem: all.length === 0 ? "This website's pages have no classifications yet." : `There is no classification called "${asked}". There are: ${all.map((one) => one.name).join(", ")}, ${SHOP_PAGES_NAME}, and Not sorted yet.` };
 }
 
 function rowOf(row: ShownRow) {
@@ -128,7 +162,7 @@ function kindWords(kind: string, name: string | null): string {
   if (name) return name;
   if (kind === NO_PAGE_KIND) return "no page recorded";
   if (kind === NOT_SORTED_KIND) return "unclassified";
-  if (kind === OTHER_KIND) return "other kinds of page";
+  if (kind === OTHER_KIND) return "other classifications";
   return kind.toLowerCase().replace(/_/g, " ");
 }
 
@@ -168,8 +202,8 @@ function pageStoryParts(story: NonNullable<Awaited<ReturnType<typeof readPageSto
 /**
  * Channels' parts above its table, as its screen shows them
  * (ga-channel-pages-plan.md CH9): the channel converting best over 12
- * months, the key events not counted, each channel by page group, and what a
- * visit is worth by channel.
+ * months, the key events not counted, each channel by page group, and how
+ * often a visit converts by channel — never money (Anthony, 2026-11-03).
  */
 function channelsParts(top: Awaited<ReturnType<typeof readChannelsTop>>) {
   const names = new Map(top.map.kinds.map((kind) => [kind.kind, kindWords(kind.kind, kind.name)]));
@@ -181,12 +215,12 @@ function channelsParts(top: Awaited<ReturnType<typeof readChannelsTop>>) {
       visits: row.visits,
       byKindOfPage: row.cells.filter((cell) => cell.visits > 0).map((cell) => ({ kindOfPage: names.get(cell.kind) ?? cell.kind, visits: cell.visits, conversions: cell.conversions })),
     })),
-    whatAVisitIsWorth: top.worth.rows.map((row) => ({
+    conversionsAVisitByChannel: top.perVisit.rows.map((row) => ({
       channel: row.channel, visits: row.visits, conversions: row.conversions,
-      conversionRatePercent: percent(row.visits > 0 ? row.conversions / row.visits : null), valuePerVisit: money(row.visits > 0 ? row.value / row.visits : null),
+      conversionRatePercent: percent(row.visits > 0 ? row.conversions / row.visits : null),
       ...(row.fewVisits ? { note: "under 100 visits: too few to trust" } : {}),
     })),
-    whatAVisitIsWorthOver: "the last 12 months, every device",
+    conversionsAVisitByChannelOver: "the last 12 months, every device",
   };
 }
 
@@ -240,6 +274,14 @@ export const googleAnalyticsInternal = internalQuery({
     list: v.optional(v.union(...VISITOR_VIEWS.map((view) => v.literal(view)))),
     /** A screen's further read (`analyticsPartsOf`), which the tool asks after the rest. */
     part: v.optional(v.union(...ANALYTICS_PARTS.map((part) => v.literal(part)))),
+    /** All pages: the order to read its pages in. Most views if left out. */
+    order: v.optional(v.union(...ALL_PAGES_ORDER_NAMES.map((order) => v.literal(order)))),
+    /** All pages: only one classification's pages, by its name, with their totals. */
+    classification: v.optional(v.string()),
+    /** All pages: only the pages that gained, dropped, stayed static or had no visits. */
+    move: v.optional(v.union(...PAGE_MOVES.map((move) => v.literal(move)))),
+    /** All pages: put the shop's search, basket and account pages back in, which it leaves out as the screen opens. */
+    everyPage: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const found = await holdFor(ctx, args.companyId, args.website);
@@ -277,10 +319,31 @@ export const googleAnalyticsInternal = internalQuery({
     };
     const asked = { message: "Figures for one device are asked of Google when the screen opens, so they are not held yet. Open the link to see them, or ask for every device." };
 
+    // All pages' whole website: a read of its own, as the screen's is, and what its figures can be trusted for.
+    if (args.part === "website") {
+      const overview = await readOverview(site, common);
+      const now = overview.now;
+      if (!now) return { ...base };
+      const before = overview.before;
+      const perVisit = (figure: { views: number; visits: number } | null) => (figure && figure.visits > 0 ? Math.round((figure.views / figure.visits) * 10) / 10 : null);
+      return {
+        ...base,
+        wholeWebsite: { pageViews: now.views, pageViewsBefore: before?.views ?? null, visits: now.visits, visitsBefore: before?.visits ?? null, pagesAVisit: perVisit(now), pagesAVisitBefore: perVisit(before) },
+        ...viewsWarning(now, before),
+      };
+    }
+
     const list = LISTS[args.screen];
     if (list) {
+      const allPages = args.screen === "allPages";
+      const chosen = allPages && args.classification ? await classificationNamed(ctx, hold._id, args.classification) : null;
+      if (chosen && "problem" in chosen) return { ok: false, problem: chosen.problem };
+      const order = allPages && args.order ? ALL_PAGES_ORDERS[args.order] : null;
+      // As the screen opens: without the shop's own pages, unless a search or the question reaches for them.
+      const leaveOut = allPages && !chosen && !args.search && args.everyPage !== true;
       const answer = await readListPage(site, {
         ...common, list: list.list, ...(args.screen === "channel" ? { channel: args.key ?? "" } : {}), ...(args.search ? { q: args.search } : {}), page: 1, rows: ROWS,
+        ...(order ?? {}), ...(chosen ? { group: chosen.id } : {}), ...(allPages && args.move ? { move: args.move } : {}), ...(leaveOut ? { leaveOut: true } : {}),
       });
       if (answer.live) return { ...base, ...asked, link: linkTo(list.segment) };
       const parts = args.screen === "channels" ? channelsParts(await readChannelsTop(site, common))
@@ -292,11 +355,41 @@ export const googleAnalyticsInternal = internalQuery({
         listed: answer.total,
         // All pages has no money and counts each page's moves (all-pages-rethink-plan.md AP1, AP5), as its screen does.
         rows: list.list === "page" ? answer.rows.map(pageRowOf) : answer.rows.map(rowOf),
+        ...(allPages ? { rows_are: `The first ${ROWS} of ${answer.total} pages, ${args.order ?? "mostViews"}.`, conversionsRule: PAGE_CONVERSIONS_RULE } : {}),
+        ...(leaveOut && answer.shop && answer.shop.pages > 0 ? {
+          leftOut: {
+            what: "Search, basket and account pages. Say they're left out, as the screen does, and ask with everyPage to read them too. Never name one as a page that moved unless asked about them.",
+            pages: answer.shop.pages, pageViews: answer.shop.views, pageViewsBefore: answer.shop.viewsBefore,
+          },
+        } : {}),
+        ...(allPages && answer.bands ? {
+          busyAndQuiet: {
+            rule: `A busy page has ${answer.bands.busyVisits} visits or more on these dates, and a quiet page has fewer. Fewer or more means by ${MOVE_VIEWS} views or more.`,
+            busyPages: answer.bands.busy, busyPagesWithFewerViews: answer.bands.busyFewer, quietPages: answer.bands.quiet, quietPagesWithMoreViews: answer.bands.quietMore,
+          },
+        } : {}),
+        ...(allPages && answer.concentration ? {
+          halfOfViews: {
+            pagesThatMadeHalfTheViews: answer.concentration.pagesForHalf, pagesThatMadeHalfTheViewsBefore: answer.concentration.pagesForHalfBefore,
+            pagesWithNoViews: answer.concentration.noViews, pagesWithNoViewsBefore: answer.concentration.noViewsBefore,
+          },
+        } : {}),
+        ...(chosen && answer.groupTotals ? {
+          classification: {
+            name: chosen.name, pages: answer.total, pageViews: answer.groupTotals.views, pageViewsBefore: answer.groupTotals.viewsBefore,
+            conversionsMadeHere: answer.groupTotals.conversions, conversionsMadeHereBefore: answer.groupTotals.conversionsBefore,
+          },
+        } : {}),
         ...(answer.moves ? { pagesByMove: { ...answer.moves, rule: `A gain or a drop is ${MOVE_VIEWS} views or more against the span before; no visits means nobody viewed the page.` } } : {}),
         ...(answer.untagged !== null ? { visitsFromNoTaggedLink: answer.untagged } : {}),
         ...(answer.figures ? { channelTotals: { visits: answer.figures.visits, visitsBefore: answer.figures.visitsBefore, conversions: answer.figures.conversions, value: money(answer.figures.value) } } : {}),
         ...(answer.thresholded ? { note: "Google held back some small groups to protect people's privacy." } : {}),
-        link: linkTo(list.segment, args.screen === "channel" && args.key ? { key: args.key } : {}),
+        link: linkTo(list.segment, {
+          ...(args.screen === "channel" && args.key ? { key: args.key } : {}),
+          ...(order ? { sort: order.sort, dir: order.direction } : {}),
+          ...(allPages && args.move ? { move: args.move } : {}),
+          ...(chosen ? { classification: chosen.id } : allPages && !leaveOut && !args.search ? { classification: "every" } : {}),
+        }),
       };
     }
 
@@ -316,6 +409,7 @@ export const googleAnalyticsInternal = internalQuery({
           ...base,
           from: answer.from, to: answer.to,
           now: figures(answer.now), theSpanBefore: figures(answer.before),
+          ...viewsWarning(answer.now, answer.before),
           changedMost: answer.changedMost.map((row) => ({ name: row.title ?? pathOfAddress(row.label), kind: row.kind, conversionsChange: row.conversions, valueChange: money(row.value) })),
           // Its panels, as the screen shows them (ga-overview-plan.md OV2–OV8): each its first rows.
           ...(panels ? overviewPanelParts(panels) : {}),
@@ -454,13 +548,27 @@ export const googleAnalyticsInternal = internalQuery({
         const map = await readVisitorMap(site, { ...common, list: view });
         const kindNames = new Map((map?.kinds ?? []).map((kind) => [kind.kind, kind.name ?? (kind.kind === NO_PAGE_KIND ? "no page recorded" : kind.kind === OTHER_KIND ? "other classifications" : "unclassified")]));
         const landsOf = new Map((map?.rows ?? []).filter((row) => row.lands).map((row) => [row.key, { classification: kindNames.get(row.lands!.kind) ?? row.lands!.kind, sharePercent: percent(row.lands!.share) }]));
+        // Visits as the screen draws it (visits-redo-plan-2026-11-03.md, step 3): every figure in visits or views, the span
+        // before beside it — the boxes, who visits by the list chosen, and what people looked at by page group.
+        const bars = await readVisitorBars(site, { ...common, list: view });
+        const looked = await readPageKindViews(site, common);
+        const figures = answer.figures;
         return {
           ...base,
-          figures: answer.figures,
+          figures: figures ? {
+            visits: figures.visits, visitsBefore: figures.visitsBefore,
+            newVisits: figures.newVisits, newVisitsBefore: figures.newVisitsBefore,
+            returningVisits: figures.returningVisits, returningVisitsBefore: figures.returningVisitsBefore,
+            visitsAPerson: figures.people > 0 ? Math.round((figures.visits / figures.people) * 10) / 10 : null,
+          } : null,
           googleSignals: answer.signals,
+          whoVisits: bars && !bars.waiting ? bars.rows.slice(0, ROWS).map((row) => ({ name: row.key, visits: row.visits, visitsBefore: row.visitsBefore })) : null,
+          whatPeopleLookedAt: looked && !looked.waiting && looked.sorted
+            ? looked.kinds.map((kind) => ({ pageGroup: kind.name ?? "not sorted yet", views: kind.views, pages: kind.pages }))
+            : null,
           [view]: listed.live ? null : listed.rows.map((row) => ({ name: row.label, people: row.people, visits: row.visits, engagedPercent: percent(row.engagementRate), conversions: row.conversions, landsMostOn: landsOf.get(row.key) ?? null })),
           ...(answer.missing.length > 0 || listed.live ? asked : {}),
-          link: linkTo("visitors", { view }),
+          link: linkTo("visits", { view }),
         };
       }
       case "products": {

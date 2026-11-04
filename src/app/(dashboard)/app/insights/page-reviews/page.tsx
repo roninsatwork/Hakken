@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useRouter } from "next/navigation";
@@ -21,7 +22,8 @@ import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { pageReviewsNames, pageReviewsSees } from "../_components/insightsSees";
 
 /**
  * Page reviews (docs/plans/active/insights-analyst-plan.md §4.1, phase 14,
@@ -35,12 +37,16 @@ export default function InsightsPageReviewsPage() {
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
   const [search, setSearch, term] = useSiteSearch();
   const [verdict, setVerdict] = useSiteParam<string>("verdict", "");
   const matches = wordStartMatcher(term.toLowerCase());
   const rows = data?.pages.filter((row) => (!verdict || row.verdict === verdict) && (!matches || matches(`${row.page} ${row.title ?? ""}`)));
   const pages = useSitePager(data ? rows : undefined, { isLoading: data === undefined });
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => pageReviewsSees(data, pageReviewsNames(tAll)), [data, tAll]);
   const open = (page: string) => {
     const base = href("page-reviews/page");
     return `${base}${base.includes("?") ? "&" : "?"}page=${encodeURIComponent(page)}`;
@@ -67,7 +73,7 @@ export default function InsightsPageReviewsPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} page={{ screen: "insights.pageReviews", siteId: site, data }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.pageReviews", siteId: eyeSite, data: seesData }} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-visitors-per-enquiry`} csv={csv} enoughData={bars.length > 0}>
         <SiteBarChart data={bars} series={[{ key: "before", name: t("chart.before"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal labels={(value) => formatNumber(value)} />
       </ChartCard>

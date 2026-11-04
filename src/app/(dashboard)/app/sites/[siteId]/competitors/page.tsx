@@ -25,6 +25,7 @@ import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { sideBySideSees } from "@/convex/utils/sees/competitors";
 import { SiteSees } from "../../_components/SiteSees";
+import { sideBySideSeen } from "../../_components/siteSeesData";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { useSiteSearch } from "../../_components/useSiteParam";
@@ -114,6 +115,10 @@ export default function SiteSideBySidePage() {
   const movePages = useSitePager(moves ? moveRows : undefined, { isLoading: moves === undefined, table: "moves" });
 
   const lines = series ?? [];
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): each website's newest check as the
+  // table shows it, the chart's lines against the check before the dates, the searches compared and the rivals' moves.
+  const te = useTranslations("sites.sideBySide.eye");
+  const seen = useMemo(() => (figures && rivals ? sideBySideSeen(figures, rivals, series, moves, { middle: te("middle"), youAbove: te("youAbove") }) : undefined), [figures, rivals, series, moves, te]);
   // A group of more than five draws the five with the most traffic, and says so (4.11).
   const drawn = lines.filter((line) => !line.isYou).length;
   const groupSize = site?.rivals.length ?? 0;
@@ -123,7 +128,7 @@ export default function SiteSideBySidePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Swords className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="competitors" seen={rivals && sideBySideSees(rivals, (host) => site?.holds.find((entry) => entry.host === host)?.siteId ?? null)} data={rivals && { rivals, figures, series, moves }} />
+      <SiteSees screen="competitors" seen={rivals && sideBySideSees(rivals, (host) => site?.holds.find((entry) => entry.host === host)?.siteId ?? null)} data={seen} />
 
       <SiteChartCard
         title={t("chartTitle")}

@@ -17,7 +17,7 @@ import AnalyticsConversionPagesPage from "./[siteId]/conversions/pages/page";
 import AnalyticsTrackingHealthPage from "./[siteId]/tracking-health/page";
 import AnalyticsTrackingCheckPage from "./[siteId]/tracking-health/check/page";
 import AnalyticsConnectionPage from "./[siteId]/connection/page";
-import { openHakkenSees } from "@/src/test/openHakkenSees";
+import { findSaid, openHakkenSees } from "@/src/test/openHakkenSees";
 
 /**
  * Google Analytics' screens hold to the looks Anthony agreed and locked on
@@ -73,14 +73,15 @@ describe("Google Analytics' approved looks", () => {
     at("/app/analytics");
     answer({
       "googleAnalyticsReads:analyticsSites": [{
-        siteId: "site_1", host: "acme-shop.test", iconUrl: null, status: "CONNECTED", visits: 2412, conversions: 23, value: 440_000, currency: "GBP", lastCollectedAt: 1,
-        visitsBefore: 2225, valueBefore: 350_000, counting: true, failing: 2, checks: 8, unknownShare: null,
+        siteId: "site_1", host: "acme-shop.test", iconUrl: null, status: "CONNECTED", visits: 2412, conversions: 23, lastCollectedAt: 1,
+        visitsBefore: 2225, conversionsBefore: 19, counting: true, failing: 2, checks: 8, unknownShare: null,
       }],
     });
     const { container } = render(<GoogleAnalyticsPage />);
     await screen.findByText("acme-shop.test");
-    await openHakkenSees();
-    await screen.findByText(/acme-shop\.test made £4,400 last month, up from £3,500/);
+    // No eye: a list of the company's websites is no one website's figures (Anthony, 2026-11-03: "We dont need the eye on
+    // non website data related pages"). Never money (the same day: "Take money off").
+    expect(screen.queryByText(/£/)).toBeNull();
     await expectApprovedLook(container, PLAN, "Main", "Google Analytics → your websites");
   });
 
@@ -96,7 +97,7 @@ describe("Google Analytics' approved looks", () => {
     const { container } = render(<AnalyticsOverviewPage />);
     await screen.findByText("2,412");
     await openHakkenSees();
-    await screen.findByText(/Visits rose 8\.4%, and conversions with them, from 19 to 23\./);
+    await findSaid(/Visits rose 8\.4%, and conversions with them, from 19 to 23\./);
     await screen.findByText("AI agency");
     // Option 4 of the Overview canvas, "Every figure" (ga-overview-plan.md, built 2026-10-15).
     await expectApprovedLook(container, "ga-overview", "Overview", "Google Analytics → Overview");
@@ -129,23 +130,59 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, "landing-pages-flow", "LandingPages", "Google Analytics → Funnel");
   });
 
-  it("6 · All pages: a short chart of the ticked pages over the table, its filters by the search box, no money (all-pages-rethink-plan.md)", async () => {
+  it("6 · All pages: four boxes, a map of pages, Views each day, then the table with its menus on one line and no money (all-pages-way-6-plan-2026-11-04.md)", async () => {
     at("/app/analytics/site_1/all-pages");
     const moves = { all: 162, gains: 33, dropped: 6, static: 20, none: 103 };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsReads:analyticsListPage": list([ROW], {
+      "googleAnalyticsReads:analyticsListPage": list([{ ...ROW, key: "~0", visitsBefore: 40 }], {
         seen: allPagesSees([{ ...ROW, label: "/ai-agency/" }], true, { counts: moves, quiet: ["/web-design-surrey/"] }),
         moves,
+        from: "2026-10-01", to: "2026-10-31", spanBefore: { from: "2026-09-01", to: "2026-09-30" },
+        bands: { busyVisits: 50, busy: 170, busyFewer: 101, quiet: 9_134, quietMore: 2_202 },
+        concentration: { pagesForHalf: 219, pagesForHalfBefore: 223, noViews: 4_100, noViewsBefore: 5_731 },
+        shop: { pages: 406, views: 31_144, viewsBefore: 37_294 },
+        groupTotals: null,
       }),
+      "googleAnalyticsReads:analyticsOverview": { now: { visits: 35_739, views: 152_926, conversions: 10, engaged: 20 }, before: { visits: 37_507, views: 167_878, conversions: 11, engaged: 21 } },
+      "googleAnalyticsPageKindViews:analyticsPageKindViews": {
+        waiting: false, sorted: true, views: 152_926, unplaced: 0,
+        kinds: [
+          { kind: "SHOP_PAGES", name: null, views: 31_144, viewsBefore: 37_294, pages: 406 },
+          { kind: "k1", name: "Electrical", views: 2_610, viewsBefore: 1_002, pages: 40 },
+          { kind: "NOT_SORTED", name: null, views: 16_882, viewsBefore: 17_437, pages: 900 },
+        ],
+      },
       "googleAnalyticsChartReads:analyticsChart": CHART,
-      "googleAnalyticsPageReads:analyticsPagesDaily": { pages: [{ ref: "~0", address: ROW.label, points: [{ day: "2026-10-07", views: 20 }, { day: "2026-10-08", views: 31 }] }], missing: [] },
+      "googleAnalyticsPageReads:analyticsPagesDaily": { pages: [{ ref: "~0", address: ROW.label, title: "AI agency", points: [{ day: "2026-10-07", views: 20, visits: 9, conversions: 1 }, { day: "2026-10-08", views: 31, visits: 12, conversions: 0 }] }] },
     });
     const { container } = render(<AnalyticsAllPagesPage />);
     await screen.findAllByText("/ai-agency/");
-    await screen.findByText("Gains 33");
-    await screen.findByText("▲ 81");
-    await expectApprovedLook(container, "all-pages-rethink", "AllPages", "Google Analytics → All pages");
+    // The boxes: the whole website's page views and pages a visit, then busy and quiet out of how many.
+    const figures = (await screen.findByText("Busy pages, fewer views")).closest("[data-part='figures']") as HTMLElement;
+    expect(within(figures).getByText("152,926")).toBeInTheDocument();
+    expect(within(figures).getByText("▼ 8.9% fewer than September")).toBeInTheDocument();
+    expect(within(figures).getByText("4.5 in September")).toBeInTheDocument();
+    expect(within(figures).getByText("Out of 170 pages with 50 visits or more.")).toBeInTheDocument();
+    expect(within(figures).getByText("Out of 9,134 pages with under 50 visits.")).toBeInTheDocument();
+    // The map's words, and Views each day opening on the whole website with no page ticked.
+    await screen.findByText("A map of your pages");
+    expect(screen.getByText(/Each box is one of your 40 most viewed pages.*Orange boxes got more views than in September, and grey boxes got fewer\./)).toBeInTheDocument();
+    expect(await screen.findByText("Views each day")).toBeInTheDocument();
+    expect(screen.getByText("Tick a page in the table to draw it here.")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Your whole website" })).toHaveValue("on");
+    expect(screen.getByRole("checkbox", { name: /Draw .* on the chart/ })).not.toBeChecked();
+    // One choice in two menus, opening with the shop's own pages left out; the moves are a menu too.
+    expect(screen.getAllByRole("combobox", { name: "Classification" })).toHaveLength(2);
+    expect(screen.getAllByText("All but search and basket").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("option", { name: "Search, basket and account" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("option", { name: "Gains 33" })).toBeInTheDocument();
+    // The table: its own headings, and no sentence in its bar.
+    expect(screen.getAllByText("Up or down").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Time on page")).toBeInTheDocument();
+    expect(screen.queryByText(/a gain or drop is/)).toBeNull();
+    expect(screen.queryByText(/£/)).toBeNull();
+    await expectApprovedLook(container, "all-pages-way-6", "Way6", "Google Analytics → All pages");
   });
 
   // Conversions with Events merged in (ga-conversions-visitors-plan.md CV2, drawn and approved 2026-10-14), and the
@@ -182,11 +219,11 @@ describe("Google Analytics' approved looks", () => {
     expect(within(map).getByLabelText("Contact form sent → Service 12")).toHaveTextContent("12");
     // A square opens the pages behind it, carrying this screen to come back to.
     expect(within(map).getByLabelText("Contact form sent → Service 12").closest("a")).toHaveAttribute("href", "/app/analytics/site_1/conversions/pages?event=generate_lead&by=kind&key=service&from=conversions");
-    // What counts: only the events that count, each with what it was worth, opening the conversion's own screen.
+    // What counts: only the events that count, never what each was worth (Anthony, 2026-11-03: "Take money off"), opening the conversion's own screen.
     const table = screen.getByRole("table");
-    expect(within(table).getByRole("columnheader", { name: /Worth/ })).toBeInTheDocument();
+    expect(within(table).queryByRole("columnheader", { name: /Worth/ })).toBeNull();
     expect(within(table).queryByText("page_view")).toBeNull();
-    expect(within(table).getByText("£3,500")).toBeInTheDocument();
+    expect(within(table).queryByText(/£/)).toBeNull();
     expect(within(table).getByRole("link", { name: "Contact form sent" })).toHaveAttribute("href", "/app/analytics/site_1/events/event?key=generate_lead");
     expect(screen.getByText("1 event")).toBeInTheDocument();
     // What left the page on the canvas: the flow, the lines by kind, what people did before, the key events not counted.
@@ -288,7 +325,7 @@ describe("Google Analytics' approved looks", () => {
   });
 
   // The canvas "Conversions page, three ways", board "Conversion", approved 2026-10-30 (conversions-and-agents-build-plan-2026-10-30.md, phase 3).
-  it("7 · a conversion's own screen: four figures, day by day, a line per channel, when people convert", async () => {
+  it("7 · a conversion's own screen: three figures, day by day, a line per channel, when people convert", async () => {
     at("/app/analytics/site_1/events/event", "key=generate_lead");
     const hours = Array.from({ length: 7 }, (_, day) => Array.from({ length: 24 }, (_, hour) => (hour >= 9 && hour <= 17 ? day + 1 : 0)));
     answer({
@@ -309,14 +346,14 @@ describe("Google Analytics' approved looks", () => {
     const { container } = render(<AnalyticsEventScreen />);
     await screen.findByText("Counted as a conversion. Google calls it generate_lead.");
     expect(screen.getByRole("link", { name: "Back to Conversions" })).toHaveAttribute("href", "/app/analytics/site_1/conversions");
-    // The figures, each against the month before: how many, the visits that did it, its rate in every hundred visits, its worth.
+    // The figures, each against the month before: how many, the visits that did it, its rate in every hundred visits — never its worth (Anthony, 2026-11-03: "Take money off").
     const figures = screen.getByText("Visits that did it").closest("[data-part='figures']") as HTMLElement;
     expect(within(figures).getAllByText("14").length).toBeGreaterThanOrEqual(2);
-    // Times 11 to 14, visits 11 to 14 and worth £2,750 to £3,500: the same rise three times.
-    expect(within(figures).getAllByText("▲ 27.3% on the month before")).toHaveLength(3);
+    // Times 11 to 14 and visits 11 to 14: the same rise twice.
+    expect(within(figures).getAllByText("▲ 27.3% on the month before")).toHaveLength(2);
     expect(within(figures).getByText("0.6%")).toBeInTheDocument();
     expect(within(figures).getByText("▲ from 0.5% the month before")).toBeInTheDocument();
-    expect(within(figures).getByText("£3,500")).toBeInTheDocument();
+    expect(within(figures).queryByText(/£/)).toBeNull();
     // The share of each day's visits that did it (with Show and Compare), a line per channel, and when people convert, Monday first.
     await screen.findByText("Contact form sent, day by day");
     expect(screen.getByText("The share of each day's visits that did it. Compare it with the month before.")).toBeInTheDocument();
@@ -332,7 +369,7 @@ describe("Google Analytics' approved looks", () => {
     const { container } = render(<AnalyticsConversionsPage />);
     await screen.findByText("Nothing counts as a conversion yet");
     await openHakkenSees();
-    await screen.findByText(/Your property does record “Newsletter sign-up”/);
+    await findSaid(/Your property does record “Newsletter sign-up”/);
     await expectApprovedLook(container, PLAN, "NothingCounted", "Google Analytics → nothing counted yet");
   });
 
@@ -353,8 +390,8 @@ describe("Google Analytics' approved looks", () => {
       }),
     });
     const { container } = render(<AnalyticsTrackingCheckPage />);
-    await openHakkenSees();
-    await screen.findByText(/In Google Analytics, open Reports, then Realtime, and check each one arrives\./);
+    // No eye since 2026-11-04 (Anthony, 2026-11-03: "We dont need the eye on non website data related pages").
+    await screen.findAllByText("Never happened");
     await expectApprovedLook(container, "ga-tracking-health", "Check", "Google Analytics → a tracking health check");
   });
 
@@ -391,9 +428,7 @@ describe("Google Analytics' approved looks", () => {
     cleanup();
     at("/app/analytics/site_1/tracking-health/check", "key=ENQUIRY_UNCOUNTED");
     render(<AnalyticsTrackingCheckPage />);
-    await openHakkenSees();
-    await screen.findByText(/Choose “Contact” on the Connection page: they are then counted from Google.s own figures, for the whole year\./);
-    screen.getByText(/happened 179 times in 12 months but isn.t counted/);
+    await screen.findAllByText("Not counted");
     expect(screen.getAllByRole("button", { name: "Choose what counts" })).toHaveLength(1);
   });
 
@@ -403,7 +438,7 @@ describe("Google Analytics' approved looks", () => {
     const { container } = render(<AnalyticsConnectionPage />);
     await screen.findAllByText("Add Google Analytics");
     await openHakkenSees();
-    await screen.findByText(/Search Console shows Google sent acme-shop\.test 367 clicks/);
+    await findSaid(/Search Console shows Google sent acme-shop\.test 367 clicks/);
     await expectApprovedLook(container, PLAN, "Connect", "Google Analytics → not connected yet");
   });
 

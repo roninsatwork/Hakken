@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -16,6 +17,7 @@ import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteChar
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
 import { toCsv } from "../../../_components/siteFormat";
+import { winsLossesSeen } from "../../../_components/siteSeesData";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
@@ -76,11 +78,20 @@ export default function SiteMovesPage() {
   }, [{ siteId, list: "keywords" }]);
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const points = series?.[0]?.points ?? [];
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): wins against losses over the dates
+  // and over the span before them, the chart's steps by their dates, and the table's moves without any guessed money.
+  const tp = useTranslations("common.periods");
+  const te = useTranslations("sites.googleMoves.eye");
+  const seriesBefore = useQuery(api.siteCharts.siteSeries, { siteId, from: range.before.from, to: range.before.to, step: range.step });
+  const seen = useMemo(() => (series ? winsLossesSeen(series[0], seriesBefore?.[0], table.result?.rows, range.step, {
+    up: t("up"), down: t("down"), dates: tp(range.period === "custom" ? "customName" : range.period), usual: te("usual", { step: range.step }),
+    before: capitalised(tp(`before.${range.period}`)),
+  }) : undefined), [series, seriesBefore, table.result, range.step, range.period, t, tp, te]);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowUpDown className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="googleMoves" seen={table.result?.seen} data={table.result && { moves: table.result, series }} />
+      <SiteSees screen="googleMoves" seen={table.result?.seen} data={seen} />
       {partHeld ? (
         <div className="flex flex-col gap-1">
           <HeldLine coverage={site?.coverage} />
@@ -155,3 +166,6 @@ export default function SiteMovesPage() {
     </div>
   );
 }
+
+/** A period's words as the start of a name: "the month before" → "The month before". */
+const capitalised = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);

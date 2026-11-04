@@ -22,12 +22,12 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUti
  * landing page's own screen (7) on 2026-10-14: every page opens the page's
  * own screen (landing-pages-flow-plan.md LF8). Connection (11) and Choose
  * what counts (14) lost theirs on 2026-10-31: connection pages carry no box
- * (Anthony; sees-every-page-plan-2026-10-31.md).
+ * (Anthony; sees-every-page-plan-2026-10-31.md). Your websites (1), Tracking
+ * health (10) and a check's own screen lost theirs on 2026-11-04 (`NO_BOX`).
  */
 const ANALYTICS = "src/app/(dashboard)/app/analytics";
 
 const ANALYTICS_SCREENS = [
-  `${ANALYTICS}/page.tsx`, // 1 · Your websites
   `${ANALYTICS}/[siteId]/page.tsx`, // 2 · Overview, and 18 · Needs reconnecting
   `${ANALYTICS}/[siteId]/channels/page.tsx`, // 4 · Channels
   `${ANALYTICS}/[siteId]/channels/channel/page.tsx`, // 5 · A channel's own screen
@@ -36,14 +36,22 @@ const ANALYTICS_SCREENS = [
   `${ANALYTICS}/[siteId]/all-pages/page/page.tsx`, // 21 · A page's own screen (second round, §18.2)
   `${ANALYTICS}/[siteId]/events/event/page.tsx`, // 23 · An event's own screen
   `${ANALYTICS}/[siteId]/campaigns/page.tsx`, // 17 · Campaigns
-  `${ANALYTICS}/[siteId]/visitors/page.tsx`, // 15 · Visitors
+  `${ANALYTICS}/[siteId]/visits/page.tsx`, // 15 · Visits (was Visitors: its old address forwards there)
   `${ANALYTICS}/[siteId]/products/page.tsx`, // 25 · Products
   `${ANALYTICS}/[siteId]/live/page.tsx`, // 14 · Live
   // 22 · Events is part of Conversions (ga-conversions-visitors-plan.md CV1): its old address forwards there.
   `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, with every event, and 16 · Nothing counted yet
-  `${ANALYTICS}/[siteId]/tracking-health/page.tsx`, // 10 · Tracking health
-  `${ANALYTICS}/[siteId]/tracking-health/check/page.tsx`, // A tracking health check's own screen (ga-tracking-health-plan.md TH2)
   `${ANALYTICS}/_components/AnalyticsNotices.tsx`, // 12 · Not connected yet, on every page until connected
+];
+
+/**
+ * Screens that show no one website's own figures, and so carry no box (Anthony, 2026-11-03: "We dont need the eye on
+ * non website data related pages", then "Agree"): the websites list, Tracking health and a check's own screen.
+ */
+const NO_BOX = [
+  `${ANALYTICS}/page.tsx`, // 1 · Your websites
+  `${ANALYTICS}/[siteId]/tracking-health/page.tsx`, // 10 · Tracking health
+  `${ANALYTICS}/[siteId]/tracking-health/check/page.tsx`, // A tracking health check's own screen
 ];
 
 const seenWords = (messages: typeof en) => (messages.googleAnalytics as unknown as { seen?: Record<string, unknown> }).seen ?? {};
@@ -54,6 +62,11 @@ describe("What Hakken sees on every Google Analytics screen", () => {
     expect(missing, "A listed Analytics screen has moved: list it where it is now.").toEqual([]);
     const boxless = ANALYTICS_SCREENS.filter((file) => !/<AnalyticsSees\b/.test(readRepoFile(file)));
     expect(boxless, "An Analytics screen without What Hakken sees. Render <AnalyticsSees> under its title (google-analytics-plan.md §14).").toEqual([]);
+  });
+
+  test("a screen with no one website's figures carries no box", () => {
+    const boxed = NO_BOX.filter((file) => /<AnalyticsSees\b/.test(readRepoFile(file)));
+    expect(boxed, "Take its box off: it shows no one website's figures.").toEqual([]);
   });
 
   test("every box names a screen whose words exist in English and Italian, with its links", () => {

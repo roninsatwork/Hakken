@@ -6,7 +6,6 @@ import { PlayCircle } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -17,7 +16,7 @@ import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
-import { WatchLink, duration, formatWhen, mono, quiet, useClarityLinks, useSourceName } from "../../_components/ClarityParts";
+import { WatchLink, duration, formatWhen, mono, quiet, useSourceName } from "../../_components/ClarityParts";
 import { useRecordingWords, type ClarityRecordingRow } from "../../_components/RecordingsList";
 import { useClarityPageHref, useClaritySiteId, useClarityStatus } from "../../_components/useClarity";
 
@@ -48,7 +47,6 @@ export default function ClarityRecordingsPage() {
   const siteId = useClaritySiteId();
   const status = useClarityStatus();
   const pageHref = useClarityPageHref();
-  const links = useClarityLinks();
   const words = useRecordingWords();
   const sourceName = useSourceName();
   const data = useQuery(api.clarityScreens.clarityRecordingsList, { siteId });
@@ -59,18 +57,10 @@ export default function ClarityRecordingsPage() {
   const { rows, tableSort } = useSiteSortedList(listed, SORTS, { opening: "when", name: nameOf });
   const pager = useSitePager(rows, { isLoading: data === undefined });
   const counts = new Map(KINDS.map((one) => [one, data?.recordings.filter((row) => row.kind === one).length ?? 0]));
-  const picked = KINDS.filter((one) => (counts.get(one) ?? 0) > 0);
-  const span = t("span");
-  const says = !data
-    ? [t("sees.loading")]
-    : data.recordings.length === 0
-      ? [t("sees.none")]
-      : [t("sees.count", { count: data.recordings.length, span, kinds: picked.map((one) => t(`kinds.${one}`).toLowerCase()).join(", ") }), t("sees.how")];
 
   return (
     <>
       <PageHeader icon={<PlayCircle className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <HakkenSees says={says} steps={[{ words: t("do.all"), link: t("do.openClarity"), href: links.project, external: true }]} page={{ screen: "clarity.recordings", siteId, data }} />
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.link}

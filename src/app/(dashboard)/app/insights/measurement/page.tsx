@@ -21,7 +21,8 @@ import { formatDay, formatNumber, toCsv } from "../../sites/_components/siteForm
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsBox, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { measurementNames, measurementSees } from "../_components/insightsSees";
 import { boxedSays } from "../_components/insightBoxSays";
 
 const TONE: Record<MeasurementStatus, "warning" | "info" | "neutral" | "success"> = { LOOK: "warning", LIMIT: "info", UNKNOWN: "neutral", PASSING: "success" };
@@ -47,9 +48,12 @@ export default function InsightsMeasurementPage() {
   const box = useInsightsBox("MEASUREMENT");
   const tBox = usePlatformTranslations("insights.box");
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightsReads.insightsMeasurement, site ? { siteId: site } : {});
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ measurement: data, box }), [data, box]);
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => measurementSees(data, box, measurementNames(tAll), formatDay), [data, box, tAll]);
   const [search, setSearch, term] = useSiteSearch();
   const [status, setStatus] = useSiteParam<string>("status", "");
   const checks = data?.measurement?.checks;
@@ -88,7 +92,7 @@ export default function InsightsMeasurementPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.measurement", siteId: site, data: seesData }} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={steps} page={{ screen: "insights.measurement", siteId: eyeSite, data: seesData }} />
       <ChartCard
         title={t("chart.title")}
         hint={days.length > 0 ? t("chart.hint", { from: days[0].label, to: days.at(-1)!.label, share: clicks > 0 ? Math.round((visits / clicks) * 100) : 0 }) : t("chart.none")}

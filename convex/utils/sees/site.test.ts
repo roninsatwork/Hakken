@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { expectWords } from "@/src/test/seenWords";
-import { assetTarget, assetsSees, auditSees, overviewSees, problemSees, websitesSees, yourPagesSees } from "./site";
+import { assetTarget, assetsSees, auditSees, overviewSees, problemSees, yourPagesSees } from "./site";
 
 /** What Hakken sees on a website's own screens and the Websites list (discovery-detail-and-hakken-sees-plan.md §6). */
 describe("Overview", () => {
@@ -122,25 +122,5 @@ describe("One problem", () => {
     const none = problemSees([], null, "Broken links");
     expect(none.says).toEqual([{ code: "none", text: "Broken links" }]);
     expectWords("auditProblem", none);
-  });
-});
-
-describe("Websites", () => {
-  const site = (siteId: string, host: string, relationship: string, rankedUp: number | null, rankedDown: number | null, checked = true) => ({ siteId, host, relationship, checked, rankedUp, rankedDown });
-
-  test("the websites held, and the one that moved most", () => {
-    const box = websitesSees([site("s1", "ronins.co.uk", "OWNED", 12, 30), site("s2", "brightside.co.uk", "TRACKED", 40, 2)]);
-    expect(box).toEqual({
-      says: [{ code: "websites", a: 1, b: 1 }, { code: "mostDown", text: "ronins.co.uk", a: 30, b: 12 }, { code: "mostUp", text: "brightside.co.uk", a: 40 }],
-      steps: [{ code: "open", text: "ronins.co.uk", link: "openWebsite", to: { url: "/app/sites/s1" } }],
-    });
-    expectWords("websites", box);
-  });
-
-  test("not checked; none held", () => {
-    const fresh = websitesSees([site("s1", "ronins.co.uk", "OWNED", null, null, false)]);
-    expect(fresh).toEqual({ says: [{ code: "websites", a: 1, b: 0 }, { code: "notChecked" }], steps: [] });
-    expectWords("websites", fresh);
-    expect(websitesSees([]).says).toEqual([{ code: "none" }]);
   });
 });

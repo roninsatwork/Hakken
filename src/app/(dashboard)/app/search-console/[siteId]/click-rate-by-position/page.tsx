@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { Percent } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -74,10 +75,22 @@ export default function SearchConsoleCtrCurvePage() {
     api.searchConsoleLists.searchConsoleLiveList,
     held && fromLive ? { ...ask, dimension: "query" as const, ...(device ? { device } : {}) } : null,
   );
-  const points: CurvePoint[] | undefined = fromLive
-    ? (live.answer === undefined ? undefined : live.answer.ok && status ? ctrCurve(live.answer.rows.flat(), status.limits.curvePositions) : [])
-    : server?.points;
+  const answer = live.answer;
+  const curvePositions = status?.limits.curvePositions;
+  const heldPoints = server?.points;
+  const points = useMemo<CurvePoint[] | undefined>(() => (fromLive
+    ? (answer === undefined ? undefined : answer.ok && curvePositions !== undefined ? ctrCurve(answer.rows.flat(), curvePositions) : [])
+    : heldPoints), [fromLive, answer, curvePositions, heldPoints]);
   const rows = points?.map((point) => ({ ...point, key: String(point.position) }));
+  // The eye's figures: each place named as the reader says it, and the same curve over the span before where it is kept
+  // (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6: "the span before's curve").
+  const tw = useTranslations("searchConsole.sees");
+  const before = fromLive ? null : (server?.before ?? null);
+  const seesData = useMemo(() => {
+    if (!points) return undefined;
+    const placed = (list: CurvePoint[]) => list.map((point) => ({ ...point, name: tw("place", { place: point.position }) }));
+    return { points: placed(points), before: before ? placed(before) : null, names: { firstPage: tw("firstPage"), secondPage: tw("secondPage"), topThree: tw("topThree"), fourToTen: tw("fourToTen") } };
+  }, [points, before, tw]);
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(row.key));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "position", name: nameOf });
@@ -91,7 +104,7 @@ export default function SearchConsoleCtrCurvePage() {
       <PageHeader icon={<Percent className="h-5 w-5 text-brand" />} title={t("ctrCurve.title")} description={t("ctrCurve.description", { period: periodWords.period })} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="ctrCurve" seen={points ? curveSees(points) : null} data={points ? { points } : undefined} />
+          <SearchConsoleSees screen="ctrCurve" seen={points ? curveSees(points) : null} data={seesData} />
           <ResultKindSwitch />
           {server?.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
           <SearchConsoleChartCard

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { CalendarCheck } from "lucide-react";
@@ -10,12 +11,14 @@ import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
-import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { formatMonth, formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useFindingsTable } from "../_components/FindingsTable";
 import { EnquiryCheckNotice } from "../_components/EnquiryCheckNotice";
 import { QuickCheckNotice } from "../_components/QuickCheckNotice";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { thisWeekAdvice, thisWeekNames, thisWeekSees } from "../_components/insightsSees";
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 
 /**
  * This week (docs/plans/active/insights-analyst-plan.md §4.1, drawn as the
@@ -28,20 +31,24 @@ export default function InsightsThisWeekPage() {
   const t = usePlatformTranslations("insights.week");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightsReads.insightsThisWeek, site ? { siteId: site } : {});
   const findings = data?.findings;
   const table = useFindingsTable({ rows: findings, when: "sure", opening: "rank" });
-  const top = findings?.[0] ?? null;
+  // The eye on a page that already shows Hakken's advice (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 2):
+  // findings of its own about this week's figures, and the week's advice — the strategy's verdict and each finding's
+  // first step — handed with them, so the piece written builds on it and never says something different.
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => thisWeekSees(data, thisWeekNames(tAll), formatMonth), [data, tAll]);
+  const advice = useMemo(() => thisWeekAdvice(data), [data]);
+  useSeesPart("advice", advice);
   const checked = data?.weeks.reduce((sum, week) => sum + week.checked, 0) ?? 0;
   const ruledOut = data?.weeks.reduce((sum, week) => sum + week.ruledOut, 0) ?? 0;
   const atStake = (findings ?? []).reduce((sum, finding) => sum + (finding.atStake ?? 0), 0);
   const sources = new Set(data?.weeks.flatMap((week) => week.sources.filter((source) => source.facts > 0).map((source) => source.source)) ?? []);
-  const says = data
-    ? findings && findings.length > 0 && top
-      ? [t("sees.count", { count: findings.length, first: top.headline }), t("sees.checked", { checked: formatNumber(checked), ruledOut })]
-      : [t("sees.none")]
-    : [];
-  const steps = (findings ?? []).slice(0, 2).map((finding) => ({ words: finding.action, link: t("seeFinding"), href: href(`findings/${finding.findingId}`) }));
+  // Where the piece's first steps may point: each of the week's findings, its whole case.
+  const links = (findings ?? []).map((finding) => ({ label: finding.headline, href: href(`findings/${finding.findingId}`) }));
 
   // Visitors and Google clicks for one enquiry, the same 90 days a year apart (the week's scorecard).
   const score = data?.weeks[0]?.summary?.scorecard ?? [];
@@ -52,7 +59,7 @@ export default function InsightsThisWeekPage() {
   return (
     <>
       <PageHeader icon={<CalendarCheck className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      {data ? <HakkenSees says={says} steps={steps} page={{ screen: "insights.thisWeek", siteId: site, data }} /> : null}
+      {data ? <HakkenSees says={[]} steps={[]} page={{ screen: "insights.thisWeek", siteId: eyeSite, data: seesData, links }} /> : null}
       <EnquiryCheckNotice check={data?.weeks[0]?.summary?.enquiryCheck} />
       <QuickCheckNotice />
       <FigureRow>

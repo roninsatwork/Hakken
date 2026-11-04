@@ -11,9 +11,9 @@ import { titlesOf } from "./pageTitles";
 import { shiftDay } from "./searchConsoleDays";
 import { pageTypeByAddress } from "./utils/siteShapes";
 import { AI_ASSISTANTS_CHANNEL, GOOGLE_AI_CHANNEL, assistantOf, channelOf } from "./utils/aiAssistants";
-import { channelKey, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { channelKey, splitChannelKey, type ListRow, type PartOnly } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
-import { FEW_VISITS, addInto, blank, connectionOf, conversionsOf, countedOf, readSlot, type Counted, type Held } from "./googleAnalyticsRows";
+import { FEW_VISITS, addInto, blank, connectionOf, conversionsOf, countedOf, eachSlotPart, readSlot, type Counted, type Held, type SlotNotes } from "./googleAnalyticsRows";
 import { merged, readChannelPoints } from "./googleAnalyticsHistory";
 import { periodRange } from "./googleAnalyticsJobs";
 import { seen, seenValidator, type Seen, type SeenPhrase } from "./utils/hakkenSees";
@@ -36,7 +36,7 @@ import {
  * the conversions it started and its dwell time (CH3), where its visits land
  * by page group (CH5), the pages behind the change (CH6), every key event
  * (CH7), the channel a day against the span before (CH4), and — on Channels
- * — each channel by page group, what a visit is worth and each channel's
+ * — each channel by page group, how often a visit converts and each channel's
  * extras for the table (CH9). Google Analytics' own figures only (CH1), read
  * from the lists Hakken already keeps; one device's landing pages are
  * every device's, as those lists are kept. Only the caller's own website.
@@ -74,11 +74,19 @@ type Classifier = { kindOf: (address: string) => string; nameOf: (kind: string) 
 
 export async function classifierFor(ctx: Reader, holdId: HoldId): Promise<Classifier> {
   const kinds = await readPageKinds(ctx, holdId);
+  // Each address classified once: its rules are read through on every call, and a year's landing pages by channel ask
+  // for each page once a channel (2026-11-04).
+  const known = new Map<string, string>();
+  const classify = (address: string) => {
+    if (address === NOT_SET) return NO_PAGE_KIND;
+    if (kinds) return kinds.kindOf(address);
+    return pageTypeByAddress(pathOfAddress(address)) ?? "OTHER";
+  };
   return {
     kindOf: (address) => {
-      if (address === NOT_SET) return NO_PAGE_KIND;
-      if (kinds) return kinds.kindOf(address);
-      return pageTypeByAddress(pathOfAddress(address)) ?? "OTHER";
+      let kind = known.get(address);
+      if (kind === undefined) known.set(address, (kind = classify(address)));
+      return kind;
     },
     nameOf: (kind) => kinds?.nameOf(kind) ?? null,
   };
@@ -137,40 +145,113 @@ export async function landingByChannel(
   country: string,
   /** One device's (ga-stored-figures-plan.md SF5); every device's until a run has built that device's lists. */
   device = "",
+  /** Only what the read names of each row (`PartOnly`); whole when null. */
+  only: PartOnly | null = null,
 ): Promise<(Held & { assistants: boolean; everyDevice: boolean }) | null> {
-  const own = device !== "" ? await readSlot(ctx, holdId, slotKey("landingChannel", period, which, device, country)) : null;
+  const rows: ListRow[] = [];
+  const held = await eachLandingByChannel(ctx, holdId, period, which, country, device, only, (row) => rows.push(row));
+  return held ? { ...held, rows } : null;
+}
+
+/** What `eachLandingByChannel` says beside its rows: the list's dates and notes, and how it was read. */
+export type LandingNotes = SlotNotes & { assistants: boolean; everyDevice: boolean };
+
+/**
+ * `landingByChannel` a part at a time: each of its rows handed to `visit` in the order it lists them, the same
+ * figures, with only what the read names of each (`PartOnly`, its `keep` naming pages) — or whole, when `only` is
+ * null. Read whole as rows, a year of landing pages by channel, now and before, ran Channels, a channel's page and a
+ * page's own screen out of their 64MB on Last 6 and 12 months on More Handles (2026-11-04).
+ */
+export async function eachLandingByChannel(
+  ctx: Reader,
+  holdId: HoldId,
+  period: AnalyticsPeriod,
+  which: "NOW" | "BEFORE",
+  country: string,
+  device: string,
+  only: PartOnly | null,
+  visit: (row: ListRow) => void,
+  /** Each row of the landing pages by channel as kept, before any assistant's visits are taken out: Conversions' flow reads their converting visits. */
+  asKept?: (row: ListRow) => void,
+): Promise<LandingNotes | null> {
+  const kept = async (key: string) => (await ctx.db
+    .query("googleAnalyticsPeriodSlots")
+    .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key))
+    .first()) !== null;
+  const own = device !== "" && (await kept(slotKey("landingChannel", period, which, device, country)));
   const shown = own ? device : "";
-  const held = own ?? await readSlot(ctx, holdId, slotKey("landingChannel", period, which, "", country));
-  if (!held) return null;
+  const listKey = slotKey("landingChannel", period, which, shown, country);
+  if (!own && !(await kept(listKey))) return null;
   const everyDevice = device !== "" && !own;
-  const assistants = await rowsOf(ctx, holdId, slotKey("landingAssistant", period, which, shown, country));
-  if (!assistants) return { ...held, assistants: false, everyDevice, rows: held.rows.map((row) => ({ ...row, key: channelKey(splitChannelKey(row.key).channel, landingChannelOf(splitChannelKey(row.key).source)) })) };
+  // A page's rows are worked out from its own rows alone, so a read of some pages reads only theirs of both lists.
+  const keepPage = only?.keep;
+  const pageOnly: PartOnly | null = only && keepPage ? { ...only, keep: (key: string) => keepPage(splitChannelKey(key).channel) } : only;
   // Each assistant visit by its page and the channel Google filed it under: only a source on the list counts.
   const taken = new Map<string, ListRow>();
   const ai = new Map<string, ListRow>();
-  for (const row of assistants) {
-    const { channel: page, source: rest } = splitChannelKey(row.key);
-    const { channel: filed, source } = splitChannelKey(rest);
-    if (assistantOf(source) === null) continue;
-    const filedKey = channelKey(page, filed);
-    addInto(taken.get(filedKey) ?? taken.set(filedKey, blank(filedKey)).get(filedKey)!, row);
-    const aiKey = channelKey(page, AI_ASSISTANTS_CHANNEL);
-    addInto(ai.get(aiKey) ?? ai.set(aiKey, blank(aiKey)).get(aiKey)!, row);
-  }
-  const rows: ListRow[] = [];
-  for (const row of held.rows) {
-    const { channel: page, source: filed } = splitChannelKey(row.key);
-    const own = taken.get(row.key);
-    const rest = own ? less(row, own) : row;
-    if (rest.visits <= 0 && rest.counts.size === 0) continue;
-    // What Google filed as AI Assistant from a source not on the list is still an assistant's.
-    const shown = landingChannelOf(filed);
-    if (shown === AI_ASSISTANTS_CHANNEL) {
+  const assistants = await eachSlotPart(ctx, holdId, slotKey("landingAssistant", period, which, shown, country), pageOnly, (rows) => {
+    for (const row of rows) {
+      const { channel: page, source: rest } = splitChannelKey(row.key);
+      const { channel: filed, source } = splitChannelKey(rest);
+      if (assistantOf(source) === null) continue;
+      const filedKey = channelKey(page, filed);
+      addInto(taken.get(filedKey) ?? taken.set(filedKey, blank(filedKey)).get(filedKey)!, row);
       const aiKey = channelKey(page, AI_ASSISTANTS_CHANNEL);
-      addInto(ai.get(aiKey) ?? ai.set(aiKey, blank(aiKey)).get(aiKey)!, rest);
-    } else if (rest.visits > 0) rows.push({ ...rest, key: channelKey(page, shown) });
-  }
-  return { ...held, assistants: true, everyDevice, rows: [...rows, ...ai.values()] };
+      addInto(ai.get(aiKey) ?? ai.set(aiKey, blank(aiKey)).get(aiKey)!, row);
+    }
+  });
+  const held = await eachSlotPart(ctx, holdId, listKey, pageOnly, (rows, part) => {
+    for (const row of rows) {
+      asKept?.(row);
+      const { channel: page, source: filed } = splitChannelKey(row.key);
+      if (!assistants) {
+        visit({ ...row, key: channelKey(page, landingChannelOf(filed)) });
+        continue;
+      }
+      const own = taken.get(row.key);
+      const rest = own ? less(row, own) : row;
+      // Left out with no visits and no key events: a row whole carries every event its part counts, nought or not.
+      if (rest.visits <= 0 && part.events.length === 0) continue;
+      // What Google filed as AI Assistant from a source not on the list is still an assistant's.
+      const shownChannel = landingChannelOf(filed);
+      if (shownChannel === AI_ASSISTANTS_CHANNEL) {
+        const aiKey = channelKey(page, AI_ASSISTANTS_CHANNEL);
+        addInto(ai.get(aiKey) ?? ai.set(aiKey, blank(aiKey)).get(aiKey)!, rest);
+      } else if (rest.visits > 0) visit({ ...rest, key: channelKey(page, shownChannel) });
+    }
+  });
+  if (!held) return null;
+  if (assistants) for (const row of ai.values()) visit(row);
+  return { ...held, assistants: assistants !== null, everyDevice };
+}
+
+/** One channel's landing pages of `eachLandingByChannel`, each keyed by its page (`landingOf`), and every row's visits and engaged visits added up. */
+export type ChannelLanding = { notes: LandingNotes; rows: ListRow[]; site: { visits: number; engaged: number } };
+
+/**
+ * One channel's landing pages, as `landingOf` takes them from `landingByChannel`'s rows, read a part at a time with
+ * only the events named: a channel's own page and its landing pages' table (2026-11-04, the year's read whole ran
+ * them out of their 64MB on More Handles).
+ */
+export async function channelLanding(
+  ctx: Reader,
+  holdId: HoldId,
+  period: AnalyticsPeriod,
+  which: "NOW" | "BEFORE",
+  country: string,
+  device: string,
+  channel: string,
+  events: ReadonlySet<string>,
+): Promise<ChannelLanding | null> {
+  const rows: ListRow[] = [];
+  const site = { visits: 0, engaged: 0 };
+  const notes = await eachLandingByChannel(ctx, holdId, period, which, country, device, { events }, (row) => {
+    site.visits += row.visits;
+    site.engaged += row.engaged;
+    const { channel: page, source: shown } = splitChannelKey(row.key);
+    if (shown === channel) rows.push({ ...row, key: page });
+  });
+  return notes ? { notes, rows, site } : null;
 }
 
 /** Each kept page key read to its address. */
@@ -240,8 +321,6 @@ const channelFiguresValidator = v.object({
   newPeople: v.number(),
   conversions: v.number(),
   conversionsBefore: v.union(v.number(), v.null()),
-  value: v.number(),
-  valueBefore: v.union(v.number(), v.null()),
   /** Conversions by the people this channel first brought, on any visit (CH3); null while not held. */
   started: v.union(v.number(), v.null()),
   startedBefore: v.union(v.number(), v.null()),
@@ -250,6 +329,9 @@ const channelFiguresValidator = v.object({
   siteEngaged: v.number(),
   siteSeconds: v.number(),
   siteConversions: v.number(),
+  /** The whole website's the span before, so the eye sets the channel's move beside the website's (2026-11-04). */
+  siteVisitsBefore: v.optional(v.union(v.number(), v.null())),
+  siteConversionsBefore: v.optional(v.union(v.number(), v.null())),
   /** AI assistants: the visits Google filed outside its own AI Assistant channel (CH8). */
   elsewhere: v.number(),
 });
@@ -309,6 +391,7 @@ export async function readChannelTop(ctx: SiteReader, args: ChannelArgs): Promis
   const total = totalsOf(mine, counted);
   const was = mineBefore ? totalsOf(mineBefore, counted) : null;
   const website = totalsOf(now.rows, counted);
+  const websiteBefore = beforeRows ? totalsOf(beforeRows, counted) : null;
   // The people a channel first brought, every device: the lists are kept so.
   const firstNow = await rowsOf(ctx, holdId, key("firstChannel", "NOW"));
   const firstBefore = await rowsOf(ctx, holdId, key("firstChannel", "BEFORE"));
@@ -323,21 +406,24 @@ export async function readChannelTop(ctx: SiteReader, args: ChannelArgs): Promis
     newPeople: total.newPeople,
     conversions: total.conversions,
     conversionsBefore: was?.conversions ?? null,
-    value: total.value,
-    valueBefore: was?.value ?? null,
     started: firstNow ? totalsOf(ofChannel(firstNow, args.channel), counted).conversions : null,
     startedBefore: firstBefore ? totalsOf(ofChannel(firstBefore, args.channel), counted).conversions : null,
     siteVisits: website.visits,
     siteEngaged: website.engaged,
     siteSeconds: website.seconds,
     siteConversions: website.conversions,
+    siteVisitsBefore: websiteBefore?.visits ?? null,
+    siteConversionsBefore: websiteBefore?.conversions ?? null,
     elsewhere,
   };
 
-  // Its landing pages, now and before: every device, as the list is kept.
-  const landed = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
-  const landing = landingOf(landed?.rows ?? null, args.channel);
-  const landingBefore = landingOf((await landingByChannel(ctx, holdId, args.period, "BEFORE", country, args.device))?.rows ?? null, args.channel);
+  // Its landing pages, now and before: every device, as the list is kept — each with only the counted events, read a
+  // part at a time (2026-11-04: read whole as rows, they ran this page out of its 64MB from Last 3 months on More Handles).
+  const countedEvents = new Set(counted.map((event) => event.eventName));
+  const landedNow = await channelLanding(ctx, holdId, args.period, "NOW", country, args.device, args.channel, countedEvents);
+  const landed = landedNow?.notes ?? null;
+  const landing = landedNow?.rows ?? [];
+  const landingBefore = (await channelLanding(ctx, holdId, args.period, "BEFORE", country, args.device, args.channel, countedEvents))?.rows ?? [];
   const addresses = await addressesOf(ctx, holdId, [...landing, ...landingBefore].map((row) => row.key));
   const classifier = await classifierFor(ctx, holdId);
   const pageRows = new Map<string, PageFacts & { address: string }>();
@@ -463,8 +549,8 @@ async function namedPages(ctx: Reader, holdId: HoldId, box: Seen): Promise<Seen>
 
 /**
  * Every key event of the property for one channel (CH7): counted as a
- * conversion or not, how many now and before, the value of those counted,
- * and the pages those visits landed on most.
+ * conversion or not, how many now and before, and the pages those visits
+ * landed on most. Never money (Anthony, 2026-11-03: "Take money off").
  */
 export const analyticsChannelEvents = tenantQuery({
   args: { ...argsOf, channel: v.string() },
@@ -474,8 +560,6 @@ export const analyticsChannelEvents = tenantQuery({
       counted: v.boolean(),
       count: v.number(),
       countBefore: v.union(v.number(), v.null()),
-      /** In hundredths; 0 for an event not counted. */
-      value: v.number(),
       landed: v.array(v.object({ address: v.string(), count: v.number() })),
       /** The other pages it happened on, past the three named. */
       landedMore: v.number(),
@@ -487,32 +571,29 @@ export const analyticsChannelEvents = tenantQuery({
     const country = await keptCountry(ctx, site.hold, args.country);
     const connection = await connectionOf(ctx, holdId);
     if (!connection?.newestDay) return { rows: [] };
-    const counted = countedOf(connection);
     const now = await rowsOf(ctx, holdId, slotKey("channel", args.period, "NOW", args.device, country));
     if (!now) return { rows: [] };
     const before = await rowsOf(ctx, holdId, slotKey("channel", args.period, "BEFORE", args.device, country));
     const total = summed(ofChannel(now, args.channel));
     const was = before ? summed(ofChannel(before, args.channel)) : null;
-    const landing = landingOf((await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device))?.rows ?? null, args.channel);
     const events = connection.events ?? [];
+    // Its landing pages with each key event, read a part at a time (2026-11-04: read whole as rows, the year's ran this
+    // out of its 64MB on More Handles).
+    const landing = (await channelLanding(ctx, holdId, args.period, "NOW", country, args.device, args.channel, new Set(events.map((event) => event.eventName))))?.rows ?? [];
     const landedOn = events.map((event) => landing
       .filter((row) => (row.counts.get(event.eventName) ?? 0) > 0)
       .sort((left, right) => (right.counts.get(event.eventName) ?? 0) - (left.counts.get(event.eventName) ?? 0)));
     const tops = landedOn.map((rows) => rows.slice(0, LANDED_NAMED));
     const addresses = await addressesOf(ctx, holdId, tops.flat().map((row) => row.key));
     return {
-      rows: events.map((event, index) => {
-        const own = counted.find((one) => one.eventName === event.eventName);
-        return {
-          eventName: event.eventName,
-          counted: event.counted,
-          count: total.counts.get(event.eventName) ?? 0,
-          countBefore: was ? was.counts.get(event.eventName) ?? 0 : null,
-          value: own ? conversionsOf(total, [own]).value : 0,
-          landed: tops[index].map((row) => ({ address: addresses.get(row.key) ?? row.key, count: row.counts.get(event.eventName) ?? 0 })),
-          landedMore: landedOn[index].length - tops[index].length,
-        };
-      }).sort((left, right) => right.count - left.count || (right.countBefore ?? 0) - (left.countBefore ?? 0) || Number(right.counted) - Number(left.counted)),
+      rows: events.map((event, index) => ({
+        eventName: event.eventName,
+        counted: event.counted,
+        count: total.counts.get(event.eventName) ?? 0,
+        countBefore: was ? was.counts.get(event.eventName) ?? 0 : null,
+        landed: tops[index].map((row) => ({ address: addresses.get(row.key) ?? row.key, count: row.counts.get(event.eventName) ?? 0 })),
+        landedMore: landedOn[index].length - tops[index].length,
+      })).sort((left, right) => right.count - left.count || (right.countBefore ?? 0) - (left.countBefore ?? 0) || Number(right.counted) - Number(left.counted)),
     };
   },
 });
@@ -644,7 +725,13 @@ export type ChannelExtras = { started: number | null; landsMost: { kind: string;
 /** Each channel's extras, by its name as the screens show it: every device, as the two lists are kept. */
 export async function channelExtras(ctx: Reader, holdId: HoldId, period: AnalyticsPeriod, country: string, counted: readonly Counted[], device = ""): Promise<Map<string, ChannelExtras>> {
   const first = await rowsOf(ctx, holdId, slotKey("firstChannel", period, "NOW", "", country));
-  const landing = (await landingByChannel(ctx, holdId, period, "NOW", country, device))?.rows ?? null;
+  // Each landing page by channel with its visits alone, read a part at a time (2026-11-04: read whole as rows, the
+  // year's ran Channels' table out of its 64MB on More Handles).
+  const landing: Array<{ page: string; channel: string; visits: number }> = [];
+  const landed = await eachLandingByChannel(ctx, holdId, period, "NOW", country, device, { events: new Set() }, (row) => {
+    const { channel: page, source: channel } = splitChannelKey(row.key);
+    landing.push({ page, channel, visits: row.visits });
+  });
   const out = new Map<string, ChannelExtras>();
   const extrasOf = (channel: string) => out.get(channel) ?? { started: first ? 0 : null, landsMost: null };
   for (const row of first ?? []) {
@@ -653,15 +740,14 @@ export async function channelExtras(ctx: Reader, holdId: HoldId, period: Analyti
     entry.started = (entry.started ?? 0) + conversionsOf(row, counted).conversions;
     out.set(channel, entry);
   }
-  if (landing) {
-    const addresses = await addressesOf(ctx, holdId, landing.map((row) => splitChannelKey(row.key).channel));
+  if (landed) {
+    const addresses = await addressesOf(ctx, holdId, landing.map((row) => row.page));
     const classifier = await classifierFor(ctx, holdId);
     const byChannel = new Map<string, Map<string, number>>();
-    for (const row of landing) {
-      const { channel: page, source: channel } = splitChannelKey(row.key);
+    for (const { page, channel, visits } of landing) {
       const kinds = byChannel.get(channel) ?? new Map<string, number>();
       const kind = classifier.kindOf(addresses.get(page) ?? page);
-      kinds.set(kind, (kinds.get(kind) ?? 0) + row.visits);
+      kinds.set(kind, (kinds.get(kind) ?? 0) + visits);
       byChannel.set(channel, kinds);
     }
     for (const [channel, kinds] of byChannel) {
@@ -679,7 +765,7 @@ const mapCellValidator = v.object({ kind: v.string(), visits: v.number(), conver
 /**
  * Channels above its table (CH9): the website's figures with the channel
  * converting best over 12 months and the key events not counted, each
- * channel by page group (ChannelMap), what a visit is worth by channel over
+ * channel by page group (ChannelMap), how often a visit converts by channel over
  * 12 months, and What Hakken sees.
  */
 export const analyticsChannelsTop = tenantQuery({
@@ -691,7 +777,6 @@ export const analyticsChannelsTop = tenantQuery({
       visitsBefore: v.union(v.number(), v.null()),
       conversions: v.number(),
       conversionsBefore: v.union(v.number(), v.null()),
-      value: v.number(),
       seconds: v.number(),
       /** The channel converting best over 12 months, from 100 visits (R8). */
       best: v.union(v.null(), v.object({ channel: v.string(), rate: v.number(), siteRate: v.number(), visits: v.number() })),
@@ -702,13 +787,13 @@ export const analyticsChannelsTop = tenantQuery({
       kinds: v.array(v.object({ kind: v.string(), name: v.union(v.string(), v.null()) })),
       rows: v.array(v.object({ channel: v.string(), visits: v.number(), cells: v.array(mapCellValidator) })),
     }),
-    /** What a visit is worth, by channel, over 12 months (CH9). */
-    worth: v.object({
+    /** How often a visit converts, by channel, over 12 months (CH9): never money (Anthony, 2026-11-03: "Take money off"). */
+    perVisit: v.object({
       siteRate: v.number(),
       /** The visits a channel needs before its rate is trusted (`FEW_VISITS`), for the chart's words. */
       few: v.number(),
       /** `fewVisits`: under 100 visits, too few to judge its rate (GA22), never shown as beating the website. */
-      rows: v.array(v.object({ channel: v.string(), visits: v.number(), conversions: v.number(), value: v.number(), fewVisits: v.boolean() })),
+      rows: v.array(v.object({ channel: v.string(), visits: v.number(), conversions: v.number(), fewVisits: v.boolean() })),
     }),
     everyDevice: v.boolean(),
     seen: seenValidator,
@@ -721,7 +806,7 @@ export async function readChannelsTop(ctx: SiteReader, args: ObjectType<typeof a
   const holdId = site.hold._id;
   const country = await keptCountry(ctx, site.hold, args.country);
   const connection = await connectionOf(ctx, holdId);
-  const empty = { figures: null, map: { kinds: [], rows: [] }, worth: { siteRate: 0, few: FEW_VISITS, rows: [] }, everyDevice: false, seen: seen([]) };
+  const empty = { figures: null, map: { kinds: [], rows: [] }, perVisit: { siteRate: 0, few: FEW_VISITS, rows: [] }, everyDevice: false, seen: seen([]) };
   if (!connection?.newestDay) return { ...empty, state: connection?.status === "CONNECTED" ? "PREPARING" as const : "NONE" as const };
   const counted = countedOf(connection);
   const now = await rowsOf(ctx, holdId, slotKey("channel", args.period, "NOW", args.device, country));
@@ -742,19 +827,19 @@ export async function readChannelsTop(ctx: SiteReader, args: ObjectType<typeof a
   const total = totalsOf(now, counted);
   const was = before ? totalsOf(before, counted) : null;
 
-  // What a visit is worth over the last 12 months, every device (CH9, R8): added up from the days, weeks and months
-  // held — visits and conversions add up (calendar-periods-plan.md, rule 10).
+  // How often a visit converts over the last 12 months, every device (CH9, R8): added up from the days, weeks and months
+  // held — visits and conversions add up (calendar-periods-plan.md, rule 10). Never money.
   const yearPoints = await readChannelPoints(ctx, connection, "", shiftDay(connection.newestDay, -364), connection.newestDay, country);
   const year = yearPoints ? merged(yearPoints.flatMap((point) => point.rows)) : null;
   const yearBy = year ? group(year) : new Map<string, ListRow>();
   const yearTotal = year ? totalsOf(year, counted) : null;
   const siteRate = yearTotal && yearTotal.visits > 0 ? yearTotal.conversions / yearTotal.visits : 0;
-  const worthRows = [...yearBy.values()]
-    .map((row) => ({ channel: row.key, visits: row.visits, ...conversionsOf(row, counted) }))
+  const perVisitRows = [...yearBy.values()]
+    .map((row) => ({ channel: row.key, visits: row.visits, conversions: conversionsOf(row, counted).conversions }))
     .filter((row) => row.visits > 0)
-    .map((row) => ({ channel: row.channel, visits: row.visits, conversions: row.conversions, value: row.value, fewVisits: row.visits < FEW_VISITS }))
+    .map((row) => ({ channel: row.channel, visits: row.visits, conversions: row.conversions, fewVisits: row.visits < FEW_VISITS }))
     .sort((left, right) => right.conversions / right.visits - left.conversions / left.visits || right.visits - left.visits);
-  const bestRow = worthRows.filter((row) => row.visits >= FEW_VISITS && row.conversions > 0)[0] ?? null;
+  const bestRow = perVisitRows.filter((row) => row.visits >= FEW_VISITS && row.conversions > 0)[0] ?? null;
   const best = bestRow && bestRow.conversions / bestRow.visits > siteRate ? { channel: bestRow.channel, rate: bestRow.conversions / bestRow.visits, siteRate, visits: bestRow.visits } : null;
 
   // Key events not counted, each with the channel bringing it most (R3).
@@ -770,22 +855,26 @@ export async function readChannelsTop(ctx: SiteReader, args: ObjectType<typeof a
     .filter((event) => event.count > 0)
     .sort((left, right) => right.count - left.count);
 
-  // Each channel by page group (ChannelMap), every device.
-  const mapped = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
-  const landing = mapped?.rows ?? null;
-  const addresses = landing ? await addressesOf(ctx, holdId, landing.map((row) => splitChannelKey(row.key).channel)) : new Map<string, string>();
+  // Each channel by page group (ChannelMap), every device: each landing page's visits and conversions alone, read a part
+  // at a time (2026-11-04: read whole as rows, the year's ran Channels out of its 64MB on More Handles).
+  const landing: Array<{ page: string; channel: string; visits: number; conversions: number }> = [];
+  const mapped = await eachLandingByChannel(ctx, holdId, args.period, "NOW", country, args.device, { events: new Set(counted.map((event) => event.eventName)) }, (row) => {
+    const { channel: page, source: channel } = splitChannelKey(row.key);
+    landing.push({ page, channel, visits: row.visits, conversions: conversionsOf(row, counted).conversions });
+  });
+  const addresses = mapped ? await addressesOf(ctx, holdId, landing.map((row) => row.page)) : new Map<string, string>();
   const classifier = await classifierFor(ctx, holdId);
   const cells = new Map<string, Map<string, { visits: number; conversions: number }>>();
   const kindTotals = new Map<string, number>();
   let noPage = 0;
-  for (const row of landing ?? []) {
-    const { channel: page, source: channel } = splitChannelKey(row.key);
+  for (const row of landing) {
+    const { page, channel } = row;
     const kind = classifier.kindOf(addresses.get(page) ?? page);
     if (kind === NO_PAGE_KIND) noPage += row.visits;
     const byKind = cells.get(channel) ?? new Map<string, { visits: number; conversions: number }>();
     const cell = byKind.get(kind) ?? { visits: 0, conversions: 0 };
     cell.visits += row.visits;
-    cell.conversions += conversionsOf(row, counted).conversions;
+    cell.conversions += row.conversions;
     byKind.set(kind, cell);
     cells.set(channel, byKind);
     kindTotals.set(kind, (kindTotals.get(kind) ?? 0) + row.visits);
@@ -830,13 +919,12 @@ export async function readChannelsTop(ctx: SiteReader, args: ObjectType<typeof a
       visitsBefore: was?.visits ?? null,
       conversions: total.conversions,
       conversionsBefore: was?.conversions ?? null,
-      value: total.value,
       seconds: total.seconds,
       best,
       uncounted: uncounted.map((event) => ({ eventName: event.eventName, count: event.count, enquiry: event.enquiry })),
     },
     map: { kinds: mapKinds.map((kind) => ({ kind, name: classifier.nameOf(kind) })), rows: mapRows },
-    worth: { siteRate, few: FEW_VISITS, rows: worthRows },
+    perVisit: { siteRate, few: FEW_VISITS, rows: perVisitRows },
     everyDevice: mapped?.everyDevice ?? false,
     seen: box,
   };

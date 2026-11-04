@@ -1,13 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { formatNumber } from "../../../sites/_components/siteFormat";
-import { BingFigures, BingSees } from "../../_components/BingParts";
+import { BingFigures, BingSees, useBingEyeNames } from "../../_components/BingParts";
+import { eyeWords, listSeen, performanceSeen } from "../../_components/bingSeesData";
 import { BingClicksChart } from "../../_components/BingCharts";
-import { BingListScreen, pathOf } from "../../_components/BingListTable";
+import { BingListScreen, pathOf, useWholeListLinks } from "../../_components/BingListTable";
 import { useBingHref, useBingSiteId, useBingStatus, useBingDates } from "../../_components/useBing";
 
 /**
@@ -26,6 +28,12 @@ export default function BingPagesPage() {
   const hrefFor = useBingHref(siteId);
   const { period } = useBingDates();
   const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, period } : "skip");
+  // The eye reads the whole list beside the table's page: what moved, each kind of page on both engines (bingSeesData.ts).
+  const whole = useQuery(api.bingWebmasterReads.bingListSeen, status?.connection?.newestWeek ? { siteId, list: "page", period } : "skip");
+  const names = useBingEyeNames();
+  const seenFigures = useMemo(() => performanceSeen(figures, names), [figures, names]);
+  const words = useMemo(() => eyeWords(names), [names]);
+  const links = useWholeListLinks(whole, "pages/page");
   return (
     <BingListScreen
       header={{ icon: <FileText className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
@@ -35,7 +43,8 @@ export default function BingPagesPage() {
           {answer ? (
             <BingSees
               screen="pages"
-              data={{ figures, list: answer }}
+              data={listSeen(seenFigures, answer, whole, words)}
+              links={links}
               says={[
                 tw("says", { count: formatNumber(answer.summary.rows) }),
                 answer.summary.top && tw("top", { page: pathOf(answer.summary.top.key), clicks: formatNumber(answer.summary.top.clicks) }),

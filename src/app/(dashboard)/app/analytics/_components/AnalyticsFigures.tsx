@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { Change, ChangeLine } from "@/src/ui/components/screens/Change";
 import { formatNumber } from "../../sites/_components/siteFormat";
-import { changeOf, formatMoney, formatPercent, formatPerVisit, formatTime } from "./analyticsFormat";
+import { changeOf, formatPercent, formatPerVisit, formatTime } from "./analyticsFormat";
 import { usePeriod, periodWord } from "./useAnalytics";
 
 type Figures = {
@@ -16,42 +16,50 @@ type Figures = {
   /** Seconds the visits lasted, all told. */
   length: number;
   conversions: number;
-  value: number;
 };
 
 /**
  * The change on the span before, its arrow in the words ("up 8.4% on the 30 days before"), or nothing to compare.
  * `lowerIsBetter` for a count where fewer is the good news — Products' products added and never bought
- * (products-screen-4-plan-2026-11-02.md) — so its colour says so; the words stay the same.
+ * (products-screen-4-plan-2026-11-02.md) — so its colour says so; the words stay the same. `named`, the span before by
+ * its own name where it has one ("September"), says it as a person would: "4.7% fewer than September" (Visits,
+ * visits-redo-plan-2026-11-03.md; the other screens keep "on the month before" until Anthony says otherwise).
  */
-export function BeforeLine({ now, before, lowerIsBetter = false }: { now: number; before: number | null | undefined; lowerIsBetter?: boolean }) {
+export function BeforeLine({ now, before, lowerIsBetter = false, named }: { now: number; before: number | null | undefined; lowerIsBetter?: boolean; named?: string }) {
   const t = useTranslations("googleAnalytics.figures");
   const tf = useTranslations("googleAnalytics.filters");
   const [period] = usePeriod();
   const change = changeOf(now, before);
   if (change === null) return <span className="text-[12px] text-muted">{t("nothingBefore")}</span>;
+  const key = named !== undefined
+    ? (change > 0 ? "moreThan" : change < 0 ? "fewerThan" : "sameAs")
+    : (change > 0 ? "onBeforeUp" : change < 0 ? "onBeforeDown" : "onBeforeSame");
   return (
     <ChangeLine by={lowerIsBetter ? -change : change}>
-      {t(change > 0 ? "onBeforeUp" : change < 0 ? "onBeforeDown" : "onBeforeSame", { change: formatPercent(Math.abs(change)), before: tf(`before.${periodWord(period)}`) })}
+      {t(key, { change: formatPercent(Math.abs(change)), before: named ?? tf(`before.${periodWord(period)}`) })}
     </ChangeLine>
   );
 }
 
 /** A figure a visit — pages, seconds — on the span before, as its own move (up 0.1 on the 30 days before); a rate in points. Visitors' visits a person too. */
-export function PerVisitLine({ now, before, format, points = false, lowerIsBetter = false }: {
+export function PerVisitLine({ now, before, format, points = false, lowerIsBetter = false, named }: {
   now: number | null;
   before: number | null;
   format: (value: number) => string;
   points?: boolean;
   lowerIsBetter?: boolean;
+  /** The span before by its own name ("September"), said as `BeforeLine` says it: "The same as September". Not for points. */
+  named?: string;
 }) {
   const t = useTranslations("googleAnalytics.figures");
   const tf = useTranslations("googleAnalytics.filters");
   const [period] = usePeriod();
   if (now === null || before === null) return <span className="text-[12px] text-muted">{t("nothingBefore")}</span>;
   const by = Math.round((now - before) * (points ? 1000 : 10)) / (points ? 1000 : 10);
-  const words = { change: format(Math.abs(by)), before: tf(`before.${periodWord(period)}`) };
-  const key = by === 0 ? "onBeforeSame" : points ? (by > 0 ? "pointsUp" : "pointsDown") : by > 0 ? "onBeforeUp" : "onBeforeDown";
+  const words = { change: format(Math.abs(by)), before: named ?? tf(`before.${periodWord(period)}`) };
+  const key = named !== undefined && !points
+    ? (by === 0 ? "sameAs" : by > 0 ? "moreThan" : "fewerThan")
+    : by === 0 ? "onBeforeSame" : points ? (by > 0 ? "pointsUp" : "pointsDown") : by > 0 ? "onBeforeUp" : "onBeforeDown";
   return <ChangeLine by={lowerIsBetter ? -by : by}>{t(key, words)}</ChangeLine>;
 }
 
@@ -60,13 +68,13 @@ const perVisit = (total: number, visits: number) => (visits > 0 ? total / visits
 /**
  * Overview's figures (§5; §18.2 board 13): page views before money (GA26) —
  * visits, page views, people and engaged visits; then visit length, pages a
- * visit and bounce rate (GA25); and conversions, their value a line beneath,
- * leading to the Conversions page. Each against the span before.
+ * visit and bounce rate (GA25); and conversions, leading to the Conversions
+ * page — never their money (Anthony, 2026-11-03: "Take money off"). Each
+ * against the span before.
  */
-export function AnalyticsFigures({ now, before, currency, conversionsHref, counting }: {
+export function AnalyticsFigures({ now, before, conversionsHref, counting }: {
   now: Figures;
   before: Figures | null;
-  currency: string | null;
   conversionsHref: string;
   /** Whether anything counts as a conversion: without, conversions say so. */
   counting: boolean;
@@ -119,12 +127,7 @@ export function AnalyticsFigures({ now, before, currency, conversionsHref, count
         label={t("conversions")}
         href={conversionsHref}
         value={counting ? formatNumber(now.conversions) : "–"}
-        detail={counting ? (
-          <>
-            <span className="block text-[12px] text-secondary">{t("ofValue", { value: formatMoney(now.value, currency) })}</span>
-            <BeforeLine now={now.conversions} before={before?.conversions} />
-          </>
-        ) : <span className="text-[12px] text-muted">{t("nothingCounted")}</span>}
+        detail={counting ? <BeforeLine now={now.conversions} before={before?.conversions} /> : <span className="text-[12px] text-muted">{t("nothingCounted")}</span>}
       />
     </FigureRow>
   );

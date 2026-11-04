@@ -23,6 +23,7 @@ import { getErrorMessage, isRecord } from "./utils/lang";
 import { appError } from "./utils/appError";
 import { ASSISTANT_FIGURE_HANDLERS } from "./assistantToolHandlers";
 import { ASSISTANT_CHART_HANDLERS } from "./assistantChartHandlers";
+import { ASSISTANT_PAGE_CHART_HANDLERS } from "./assistantPageChartHandlers";
 import { ASSISTANT_TASK_HANDLERS } from "./assistantTaskHandlers";
 
 type JsonSchema = Record<string, unknown>;
@@ -72,6 +73,8 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   "assistant.insights.read",
   // A chart under an answer, drawn from the Search Console figures a member can already open (hakken-tasks-plan.md, 2.1).
   "assistant.chart",
+  // A chart from the page the conversation started on, redrawn from that page's own figures (ask-hakken-every-chart-page-plan-2026-11-03.md).
+  "assistant.pageChart",
   // Every Google Analytics screen and Live, as a member can already open them (google-analytics-plan.md §18.6.8).
   "assistant.googleAnalytics",
   "assistant.googleAnalytics.live",
@@ -629,6 +632,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   ...ASSISTANT_FIGURE_HANDLERS,
   ...ASSISTANT_TASK_HANDLERS,
   ...ASSISTANT_CHART_HANDLERS,
+  ...ASSISTANT_PAGE_CHART_HANDLERS,
   "knowledge.search": async (input) => {
     const query = getStringToolArg(input.args, "query") || input.fallbackQuery || "";
     const limit = getNumberToolArg(input.args, "limit");

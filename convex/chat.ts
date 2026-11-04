@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { MOST_FIGURES, startedOnValidator } from "./utils/startedOn";
+import { keptCharts } from "./utils/assistantPageCharts";
 import { issueUpload, requireOwnedUpload } from "./uploadReservations";
 import { uploadMetadataArgs } from "./uploadSchema";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -382,7 +383,7 @@ export const createThread = tenantMutation({
       userId,
       companyId: activeCompanyId,
       ...(args.forWebsiteId !== undefined ? { companyWebsiteId: args.forWebsiteId } : {}),
-      ...(args.startedOn ? { startedOn: { ...args.startedOn, findings: args.startedOn.findings.slice(0, 12), said: args.startedOn.said.slice(0, 12), ...(args.startedOn.figures ? { figures: args.startedOn.figures.slice(0, MOST_FIGURES).map((line) => line.slice(0, 200)) } : {}) } } : {}),
+      ...(args.startedOn ? { startedOn: { ...args.startedOn, findings: args.startedOn.findings.slice(0, 12), said: args.startedOn.said.slice(0, 12), ...(args.startedOn.figures ? { figures: args.startedOn.figures.slice(0, MOST_FIGURES).map((line) => line.slice(0, 200)) } : {}), ...(args.startedOn.charts ? { charts: keptCharts(args.startedOn.charts) } : {}) } } : {}),
       agentId: args.agentId,
       title: "New Conversation",
       createdAt: now,

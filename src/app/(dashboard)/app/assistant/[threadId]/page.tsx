@@ -123,7 +123,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                     than replacing a differently shaped object. */}
                 {messages.length > 0 && messages[messages.length - 1].role === "user" && (
                   isVectorizing ? (
-                    <div className="flex flex-col gap-2.5 border-l border-border-dim pl-4 sm:pl-5 mb-9">
+                    <div className="flex flex-col gap-2.5 mb-9">
                       <div className="flex items-center gap-2">
                         <span className="w-[15px] h-[15px] rounded-[4px] bg-brand flex items-center justify-center flex-shrink-0">
                           <Sparkles className="w-2.5 h-2.5 text-on-brand" />

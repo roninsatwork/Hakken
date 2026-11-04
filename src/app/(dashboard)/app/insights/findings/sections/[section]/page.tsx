@@ -12,7 +12,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { isFindingSection, sectionOf } from "@/convex/utils/insightSections";
 import { useFindingsTable } from "../../../_components/FindingsTable";
-import { useInsightsHref, useInsightsSite } from "../../../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../../../_components/useInsights";
 
 /**
  * One section of Findings (insights-intelligence-plan.md phase 7): the
@@ -27,6 +27,8 @@ export default function InsightsFindingsSectionPage() {
   const section = isFindingSection(raw) ? raw : "enquiries";
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const all = useQuery(api.insightsReads.insightsAllFindings, site ? { siteId: site } : {});
   // One list while the answer stays the same, so the eye is not handed its figures again on every render.
   const rows = useMemo(() => all?.filter((row) => sectionOf(row) === section), [all, section]);
@@ -36,7 +38,7 @@ export default function InsightsFindingsSectionPage() {
     <>
       <PageHeader icon={<ListChecks className="h-5 w-5 text-brand" />} title={t(`sections.${section}.title`)} description={t(`sections.${section}.description`)} />
       {rows && rows.length === 0 ? <HakkenEmptyState icon={ListChecks} title={t("sections.emptyTitle")} description={t("sections.emptyDescription")} /> : null}
-      {rows ? <HakkenSees says={top ? [t("sections.sees", { count: rows.length })] : []} steps={top ? [{ words: top.headline, link: t("overview.see"), href: href(`findings/${top.findingId}`) }] : []} page={{ screen: "insights.findingsSection", siteId: site, data: rows }} /> : null}
+      {rows ? <HakkenSees says={top ? [t("sections.sees", { count: rows.length })] : []} steps={top ? [{ words: top.headline, link: t("overview.see"), href: href(`findings/${top.findingId}`) }] : []} page={{ screen: "insights.findingsSection", siteId: eyeSite, data: rows }} /> : null}
       {rows && rows.length > 0 ? <DataTable {...table} footer={table.footer} /> : null}
     </>
   );

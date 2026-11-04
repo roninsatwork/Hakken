@@ -1,5 +1,6 @@
 import type { Finding, FindingFact } from "./findings";
 import { COUNT_ORDER, MEASURES, measureWords } from "./measures";
+import { OWN_FINDINGS } from "./pageOwnFindings";
 
 /**
  * What a page's own figures show, found by general rules (docs/plans/active/sees-every-page-plan-2026-10-31.md, phase
@@ -20,8 +21,11 @@ import { COUNT_ORDER, MEASURES, measureWords } from "./measures";
  */
 
 type Row = Record<string, unknown>;
-/** `picked`: rows the page chose from a longer list (a top ten, a table's first page), never the whole of anything. */
-type Table = { path: string; rows: Row[]; picked: boolean };
+/**
+ * `picked`: rows the page chose from a longer list (a top ten, a table's first page), never the whole of anything.
+ * `whole`: every row, for the list's totals; `rows` those a finding may name, without pages not sorted yet.
+ */
+type Table = { path: string; rows: Row[]; whole: Row[]; picked: boolean };
 /** `short`: the path of the list of one or two this row came from, its rows read as totals. */
 type Totals = { path: string; row: Row; name: string | null; short?: string };
 
@@ -42,6 +46,16 @@ const MOVE_SHARE = 0.03;
  * span before: this many of its rows had something then. A list with nothing before at all was not kept then.
  */
 const NEW_NEEDS_HELD = 2;
+/**
+ * A place that moved worth saying (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 7): this many places or
+ * more, between places a reader would know (the top hundred); weighed by the row's share of the list's main figure.
+ */
+const PLACE_LEAST = 3;
+const PLACE_MOST = 100;
+/** A row this light is no move worth saying: a fifth of the weight of a row with a twentieth of the list (1%). */
+const PLACE_REACH = Math.sqrt(0.2);
+/** The places a row may be kept by, as the screens name them. */
+const PLACE_FIELDS = ["position", "averagePosition"] as const;
 /** A row holding this share of a list's main figure, in a list of at least this many rows. */
 const HOLDS_SHARE = 0.4;
 const HOLDS_ROWS = 4;
@@ -98,13 +112,41 @@ function rowName(row: Row): string | null {
   return null;
 }
 
-/** A figure's value the span before, by the names the screens give it: `clicksBefore`, `previousClicks`, `before.clicks`. */
+/**
+ * A figure's value the span before, by every name the screens give it (ask-hakken-every-chart-page-plan-2026-11-03.md,
+ * shared work 3): `clicksBefore`, `previousClicks`, `before.clicks`; a plain `before` beside the row's main count
+ * (`{ visits: 640, before: 390 }`); or, on Google Analytics' screens, a change kept as a fraction of the visits or times
+ * (`{ visits: 640, changePercent: 64 }`, `pageData.ts`), worked back to the visits before. Before, a change kept as a
+ * fraction was invisible to the rules: Channels', Campaigns', Funnel's and Overview's visit changes said nothing.
+ */
 function beforeOf(row: Row, field: string): number | undefined {
   const nested = row.before && typeof row.before === "object" ? (row.before as Row)[field] : undefined;
   for (const value of [row[`${field}Before`], row[`previous${cap(field)}`], row[`${field}Previous`], nested]) {
     if (isNumber(value)) return value;
   }
+  if (isNumber(row.before) && field === mainCountOf(row)) return row.before;
+  const change = row.changePercent;
+  if (isNumber(change) && change > -100 && field === CHANGE_OF.find((count) => isNumber(row[count])) && isNumber(row[field])) {
+    return Math.round((row[field] as number) / (1 + change / 100));
+  }
   return undefined;
+}
+
+/** The counts a Google Analytics row's `change` is of, in the order looked for: its visits, else its times (an event's). */
+const CHANGE_OF = ["visits", "sessions", "times", "views"] as const;
+/** A row's main count: the first of the counts it holds. */
+const mainCountOf = (row: Row) => COUNT_ORDER.find((count) => isNumber(row[count]));
+
+/**
+ * Whether a list is one page of a longer one, so never a whole (shared work 4): the page marked it (`{ picked: true }`),
+ * the eye cut it (`rowsAllRows`, `pageData.ts`), or it is a page of a paged list (`{ rows, total, page, pages }`).
+ */
+function pickedIn(holder: Row, name: string, list: readonly unknown[]): boolean {
+  if (holder.picked === true) return true;
+  const all = holder[`${name}AllRows`];
+  if (isNumber(all) && all > list.length) return true;
+  if (isNumber(holder.pages) && holder.pages > 1) return true;
+  return isNumber(holder.total) && isNumber(holder.page) && holder.total > list.length;
 }
 
 /** A percentage's own reference beside it: the whole website's (`websiteX`), else similar pages' (`groupX`). */
@@ -129,7 +171,9 @@ function tablesIn(value: unknown, path: string[] = [], depth = 0, found: Table[]
   if (depth > MOST_DEPTH || !value || typeof value !== "object") return found;
   if (Array.isArray(value)) {
     const named = value.filter(isRow).map(flat).filter((row) => rowName(row) !== null);
-    if (value.length > TOTALS_ROWS && named.some(measured)) found.push({ path: path.join(".") || "list", rows: named, picked });
+    // A row marked not sorted (`sorted: false`: pages Hakken has still to put in a group) is housekeeping: in the list's
+    // totals, never named in a finding (Anthony, 2026-11-03, on the Visits eye: "this is really poor from the ai").
+    if (value.length > TOTALS_ROWS && named.some(measured)) found.push({ path: path.join(".") || "list", rows: named.filter((row) => row.sorted !== false), whole: named, picked });
     // The lists inside each named row, each a list of its own; a row named by nothing (a day) is never looked into.
     for (const row of named) {
       for (const [field, inner] of Object.entries(row)) if (inner && typeof inner === "object") tablesIn(inner, [...path, rowName(row)!, field], depth + 1, found);
@@ -137,7 +181,7 @@ function tablesIn(value: unknown, path: string[] = [], depth = 0, found: Table[]
     return found;
   }
   const row = value as Row;
-  for (const [name, inner] of Object.entries(row)) tablesIn(inner, [...path, name], depth + 1, found, picked || row.picked === true);
+  for (const [name, inner] of Object.entries(row)) tablesIn(inner, [...path, name], depth + 1, found, picked || (Array.isArray(inner) ? pickedIn(row, name, inner) : row.picked === true));
   return found;
 }
 
@@ -210,6 +254,10 @@ function apart(list: string, name: string | null, row: Row, field: string, reach
 export function pageFindings(screen: string, data: unknown): Finding[] {
   if (!data || typeof data !== "object") return [];
   const found: Found[] = [];
+  // A page's own rules first (pageOwnFindings.ts): on a page with `general: false`, the only ones it says.
+  const own = OWN_FINDINGS[screen];
+  if (own) found.push(...own.find(isRow(data) ? data : {}));
+  if (own && !own.general) return chosenOf(found);
 
   // A short list's rows against their references: the one furthest only, as the other mirrors it (women up, men down).
   const shortBest = new Map<string, Found>();
@@ -244,9 +292,10 @@ export function pageFindings(screen: string, data: unknown): Finding[] {
 
   for (const table of tablesIn(data)) {
     // The list's main figure: the first count most of its rows hold, with something in it.
-    const totalOf = (field: string) => table.rows.reduce((sum, row) => sum + (isNumber(row[field]) ? row[field] : 0), 0);
-    const main = COUNT_ORDER.find((field) => table.rows.filter((row) => isNumber(row[field])).length >= 3 && totalOf(field) > 0);
+    const totalOf = (field: string) => table.whole.reduce((sum, row) => sum + (isNumber(row[field]) ? row[field] : 0), 0);
+    const main = COUNT_ORDER.find((field) => table.whole.filter((row) => isNumber(row[field])).length >= 3 && totalOf(field) > 0);
     const total = main ? totalOf(main) : 0;
+    found.push(...placesMoved(table, screen, main, total));
 
     if (main && total > 0) {
       const words = measureWords(main);
@@ -277,7 +326,7 @@ export function pageFindings(screen: string, data: unknown): Finding[] {
       }
 
       // One holds most of the list's main figure: never of a list the page picked, which is no whole.
-      if (!table.picked && table.rows.length >= HOLDS_ROWS) {
+      if (!table.picked && table.whole.length >= HOLDS_ROWS) {
         const top = [...table.rows].filter((row) => isNumber(row[main])).sort((a, b) => (b[main] as number) - (a[main] as number))[0];
         const share = top ? (top[main] as number) / total : 0;
         if (top && share >= HOLDS_SHARE && share < 1) {
@@ -285,7 +334,7 @@ export function pageFindings(screen: string, data: unknown): Finding[] {
           found.push({
             id: `holdsMost:${table.path}:${main}:${name}`, kind: "holdsMost", list: table.path,
             score: share,
-            params: { name, measure: main, share: round1(share * 100), value: top[main] as number, rows: table.rows.length },
+            params: { name, measure: main, share: round1(share * 100), value: top[main] as number, rows: table.whole.length },
             facts: [
               { key: "value", value: top[main] as number, unit: "count", label: `${name}: ${words}` },
               { key: "share", value: round1(share * 100), unit: "percent", label: `${name}'s share of the list's ${words}` },
@@ -344,7 +393,63 @@ export function pageFindings(screen: string, data: unknown): Finding[] {
     }
   }
 
-  // The best first, at most four from one list, and each once: a page may hold the same list twice (its table and its chart).
+  return chosenOf(found);
+}
+
+/**
+ * A row's place the span before: kept beside it (`positionBefore`, `previousPosition`), or worked back from the places it
+ * moved — Search Console's `positionChange` and Visibility's `change`, each the place before less the place now.
+ */
+function placeBefore(row: Row, field: string, screen: string): number | undefined {
+  const kept = beforeOf(row, field);
+  if (kept !== undefined) return kept;
+  const now = row[field];
+  if (!isNumber(now)) return undefined;
+  if (isNumber(row.positionChange)) return now + row.positionChange;
+  // Only Visibility keeps its places' move as `change`; Search Console's `change` is the clicks gained.
+  if (screen.startsWith("visibility.") && isNumber(row.change)) return now + row.change;
+  return undefined;
+}
+
+/**
+ * The biggest climb and the biggest drop in places on a list (shared work 7): 9th to 4th on Google, weighed by the row's
+ * share of the list's main figure, so a search with clicks outranks one nobody makes. Never on a page of a longer list,
+ * where "the biggest on the list" would not be true.
+ */
+function placesMoved(table: Table, screen: string, main: string | undefined, total: number): Found[] {
+  if (table.picked) return [];
+  const field = PLACE_FIELDS.find((one) => table.rows.filter((row) => isNumber(row[one])).length >= 3);
+  if (!field) return [];
+  // A row's weight: its share of the list's main figure, so a search nobody makes never outranks one with clicks.
+  const reachOf = (row: Row) => (main && total > 0 && isNumber(row[main]) ? Math.sqrt(Math.min(1, (row[main] as number) / total / 0.05)) : 0.8);
+  const moves = table.rows
+    .map((row) => ({ row, now: row[field], before: placeBefore(row, field, screen) }))
+    .filter((one): one is { row: Row; now: number; before: number } => isNumber(one.now) && one.before !== undefined && one.now >= 1 && one.before >= 1 && one.now <= PLACE_MOST && one.before <= PLACE_MOST)
+    .map((one) => ({ ...one, climbed: one.before - one.now, reach: reachOf(one.row) }))
+    .filter((one) => Math.abs(one.climbed) >= PLACE_LEAST && one.reach >= PLACE_REACH);
+  // Places past ten count as ten: from 40th to 10th is no more news than from 14th to 4th.
+  const weight = (one: { climbed: number; reach: number }) => Math.min(10, Math.abs(one.climbed)) * one.reach;
+  const best = (way: 1 | -1) => moves.filter((one) => one.climbed * way > 0).sort((a, b) => weight(b) - weight(a))[0];
+  const words = measureWords(field);
+  const out: Found[] = [];
+  for (const [one, kind] of [[best(1), "placeUp"], [best(-1), "placeDown"]] as const) {
+    if (!one) continue;
+    const name = rowName(one.row)!;
+    out.push({
+      id: `${kind}:${table.path}:${field}:${name}`, kind, list: table.path,
+      score: (0.4 + Math.min(1, Math.abs(one.climbed) / 10)) * one.reach,
+      params: { name, measure: field, now: round1(one.now), before: round1(one.before), moved: round1(Math.abs(one.climbed)) },
+      facts: [
+        { key: "now", value: round1(one.now), unit: "score", label: `${name}: ${words}, this span` },
+        { key: "before", value: round1(one.before), unit: "score", label: `${name}: ${words}, the span before` },
+      ],
+    });
+  }
+  return out;
+}
+
+/** The best first, at most four from one list, and each once: a page may hold the same list twice (its table and its chart). */
+function chosenOf(found: Found[]): Finding[] {
   const fromList = new Map<string, number>();
   const said = new Set<string>();
   const chosen: Found[] = [];
@@ -358,6 +463,5 @@ export function pageFindings(screen: string, data: unknown): Finding[] {
     chosen.push(finding);
     if (chosen.length >= MOST) break;
   }
-  void screen;
   return chosen.map(({ list: _list, ...finding }, at) => ({ ...finding, score: Math.round(finding.score * 100) / 100, facts: finding.facts.map((fact) => ({ ...fact, key: `f${at + 1}.${fact.key}` })) }));
 }

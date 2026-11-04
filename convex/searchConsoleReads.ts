@@ -142,6 +142,11 @@ export const searchConsolePerformance = tenantQuery({
     totals: v.union(figuresValidator, v.null()),
     previous: v.union(figuresValidator, v.null()),
     named: v.union(v.number(), v.null()),
+    /**
+     * Days held of the span before, for What Hakken sees (2026-11-03): morehandles.co.uk's connection said its days
+     * began on 11 June 2025 while its first day held was 23 April 2026, so Last 6 months set 184 days against 9.
+     */
+    previousDays: v.optional(v.number()),
     /** A country not kept ready: asked of Google instead. */
     live: v.boolean(),
   }),
@@ -181,6 +186,7 @@ export async function readPerformance(
     totals: addUp(inRange),
     previous: previousHeld ? addUp(beforeRows) : null,
     named: inRange.length > 0 && namedKnown ? inRange.reduce((sum, row) => sum + (row.namedClicks ?? 0), 0) : null,
+    previousDays: beforeRows.length,
     live: false,
   };
 }

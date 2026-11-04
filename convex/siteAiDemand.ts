@@ -3,7 +3,7 @@ import { seeing, seenValidator } from "./utils/hakkenSees";
 import { demandSees } from "./utils/sees/aiAnswers";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
-import { groupOwner, requireMySite } from "./siteAccess";
+import { groupOwner, requireMySite, type SiteReader } from "./siteAccess";
 import { aiVolumeOf, demandSearches } from "./aiDemand";
 import { searchVolumeOf } from "./searchVolumes";
 import { trendOf } from "./utils/rankFacts";
@@ -32,29 +32,32 @@ export const aiDemand = tenantQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const hold = groupOwner(site);
-    if (!hold) return { month: null, rows: [] };
-    let month: string | null = null;
-    const rows = [];
-    for (const { keyword, from } of await demandSearches(ctx, hold)) {
-      const [ai, rank, measured] = await Promise.all([
-        aiVolumeOf(ctx, keyword, site.place),
-        ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", hold.websiteId).eq("locationCode", site.place).eq("keyword", keyword)).first(),
-        searchVolumeOf(ctx, keyword, site.place),
-      ]);
-      if (ai?.month && (!month || ai.month > month)) month = ai.month;
-      const googleMonths = rank?.trend !== undefined ? trendOf(rank.trend) : measured?.trend ?? [];
-      rows.push({
-        keyword,
-        from,
-        ai: ai?.volume ?? null,
-        aiMonths: ai ? unpackColumn(ai.months).map((value) => value ?? 0) : [],
-        google: rank?.volumeKnown ? rank.volume : measured?.volume ?? null,
-        googleMonths,
-      });
-    }
-    return { month, rows };
-  }, demandSees),
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => await readAiDemand(ctx, args), demandSees),
 });
+
+/** aiDemand's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readAiDemand(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const hold = groupOwner(site);
+  if (!hold) return { month: null, rows: [] };
+  let month: string | null = null;
+  const rows = [];
+  for (const { keyword, from } of await demandSearches(ctx, hold)) {
+    const [ai, rank, measured] = await Promise.all([
+      aiVolumeOf(ctx, keyword, site.place),
+      ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", hold.websiteId).eq("locationCode", site.place).eq("keyword", keyword)).first(),
+      searchVolumeOf(ctx, keyword, site.place),
+    ]);
+    if (ai?.month && (!month || ai.month > month)) month = ai.month;
+    const googleMonths = rank?.trend !== undefined ? trendOf(rank.trend) : measured?.trend ?? [];
+    rows.push({
+      keyword,
+      from,
+      ai: ai?.volume ?? null,
+      aiMonths: ai ? unpackColumn(ai.months).map((value) => value ?? 0) : [],
+      google: rank?.volumeKnown ? rank.volume : measured?.volume ?? null,
+      googleMonths,
+    });
+  }
+  return { month, rows };
+}

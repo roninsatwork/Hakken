@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Link as LinkIcon } from "lucide-react";
@@ -17,6 +17,7 @@ import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { backlinksSummarySees } from "@/convex/utils/sees/backlinks";
 import { SiteSees } from "../../_components/SiteSees";
+import { summarySees } from "./_components/linkSees";
 import { newestOfEach } from "../newestOfEach";
 
 type Measure = "referringDomains" | "backlinks" | "domainRank";
@@ -29,6 +30,9 @@ const MEASURES: Measure[] = ["referringDomains", "backlinks", "domainRank"];
  * All four figures by one rule (docs/plans/active/sites-audit-fixes-plan.md,
  * 4.12): as each stood at the end of the dates — the newest in them, else the
  * newest before them. Two used to fall back to today's while two showed "–".
+ *
+ * The chart's lines come with the rivals' beside them, for the eye alone (ask-hakken-every-chart-page-plan-2026-11-03.md,
+ * section 10: "Linking websites up 12 while the leading rival rose 40"): the page draws only its own, the first line.
  */
 export default function SiteBacklinksPage() {
   const t = useTranslations("sites.backlinks");
@@ -38,7 +42,9 @@ export default function SiteBacklinksPage() {
   const site = useSite();
   const range = useSiteRange();
   const [shown, setShown] = useState<Record<Measure, boolean>>({ referringDomains: true, backlinks: false, domainRank: true });
-  const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
+  const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(() => summarySees(series, { rivals: tn("rivals") }), [series, tn]);
   const points = (series?.[0]?.points ?? []).filter((point) => point.referringDomains !== undefined || point.backlinks !== undefined);
   const before = series?.[0]?.before ?? null;
   const latest = newestOfEach(before ? [before, ...points] : points);
@@ -47,7 +53,7 @@ export default function SiteBacklinksPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<LinkIcon className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinks" seen={series && backlinksSummarySees(series[0])} data={series} />
+      <SiteSees screen="backlinks" seen={series && backlinksSummarySees(series[0])} data={sees} />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Figure label={t("domainRank")} value={formatNumber(latest?.domainRank)} detail={<span className="text-muted">{t("rankScale")}</span>} />

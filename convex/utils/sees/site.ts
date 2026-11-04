@@ -130,23 +130,3 @@ export function problemSees(rows: ReadonlyArray<{ page: string; brokenLinks: rea
   ];
   return seen(says, [{ code: "fixFirst", text: rows[0].page || "/", link: "seePage", to: toRecord("page", rows[0].page) }]);
 }
-
-/** The Websites list: the websites held, and the one that moved most at its newest check. */
-export function websitesSees(rows: ReadonlyArray<{ siteId: string; host: string; relationship: string; checked: boolean; rankedUp: number | null; rankedDown: number | null }>): Seen {
-  if (rows.length === 0) return seen([{ code: "none" }]);
-  const owned = rows.filter((row) => row.relationship === "OWNED").length;
-  const checked = rows.filter((row) => row.checked);
-  const down = [...checked].filter((row) => (row.rankedDown ?? 0) > 0).sort((left, right) => (right.rankedDown ?? 0) - (left.rankedDown ?? 0))[0] ?? null;
-  const up = [...checked].filter((row) => (row.rankedUp ?? 0) > 0).sort((left, right) => (right.rankedUp ?? 0) - (left.rankedUp ?? 0))[0] ?? null;
-  const lead = down ?? up;
-  const says: Array<Maybe<SeenPhrase>> = [
-    { code: "websites", a: owned, b: rows.length - owned },
-    down ? { code: "mostDown", text: down.host, a: down.rankedDown!, b: down.rankedUp ?? 0 } : null,
-    up && up !== down ? { code: "mostUp", text: up.host, a: up.rankedUp! } : null,
-    checked.length === 0 ? { code: "notChecked" } : null,
-  ];
-  const steps: Array<Maybe<SeenStep>> = [
-    lead ? { code: "open", text: lead.host, link: "openWebsite", to: { url: `/app/sites/${lead.siteId}` } } : null,
-  ];
-  return seen(says, steps);
-}

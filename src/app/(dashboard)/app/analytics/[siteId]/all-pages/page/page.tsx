@@ -28,6 +28,7 @@ import { VisitsChart } from "../../../_components/AnalyticsChart";
 import { formatPercent, formatPerVisit, formatTime, pathOf } from "../../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus, periodWord } from "../../../_components/useAnalytics";
 import { backTarget } from "../../../_components/analyticsBack";
+import { useEyeNames } from "../../../_components/useEyeFigures";
 import { PageStoryCharts, useSourceName } from "../../../_components/PageStory";
 import { PageBoxes, type PageAnswer } from "../../../_components/PageBoxes";
 import { ConversionExplorerCard } from "../../../_components/ConversionExplorer";
@@ -121,7 +122,9 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
   const seen = useMemo(() => (answer && !answer.live && boxes ? withNames(pageSees(page, answer.address, Boolean(answer.row), pageStoryFacts(answer.story, boxes)), answer.seen) : answer?.seen), [answer, boxes, page]);
   const currency = status.connection?.currency ?? null;
   const address = answer?.address ?? "";
-  const seesData = useMemo(() => (answer ? seesDataOf(answer) : undefined), [answer]);
+  // With the names its own findings use ("This page", "The whole website"), in the reader's words.
+  const eyeNames = useEyeNames();
+  const seesData = useMemo(() => (answer ? { ...seesDataOf(answer), names: eyeNames } : undefined), [answer, eyeNames]);
   const named = { period: tf(`periods.${periodWord(period)}`) };
   // Where the team's "Do first" steps may send the reader, beside the rules' own links.
   const seesLinks = useMemo(() => [

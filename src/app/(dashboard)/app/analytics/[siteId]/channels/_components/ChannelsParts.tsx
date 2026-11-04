@@ -11,14 +11,15 @@ import { formatNumber, toCsv } from "../../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../../../search-console/_components/SearchConsoleChartCard";
 import { BeforeLine } from "../../../_components/AnalyticsFigures";
 import { eventList } from "../../../_components/AnalyticsSees";
-import { formatMoney, formatPercent, formatTime } from "../../../_components/analyticsFormat";
+import { formatPercent, formatTime } from "../../../_components/analyticsFormat";
 import { useEventName } from "../../../_components/useEventName";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, periodWord } from "../../../_components/useAnalytics";
 
 /**
  * Channels above its table (docs/plans/active/ga-channel-pages-plan.md CH9):
- * four figures, each channel by page classification (ChannelMap) and what a
- * visit is worth by channel over 12 months. Google Analytics' figures only.
+ * four figures, each channel by page classification (ChannelMap) and how
+ * often a visit converts by channel over 12 months. Google Analytics' figures
+ * only, never money.
  */
 
 export type ChannelsTop = FunctionReturnType<typeof api.googleAnalyticsChannelReads.analyticsChannelsTop>;
@@ -109,25 +110,23 @@ export function ChannelsMap({ top, kindName }: { top: ChannelsTop | undefined; k
 }
 
 /**
- * "What a visit is worth, by channel" (CH9): over the last 12 months, so
+ * "How often a visit converts, by channel" (CH9): over the last 12 months, so
  * small channels have enough visits to judge — each bar conversions out of
- * visits, orange where it beats the website's rate, and on hover the value
- * a visit: conversions' value over visits, valued as in Google Analytics or
- * in Hakken's conversion settings where Analytics has none.
+ * visits, orange where it beats the website's rate, the visits on hover.
+ * Never money (Anthony, 2026-11-03: "Take money off").
  */
-export function ChannelsWorth({ top }: { top: ChannelsTop | undefined }) {
-  const t = useTranslations("googleAnalytics.channelsPage.worth");
+export function ChannelsPerVisit({ top }: { top: ChannelsTop | undefined }) {
+  const t = useTranslations("googleAnalytics.channelsPage.perVisit");
   const status = useAnalyticsStatus();
-  const currency = status?.connection?.currency ?? null;
-  const worth = top?.worth;
-  const siteRate = worth?.siteRate ?? 0;
-  const data = (worth?.rows ?? []).map((row) => ({ label: row.channel, rate: row.visits > 0 ? row.conversions / row.visits : 0, row }));
+  const perVisit = top?.perVisit;
+  const siteRate = perVisit?.siteRate ?? 0;
+  const data = (perVisit?.rows ?? []).map((row) => ({ label: row.channel, rate: row.visits > 0 ? row.conversions / row.visits : 0, row }));
   return (
     <SearchConsoleChartCard
       title={t("title")}
-      hint={t("hint", { siteRate: formatPercent(siteRate), few: worth?.few ?? 0 })}
-      exportName="google-analytics-channel-worth"
-      csv={() => toCsv(["channel", "visits", "conversions", "rate", "valuePerVisit"], (worth?.rows ?? []).map((row) => [row.channel, row.visits, row.conversions, row.visits > 0 ? row.conversions / row.visits : 0, row.visits > 0 ? row.value / 100 / row.visits : 0]))}
+      hint={t("hint", { siteRate: formatPercent(siteRate), few: perVisit?.few ?? 0 })}
+      exportName="google-analytics-channel-per-visit"
+      csv={() => toCsv(["channel", "visits", "conversions", "rate"], (perVisit?.rows ?? []).map((row) => [row.channel, row.visits, row.conversions, row.visits > 0 ? row.conversions / row.visits : 0]))}
       host={status?.host ?? ""}
       from={null}
       to={null}
@@ -143,11 +142,10 @@ export function ChannelsWorth({ top }: { top: ChannelsTop | undefined }) {
           highlight={{ colour: CHART_SERIES_ORANGE, rows: (row) => Number(row.rate) > siteRate && !(row.row as { fewVisits: boolean }).fewVisits }}
           formatScale={(value) => formatPercent(value)}
           formatValue={(value, entry) => {
-            const row = entry.payload?.row as ChannelsTop["worth"]["rows"][number] | undefined;
+            const row = entry.payload?.row as ChannelsTop["perVisit"]["rows"][number] | undefined;
             return t(row?.fewVisits ? "readoutFew" : "readout", {
               rate: formatPercent(value),
               visits: formatNumber(row?.visits ?? 0),
-              each: formatMoney(row && row.visits > 0 ? Math.round(row.value / row.visits) : 0, currency),
             });
           }}
         />

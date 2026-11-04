@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,7 @@ import { datedRow } from "../../../_components/datedRows";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { mentionsRivalsSeen } from "../../../_components/siteSeesData";
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -73,12 +75,16 @@ export default function MentionsAgainstRivalsPage() {
   const nameOf = (row: { host: string; you: boolean }) => (row.you ? tm("you", { name: row.host }) : row.host);
   const shortName = (row: { host: string; you: boolean }) => (row.you ? tm("youShort") : row.host);
   const chartRows = (data?.steps ?? []).map((day, at) => datedRow({ day }, Object.fromEntries((data?.businesses ?? []).map((row) => [row.host, row.series[at]]))));
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): each business's mentions in the dates
+  // and the span before, how they speak of it and without a link, and the chart's steps by their dates.
+  const te = useTranslations("sites.mentions.rivals.eye");
+  const seen = useMemo(() => (data ? mentionsRivalsSeen(data, { middle: te("middle") }) : undefined), [data, te]);
   const fileBase = `${site?.host ?? "site"}-web-mentions-against-rivals`;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<AtSign className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="mentionsRivals" seen={data?.seen} data={data} />
+      <SiteSees screen="mentionsRivals" seen={data?.seen} data={seen} />
 
       {data ? (
         <FigureRow>

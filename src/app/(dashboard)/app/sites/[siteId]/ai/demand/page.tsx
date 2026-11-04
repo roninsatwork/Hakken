@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -21,6 +22,7 @@ import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { aiDemandSeen } from "../../../_components/siteSeesData";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -85,6 +87,11 @@ export default function AiDemandPage() {
     return date.toISOString().slice(0, 7);
   });
   const chartRows = months.map((month, at) => ({ label: month ? formatMonth(month) : "", ai: sumBack(tracked, (row) => row.aiMonths, 11 - at), google: sumBack(tracked, (row) => row.googleMonths, 11 - at) }));
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the boxes against 11 months before,
+  // as they show it, and the searches the most moved first — in AI over three months, on Google over the year — since
+  // a list of a hundred reaches the eye cut short.
+  const te = useTranslations("sites.aiApps.demand.eye");
+  const seen = useMemo(() => (data ? aiDemandSeen({ month: data.month, rows: data.rows as Row[] }, { searches: te("searches"), google: t("figures.google"), onGoogle: te("onGoogle"), every: te("every") }) : undefined), [data, t, te]);
   const fromWords = (row: Row) => t(`from.${row.from}`);
   const fileBase = `${site?.host ?? "site"}-ai-demand`;
   const change = (now: number, before: number) => {
@@ -95,7 +102,7 @@ export default function AiDemandPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Sparkles className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="aiDemand" seen={data?.seen} data={data} />
+      <SiteSees screen="aiDemand" seen={data?.seen} data={seen} />
 
       {data ? (
         <FigureRow>

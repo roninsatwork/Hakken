@@ -7,17 +7,16 @@ import { keptCountry } from "./googleAnalyticsCountries";
 import { slotKey } from "./googleAnalyticsCollect";
 import { decodePages } from "./holdPageRefs";
 import { readPageKinds } from "./pageKinds";
-import { landingByChannel } from "./googleAnalyticsChannelReads";
+import { eachLandingByChannel } from "./googleAnalyticsChannelReads";
 import { funnelAsk } from "./googleAnalyticsLive";
 import { EVERY_DEVICE, PAGE_FACT_JOIN, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod, type PageFactList } from "./googleAnalyticsSchema";
-import { connectionOf, conversionsOf, countedOf, readLive, readSlot, type Counted } from "./googleAnalyticsRows";
+import { connectionOf, conversionsOf, countedOf, eachSlotRow, readLive, type Counted } from "./googleAnalyticsRows";
 import { WEBSITE_FUNNEL, actionEvents, actionsFrom } from "./googleAnalyticsActionFunnels";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { OTHER_ROWS } from "./utils/analyticsSharedLists";
 import { isUnknownValue } from "./utils/analyticsUnknown";
-import { PURCHASE_EVENT } from "./utils/analyticsEvents";
 import { FLOW_LEFT, FLOW_MORE } from "./utils/conversionFlow";
 
 /**
@@ -86,8 +85,6 @@ const routeValidator = v.object({
   to: v.string(),
   visits: v.number(),
   conversions: v.number(),
-  /** A shop's purchase revenue on the route, in hundredths. */
-  revenue: v.number(),
   /** The channels whose visits took this route: following a channel lights its routes two steps on. */
   channels: v.array(v.string()),
 });
@@ -101,7 +98,7 @@ export const flowValidator = v.object({
   channels: v.array(v.object({ key: v.string(), visits: v.number(), conversions: v.number(), more: v.number() })),
   kinds: v.array(v.object({ kind: v.string(), name: v.union(v.string(), v.null()), visits: v.number(), conversions: v.number(), more: v.number() })),
   /** Each key event — counted, then not counted — then `LEFT`. */
-  endings: v.array(v.object({ key: v.string(), counted: v.boolean(), count: v.number(), revenue: v.number() })),
+  endings: v.array(v.object({ key: v.string(), counted: v.boolean(), count: v.number() })),
   routes: v.array(routeValidator),
   /**
    * Conversions by page classification (Anthony, 2026-10-14: "add conversion by page classification … in this style"):
@@ -128,22 +125,34 @@ export async function readConversionFlow(
   device: string,
   country: string,
 ): Promise<ConversionFlow | null> {
-  const byChannel = await landingByChannel(ctx, holdId, period, "NOW", country, device);
+  const keyEvents = (connection.events ?? []).map((event) => event.eventName);
+  // Each landing page by channel with its key events alone, read a part at a time — and, from the same rows as kept,
+  // whatever channel Google filed them under, the visits that made a listed event (2026-11-04: read whole as rows, and
+  // the list again for those visits, they ran Conversions out of its 64MB from Last 3 months on More Handles).
+  const landed: ListRow[] = [];
+  const converting: Array<{ page: string; converting: number | undefined }> = [];
+  const byChannel = await eachLandingByChannel(ctx, holdId, period, "NOW", country, device, { events: new Set(keyEvents) }, (row) => landed.push(row), (row) => {
+    converting.push({ page: splitChannelKey(row.key).channel, converting: row.converting });
+  });
   if (!byChannel) return null;
-  // The visits that made a listed event, by landing page: from the list as kept, whatever channel Google filed them under.
-  const kept = await readSlot(ctx, holdId, slotKey("landingChannel", period, "NOW", byChannel.everyDevice ? EVERY_DEVICE : device, country));
-  const collecting = !kept || kept.rows.every((row) => row.converting === undefined);
+  const collecting = converting.every((row) => row.converting === undefined);
   const counted = countedOf(connection);
   const countedNames = new Set(counted.map((event) => event.eventName));
-  const keyEvents = (connection.events ?? []).map((event) => event.eventName);
   const kinds = await kindsFor(ctx, holdId);
-  const addresses = await addressesOf(ctx, holdId, [...byChannel.rows, ...(kept?.rows ?? [])].map((row) => splitChannelKey(row.key).channel));
-  const kindOfPage = (page: string) => kinds.kindOf(addresses.get(page) ?? page);
+  const addresses = await addressesOf(ctx, holdId, [...landed.map((row) => splitChannelKey(row.key).channel), ...converting.map((row) => row.page)]);
+  // Each page classified once: a page's rules are read through on every call, and a year's rows call it for each
+  // channel and key event of each page — a part of why the flow ran past its second on More Handles (2026-11-04).
+  const kindByPage = new Map<string, string>();
+  const kindOfPage = (page: string) => {
+    let kind = kindByPage.get(page);
+    if (kind === undefined) kindByPage.set(page, (kind = kinds.kindOf(addresses.get(page) ?? page)));
+    return kind;
+  };
 
   // Channels and classifications ranked by visits; the rest one box each.
   const channelVisits = new Map<string, number>();
   const kindVisits = new Map<string, number>();
-  for (const row of byChannel.rows) {
+  for (const row of landed) {
     const { channel: page, source: channel } = splitChannelKey(row.key);
     channelVisits.set(channel, (channelVisits.get(channel) ?? 0) + row.visits);
     kindVisits.set(kindOfPage(page), (kindVisits.get(kindOfPage(page)) ?? 0) + row.visits);
@@ -158,17 +167,18 @@ export async function readConversionFlow(
   const box = (into: Map<string, Box>, key: string) => into.get(key) ?? into.set(key, { visits: 0, conversions: 0, more: new Set() }).get(key)!;
   const channelBoxes = new Map<string, Box>();
   const kindBoxes = new Map<string, Box>();
-  type Route = { visits: number; conversions: number; revenue: number; channels: Set<string> };
+  // Visits and conversions only, never money (Anthony, 2026-11-03: "Take money off").
+  type Route = { visits: number; conversions: number; channels: Set<string> };
   const routes = new Map<string, Route & { from: string; to: string }>();
   const route = (from: string, to: string) => {
     const key = `${from}>${to}`;
-    return routes.get(key) ?? routes.set(key, { from, to, visits: 0, conversions: 0, revenue: 0, channels: new Set() }).get(key)!;
+    return routes.get(key) ?? routes.set(key, { from, to, visits: 0, conversions: 0, channels: new Set() }).get(key)!;
   };
-  const endings = new Map<string, { count: number; revenue: number }>();
+  const endings = new Map<string, { count: number }>();
   // Each key event's count by the kind of page its visits started on, every classification kept apart: the grid.
   const byKind = new Map<string, Map<string, number>>();
   const conversionsIn = (row: ListRow, events: readonly Counted[]) => conversionsOf(row, events).conversions;
-  for (const row of byChannel.rows) {
+  for (const row of landed) {
     const { channel: page, source: channel } = splitChannelKey(row.key);
     const from = `c:${channelBox(channel)}`;
     const kind = kindBox(kindOfPage(page));
@@ -185,32 +195,27 @@ export async function readConversionFlow(
     const first = route(from, to);
     first.visits += row.visits;
     first.conversions += conversions;
-    first.revenue += row.revenue;
     first.channels.add(from);
     // Each key event made from it: counted and not, on the route from its classification.
     for (const event of keyEvents) {
       const count = row.counts.get(event) ?? 0;
       if (count <= 0) continue;
-      const ending = endings.get(event) ?? endings.set(event, { count: 0, revenue: 0 }).get(event)!;
+      const ending = endings.get(event) ?? endings.set(event, { count: 0 }).get(event)!;
       ending.count += count;
       const eventKinds = byKind.get(event) ?? byKind.set(event, new Map()).get(event)!;
       eventKinds.set(kindOfPage(page), (eventKinds.get(kindOfPage(page)) ?? 0) + count);
       const second = route(to, `e:${event}`);
       second.visits += count;
       second.conversions += countedNames.has(event) ? count : 0;
-      if (event === PURCHASE_EVENT) {
-        ending.revenue += row.revenue;
-        second.revenue += row.revenue;
-      }
       second.channels.add(from);
     }
   }
   // Left without converting: a classification's visits less those that made any listed event, as kept.
   let left = 0;
-  if (!collecting && kept) {
+  if (!collecting) {
     const made = new Map<string, number>();
-    for (const row of kept.rows) {
-      const kind = kindBox(kindOfPage(splitChannelKey(row.key).channel));
+    for (const row of converting) {
+      const kind = kindBox(kindOfPage(row.page));
       made.set(kind, (made.get(kind) ?? 0) + (row.converting ?? 0));
     }
     for (const [kind, entry] of kindBoxes) {
@@ -222,12 +227,12 @@ export async function readConversionFlow(
       for (const one of routes.values()) if (one.to === `k:${kind}`) for (const channel of one.channels) end.channels.add(channel);
     }
   }
-  const counts = (event: string) => endings.get(event) ?? { count: 0, revenue: 0 };
+  const counts = (event: string) => endings.get(event) ?? { count: 0 };
   // Every counted kind, happened or not; a key event not counted only when it happened (CV3).
   const endingRows = [
     ...counted.map((event) => ({ key: event.eventName, counted: true, ...counts(event.eventName) })).sort((left, right) => right.count - left.count),
     ...keyEvents.filter((event) => !countedNames.has(event) && counts(event).count > 0).map((event) => ({ key: event, counted: false, ...counts(event) })).sort((left, right) => right.count - left.count),
-    ...(collecting ? [] : [{ key: LEFT, counted: false, count: left, revenue: 0 }]),
+    ...(collecting ? [] : [{ key: LEFT, counted: false, count: left }]),
   ];
   const grid = rankKinds(kindVisits, MAP_KINDS);
   const cellOf = (event: string, kind: string) => {
@@ -372,24 +377,34 @@ export async function readVisitorMap(ctx: SiteReader, args: ObjectType<typeof vi
   const connection = await connectionOf(ctx, holdId);
   if (!connection?.newestDay) return null;
   const source = SOURCE[args.list];
-  const held = await readSlot(ctx, holdId, slotKey(source.list, args.period, "NOW", args.device, country));
   const empty = { collecting: true, thresholded: false, conversions: false, kinds: [], rows: [] };
-  if (!held) return empty;
   const counted = countedOf(connection);
-  const kinds = await kindsFor(ctx, holdId);
-  const addresses = await addressesOf(ctx, holdId, held.rows.map((row) => splitChannelKey(row.key).channel));
   type Cell = { visits: number; conversions: number };
+  // Each landing page's visits and conversions by group, read a part at a time with only those figures: a year of
+  // landing pages read whole as rows ran this out of memory (ask-hakken-every-chart-page-plan-2026-11-03.md).
+  const byPage = new Map<string, Map<string, Cell>>();
+  const held = await eachSlotRow(ctx, holdId, slotKey(source.list, args.period, "NOW", args.device, country), counted.map((event) => event.eventName), (key, visits, times) => {
+    const { channel: page, source: rest } = splitChannelKey(key);
+    const group = visitorGroupOf(rest.split(PAGE_FACT_JOIN)[source.part] ?? "");
+    const byGroup = byPage.get(page) ?? byPage.set(page, new Map()).get(page)!;
+    const cell = byGroup.get(group) ?? byGroup.set(group, { visits: 0, conversions: 0 }).get(group)!;
+    cell.visits += visits;
+    cell.conversions += times;
+  });
+  if (!held) return empty;
+  const kinds = await kindsFor(ctx, holdId);
+  const addresses = await addressesOf(ctx, holdId, [...byPage.keys()]);
   const groups = new Map<string, Map<string, Cell>>();
   const kindVisits = new Map<string, number>();
-  for (const row of held.rows) {
-    const { channel: page, source: rest } = splitChannelKey(row.key);
-    const group = visitorGroupOf(rest.split(PAGE_FACT_JOIN)[source.part] ?? "");
+  for (const [page, byGroup] of byPage) {
     const kind = kinds.kindOf(addresses.get(page) ?? page);
-    const byKind = groups.get(group) ?? groups.set(group, new Map()).get(group)!;
-    const cell = byKind.get(kind) ?? byKind.set(kind, { visits: 0, conversions: 0 }).get(kind)!;
-    cell.visits += row.visits;
-    cell.conversions += conversionsOf(row, counted).conversions;
-    kindVisits.set(kind, (kindVisits.get(kind) ?? 0) + row.visits);
+    for (const [group, own] of byGroup) {
+      const byKind = groups.get(group) ?? groups.set(group, new Map()).get(group)!;
+      const cell = byKind.get(kind) ?? byKind.set(kind, { visits: 0, conversions: 0 }).get(kind)!;
+      cell.visits += own.visits;
+      cell.conversions += own.conversions;
+      kindVisits.set(kind, (kindVisits.get(kind) ?? 0) + own.visits);
+    }
   }
   const { shown, rest } = rankKinds(kindVisits, MAP_KINDS);
   const visitsOf = (byKind: ReadonlyMap<string, Cell>) => [...byKind.values()].reduce((sum, cell) => sum + cell.visits, 0);

@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
-import type { ANALYTICS_SCREENS } from "./utils/analyticsScreens";
+import { analyticsPartsOf, type ANALYTICS_SCREENS } from "./utils/analyticsScreens";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
@@ -10,6 +10,7 @@ import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { PROPERTY, dayOf, fakeGoogle, history, type Visit } from "@/src/test/googleAnalyticsFake";
 import { shiftDay } from "./searchConsoleDays";
+import { DOWNLOAD_PART } from "./googleAnalyticsReads";
 import { YOUR_PAGES_COPY, YOUR_PAGES_FIELDS } from "./holdPages";
 import { encodeCopyRows } from "./utils/copyColumns";
 import { keyedRead } from "./utils/agentTools";
@@ -234,13 +235,14 @@ describe("the standard tables", () => {
 });
 
 describe("Conversions", () => {
-  test("each kind with its count, value each and where it is set, against the span before", async () => {
+  test("each kind with its count against the span before; its value kept for Ask Hakken alone", async () => {
     const { siteId, user } = await collectedGrowing();
     const conversions = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "lastMonth", device: "" });
+    // No screen shows money (Anthony, 2026-11-03: "Take money off"): only Ask Hakken reads each kind's value.
     expect(conversions.kinds).toEqual([
-      { eventName: "generate_lead", count: 60, countBefore: 30, each: 25_000, setIn: "HAKKEN", value: 60 * 25_000, valueBefore: 30 * 25_000 },
-      { eventName: "click_tel", count: 60, countBefore: 30, each: null, setIn: null, value: null, valueBefore: null },
-      { eventName: "sign_up", count: 30, countBefore: 0, each: 1_000, setIn: "ANALYTICS", value: 30 * 1_000, valueBefore: 0 },
+      { eventName: "generate_lead", count: 60, countBefore: 30, value: 60 * 25_000 },
+      { eventName: "click_tel", count: 60, countBefore: 30, value: null },
+      { eventName: "sign_up", count: 30, countBefore: 0, value: 30 * 1_000 },
     ]);
     expect(conversions.shop).toBeNull();
     // Only one conversion's landing pages.
@@ -374,9 +376,12 @@ describe("a page's story on its own screen (analytics-page-screen-plan.md §2, �
     expect(byDevice).toMatchObject({ ok: true, chart: { by: "device", link: expect.stringContaining(`all-pages/page?key=${encodeURIComponent(page)}`) } });
     expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...pageChart, by: "weekday" })).toMatchObject({ ok: true, chart: { by: "weekday" } });
     expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...pageChart, by: "device", measure: "conversions" })).toMatchObject({ ok: false });
-    // Age without a page has nothing to draw.
+    // Age without a page is the whole website's, as Visits' bars draw it (visits-redo-plan-2026-11-03.md, step 3): visits
+    // only, never conversions; the day of the week is one page's alone.
     const { page: _page, ...website } = pageChart;
-    expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...website, by: "age" })).toMatchObject({ ok: false });
+    expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...website, by: "age" })).toMatchObject({ ok: true, chart: { by: "age", link: expect.stringContaining("/visits?view=age") } });
+    expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...website, by: "age", measure: "conversions" })).toMatchObject({ ok: false });
+    expect(await t.query(internal.assistantGroupChartReads.groupsChartInternal, { ...website, by: "weekday" })).toMatchObject({ ok: false });
     expect((story.returning?.first ?? 0) + (story.returning?.back ?? 0) + (story.returning?.unknown ?? 0)).toBe(story.started?.visits);
     // Google sent most of its visits and none converted: a look at that channel across the website.
     expect(opened.seen.steps).toEqual([{ code: "seeChannel", text: "Google", link: "channel", to: { segment: "channels/channel", filters: { key: "Organic Search" } } }]);
@@ -511,8 +516,8 @@ describe("Campaigns (GA28)", () => {
   });
 });
 
-describe("Visitors (GA24)", () => {
-  test("people, new and returning, a day at a time, each list by people and visits, and Google signals off", async () => {
+describe("Visits (GA24; visits-redo-plan-2026-11-03.md)", () => {
+  test("visits, new and returning, a day at a time with the month before, each list by people and visits, and Google signals off", async () => {
     const t = harness();
     // The last 30 days' returning visitors on Safari: a visit a day, each one a lead.
     const returning = Array.from({ length: 30 }, (_, at): Visit => ({
@@ -523,12 +528,23 @@ describe("Visitors (GA24)", () => {
     const args = { siteId, period: "lastMonth" as const, device: "" };
     const visitors = (await user.query(api.googleAnalyticsVisitorReads.analyticsVisitors, args))!;
     expect(visitors).toMatchObject({ preparing: false, missing: [], signals: "off" });
-    expect(visitors.figures).toMatchObject({ visits: 30 * 34, visitsBefore: 30 * 16 });
-    expect(visitors.points).toHaveLength(30);
-    expect(visitors.points.every((point) => point.returning > 0 && point.new > 0)).toBe(true);
-    // Returning visitors converted every time; new ones two leads in 33 visits a day — at least twice as often.
-    expect(visitors.seen.says.map((phrase) => phrase.code)).toEqual(["people", "returnersConvert", "signalsOff"]);
-    expect(visitors.seen.steps.map((step) => step.code)).toEqual(["reasonToReturn"]);
+    expect(visitors.figures).toMatchObject({ visits: 30 * 34, visitsBefore: 30 * 16, returningVisits: 30 });
+    expect(visitors.figures!.newVisits + visitors.figures!.returningVisits).toBe(30 * 34);
+    const days = (await user.query(api.googleAnalyticsVisitorReads.analyticsVisitorDays, args))!;
+    expect(days.points).toHaveLength(30);
+    // Each day's visits, not people: one returning visit a day.
+    expect(days.points.every((point) => point.returning === 1 && point.new > 0)).toBe(true);
+    // The month before's days, kept beside them for the chart to compare.
+    expect(days.pointsBefore?.length).toBeGreaterThan(0);
+    expect(visitors.spanBefore?.from.endsWith("-01")).toBe(true);
+    // Every figure in visits; no rule weighs conversions, which the lists count as events, not visits. Every returning
+    // visit started on the home page, in no page group: not said, as Not sorted is nothing to act on.
+    expect(visitors.seen.says.map((phrase) => phrase.code)).toEqual(["visits", "signalsOff"]);
+    expect(visitors.seen.steps).toEqual([]);
+    // The bars' list: each group's visits now and the month before.
+    const bars = (await user.query(api.googleAnalyticsVisitorReads.analyticsVisitorBars, { ...args, list: "browser" }))!;
+    expect(bars.rows.map((row) => [row.key, row.visits])).toEqual([["Chrome", 30 * 33], ["Safari", 30]]);
+    expect(bars.rows.every((row) => row.visitsBefore !== null)).toBe(true);
     const browsers = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...args, ...listArgs, list: "browser" });
     expect(browsers.rows.map((row) => [row.label, row.visits])).toEqual([["Chrome", 30 * 33], ["Safari", 30]]);
     expect(browsers.seen).toEqual({ says: [], steps: [] });
@@ -575,6 +591,93 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
   /** An answer's own fields, whatever screen it is: the test reads what it asked for. */
   const fields = (answer: unknown) => answer as Record<string, unknown> & { rows?: Array<Record<string, unknown>> };
 
+  // Anthony, 2026-11-04: "we need to fix these". It only ever saw the 25 most viewed pages, couldn't look at one
+  // classification, told a basket's 302 as 302%, and said nothing when page views looked counted differently.
+  test("All pages: in the order the question needs, one classification with its totals, and conversions told as they are", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+    await t.run(async (ctx) => {
+      const classificationId = await ctx.db.insert("pageClassifications", { companyWebsiteId: siteId, name: "Services", type: "SERVICE", createdAt: 1, updatedAt: 1 });
+      await ctx.db.insert("pageClassificationLines", { companyWebsiteId: siteId, classificationId, kind: "STARTS_WITH", value: "/ai-agency/", createdAt: 1 });
+    });
+    const read = async (extra: Record<string, string> = {}) => fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "acme-shop.test", screen: "allPages", period: "lastMonth", ...extra }));
+    const pathOf = (row: Record<string, unknown>) => String(row.name).split(" — ").at(-1);
+
+    // As the screen shows it, opening on the most viewed.
+    const opening = await read();
+    const shown = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
+    expect(opening.rows!.map((row) => row.pageViews)).toEqual(shown.rows.map((row) => row.views));
+
+    // A rate over 100 is never told as a percentage.
+    expect(opening.rows![0]).toHaveProperty("conversionsPer100Visits");
+    expect(opening.rows![0]).not.toHaveProperty("conversionRatePercent");
+    expect(opening.conversionsRule).toMatch(/never call it a conversion rate/);
+
+    // The order the question needs, read from every page, with a link that opens the screen in that order.
+    const gained = await read({ order: "gainedMostViews" });
+    expect(gained.rows!.map((row) => row.pageViewsChange)).toEqual([...gained.rows!.map((row) => row.pageViewsChange as number)].sort((left, right) => right - left));
+    expect(gained.link).toContain("sort=viewsChange");
+    expect(gained.link).toContain("dir=desc");
+    const lost = await read({ order: "lostMostViews" });
+    expect(lost.rows!.map((row) => row.pageViewsChange)).toEqual([...lost.rows!.map((row) => row.pageViewsChange as number)].sort((left, right) => left - right));
+
+    // One classification, its pages and its own totals, by the name a person would use.
+    const services = await read({ classification: "services" });
+    expect(services.rows!.map(pathOf)).toEqual(["/ai-agency/"]);
+    expect(services.classification).toMatchObject({ name: "Services", pages: 1, pageViews: services.rows![0].pageViews, pageViewsBefore: services.rows![0].pageViewsBefore });
+    const notSorted = await read({ classification: "Not sorted yet" });
+    expect(notSorted.rows!.map(pathOf)).not.toContain("/ai-agency/");
+    expect(await read({ classification: "Teapots" })).toMatchObject({ ok: false, problem: expect.stringContaining("Services") });
+
+    // One of the screen's filters.
+    const gains = await read({ move: "gains" });
+    expect(gains.listed).toBe(shown.moves!.gains);
+
+    // The whole website, as the screen's own read has it.
+    const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
+    expect(analyticsPartsOf("allPages")).toEqual(["website"]);
+    const website = await read({ part: "website" });
+    expect(website.wholeWebsite).toMatchObject({ pageViews: overview.now!.views, pageViewsBefore: overview.before!.views, visits: overview.now!.visits, visitsBefore: overview.before!.visits });
+    // A website this small moves by chance: no warning.
+    expect(website).not.toHaveProperty("warning");
+  });
+
+  test("All pages: Ask Hakken's figures are the screen's, on every date the menu offers, with the shop's own pages left out the same way", async () => {
+    const t = harness();
+    const visit = (date: string, page: string, sessions: number): Visit => ({ date, device: "mobile", channel: "Direct", source: "(direct)", landing: page, page, sessions, engaged: sessions, seconds: 60, views: sessions * 3, events: {} });
+    // The basket beats every other page, and nothing on the screen or in the answers may name it unless asked.
+    const basket = Array.from({ length: 60 }, (_, at) => visit(shiftDay(TOP, -at), "/checkout/cart/", at < 30 ? 5 : 40));
+    const { siteId, user } = await collected(t, [...growing(), ...basket]);
+    const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+    const ask = async (period: string, extra: Record<string, unknown> = {}) => fields(await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "https://www.acme-shop.test/", screen: "allPages", period, ...extra } as never));
+    let leftOutOn = 0;
+    for (const period of ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"] as const) {
+      const screen = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs, period, leaveOut: true });
+      const answer = await ask(period);
+      expect(answer.rows!.map((row) => row.pageViews), period).toEqual(screen.rows.map((row) => row.views));
+      expect(answer.listed, period).toBe(screen.total);
+      expect(answer.rows!.some((row) => String(row.name).includes("/checkout/")), period).toBe(false);
+      if (screen.bands) expect(answer.busyAndQuiet, period).toMatchObject({ busyPages: screen.bands.busy, busyPagesWithFewerViews: screen.bands.busyFewer, quietPages: screen.bands.quiet, quietPagesWithMoreViews: screen.bands.quietMore });
+      if (screen.concentration) expect(answer.halfOfViews, period).toMatchObject({ pagesThatMadeHalfTheViews: screen.concentration.pagesForHalf, pagesThatMadeHalfTheViewsBefore: screen.concentration.pagesForHalfBefore });
+      // Dates with nothing kept yet have no list to leave anything out of.
+      if (screen.shop?.pages) {
+        expect(answer.leftOut, period).toMatchObject({ pages: screen.shop.pages, pageViews: screen.shop.views, pageViewsBefore: screen.shop.viewsBefore });
+        leftOutOn += 1;
+      }
+      const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period, device: "" });
+      if (overview.now) expect((await ask(period, { part: "website" })).wholeWebsite, period).toMatchObject({ pageViews: overview.now.views, visits: overview.now.visits });
+    }
+    expect(leftOutOn).toBeGreaterThan(3);
+    // Asked for, they're there: every page, only those, or by a search.
+    expect((await ask("lastMonth", { everyPage: true })).rows!.some((row) => String(row.name).includes("/checkout/"))).toBe(true);
+    expect(await ask("lastMonth", { everyPage: true })).not.toHaveProperty("leftOut");
+    const only = await ask("lastMonth", { classification: "basket" });
+    expect(only.rows!.map((row) => String(row.name))).toEqual(["/checkout/cart/"]);
+    expect(only.classification).toMatchObject({ name: "Search, basket and account", pages: 1 });
+    expect((await ask("lastMonth", { search: "checkout" })).rows!.map((row) => String(row.name))).toEqual(["/checkout/cart/"]);
+  });
+
   test("each screen's figures as the screen shows them, with its link; a website not the company's has none", async () => {
     const { t, siteId, user } = await collectedGrowing();
     const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
@@ -613,7 +716,10 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
     expect(channel.conversionsItStarted).toMatchObject({ now: channelTop.figures!.started });
     expect((channel.whereItLands as Array<{ visits: number }>).map((kind) => kind.visits)).toEqual(channelTop.kinds.map((kind) => kind.visits));
     const channels = await read("channels");
-    expect((channels.whatAVisitIsWorth as unknown[]).length).toBeGreaterThan(0);
+    expect((channels.conversionsAVisitByChannel as unknown[]).length).toBeGreaterThan(0);
+    // How often a visit converts, never what it is worth (Anthony, 2026-11-03: "Take money off").
+    expect(channels).not.toHaveProperty("whatAVisitIsWorth");
+    expect(JSON.stringify(channels.conversionsAVisitByChannel)).not.toMatch(/valuePerVisit|"value"/);
     expect((channels.whereEachChannelLands as Array<{ channel: string }>).map((row) => row.channel)).toContain("Organic Search");
 
     const page = await read("page", { key: "https://www.acme-shop.test/ai-agency/" });
@@ -733,7 +839,8 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     const { siteId, user } = await collectedGrowing();
     const channels = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "channel", ...listArgs, q: "dir" });
     expect(channels.rows.map((row) => row.label)).toEqual(["Direct"]);
-    expect(channels.seen.says[0]).toMatchObject({ code: "lead", text: "Organic Search" });
+    // The channel bringing the most conversions leads, never the most money (Anthony, 2026-11-03).
+    expect(channels.seen.says[0]).toMatchObject({ code: "lead", text: "AI assistants" });
     expect(channels.figures).toBeNull();
     const assistants = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "source", channel: "AI assistants", ...listArgs });
     expect(assistants.figures).toMatchObject({ visits: 270, conversions: 90, value: 30_000, siteVisits: 990 });
@@ -782,8 +889,44 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     const none = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs, move: "none" });
     expect(none.rows.map((row) => [new URL(row.label).pathname, row.views, row.key.startsWith("~")])).toEqual([["/about/", 0, false], ["/pricing/", 0, false]]);
     expect(none.total).toBe(2);
-    const download = await user.query(api.googleAnalyticsReads.analyticsListAll, { siteId, list: "page", period: "lastMonth", device: "", move: "gains" });
+    const download = await user.query(api.googleAnalyticsReads.analyticsListAll, { siteId, list: "page", period: "lastMonth", device: "", move: "gains", part: 0 });
     expect(download.rows).toHaveLength(3);
+    expect(download.total).toBe(3);
+  });
+
+  test("a long list's download comes in parts: every row once, in the screen's order, with no read for each title", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    // Sites → Your pages: enough pages nobody viewed to run past one part. More Handles' All pages is 13,803 rows and up.
+    const quiet = DOWNLOAD_PART + 5;
+    await t.run(async (ctx) => {
+      for (const held of await ctx.db.query("siteListCopies").withIndex("by_kind_key", (q) => q.eq("kind", YOUR_PAGES_COPY).eq("key", `${siteId}`)).collect()) await ctx.db.delete(held._id);
+      const rows = Array.from({ length: quiet }, (_, index) => [`/quiet-${index}/`, null, 1, 0, 0, 0, "BRAND"]);
+      await ctx.db.insert("siteListCopies", { kind: YOUR_PAGES_COPY, key: `${siteId}`, buildId: "b1", fields: [...YOUR_PAGES_FIELDS], rows: rows.length, parts: 1, cut: null, meta: {}, builtAt: 1 });
+      await ctx.db.insert("siteListCopyParts", { kind: YOUR_PAGES_COPY, key: `${siteId}`, buildId: "b1", part: 0, data: encodeCopyRows(rows, YOUR_PAGES_FIELDS.length) });
+      await ctx.db.insert("holdPages", { companyWebsiteId: siteId, page: "/ai-agency/", crawled: false, shown: false, clicks: 0, ranks: false, title: "AI Agency | Acme" });
+    });
+    const ask = { siteId, list: "page" as const, period: "lastMonth" as const, device: "", sort: "views" as const };
+    const first = await user.query(api.googleAnalyticsReads.analyticsListAll, { ...ask, part: 0 });
+    const second = await user.query(api.googleAnalyticsReads.analyticsListAll, { ...ask, part: 1 });
+    const past = await user.query(api.googleAnalyticsReads.analyticsListAll, { ...ask, part: 2 });
+    // An answer may hold 8,192 to a list.
+    expect(DOWNLOAD_PART).toBeLessThanOrEqual(8_192);
+    expect(first.rows).toHaveLength(DOWNLOAD_PART);
+    expect(first.total).toBe(quiet + 3);
+    expect(second.total).toBe(first.total);
+    expect(second.rows).toHaveLength(first.total - DOWNLOAD_PART);
+    expect(past.rows).toEqual([]);
+    const every = [...first.rows, ...second.rows];
+    expect(new Set(every.map((row) => row.key)).size).toBe(first.total);
+    expect(every.some((row) => row.label.startsWith("~"))).toBe(false);
+    // The same order as the screen's. The screen gives a page its title; the file holds none, so its read asks for none.
+    const screen = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...ask, page: 1, rows: 25 });
+    expect(first.rows.slice(0, 25).map((row) => row.key)).toEqual(screen.rows.map((row) => row.key));
+    const titled = (rows: typeof every) => rows.find((row) => row.label.endsWith("/ai-agency/"));
+    expect(titled(screen.rows)?.title).toBe("AI Agency | Acme");
+    expect(titled(first.rows)).toBeDefined();
+    expect(titled(first.rows)).not.toHaveProperty("title");
   });
 
   test("a device's box weighs it against every device, both kept by the collection", async () => {
@@ -800,7 +943,10 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(conversions.seen.says[0]).toEqual({ code: "topKind", text: "generate_lead", a: 60, b: 150 });
     expect(conversions.fired).toEqual([]);
     const [site] = await user.query(api.googleAnalyticsReads.analyticsSites, {});
-    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, counting: true, checks: 13 });
+    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, conversions: 150, conversionsBefore: 60, counting: true, checks: 13 });
+    // Your websites shows no money (Anthony, 2026-11-03: "Take money off").
+    expect(site).not.toHaveProperty("value");
+    expect(site).not.toHaveProperty("currency");
     const connected = await user.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId });
     expect(connected?.searchConsole).toBeNull();
     await t.run(async (ctx) => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { BadgeCheck } from "lucide-react";
@@ -46,6 +47,16 @@ export default function SearchConsoleBrandPage() {
   const days = list.range.days;
   const host = list.status?.host ?? "";
   const points = chart.rows((period) => ({ brand: period.brandClicks, other: period.otherClicks }));
+  // The eye's figures: the list's, its brand words, the chart's periods and the page's own names for the two kinds of
+  // search; its "Do first" steps may open the searches that gained and lost most, each on its own screen.
+  const brandName = t("filters.brandYes");
+  const otherName = t("filters.brandNo");
+  const brandWords = words?.names ?? null;
+  // The chart's periods by their first day (`day`), so the eye keeps the newest of a long chart, never its oldest.
+  const seesData = useMemo(() => (list.pageData ? { ...list.pageData, brandWords, chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null, names: { brand: brandName, other: otherName } } : undefined), [list.pageData, brandWords, periods, brandName, otherName]);
+  const movers = list.summary?.wholeList?.movers;
+  const seesLinks = useMemo(() => [movers?.otherDown, movers?.otherUp, movers?.brandDown]
+    .flatMap((moved) => (moved ? [{ label: moved.key, href: recordHref("keywords/keyword", moved.key) }] : [])), [movers, recordHref]);
   // Brand and Non-brand, each with its tick box, as drawn. Amber against blue (2026-10-04): amber against orange read as one line.
   const ticks = useSeriesTicks([
     { key: "brand", name: t("filters.brandYes"), colour: SITE_SERIES_COLOURS[3] },
@@ -66,7 +77,7 @@ export default function SearchConsoleBrandPage() {
   );
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="brand" seen={list.summary ? brandSees(list.summary) : null} data={list.pageData ? { ...list.pageData, brandWords: words?.names ?? null, chart: periods ?? null } : undefined} />}
+      sees={<SearchConsoleSees screen="brand" seen={list.summary ? brandSees(list.summary) : null} data={seesData} links={seesLinks} />}
       icon={<BadgeCheck className="h-5 w-5 text-brand" />}
       title={t("brand.title")}
       description={description}

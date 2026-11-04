@@ -412,6 +412,8 @@ describe("ai tool execution service", () => {
       "assistant.googleAnalytics.live",
       // Insights' findings, as written (insights-analyst-plan.md I14, phase 16).
       "assistant.insights.read",
+      // A chart from the page the conversation started on, redrawn (ask-hakken-every-chart-page-plan-2026-11-03.md).
+      "assistant.pageChart",
       "assistant.searchConsole",
       "assistant.site.overview",
       // The Assistant's Hakken task tools (hakken-tasks-plan.md, item 1.2): each

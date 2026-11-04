@@ -37,6 +37,18 @@ const FORMS = new Set([
   "src/app/(dashboard)/app/bing-webmaster/[siteId]/connection/page.tsx",
   // Google Analytics' connection, the same (Anthony, 2026-10-31: connection pages carry no box).
   "src/app/(dashboard)/app/analytics/[siteId]/connection/page.tsx",
+  // The websites lists: a list of the company's websites, not one website's figures (Anthony, 2026-11-03: "We dont
+  // need the eye on non website data related pages").
+  "src/app/(dashboard)/app/search-console/page.tsx",
+  "src/app/(dashboard)/app/bing-webmaster/page.tsx",
+  "src/app/(dashboard)/app/analytics/page.tsx",
+  // Google Analytics' Tracking health and a check's own screen: the tracking's setup, not the website's figures (the
+  // same decision).
+  "src/app/(dashboard)/app/analytics/[siteId]/tracking-health/page.tsx",
+  "src/app/(dashboard)/app/analytics/[siteId]/tracking-health/check/page.tsx",
+  // Visibility's websites list, and a draft the team wrote: neither is one website's figures (the same decision).
+  "src/app/(dashboard)/app/sites/page.tsx",
+  "src/app/(dashboard)/app/sites/[siteId]/drafts/[draftId]/page.tsx",
   // A keyword's and a page's countries: the record's own tab, under the record's box.
   "src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx",
   "src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx",
@@ -46,6 +58,8 @@ const FORMS = new Set([
   "src/app/(dashboard)/app/analytics/[siteId]/landing-pages/page.tsx",
   // Events is part of Conversions now (ga-conversions-visitors-plan.md CV1): its old address only forwards there.
   "src/app/(dashboard)/app/analytics/[siteId]/events/page.tsx",
+  // Visitors is Visits now (visits-redo-plan-2026-11-03.md): its old address only forwards there.
+  "src/app/(dashboard)/app/analytics/[siteId]/visitors/page.tsx",
 ]);
 
 const screens = () => ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set([".tsx"])))

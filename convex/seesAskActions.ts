@@ -14,7 +14,7 @@ import { briefFor } from "./utils/insightBriefs";
 import { factsByKey, type Fact } from "./utils/insightFacts";
 import { ANALYTICS_READ } from "./utils/agentTools";
 import { findingWords, type Finding } from "./utils/sees/findings";
-import { judgeFindings, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
+import { judgeFindings, judgeLeftOff, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
 import {
   JUDGE_FORMAT, MOST_COVERED, SEES_FINDINGS_FORMAT, judgeFrom, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
   type SeesLink, type SeesVerdict,
@@ -22,6 +22,7 @@ import {
 import { briefOf, pageFacts } from "./utils/sees/pageData";
 import { pageFindings } from "./utils/sees/pageFindings";
 import { seesScreenFor } from "./utils/sees/screens";
+import type { SeesStageNote } from "./utils/sees/stages";
 
 /** A list's rows in the writer's brief once code has found the figures: enough for the page's setting. */
 const BRIEF_ROWS = 8;
@@ -59,9 +60,10 @@ const LOOK_LIMIT_MS = 2.5 * 60 * 1000;
 
 /**
  * The team writes one page's words: the screen list names the specialist (sees-every-page-plan-2026-10-31.md), code
- * finds what the figures show, the specialist writes them up, the Editor checks.
+ * finds what the figures show, the specialist writes them up, the Editor checks. `note` says each stage as it starts,
+ * for the panel to show what the press is doing (`utils/sees/stages.ts`); the eval set has no panel, and no notes.
  */
-async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Promise<Written> {
+async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, note: SeesStageNote = async () => {}): Promise<Written> {
   const lines: Written["lines"] = [];
   const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, {});
   const member = (role: string): TeamMember | undefined => setup.members.find((entry) => entry.role === role && entry.isActive);
@@ -71,6 +73,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   // The page's own figures, as it showed them, keyed as the writer names them (every page but the Conversions screens').
   const pageRead = page.data !== undefined && page.data !== null ? pageFacts(page.screen, page.data, { ...(page.from ? { from: page.from } : {}), ...(page.to ? { to: page.to } : {}), ...(page.country ? { country: page.country } : {}) }) : null;
   const facts = [...factsOf(page), ...(pageRead?.facts ?? []).filter((fact) => !page.facts.some((own) => own.key === fact.key))];
+  await note("reading", facts.length);
   const held = factsByKey(factsOf(page));
   const rules = rulesFor(run);
   // Tracking health's faults that break the conversion figures, in words: the only time the bubble may speak about tracking.
@@ -90,11 +93,19 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   const judgeRun = { companyId: run.companyId, runId: run.runId };
   const prepared = await prepareSeesJudge(ctx, judgeRun);
   let findings: Finding[] = [];
+  // Found, then in front of the checker: the panel says each, and the checker only where it is switched on.
+  const noteFound = async (found: readonly Finding[]) => {
+    await note("finding", found.length);
+    if (prepared.model && found.length > 0) await note("weighing");
+  };
   // Every other page's findings come from its own figures, by the general rules (sees-every-page-plan, phase 3).
   const conversionsPage = page.screen === "googleAnalytics.conversions" || page.screen.startsWith("googleAnalytics.event:");
   if (!conversionsPage && page.data !== undefined && page.data !== null) {
     try {
-      const judged = await judgeFindings(ctx, judgeRun, prepared, { host: page.host, shop: page.shop, about: page.about }, pageFindings(page.screen, page.data));
+      await note("finding");
+      const found = pageFindings(page.screen, page.data);
+      await noteFound(found);
+      const judged = await judgeFindings(ctx, judgeRun, prepared, { host: page.host, shop: page.shop, about: page.about }, found);
       findings = judged.findings;
       for (const note of judged.notes) lines.push({ heading: "Jev", detail: note.slice(0, 900) });
       lines.push({ heading: "Findings", detail: `${findings.length} found by code in the page's figures: ${findings.map(findingWords).join(" ")}`.slice(0, 900) });
@@ -104,7 +115,9 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   }
   if (reads && conversionsPage) {
     try {
+      await note("finding");
       const found = await ctx.runQuery(internal.seesFindings.seesFindingsInternal, { companyId: run.companyId, siteId: run.holdId, period: page.period, device: page.device ?? "", ...(page.country ? { country: page.country } : {}) });
+      await noteFound(found);
       const judged = await judgeFindings(ctx, judgeRun, prepared, { host: page.host, shop: page.shop, about: page.about }, found);
       findings = judged.findings;
       for (const note of judged.notes) lines.push({ heading: "Jev", detail: note.slice(0, 900) });
@@ -153,45 +166,68 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page): Pr
   const covering = mustCover.length > 0 ? { mustCover } : {};
   let verdict: SeesVerdict;
   let raw: unknown;
+  // Whether Jev has read the words as they will be shown already: inside a conversation that reads, the last answer
+  // passed its check (`sentBack` null) and the Editor left nothing off it. Then they are not read twice.
+  let judged = false;
   if (reads) {
     const written = await askWithTools(ctx, run, writer, who, system, prompt, readsScreens ? [analyticsTool(scope)] : [], {
       firstReads: readsScreens ? firstReadsFor(page) : [],
       limitMs: WRITE_LIMIT_MS,
+      onStage: note,
       check: async (answer, found) => {
+        await note("checking");
         const checked = seesFrom(answer, withRead(found), page.links, { ...noTracking, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) });
-        return checked.ok ? await wordsWhy(checked) : checked.why;
+        if (!checked.ok) return checked.why;
+        if (prepared.model) await note("guessing");
+        return await wordsWhy(checked);
       },
     });
     named = withRead(factsByKey(written.found));
     raw = written.answer;
     for (const read of written.reads) lines.push({ heading: "Read", detail: readLine(read), failed: Boolean(read.problem) });
-    // 3. The Editor's check ran inside the conversation (S5, S7): what failed went back once, with why. Words that
-    // still leave a finding out stand without it rather than leave the reader nothing; the run's log says so.
-    const strict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}) });
+    // 3. The Editor's check ran inside the conversation (S5, S7): what failed went back once, with every fault. After
+    // that a sentence with a fault is left off and the rest stand, and words that still leave a finding out stand
+    // without it, rather than leave the reader the rule's words; the run's log says so.
+    const strict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true });
     verdict = !strict.ok && strict.why.startsWith("It left out a finding")
-      ? seesFrom(raw, named, page.links, { ...noTracking, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}) })
+      ? seesFrom(raw, named, page.links, { ...noTracking, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true })
       : strict;
     if (!strict.ok && verdict.ok) lines.push({ heading: "The Editor", detail: `Kept although ${strict.why.charAt(0).toLowerCase()}${strict.why.slice(1)}` });
+    judged = written.sentBack === null && strict.ok && !strict.left?.length;
     if (written.sentBack && verdict.ok) lines.push({ heading: "Jev", detail: `Kept after one rewrite, though: ${written.sentBack}`.slice(0, 900) });
   } else {
     const answered = (value: unknown) => value !== null && typeof value === "object" && "says" in value;
+    await note("writing");
     raw = await ask(ctx, run, writer, who, system, prompt, undefined, answered);
     // 3. The Editor checks every number and every word (S5, S7): what fails goes back once, with why, as it does for a
     // writer that reads (sees-every-page-plan-2026-10-31.md: a page's words were left to the rule's after one slip).
+    await note("checking");
     verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering });
     if (!verdict.ok) {
       lines.push({ heading: "The Editor", detail: `Sent back once: ${verdict.why}`.slice(0, 900) });
+      await note("rewriting");
       raw = await ask(ctx, run, writer, who, system, `${prompt}\n\nYour last answer was sent back by the Editor: ${verdict.why} Write it again, keeping every rule.`, undefined, answered);
-      verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering });
-      // Words that still leave a finding out stand without it rather than leave the reader nothing.
-      if (!verdict.ok && verdict.why.startsWith("It left out a finding")) verdict = seesFrom(raw, named, page.links, noTracking);
-    }
-    if (verdict.ok) {
-      const jev = await wordsWhy(verdict);
-      if (jev) lines.push({ heading: "Jev", detail: `Kept, though: ${jev}`.slice(0, 900) });
+      await note("checking");
+      // After the rewrite a sentence with a fault is left off and the rest stand; words that still leave a finding out
+      // stand without it, rather than leave the reader nothing.
+      verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, salvage: true });
+      if (!verdict.ok && verdict.why.startsWith("It left out a finding")) verdict = seesFrom(raw, named, page.links, { ...noTracking, salvage: true });
     }
   }
-  if (!verdict.ok) return { verdict, role: chosen, lines, findings };
+  if (verdict.ok && verdict.left?.length) lines.push({ heading: "The Editor", detail: `Left off: ${verdict.left.join(" ")}`.slice(0, 900) });
+  // Jev reads the words as they will be shown: a guess stated as fact, or a step that fits any website, is left off,
+  // so long as a sentence stands (ask-hakken-every-chart-page-plan-2026-11-03.md).
+  if (verdict.ok && !judged) {
+    const shown = verdict;
+    if (prepared.model) await note("guessing");
+    const flagged = await judgeLeftOff(ctx, judgeRun, prepared, page.host, shown.says, shown.steps.map((step) => step.words), figuresForJev);
+    const says = shown.says.filter((_, at) => !flagged.says.includes(at));
+    if (says.length > 0 && (flagged.says.length > 0 || flagged.steps.length > 0)) {
+      const gone = [...flagged.says.map((at) => shown.says[at]), ...flagged.steps.map((at) => shown.steps[at].words)];
+      lines.push({ heading: "Jev", detail: `Left off as a guess or advice for any website: ${gone.map((words) => `"${words}"`).join(" ")}`.slice(0, 900) });
+      verdict = { ...shown, says, steps: shown.steps.filter((_, at) => !flagged.steps.includes(at)) };
+    }
+  }
   return { verdict, role: chosen, lines, findings };
 }
 
@@ -255,8 +291,12 @@ export const writeSeesAnswer = internalAction({
       await log("Sent back", why, true);
       await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId: args.runId, status: "FAILED", summary: `The bubble was not written: ${why}` });
     };
+    // Each stage saved as it starts, for the panel; one that can't be saved only goes unseen, and the press carries on.
+    const note: SeesStageNote = async (stage, count) => {
+      await ctx.runMutation(internal.seesAsk.noteSeesStage, { answerId: args.answerId, runId: args.runId, stage, ...(count !== undefined ? { count } : {}) }).catch(() => null);
+    };
     try {
-      const written = await writeBubble(ctx, run, args);
+      const written = await writeBubble(ctx, run, args, note);
       for (const line of written.lines) await log(line.heading, line.detail, line.failed ?? false);
       if (!written.verdict.ok) {
         await sentBack(written.verdict.why, written.role);

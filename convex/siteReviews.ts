@@ -4,7 +4,7 @@ import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { listingSourceValidator } from "./localSchema";
 import { listingsById, localSetup, rivalsOf } from "./localReads";
 import { readReviews, type StoredReview } from "./localReviews";
@@ -124,41 +124,44 @@ export const yourReviews = tenantQuery({
     rows: v.array(reviewRowValidator),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { setup, listings } = await ownListings(ctx, site, args.officeId);
-    const rows: Array<StoredReview & { listingId: Id<"listings"> }> = [];
-    for (const listing of listings) for (const review of await readReviews(ctx, listing._id)) rows.push({ ...review, listingId: listing._id });
-    rows.sort((left, right) => right.day.localeCompare(left.day));
-
-    const now = Date.now();
-    const google = listings.filter((listing) => listing.source === "GOOGLE" && listing.rating !== undefined && (listing.reviews ?? 0) > 0);
-    const googleRating = google.length > 0
-      ? google.reduce((sum, listing) => sum + listing.rating! * (listing.reviews ?? 0), 0) / google.reduce((sum, listing) => sum + (listing.reviews ?? 0), 0)
-      : null;
-    const waiting = rows.filter((row) => !row.replyDay);
-    const { span, before } = reviewSpans(args.period, now);
-    return {
-      offices: setup.offices.map((office) => ({ listingId: office._id, name: office.name, town: office.town ?? null })),
-      listings: listings.map((listing) => ({ listingId: listing._id, source: listing.source, town: listing.town ?? null, rating: listing.rating ?? null })),
-      figures: {
-        googleRating,
-        otherRatings: listings.filter((listing) => listing.source !== "GOOGLE" && listing.rating !== undefined).map((listing) => ({ source: listing.source, rating: listing.rating! })),
-        newIn: rows.filter((row) => inSpan(row.day, span)).length,
-        newBefore: rows.filter((row) => inSpan(row.day, before)).length,
-        waiting: waiting.length,
-        oldestWaitingDays: waiting.length > 0 ? daysBetween(waiting[waiting.length - 1].day, dayBefore(0, now)) : null,
-        daysToAnswer: daysToAnswer(rows.filter((row) => inSpan(row.day, span)), span.from),
-      },
-      period: args.period,
-      points: reviewSteps(rows, span, args.step),
-      rows: rows.map((row) => ({
-        listingId: row.listingId, id: row.id, day: row.day, stars: row.stars,
-        text: row.text ?? null, name: row.name ?? null, guide: row.guide === true, replyDay: row.replyDay ?? null, replyRough: row.replyRough === true,
-      })),
-    };
-  }, yourReviewsSees),
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) => await readYourReviews(ctx, args), yourReviewsSees),
 });
+
+/** yourReviews's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readYourReviews(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { setup, listings } = await ownListings(ctx, site, args.officeId);
+  const rows: Array<StoredReview & { listingId: Id<"listings"> }> = [];
+  for (const listing of listings) for (const review of await readReviews(ctx, listing._id)) rows.push({ ...review, listingId: listing._id });
+  rows.sort((left, right) => right.day.localeCompare(left.day));
+
+  const now = Date.now();
+  const google = listings.filter((listing) => listing.source === "GOOGLE" && listing.rating !== undefined && (listing.reviews ?? 0) > 0);
+  const googleRating = google.length > 0
+    ? google.reduce((sum, listing) => sum + listing.rating! * (listing.reviews ?? 0), 0) / google.reduce((sum, listing) => sum + (listing.reviews ?? 0), 0)
+    : null;
+  const waiting = rows.filter((row) => !row.replyDay);
+  const { span, before } = reviewSpans(args.period, now);
+  return {
+    offices: setup.offices.map((office) => ({ listingId: office._id, name: office.name, town: office.town ?? null })),
+    listings: listings.map((listing) => ({ listingId: listing._id, source: listing.source, town: listing.town ?? null, rating: listing.rating ?? null })),
+    figures: {
+      googleRating,
+      otherRatings: listings.filter((listing) => listing.source !== "GOOGLE" && listing.rating !== undefined).map((listing) => ({ source: listing.source, rating: listing.rating! })),
+      newIn: rows.filter((row) => inSpan(row.day, span)).length,
+      newBefore: rows.filter((row) => inSpan(row.day, before)).length,
+      waiting: waiting.length,
+      oldestWaitingDays: waiting.length > 0 ? daysBetween(waiting[waiting.length - 1].day, dayBefore(0, now)) : null,
+      daysToAnswer: daysToAnswer(rows.filter((row) => inSpan(row.day, span)), span.from),
+    },
+    period: args.period,
+    points: reviewSteps(rows, span, args.step),
+    rows: rows.map((row) => ({
+      listingId: row.listingId, id: row.id, day: row.day, stars: row.stars,
+      text: row.text ?? null, name: row.name ?? null, guide: row.guide === true, replyDay: row.replyDay ?? null, replyRough: row.replyRough === true,
+    })),
+  };
+}
 
 const businessRowValidator = v.object({
   listingId: v.id("listings"),
@@ -189,50 +192,53 @@ export const reviewsAgainstRivals = tenantQuery({
     lines: v.array(v.object({ listingId: v.id("listings"), name: v.string(), you: v.boolean(), counts: v.array(v.union(v.number(), v.null())) })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const setup = await localSetup(ctx, site);
-    const office = setup.offices.find((entry) => entry._id === args.officeId) ?? setup.offices[0] ?? null;
-    const offices = setup.offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
-    if (!office) return { offices, office: null, rows: [], steps: [], lines: [] };
-    const rivals = rivalsOf(office, setup.rivals, setup.rivalOffice);
-    const links = setup.hold ? await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", setup.hold!._id)).take(200) : [];
-    const elsewhere = [...(await listingsById(ctx, links.map((link) => link.listingId))).values()].filter((listing) => listing.source !== "GOOGLE");
-    // A rival's pages elsewhere are joined to it by the website they name.
-    const rivalHosts = new Set(rivals.map((rival) => rival.websiteHost).filter(Boolean));
-    const ownLinks = new Set(links.filter((link) => link.role === "OWN").map((link) => link.listingId as string));
-    const businesses: Array<{ listing: Doc<"listings">; you: boolean }> = [
-      { listing: office, you: true },
-      ...rivals.map((listing) => ({ listing, you: false })),
-      ...elsewhere.filter((listing) => ownLinks.has(listing._id)).map((listing) => ({ listing, you: true })),
-      ...elsewhere.filter((listing) => !ownLinks.has(listing._id) && rivalHosts.has(listing.websiteHost)).map((listing) => ({ listing, you: false })),
-    ];
-    const { span } = reviewSpans(args.period);
-    const rows = [];
-    const held = new Map<string, StoredReview[]>();
-    for (const { listing, you } of businesses) {
-      const reviews = await readReviews(ctx, listing._id);
-      held.set(listing._id, reviews);
-      rows.push({
-        listingId: listing._id,
-        name: listing.name,
-        source: listing.source,
-        you,
-        rating: listing.rating ?? null,
-        reviews: listing.reviews ?? null,
-        ...reviewFiguresIn(reviews, span),
-      });
-    }
-    const steps = stepsOf(span, args.step);
-    const lines = businesses.filter((entry) => entry.listing.source === "GOOGLE").map(({ listing, you }) => ({
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) => await readReviewsAgainstRivals(ctx, args), reviewsRivalsSees),
+});
+
+/** reviewsAgainstRivals's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
+export async function readReviewsAgainstRivals(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const setup = await localSetup(ctx, site);
+  const office = setup.offices.find((entry) => entry._id === args.officeId) ?? setup.offices[0] ?? null;
+  const offices = setup.offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
+  if (!office) return { offices, office: null, rows: [], steps: [], lines: [] };
+  const rivals = rivalsOf(office, setup.rivals, setup.rivalOffice);
+  const links = setup.hold ? await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", setup.hold!._id)).take(200) : [];
+  const elsewhere = [...(await listingsById(ctx, links.map((link) => link.listingId))).values()].filter((listing) => listing.source !== "GOOGLE");
+  // A rival's pages elsewhere are joined to it by the website they name.
+  const rivalHosts = new Set(rivals.map((rival) => rival.websiteHost).filter(Boolean));
+  const ownLinks = new Set(links.filter((link) => link.role === "OWN").map((link) => link.listingId as string));
+  const businesses: Array<{ listing: Doc<"listings">; you: boolean }> = [
+    { listing: office, you: true },
+    ...rivals.map((listing) => ({ listing, you: false })),
+    ...elsewhere.filter((listing) => ownLinks.has(listing._id)).map((listing) => ({ listing, you: true })),
+    ...elsewhere.filter((listing) => !ownLinks.has(listing._id) && rivalHosts.has(listing.websiteHost)).map((listing) => ({ listing, you: false })),
+  ];
+  const { span } = reviewSpans(args.period);
+  const rows = [];
+  const held = new Map<string, StoredReview[]>();
+  for (const { listing, you } of businesses) {
+    const reviews = await readReviews(ctx, listing._id);
+    held.set(listing._id, reviews);
+    rows.push({
       listingId: listing._id,
       name: listing.name,
+      source: listing.source,
       you,
-      counts: reviewsAtEnds(held.get(listing._id) ?? [], listing.reviews ?? null, steps.map((one) => one.to)),
-    }));
-    return { offices, office: { listingId: office._id, name: office.name, town: office.town ?? null }, rows, steps: steps.map((one) => one.key), lines };
-  }, reviewsRivalsSees),
-});
+      rating: listing.rating ?? null,
+      reviews: listing.reviews ?? null,
+      ...reviewFiguresIn(reviews, span),
+    });
+  }
+  const steps = stepsOf(span, args.step);
+  const lines = businesses.filter((entry) => entry.listing.source === "GOOGLE").map(({ listing, you }) => ({
+    listingId: listing._id,
+    name: listing.name,
+    you,
+    counts: reviewsAtEnds(held.get(listing._id) ?? [], listing.reviews ?? null, steps.map((one) => one.to)),
+  }));
+  return { offices, office: { listingId: office._id, name: office.name, town: office.town ?? null }, rows, steps: steps.map((one) => one.key), lines };
+}
 
 /**
  * A listing's reviews at the end of each month: its count now less the reviews

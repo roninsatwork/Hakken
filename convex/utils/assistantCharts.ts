@@ -1,5 +1,6 @@
 import { v, type Infer } from "convex/values";
-import { GROUP_CHART_BY, GROUP_CHART_KINDS, PRODUCT_GROUP_MEASURES, SEARCH_GROUP_MEASURES, groupsChartValidator, type GroupsChart } from "./assistantGroupCharts";
+import { CLARITY_GROUP_MEASURES, GROUP_CHART_BY, GROUP_CHART_KINDS, GROUP_LOOKS, PRODUCT_GROUP_MEASURES, SEARCH_GROUP_MEASURES, VISIBILITY_GROUP_MEASURES, groupsChartValidator, type GroupsChart } from "./assistantGroupCharts";
+import { pageChartValidator, type PageChart } from "./assistantPageCharts";
 
 /**
  * A chart under an Ask Hakken answer (docs/plans/active/hakken-tasks-plan.md,
@@ -50,8 +51,9 @@ export type DaysChart = Infer<typeof daysChartValidator>;
  * Any chart under an answer: a line a day, or — since 2026-10-31 (ask-hakken-every-chart-plan) — a website's groups
  * as bars, stacked bars, a pie, a scatter or a grid (`assistantGroupCharts.ts`).
  */
-export const answerChartValidator = v.union(daysChartValidator, groupsChartValidator);
-export type AnswerChart = DaysChart | GroupsChart;
+export const answerChartValidator = v.union(daysChartValidator, groupsChartValidator, pageChartValidator);
+/** Since 2026-11-03, a chart from the page the conversation started on, redrawn (`assistantPageCharts.ts`). */
+export type AnswerChart = DaysChart | GroupsChart | PageChart;
 
 /** The longest chart: Search Console's longest look-up. */
 export const MOST_CHART_DAYS = 90;
@@ -69,11 +71,13 @@ function parse(json: string | undefined): unknown {
 const MOST_GROUPS = 20;
 
 function isGroupsChart(chart: Record<string, unknown>): boolean {
-  return (chart.look === "analyticsGroups" || chart.look === "searchConsoleGroups")
+  // Every source's groups (2026-11-03): Bing's, Clarity's and Visibility's charts were drawn by their tools and then
+  // dropped here, so they never reached the answer.
+  return (GROUP_LOOKS as readonly unknown[]).includes(chart.look)
     && (GROUP_CHART_KINDS as readonly unknown[]).includes(chart.kind)
     && (GROUP_CHART_BY as readonly unknown[]).includes(chart.by)
     // A shop's products are Google Analytics' own groups too (products-screen-4-plan-2026-11-02.md, phase 5).
-    && ([...ANALYTICS_CHART_MEASURES, ...SEARCH_GROUP_MEASURES, ...PRODUCT_GROUP_MEASURES] as readonly unknown[]).includes(chart.measure)
+    && ([...ANALYTICS_CHART_MEASURES, ...SEARCH_GROUP_MEASURES, ...PRODUCT_GROUP_MEASURES, ...CLARITY_GROUP_MEASURES, ...VISIBILITY_GROUP_MEASURES] as readonly unknown[]).includes(chart.measure)
     && typeof chart.website === "string"
     && typeof chart.period === "string"
     && typeof chart.link === "string"
@@ -82,10 +86,19 @@ function isGroupsChart(chart: Record<string, unknown>): boolean {
     && chart.groups.length <= MOST_GROUPS;
 }
 
+/** A page's chart, redrawn: its kind, its title and column, and its groups, each a name and a figure. */
+function isPageChart(chart: Record<string, unknown>): boolean {
+  return chart.look === "pageChart"
+    && typeof chart.kind === "string" && typeof chart.title === "string" && typeof chart.measure === "string" && typeof chart.link === "string"
+    && Array.isArray(chart.groups) && chart.groups.length > 0 && chart.groups.length <= 200
+    && chart.groups.every((group: unknown) => Boolean(group) && typeof (group as { name?: unknown }).name === "string" && typeof (group as { value?: unknown }).value === "number");
+}
+
 function isChart(value: unknown): value is AnswerChart {
   if (!value || typeof value !== "object") return false;
   const chart = value as Record<string, unknown>;
-  if (chart.look === "analyticsGroups" || chart.look === "searchConsoleGroups") return isGroupsChart(chart);
+  if (chart.look === "pageChart") return isPageChart(chart);
+  if ((GROUP_LOOKS as readonly unknown[]).includes(chart.look)) return isGroupsChart(chart);
   return (
     ((chart.look === "searchConsoleDays" && (chart.measure === "visitors" || chart.measure === "impressions"))
       || (chart.look === "analyticsDays" && (ANALYTICS_CHART_MEASURES as readonly unknown[]).includes(chart.measure)))
@@ -102,7 +115,7 @@ function isChart(value: unknown): value is AnswerChart {
 }
 
 /** The chart a run asked for: the last `show_chart` that drew one. One chart to an answer. */
-const CHARTING = new Set(["assistant.chart", "assistant.tasks.proposeChartReport"]);
+const CHARTING = new Set(["assistant.chart", "assistant.tasks.proposeChartReport", "assistant.pageChart"]);
 
 export function chartFromToolCalls(
   calls: Array<{ handlerMapping: string; status: string; resultJson?: string }>,

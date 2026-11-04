@@ -20,7 +20,7 @@ import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsBox, useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
 import { boxedSays } from "../_components/insightBoxSays";
 import { soFarRow } from "../_components/insightCheck";
 
@@ -43,6 +43,8 @@ export default function InsightsTrackRecordPage() {
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightsReads.insightsTrackRecord, site ? { siteId: site } : {});
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
   const seesData = useMemo(() => ({ trackRecord: data, box }), [data, box]);
@@ -98,7 +100,7 @@ export default function InsightsTrackRecordPage() {
   return (
     <>
       <PageHeader icon={<History className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      {data ? <HakkenSees says={boxed} steps={steps} page={{ screen: "insights.trackRecord", siteId: site, data: seesData }} /> : null}
+      {data ? <HakkenSees says={boxed} steps={steps} page={{ screen: "insights.trackRecord", siteId: eyeSite, data: seesData }} /> : null}
       <FigureRow>
         <Figure label={t("figures.written")} value={data ? formatNumber(written) : "…"} detail={<span className="text-secondary">{t("figures.writtenDetail")}</span>} />
         <Figure label={t("figures.acted")} value={data ? formatNumber(acted) : "…"} detail={<span className="text-secondary">{t("figures.of", { all: formatNumber(written) })}</span>} />

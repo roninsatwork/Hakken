@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { Activity } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -57,12 +58,33 @@ export default function SearchConsoleVolatilityPage() {
   // Its figures keep the newest seven days whatever the menu says, so they name the day they end on (calendar-periods-plan.md).
   const newestWords = facts?.newestDay ? formatShortDay(facts.newestDay) : "…";
   const clickChange = facts && facts.clicks.before !== null && facts.clicks.before > 0 ? (facts.clicks.now - facts.clicks.before) / facts.clicks.before : null;
+  // The eye's figures: the four boxes' (with the same days' times shown), the keywords on screen and the chart, each
+  // part named as the page names it; "Do first" may open the search that moved most (section 6 of
+  // ask-hakken-every-chart-page-plan-2026-11-03.md).
+  const tw = useTranslations("searchConsole.sees");
+  const shownRows = list.table.pageRows ?? null;
+  const latestDay = latest?.day ?? null;
+  const seesData = useMemo(() => (facts
+    ? {
+      volatility: facts,
+      rows: shownRows,
+      picked: true,
+      // By their first day (`day`), so the eye keeps the newest of a long chart, never its oldest.
+      chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null,
+      names: {
+        latest: latestDay ? formatShortDay(latestDay) : tv("latestDayNone"),
+        usual: tw("usual"), last7: tw("last7"), week7Before: tw("week7Before"), climbed5: tw("climbed5"), fell5: tw("fell5"), beforeIt: tw("beforeIt"), dayBefore: tw("dayBefore"),
+      },
+    }
+    : undefined), [facts, shownRows, periods, latestDay, tv, tw]);
+  const moved = shownRows?.find((row) => row.clicks > 0 && row.positionChange !== null);
+  const seesLinks = useMemo(() => (moved ? [{ label: moved.key, href: recordHref("keywords/keyword", moved.key) }] : []), [moved, recordHref]);
   return (
     <SearchConsoleListScreen
       icon={<Activity className="h-5 w-5 text-brand" />}
       title={tv("title")}
       description={tv("description")}
-      sees={<SearchConsoleSees screen="volatility" seen={facts?.seen} data={facts ? { volatility: facts, rows: list.table.pageRows ?? null, chart: periods ?? null } : undefined} />}
+      sees={<SearchConsoleSees screen="volatility" seen={facts?.seen} data={seesData} links={seesLinks} />}
       kindSwitch={false}
       heroes={
         <FigureRow>

@@ -158,9 +158,9 @@ describe("Paid keywords", () => {
     expect(await paid({ sort: "volume" })).toEqual(["boiler repair", "emergency plumber", "plumber leeds"]);
     expect(await paid({ sort: "position" })).toEqual(["emergency plumber", "boiler repair", "plumber leeds"]);
     expect(await paid({ sort: "position", direction: "desc" })).toEqual(["boiler repair", "emergency plumber", "plumber leeds"]);
-    expect(await paid({ sort: "cpc", direction: "asc" })).toEqual(["boiler repair", "emergency plumber", "plumber leeds"]);
-    expect(await paid({ sort: "cost" })).toEqual(["emergency plumber", "boiler repair", "plumber leeds"]);
     expect(await paid({ sort: "keyword" })).toEqual(["boiler repair", "emergency plumber", "plumber leeds"]);
+    // What a click and the visits would cost are no longer shown, so never an order (decision 4, 2026-11-03).
+    for (const sort of ["cpc", "cost"]) await expect(asAcme.query(api.sitePaid.listPaidKeywords, { siteId: own.holdId, page: 1, rows: 25, sort } as never)).rejects.toThrow();
     // The dropdown's old orders are not the headings': refused.
     await expect(asAcme.query(api.sitePaid.listPaidKeywords, { siteId: own.holdId, page: 1, rows: 25, sort: "dearest" } as never)).rejects.toThrow();
   });

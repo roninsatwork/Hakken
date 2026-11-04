@@ -28,7 +28,14 @@ export type FindingView = {
 };
 
 /** The Conversions screens' kinds, then every other page's (`pageFindings.ts`, sees-every-page-plan-2026-10-31.md). */
-export type FindingKind = "visitsForOne" | "step" | "groupAbove" | "groupBelow" | "rose" | "fell" | "trackingGap" | "wholeUp" | "wholeDown" | "rowUp" | "rowDown" | "holdsMost" | "rowAbove" | "rowBelow";
+/** Then a page's own (`pageOwnFindings.ts`): a figure that moved, said with its change and, where it matters, another's. */
+/**
+ * Then those for every section (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 7): a place that moved (9th
+ * to 4th on Google), a rival's figure moving beside yours, new against lost, and a share of a whole against its share
+ * before.
+ */
+export type FindingKind = "visitsForOne" | "step" | "groupAbove" | "groupBelow" | "rose" | "fell" | "trackingGap" | "wholeUp" | "wholeDown" | "rowUp" | "rowDown" | "holdsMost" | "rowAbove" | "rowBelow" | "movedUp" | "movedDown"
+  | "placeUp" | "placeDown" | "rivalUp" | "rivalDown" | "newLost" | "shareMoved" | "countedDifferently" | "halfOfViews" | "busyFewer";
 
 /** A figure a finding names, keyed so the team names it and the Editor fills it in. */
 export type FindingFact = { key: string; value: number; unit: "count" | "percent" | "ratio" | "score"; label: string };
@@ -59,7 +66,7 @@ const MOVE_POINTS = 0.5;
 /** A gap between devices this many times over is checked as tracking before it is called behaviour. */
 const TRACKING_GAP = 3;
 /** Columns that are no group a person can act on. */
-const NOT_A_GROUP = new Set(["no page recorded", "other kinds of page", "unclassified", "(not set)", "(other)"]);
+const NOT_A_GROUP = new Set(["no page recorded", "other classifications", "unclassified", "(not set)", "(other)"]);
 /** A shop's purchase, as Google names it: the conversion a shop is judged by first. */
 const PURCHASE = "purchase";
 
@@ -286,7 +293,7 @@ export function findingsFrom(views: readonly FindingView[]): Finding[] {
 
 /** An event's Google name in plain words, for a model to read: "add_to_cart" → "add to cart"; every conversion together named so. */
 const eventWords = (event: string | number) => (event === "*" ? "every conversion together" : String(event).replace(/_/g, " "));
-const viewWords: Record<string, string> = { channel: "channel", kind: "kind of page", device: "device", country: "country" };
+const viewWords: Record<string, string> = { channel: "channel", kind: "classification", device: "device", country: "country" };
 
 /**
  * A finding as one plain English sentence, for Jev to judge and the team to read beside its keys. Never shown to a
@@ -325,10 +332,34 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
     case "rowAbove":
     case "rowBelow": {
       const unit = MEASURES[String(p.measure)]?.kind === "percent" ? "%" : "";
-      // Against its own reference (pageFindings' `apart`): the whole website's, or similar pages'.
-      const against = p.against === "website" ? "across the whole website" : p.against === "group" ? "on similar pages" : "on average across the list";
+      // Against its own reference (pageFindings' `apart`): the whole website's, similar pages', or another group's.
+      const against = p.against === "website" ? "across the whole website" : p.against === "group" ? "on similar pages" : p.against === "other" ? `for ${p.other}` : "on average across the list";
       return `${p.name}: ${measureWords(p.measure)} ${p.value}${unit}, against ${p.mean}${unit} ${against}.`;
     }
+    case "movedUp":
+    case "movedDown": {
+      // A rate's move in points, never a change of a change, where no other group's change is set beside it.
+      const points = MEASURES[String(p.measure)]?.kind === "percent" && p.other === undefined;
+      const by = points ? `${Math.round(Math.abs(Number(p.now) - Number(p.before)) * 10) / 10} points, to ${p.now}% from ${p.before}%` : `${p.change}%, to ${p.now} from ${p.before}`;
+      return `${p.name}: ${measureWords(p.measure)} ${finding.kind === "movedUp" ? "up" : "down"} ${by} the span before${p.other !== undefined ? `; ${p.other}: ${p.otherWay} ${p.otherChange}%` : ""}.`;
+    }
+    case "placeUp":
+    case "placeDown":
+      // `single`: one record's own place (a keyword's own screen), with no list to be the biggest on.
+      return `${p.name}: ${measureWords(p.measure)} ${p.now}, from ${p.before} the span before${p.single ? `, ${finding.kind === "placeUp" ? "a climb" : "a drop"}` : `, the biggest ${finding.kind === "placeUp" ? "climb" : "drop"} on the list`}.`;
+    case "rivalUp":
+    case "rivalDown":
+      return `${p.name}: ${measureWords(p.measure)} ${finding.kind === "rivalUp" ? "rose" : "fell"} to ${p.now} from ${p.before} the span before, while yours went to ${p.you} from ${p.youBefore}.`;
+    case "newLost":
+      return `${capital(measureWords(p.measure))}: ${p.gained} new and ${p.lost} lost${p.gainedBefore !== undefined ? `, against ${p.gainedBefore} new and ${p.lostBefore} lost the span before` : ""}.`;
+    case "shareMoved":
+      return `${p.name}: ${p.share}% of all the ${measureWords(p.measure)}, from ${p.shareBefore}% the span before.`;
+    case "halfOfViews":
+      return `Half the views came from ${p.pages} pages, against ${p.pagesBefore} the span before.`;
+    case "busyFewer":
+      return `${p.fewer} of the ${p.busy} busy pages, those with ${p.visits} visits or more, had fewer views${p.name !== undefined ? `, most of all ${p.name}` : ""}.`;
+    case "countedDifferently":
+      return `Pages a visit went to ${p.now} from ${p.before} the span before. That usually means page views were counted differently on these dates, so ups and downs in views may not be real.`;
   }
 }
 

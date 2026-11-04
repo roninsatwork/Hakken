@@ -277,10 +277,10 @@ describe("paid keywords (2.2)", () => {
     const asKorda = await member(t, korda);
     const list = await asKorda.query(api.sitePaid.listPaidKeywords, { siteId: own.holdId, page: 1, rows: 25, sort: "traffic" });
     expect(list.total).toBe(2);
-    expect(list.rows.map((row) => [row.keyword, row.volume, row.traffic, row.trafficCost])).toEqual([
-      ["carp rods", 900, 40, 32],
+    expect(list.rows.map((row) => [row.keyword, row.volume, row.traffic])).toEqual([
+      ["carp rods", 900, 40],
       // Unknown, not nought — and last, where blanks sort.
-      ["korda leads", null, null, null],
+      ["korda leads", null, null],
     ]);
     // DataForSEO's own count, for the screen to set the two held against.
     expect((await asKorda.query(api.sites.getMySite, { siteId: own.holdId }))?.counts.paidKeywords).toBe(450);

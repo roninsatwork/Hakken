@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { Waypoints } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -13,8 +14,9 @@ import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { ChannelsDailyChart } from "../../_components/AnalyticsChart";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, periodWord } from "../../_components/useAnalytics";
+import { useEyeNames } from "../../_components/useEyeFigures";
 import { useKindName } from "./_components/ChannelParts";
-import { ChannelsFigures, ChannelsMap, ChannelsWorth } from "./_components/ChannelsParts";
+import { ChannelsFigures, ChannelsMap, ChannelsPerVisit } from "./_components/ChannelsParts";
 
 const EVERY = "all";
 
@@ -23,7 +25,7 @@ const EVERY = "all";
  * came from, in Google's own channels with AI assistants their own (GA10),
  * under What Hakken sees comparing them — four figures, the channels a day
  * with a dot on each day with a conversion, each channel by page
- * classification, what a visit is worth by channel over 12 months, then the
+ * classification, how often a visit converts by channel over 12 months, then the
  * table with its "Lands most on" filter. Every channel opens its own page.
  */
 export default function AnalyticsChannelsPage() {
@@ -41,17 +43,20 @@ export default function AnalyticsChannelsPage() {
   const kinds = (top?.map.kinds ?? []).filter((kind) => kind.kind !== OTHER_KIND);
   const [group, setGroup] = useSiteParam<string>("group", EVERY);
   const chosen = group !== EVERY && kinds.some((kind) => kind.kind === group) ? group : null;
+  // What the eye reads: the page's own read, with the names its findings use; the table hands its rows (`channelsTable`).
+  const names = useEyeNames();
+  const seesData = useMemo(() => (top ? { ...top, names } : top), [top, names]);
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Waypoints className="h-5 w-5 text-brand" />} title={t("title")} description={t("description", { before: tf(`before.${periodWord(period)}`) })} />
       {status ? (
         <AnalyticsGate status={status} siteId={siteId}>
           <div className="flex flex-col gap-4">
-            <AnalyticsSees screen="channelsPage" seen={top?.seen} currency={currency} data={top} />
+            <AnalyticsSees screen="channelsPage" seen={top?.seen} currency={currency} data={seesData} />
             <ChannelsFigures figures={top?.figures} />
             <ChannelsDailyChart />
             <ChannelsMap top={top} kindName={kindName} />
-            <ChannelsWorth top={top} />
+            <ChannelsPerVisit top={top} />
             <AnalyticsTable
               list="channel"
               seesPart="channelsTable"

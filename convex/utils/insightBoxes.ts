@@ -43,7 +43,7 @@ export const BOXES: Record<BoxScreen, BoxSpec> = {
   ENQUIRIES: {
     role: "INSIGHTS_CONVERSION",
     facts: ["why.", "month.", "ga.conversions.", "ga.people.", "ga.peoplePerConversion.", "ga.visits."],
-    wants: "Enquiries and pages, for the newest whole month: how many enquiries came, from how many people, against the month before and the same month a year before, and which kinds of page and sources moved them.",
+    wants: "Enquiries and pages, for the newest whole month: how many enquiries came, from how many people, against the month before and the same month a year before, and which classifications and sources moved them.",
     link: "/app/insights/enquiries",
     period: true,
   },

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { Split } from "lucide-react";
@@ -21,7 +22,8 @@ import { formatDay, formatNumber, toCsv } from "../../sites/_components/siteForm
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
+import { cannibalisationNames, cannibalisationSees } from "../_components/insightsSees";
 
 /**
  * Keyword cannibalisation (docs/plans/active/insights-intelligence-plan.md
@@ -36,11 +38,16 @@ export default function InsightsCannibalisationPage() {
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightCompeting.insightsCannibalisation, site ? { siteId: site } : {});
   const [search, setSearch, term] = useSiteSearch();
   const matches = wordStartMatcher(term.toLowerCase());
   const rows = data?.groups.filter((row) => !matches || matches(row.group.name) || row.group.pages.some((page) => matches(page.path)));
   const pager = useSitePager(data ? rows : undefined, { isLoading: data === undefined });
+  // The eye's figures: each group as its table and charts show it (each group's own page holds its searches).
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => cannibalisationSees(data, cannibalisationNames(tAll)), [data, tAll]);
   const open = (key: string) => {
     const base = href("cannibalisation/group");
     return `${base}${base.includes("?") ? "&" : "?"}key=${encodeURIComponent(key)}`;
@@ -78,7 +85,7 @@ export default function InsightsCannibalisationPage() {
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} page={{ screen: "insights.cannibalisation", siteId: site, data }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "insights.cannibalisation", siteId: eyeSite, data: seesData }} />
       <FigureRow>
         <Figure label={t("figures.groups")} value={formatNumber(groups.length)} detail={<span className="text-secondary">{t("figures.pages", { count: pages })}</span>} />
         <Figure label={t("figures.split")} value={formatNumber(sum("split"))} detail={<span className="text-secondary">{t("figures.shared", { count: formatNumber(sum("shared")) })}</span>} />

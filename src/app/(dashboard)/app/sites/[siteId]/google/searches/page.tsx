@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -20,6 +21,7 @@ import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { searchesSees } from "@/convex/utils/sees/google";
 import { SiteSees } from "../../../_components/SiteSees";
+import { searchesSeen } from "../../../_components/siteSeesData";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -67,6 +69,11 @@ export default function SiteSearchesPage() {
     charted.length > 0 ? { siteId, keywords: charted, from: range.from, to: range.to, step: range.step } : "skip",
   );
 
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): page one now and at the check before,
+  // counted over every search; the searches the most moved first, each with its best; and the chart's lines.
+  const te = useTranslations("sites.googleSearches.eye");
+  const seen = useMemo(() => (rows ? searchesSeen(rows, positions, { pageOne: te("pageOne"), best: te("best"), slipping: t("verdicts.SLIPPING") }) : undefined), [rows, positions, t, te]);
+
   const term = settled.toLowerCase();
   const matches = wordStartMatcher(term);
   const matching = rows?.filter((row) => (!matches || matches(row.keyword)) && (!verdict || row.verdict === verdict));
@@ -88,7 +95,7 @@ export default function SiteSearchesPage() {
         title={t("title")}
         description={t("description", { place: site?.placeLabel ?? "" })}
       />
-      <SiteSees screen="googleSearches" seen={rows && searchesSees(rows)} data={rows && { searches: rows, positions }} />
+      <SiteSees screen="googleSearches" seen={rows && searchesSees(rows)} data={seen} />
 
       <SiteChartCard
         title={t("chartTitle")}

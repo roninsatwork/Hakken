@@ -6,7 +6,7 @@ import { keptCountry } from "./googleAnalyticsCountries";
 import { splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { connectionOf, countedOf, readFor } from "./googleAnalyticsRows";
-import { landingByChannel } from "./googleAnalyticsChannelReads";
+import { eachLandingByChannel } from "./googleAnalyticsChannelReads";
 import { AUTOMATIC_EVENTS, shopChoiceOf } from "./googleAnalyticsShopSteps";
 import { productsOf, soldOnPage } from "./googleAnalyticsProductReads";
 import { landingKeyOf } from "./googleAnalyticsPageNumbers";
@@ -78,7 +78,8 @@ export async function readPageBoxes(ctx: SiteReader, args: ObjectType<typeof box
       const products = await productsOf(ctx, holdId, args, country);
       const sold = products.rows.filter((row) => address && soldOnPage(row.name, address));
       if (sold.length > 0) {
-        const before = await readFor(ctx, holdId, "product", args.period, "BEFORE", args.device, undefined, country);
+        // Its items alone, no key events: a product's row carries a column of each, all nought (2026-11-04).
+        const before = await readFor(ctx, holdId, "product", args.period, "BEFORE", args.device, undefined, country, { events: new Set() });
         const held = before && before !== "LIVE" ? before : null;
         const soldKeys = new Set(sold.map((row) => row.key));
         const earlier = held ? held.rows.filter((row) => soldKeys.has(row.key)) : null;
@@ -93,37 +94,49 @@ export async function readPageBoxes(ctx: SiteReader, args: ObjectType<typeof box
       }
     }
 
-    const byChannel = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
-    if (!byChannel) return { product, sale: null };
-    // The landing pages' own number for the page: Analytics names a landing page without its trailing slash, which can
-    // be a second number (googleAnalyticsPageNumbers.ts, `landingKeyOf`).
-    const landed = await landingKeyOf(ctx, holdId, args.page, byChannel.rows.map((row) => splitChannelKey(row.key).channel));
-    const own = byChannel.rows.filter((row) => splitChannelKey(row.key).channel === landed);
-    const startedVisits = own.reduce((sum, row) => sum + row.visits, 0);
     // A shop's sale as it picked it on Products, else Google's own; elsewhere the counted conversion most of this page's visits did.
-    let eventName: string | null = null;
+    let shopSale: string | null = null;
     if (shop) {
       const events = await readFor(ctx, holdId, "event", args.period, "NOW", args.device, undefined, country);
       const recorded = new Set((events && events !== "LIVE" ? events.rows : []).filter((row) => row.visits > 0 && !AUTOMATIC_EVENTS.has(row.key)).map((row) => row.key));
-      eventName = shopChoiceOf(connection, recorded).sale;
+      shopSale = shopChoiceOf(connection, recorded).sale;
     }
-    if (eventName === null) {
-      const counted = countedOf(connection).map((event) => event.eventName);
-      eventName = counted
-        .map((name) => ({ name, visits: own.reduce((sum, row) => sum + visitsWith(row, name), 0) }))
-        .sort((left, right) => right.visits - left.visits || left.name.localeCompare(right.name))[0]?.name ?? null;
-    }
+    const counted = countedOf(connection).map((event) => event.eventName);
+    const named = [...new Set([...counted, ...(shopSale !== null ? [shopSale] : [])])];
+    // Each landing page's visits, and its visits with each of those events, added up a part at a time: read whole as
+    // rows, a year's landing pages by channel ran these boxes out of their 64MB on More Handles (2026-11-04).
+    const byPage = new Map<string, { visits: number; units: number[] }>();
+    const website = { visits: 0, units: named.map(() => 0) };
+    const byChannel = await eachLandingByChannel(ctx, holdId, args.period, "NOW", country, args.device, { events: new Set(named), units: true }, (row) => {
+      const page = splitChannelKey(row.key).channel;
+      const own = byPage.get(page) ?? byPage.set(page, { visits: 0, units: named.map(() => 0) }).get(page)!;
+      own.visits += row.visits;
+      website.visits += row.visits;
+      named.forEach((event, at) => {
+        const visits = visitsWith(row, event);
+        own.units[at] += visits;
+        website.units[at] += visits;
+      });
+    });
+    if (!byChannel) return { product, sale: null };
+    // The landing pages' own number for the page: Analytics names a landing page without its trailing slash, which can
+    // be a second number (googleAnalyticsPageNumbers.ts, `landingKeyOf`).
+    const landed = await landingKeyOf(ctx, holdId, args.page, [...byPage.keys()]);
+    const own = byPage.get(landed) ?? { visits: 0, units: named.map(() => 0) };
+    const unitsOf = (event: string) => own.units[named.indexOf(event)] ?? 0;
+    const eventName = shopSale ?? counted
+      .map((name) => ({ name, visits: unitsOf(name) }))
+      .sort((left, right) => right.visits - left.visits || left.name.localeCompare(right.name))[0]?.name ?? null;
     if (eventName === null) return { product, sale: null };
-    const event = eventName;
     return {
       product,
       sale: {
-        eventName: event,
+        eventName,
         shop,
-        visits: own.reduce((sum, row) => sum + visitsWith(row, event), 0),
-        startedVisits,
-        websiteVisits: byChannel.rows.reduce((sum, row) => sum + row.visits, 0),
-        websiteEventVisits: byChannel.rows.reduce((sum, row) => sum + visitsWith(row, event), 0),
+        visits: unitsOf(eventName),
+        startedVisits: own.visits,
+        websiteVisits: website.visits,
+        websiteEventVisits: website.units[named.indexOf(eventName)] ?? 0,
       },
     };
 }

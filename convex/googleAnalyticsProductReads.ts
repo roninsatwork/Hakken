@@ -55,8 +55,11 @@ type ProductRow = {
 
 /** The products held for the dates, device and home country chosen, each beside the period before; a page's own screen reads them too. */
 export async function productsOf(ctx: Reader, holdId: Id<"companyWebsites">, args: { period: AnalyticsPeriod; device: string }, country: string) {
-  const nowList = await readFor(ctx, holdId, "product", args.period, "NOW", args.device, undefined, country);
-  const before = heldOf(await readFor(ctx, holdId, "product", args.period, "BEFORE", args.device, undefined, country));
+  // Its items alone, no key events: a product's row carries a column of each, all nought, and a page's boxes read this
+  // beside a year's landing pages (2026-11-04: the two read whole ran them out of their 64MB on More Handles).
+  const items = { events: new Set<string>() };
+  const nowList = await readFor(ctx, holdId, "product", args.period, "NOW", args.device, undefined, country, items);
+  const before = heldOf(await readFor(ctx, holdId, "product", args.period, "BEFORE", args.device, undefined, country, items));
   const now = heldOf(nowList);
   const was = new Map((before?.rows ?? []).map((row) => [row.key, row]));
   const row = (held: Held["rows"][number], earlier: Held["rows"][number] | undefined, gone = false): ProductRow => {

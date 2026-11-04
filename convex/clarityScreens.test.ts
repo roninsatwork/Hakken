@@ -106,7 +106,8 @@ describe("Microsoft Clarity's screens", () => {
     expect(overview.devices.map((device) => [device.name, device.now.visits])).toEqual([["PC", 22], ["Mobile", 4]]);
     expect(overview.sources?.rows.map((source) => [source.name, source.now.visits])).toEqual([["google", 16], ["Direct", 4]]);
     expect(overview.errors.pages.map((entry) => [entry.line.page, entry.mostly])).toEqual([["/ai-agency/", { browser: "Chrome", device: "PC" }]]);
-    expect(overview.stuck.quickBackPage).toEqual({ page: "/ai-agency/", visits: 3 });
+    // With the page's own visits, for the eye: its share of the quick backs against its share of the visits (2026-11-03).
+    expect(overview.stuck.quickBackPage).toEqual({ page: "/ai-agency/", visits: 3, pageVisits: 20 });
     // What went wrong first.
     expect(overview.recordings.top.map((recording) => recording.kind)).toEqual(["ERRORS", "LONGEST"]);
   });

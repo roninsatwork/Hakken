@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -14,10 +15,11 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
-import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
+import { formatDay, formatMonth, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { newLostSees, stepEnd } from "@/convex/utils/sees/backlinks";
 import { SiteSees } from "../../../_components/SiteSees";
+import { linkChangesSees } from "../_components/linkSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -49,6 +51,17 @@ export default function SiteLinksNewLostPage() {
   const site = useSite();
   const range = useSiteRange();
   const points = useQuery(api.siteLinkLists.linkChanges, { siteId, from: range.from, to: range.to, step: range.step });
+  // The same span before, added up for the eye alone (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): new
+  // against lost is said beside the span before's. Skipped on a competitor, whose links are not bought.
+  const pointsBefore = useQuery(api.siteLinkLists.linkChanges, competitor ? "skip" : { siteId, from: range.before.from, to: range.before.to, step: range.step });
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(() => linkChangesSees(
+    points,
+    pointsBefore,
+    { from: range.from, to: range.to, step: range.step, before: { from: range.before.from, to: range.before.to } },
+    (day) => (range.step === "month" ? formatMonth(day.slice(0, 7)) : formatDay(day)),
+    { otherSteps: tn(range.step === "month" ? "otherMonths" : range.step === "week" ? "otherWeeks" : "otherDays") },
+  ), [points, pointsBefore, range.from, range.to, range.step, range.before.from, range.before.to, tn]);
   const [measure, setMeasure] = useSiteParam<"backlinks" | "domains">("show", "backlinks", ["backlinks", "domains"]);
 
   const shownKeys = measure === "backlinks" ? (["newBacklinks", "lostBacklinks"] as const) : (["newReferringDomains", "lostReferringDomains"] as const);
@@ -72,7 +85,7 @@ export default function SiteLinksNewLostPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowLeftRight className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksNewLost" seen={points && newLostSees(points, range.step, formatDay)} data={points} />
+      <SiteSees screen="backlinksNewLost" seen={points && newLostSees(points, range.step, formatDay)} data={sees} />
 
       <SiteChartCard
         title={t("chartTitle")}

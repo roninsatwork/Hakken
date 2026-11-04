@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -21,7 +21,8 @@ import { useSiteSortedList, type SiteSortColumns } from "../../sites/_components
 import { CUT_COLUMN } from "../../sites/_components/SiteCells";
 import { formatPosition, formatRate } from "../../search-console/_components/searchConsoleFormat";
 import { BingGate } from "./BingNotices";
-import { BingRecordFigures, BingSees } from "./BingParts";
+import { BingRecordFigures, BingSees, useBingEyeNames } from "./BingParts";
+import { recordSeen } from "./bingSeesData";
 import { BingRecordChart } from "./BingCharts";
 import { pathOf } from "./BingListTable";
 import { FEW_IMPRESSIONS, useBingHref, useBingSiteId, useBingStatus, usePeriod } from "./useBing";
@@ -88,11 +89,15 @@ function RecordBody({ list, record, host }: { list: "query" | "page"; record: Re
   const paged = useSitePager(sorted, { isLoading: sorted === undefined });
   const figures = record.figures;
   const few = (impressions: number) => impressions < FEW_IMPRESSIONS;
+  // The eye reads the record with its span before and the rows Bing gave the screen, under a key of its own: a keyword's
+  // and a page's screens say different things (ask-hakken-every-chart-page-plan-2026-11-03.md, section 7).
+  const names = useBingEyeNames();
+  const seen = useMemo(() => recordSeen(list, record, rows, names), [list, record, rows, names]);
 
   return (
     <div className="flex flex-col gap-6">
       {figures ? (
-        <BingSees screen="record" data={{ list, record, rows }} says={[
+        <BingSees screen={list === "query" ? "keyword" : "page"} data={seen} says={[
           list === "query"
             ? figures.googlePosition !== null
               ? tw("keyword", { bing: formatPosition(figures.position), google: formatPosition(figures.googlePosition), clicks: formatNumber(figures.clicks), impressions: formatNumber(figures.impressions) })

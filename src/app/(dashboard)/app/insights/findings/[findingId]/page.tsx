@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useParams, useRouter } from "next/navigation";
@@ -22,9 +23,11 @@ import { SiteBarChart } from "../../../sites/_components/SiteCharts";
 import { formatDay, toCsv } from "../../../sites/_components/siteFormat";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
-import { useInsightsHref, useInsightsSite } from "../../_components/useInsights";
+import { useInsightsHref, useInsightsShownSite } from "../../_components/useInsights";
 import { useInsightWords } from "../../_components/insightWords";
 import { howWeKnowWords, soFarWords } from "../../_components/insightCheck";
+import { findingAdvice, findingNames, findingSees } from "../../_components/insightsSees";
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 
 type Evidence = { key: string; source: string; shows: string; against: string };
 type RuledOut = { key: string; explanation: string; why: string };
@@ -52,10 +55,18 @@ export default function InsightsFindingPage() {
   const tCheck = usePlatformTranslations("insights.check");
   const words = useInsightWords();
   const href = useInsightsHref();
-  const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const finding = useQuery(api.insightsReads.insightsFinding, { findingId: params.findingId as Id<"insightFindings"> });
   const router = useRouter();
   const markActed = useMutation(api.insightsReads.markInsightFindingActed);
+  // The eye on a page that already shows Hakken's advice (ask-hakken-every-chart-page-plan-2026-11-03.md, decision 2):
+  // findings of its own about the figures this finding rests on, and the finding's own words handed as advice, so the
+  // piece written builds on them and never says something different.
+  const tAll = usePlatformTranslations("insights");
+  const seesData = useMemo(() => findingSees(finding, findingNames(tAll), heading), [finding, tAll]);
+  const advice = useMemo(() => findingAdvice(finding), [finding]);
+  useSeesPart("advice", advice);
   const facts = new Map((finding?.facts ?? []).map((fact) => [fact.key, fact]));
   const pairs = (finding?.comparisons ?? [])
     .map(([a, b]) => ({ now: facts.get(a), then: facts.get(b) }))
@@ -95,8 +106,6 @@ export default function InsightsFindingPage() {
   };
   const bars = pairs.slice(0, 6).map((pair) => ({ label: heading(pair.now.label), then: pair.then.value, now: pair.now.value, unit: pair.now.unit, currency: pair.now.currency }));
   const csv = () => toCsv([t("chart.figure"), t("chart.then"), t("chart.now")], bars.map((row) => [row.label, row.then, row.now]));
-  // The story's sentences, each its own line, as the box says them.
-  const says = finding.story.split(/(?<=\.)\s+(?=[A-Z])/).filter(Boolean);
 
   // A group of competing pages opens its own page, where every page and search is (insights-intelligence-plan.md phase 3).
   const groupKey = finding.pattern === "COMPETING_PAGES" ? /^competing\.(.+)\.shown$/.exec(finding.facts.find((fact) => fact.key.startsWith("competing.") && fact.key.endsWith(".shown"))?.key ?? "")?.[1] : undefined;
@@ -119,7 +128,7 @@ export default function InsightsFindingPage() {
         }
         action={<PagePrimaryAction variant="brand" onClick={toTasks}>{t("toTasks")}</PagePrimaryAction>}
       />
-      <HakkenSees says={says} steps={[{ words: finding.action, ...(group ? { link: t("seeGroup"), href: group } : { link: t("seeAll"), href: href("this-week") }) }]} page={{ screen: "insights.finding", siteId: site, data: finding }} />
+      <HakkenSees says={[]} steps={[]} page={{ screen: "insights.finding", siteId: eyeSite, data: seesData, links: [...(group ? [{ label: t("seeGroup"), href: group }] : []), { label: t("seeAll"), href: href("this-week") }] }} />
       {pairs.length > 0 ? (
         <FigureRow>
           {pairs.slice(0, 4).map((pair) => (

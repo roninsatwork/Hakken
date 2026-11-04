@@ -20,7 +20,6 @@ import { BookNames, asText, namedRows, textsFrom, wholeBook } from "./searchCons
 import { SORT_KEYS, sortRows, type SortKey } from "./searchConsoleSorts";
 import { checkedLongest, consoleLimitsOf, consoleLimitsValidator, viewRulesOf, type ConsoleLimits } from "./searchConsoleLimits";
 import { UNKNOWN, factsFor } from "./searchConsoleFacts";
-import { holdBrandNames } from "./holdProfiles";
 import { pageKindSetupValidator, readPageKinds, readPageKindSetup } from "./pageKinds";
 import { classificationTypeValidator } from "./pagesSchema";
 import { loadSite } from "./websiteSiteRows";
@@ -45,7 +44,7 @@ import {
   type View,
   type ViewContext,
 } from "./utils/searchConsoleViews";
-import { trackedKeys } from "./searchConsoleTracking";
+import { brandWordsOf, connectionOf, sitesKeywordsOf, trackedOf } from "./searchConsoleListSources";
 import { GOOGLE_DIMENSIONS, LISTS_OF } from "./searchConsoleApi";
 import { EXPORT_FIELDS, exportFileName, exportValue } from "./utils/searchConsoleExport";
 import { bySide, fromGoogle, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
@@ -131,6 +130,7 @@ const rowValidator = v.object({
 const sortValidator = v.optional(v.union(...SORT_KEYS.map((key) => v.literal(key))));
 
 const brandSplitValidator = v.object({ brandClicks: v.number(), nonBrandClicks: v.number(), brandImpressions: v.number(), nonBrandImpressions: v.number() });
+const movedValidator = v.union(v.null(), v.object({ key: v.string(), clicks: v.number(), previousClicks: v.number() }));
 
 /** What a page's hero boxes read: figures over every row its rule lists (`summarise`). */
 const summaryValidator = v.object({
@@ -157,6 +157,13 @@ const summaryValidator = v.object({
   brand: v.union(v.null(), v.object({ now: brandSplitValidator, before: v.union(brandSplitValidator, v.null()) })),
   kinds: v.array(v.object({ kind: v.string(), rows: v.number(), clicks: v.number() })),
   types: v.array(v.object({ type: classificationTypeValidator, rows: v.number(), clicks: v.number() })),
+  /** What Hakken sees over the whole list (`ListSees`): searches' lists only, their movers named by the read. */
+  wholeList: v.optional(v.object({
+    bandClicks: v.record(v.string(), v.number()),
+    bandClicksBefore: v.union(v.record(v.string(), v.number()), v.null()),
+    crossed: v.union(v.null(), v.object({ top3In: v.number(), top3Out: v.number(), pageOneIn: v.number(), pageOneOut: v.number() })),
+    movers: v.union(v.null(), v.object({ brandUp: movedValidator, brandDown: movedValidator, otherUp: movedValidator, otherDown: movedValidator })),
+  })),
 });
 
 const filterArgs = {
@@ -207,35 +214,6 @@ type Ask = {
   direction?: "asc" | "desc";
   missed?: "searched" | "untracked";
 } & Filters;
-
-async function connectionOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">) {
-  return await ctx.db
-    .query("searchConsoleConnections")
-    .withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId))
-    .first();
-}
-
-/** The company's tracked searches or pages on this website, read by its hold. */
-async function trackedOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, kind: "query" | "page"): Promise<Set<string>> {
-  return new Set(await trackedKeys(ctx, companyWebsiteId, kind));
-}
-
-/** The website's brand words, from its Profile: names and misspellings alike. */
-async function brandWordsOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">): Promise<string[]> {
-  return (await holdBrandNames(ctx, companyWebsiteId)).map((brand) => brand.name);
-}
-
-/** The website's most-searched keywords in Sites, for Missed demand: as many as its limit (`consoleMissedKeywords`). */
-async function sitesKeywordsOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, most: number): Promise<SitesKeyword[]> {
-  const site = await loadSite(ctx, companyWebsiteId);
-  if (!site) return [];
-  const rows = await ctx.db
-    .query("siteKeywordRanks")
-    .withIndex("by_site_volume", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place))
-    .order("desc")
-    .take(most);
-  return rows.filter((row) => row.volumeKnown).map((row) => ({ keyword: row.keyword, volume: row.volume, kind: row.intent }));
-}
 
 type ListAnswer = {
   rows: ListRows;
@@ -364,7 +342,16 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     brandWords,
     pageList: dimension === "page",
     ...(pageKinds ? { kindType: pageKinds.typeOf } : {}),
+    wholeList: view === "all" && dimension === "query",
   });
+  // The four searches What Hakken sees moved most, named as the rows on screen are: the rest stay tokens.
+  const movers = summary.wholeList?.movers;
+  if (movers && names) {
+    for (const way of ["brandUp", "brandDown", "otherUp", "otherDown"] as const) {
+      const moved = movers[way];
+      if (moved) movers[way] = { ...moved, key: await names.textOf(moved.key) };
+    }
+  }
   const sorted = sortRows(filterRows(listed, args, textOf), args.sort, args.direction, pageKinds);
   // A keyword's pages, or a page's keywords, hold their own limit; every other list the list limit.
   const most = within ? limits.pairedRows : limits.listRows;

@@ -154,7 +154,10 @@ export const SEES_FORMAT = [
   "Start with the page as it is laid out (pageParts): what each part says that matters, a short sentence each where it has something to say; the reader sees the boxes, so never spend a sentence on them alone. Never name the parts (\"on the chart\", \"the map shows\"): say what they show. Then dig into the biggest thing.",
   "Write it as a short story a busy owner reads in under a minute, never a list of figures: what is happening, where it happens, and why it matters. Plain words, short sentences under 20 words, at most two figures in a sentence and eight in the whole bubble: choose the figures that tell the story. Name every figure by its key in double square brackets, like [[conv.purchases.now]], and never type a number: each is filled in from the page. Never a list of names inside a sentence.",
   "Say what got better and what got worse against the span before, wherever the figures hold it.",
-  "Each step is one thing a person can do, in plain words, saying where: the device, channel, kind of page, step or product it is about — never advice that would fit any website. Link it to the place it names. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
+  // Anthony, 2026-11-03, on the Visits eye ("this is really poor from the ai"): the writer said visits "held steady on
+  // weekdays" with no day on the page, and that people were "likely hitting a dead end".
+  "Say only what the figures you were given show. Never guess at a reason, a day, a time or a pattern they do not hold, and never write \"likely\", \"probably\" or \"may be because\": where the figures cannot say why, make finding out a step.",
+  "Each step is one thing a person can do, in plain words, saying where: the device, channel, classification, step or product it is about — never advice that would fit any website. Link it to the place it names, each step to a different page where the links allow. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
   "Never tell them to change what counts as a conversion, or how their tracking is set up: they chose it on purpose. Speak about tracking only when trackingFaults lists a fault.",
   "The most useful thing first: what a client would act on, never what did not happen.",
   // The platform's word (Anthony, GA19, 2026-10-09), though some screens' own figures still say enquiries.
@@ -169,9 +172,9 @@ export const SEES_FORMAT = [
  * before writing, and where the page holds a figure, say the page's, so the bubble and the boxes agree.
  */
 export const SEES_READS_FORMAT = [
-  `You can read every Google Analytics screen of this website yourself, for the same dates, country and device, with ${ANALYTICS_READ}. The page's own screen is read for you already, with its map by kind of page and by channel. Read anything else that helps you find what the reader would miss.`,
+  `You can read every Google Analytics screen of this website yourself, for the same dates, country and device, with ${ANALYTICS_READ}. The page's own screen is read for you already, with its map by classification and by channel. Read anything else that helps you find what the reader would miss.`,
   "Each read of the map starts with its standouts and, for a shop, the steps from one to the next, all worked out in code: where the groups part most, and how many go on from each step. Look at them first; they are where a story usually starts.",
-  "Before you write, dig: take the biggest change you see and break it down — by device, by channel, by kind of page, by country, against the span before — until you know where it happens and where it does not. Read the map's other columns to do it. Then tell the reader where.",
+  "Before you write, dig: take the biggest change you see and break it down — by device, by channel, by classification, by country, against the span before — until you know where it happens and where it does not. Read the map's other columns to do it. Then tell the reader where.",
   "Question a gap that looks too big: when one group's rate is three or more times another's, say its tracking may be broken there before calling it behaviour, and make checking it a step.",
   "Every number a screen gives comes with its key in double square brackets: name it by that key. Where the page's own facts hold the same figure, use the page's key, so the bubble says what the page's boxes say.",
   "At least one sentence must name a figure you read beyond the page's boxes: that is what the reader cannot see for themselves.",
@@ -185,6 +188,14 @@ export const SEES_SHOP_FORMAT = [
   "This website is a shop. Speak in conversions and purchases, never in money: do not lead with sales value or what anything earned.",
   "Compare things that matter to the business: never set a figure against nothing, or against a channel or page with a handful of visits.",
 ].join("\n");
+
+/**
+ * Words that name a part of the page rather than say what it shows ("In the table, 37.9% of returning visits left at
+ * once": the Visits eye, 2026-11-03). Never Google Maps: a place on the map is a figure of its own.
+ */
+const PART_TALK = /\b(in|on|from) the (table|chart|graph|treemap|boxes|box|panel|line)\b|\bthe (table|chart|graph|treemap) (shows|says)\b/i;
+/** The same said first, then a comma: cut off, and the sentence stands ("37.9% of returning visits left at once"). */
+const LEADING_PART = /^(in|on|from) the (table|chart|graph|treemap|boxes|box|panel|line),?\s+/i;
 
 /** Words that advise on tracking or on what counts: the bubble's only when tracking health found a fault. */
 const TRACKING_TALK = /\b(double[- ]count\w*|duplicat\w* (tracking|tags?|events?|conversions?|goals?)|stop counting|(un)?count(ing)? [\w ]{1,30} as (a )?conversions?|remove [\w ]{1,30} (tracking|tags?|goals?)|tracking (set ?up|tags?)|as goals?)\b/i;
@@ -215,6 +226,8 @@ export function seriousFaults(failing: readonly string[]): string[] {
 export const SEES_PAGE_FORMAT = [
   "pageFigures is the page as the reader sees it, every number beside its key in double square brackets. Write from it: name each figure by its key.",
   "Use the page's own words for things: a page about searches speaks of clicks and times shown in Google; a page about links speaks of linking websites.",
+  // The Visits eye read "Not sorted yet" as pages people land on and hit a dead end (2026-11-03).
+  "A group named \"Not sorted yet\", or marked sorted: false, is pages still to be put in a group: never a finding, a cause or a step.",
 ].join("\n");
 
 /** Findings the words must cover, of those code found: the first ones; the panel shows them all. */
@@ -233,15 +246,26 @@ export function sameFigures(left: ReadonlyArray<{ key: string; value: number }> 
   return right.every((fact) => held.get(fact.key) === fact.value);
 }
 
-/** Why a written bubble was sent back: for the run's log, in plain words. */
-export type SeesVerdict = { ok: true; says: string[]; steps: Array<{ words: string; link: string; href: string }> } | { ok: false; why: string };
+/**
+ * Why a written bubble was sent back, for the run's log in plain words; or what passed, with the sentences and steps
+ * left off for a fault (`left`), which the run's log names.
+ */
+export type SeesVerdict = { ok: true; says: string[]; steps: Array<{ words: string; link: string; href: string }>; left?: string[] } | { ok: false; why: string };
 
 /**
  * The Editor's code checks on what a specialist wrote (S5, S7; the weekly
  * run's rule 1: an AI never types a figure): every sentence names only facts
- * the page handed over and types no number, is one to twenty-four words and
+ * the page handed over and types no number, is one to twenty words and
  * names no supplier; every step is one plain sentence with one of the page's
- * links. Anything else goes back, and the bubble keeps the rule's words.
+ * links.
+ *
+ * Every fault is named at once, so the one rewrite fixes them all
+ * (ask-hakken-every-chart-page-plan-2026-11-03.md; Anthony, 2026-11-03, on the
+ * Visits eye: "this is really poor from the ai"). Told one fault at a time, the
+ * writer mended the first and was failed on the second, and the reader got the
+ * rule's words. After the rewrite (`salvage`), a sentence or step with a fault
+ * is left off and the rest stand, as a crowded later sentence always was; only
+ * nothing left, or a first sentence naming no figure, sends the words back.
  */
 export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, links: readonly SeesLink[], options: {
   /**
@@ -259,8 +283,13 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
    * sentence that is kept (sees-findings-in-code-plan-2026-10-31.md, phase 3).
    */
   mustCover?: ReadonlyArray<{ keys: readonly string[]; words: string }>;
+  /** The words after their rewrite: a sentence or step with a fault is left off, never the whole bubble. */
+  salvage?: boolean;
 } = {}): SeesVerdict {
   const namedKept: string[] = [];
+  const faults: string[] = [];
+  const left: string[] = [];
+  const salvage = options.salvage === true;
   const jargon = (text: string) => (options.analytics ? text.match(ANALYTICS_JARGON)?.[0] ?? null : null);
   let figures = 0;
   const trackingTalk = (text: string) => options.noTrackingTalk && TRACKING_TALK.test(text);
@@ -268,54 +297,88 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
   const saysRaw = Array.isArray(raw.says) ? raw.says : [];
   if (saysRaw.length === 0) return { ok: false, why: "It said nothing." };
   const says: string[] = [];
+  // A sentence's fault: named for the rewrite, or, after it, the sentence left off.
+  const fault = (why: string) => {
+    if (salvage) left.push(why);
+    else faults.push(why);
+  };
   for (const line of saysRaw.slice(0, MOST_SEES_SAYS)) {
-    if (typeof line !== "string" || !line.trim()) return { ok: false, why: "A sentence was empty." };
-    const trimmed = line.trim();
-    if (typedNumbers(trimmed).length > 0) return { ok: false, why: `A sentence typed a number: "${trimmed}".` };
-    if (namedFacts(trimmed).length === 0 && says.length === 0) return { ok: false, why: `The first sentence names no figure: "${trimmed}".` };
+    if (typeof line !== "string" || !line.trim()) {
+      fault("A sentence was empty.");
+      continue;
+    }
+    const cut = line.trim().replace(LEADING_PART, "");
+    // A capital to start, but a name that starts small keeps its spelling: never "IOS led the growth".
+    const trimmed = /^\p{Ll}+\p{Lu}/u.test(cut) ? cut : cut.charAt(0).toUpperCase() + cut.slice(1);
+    if (typedNumbers(trimmed).length > 0) {
+      fault(`A sentence typed a number: "${trimmed}".`);
+      continue;
+    }
+    if (namedFacts(trimmed).length === 0 && says.length === 0) {
+      fault(`The first sentence names no figure: "${trimmed}".`);
+      continue;
+    }
     // Too many figures in the first sentence sends the words back; a later one is left off and the rest stand
     // (sees-every-page-plan-2026-10-31.md: whole answers were lost to one crowded sentence on Products and Clarity).
     if (namedFacts(trimmed).length > MOST_SENTENCE_FIGURES) {
-      if (says.length === 0) return { ok: false, why: `A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.` };
+      if (says.length === 0) fault(`A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.`);
       continue;
     }
     // Past the bubble's figures the rest is left off, the most useful having come first; never the first sentence.
     if (says.length > 0 && figures + namedFacts(trimmed).length > MOST_BUBBLE_FIGURES) break;
+    const filled = fillFacts(trimmed, facts);
+    const why = filled.missing.length > 0 ? `A sentence named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.`
+      : filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS ? `A sentence ran past ${MOST_SENTENCE_WORDS} words: "${filled.text}". Split it in two, or say less.`
+      : /dataforseo|firecrawl/i.test(filled.text) ? "A sentence named a supplier."
+      : jargon(filled.text) ? `A sentence used "${jargon(filled.text)}", which the page never says: use the page's own words.`
+      : trackingTalk(filled.text) ? `A sentence spoke about tracking or what counts, and tracking health found nothing wrong: "${filled.text}".`
+      : PART_TALK.test(filled.text) ? `A sentence named a part of the page ("${filled.text.match(PART_TALK)?.[0]}"): say what it shows, never where.`
+      : null;
+    if (why) {
+      fault(why);
+      continue;
+    }
     figures += namedFacts(trimmed).length;
     namedKept.push(...namedFacts(trimmed));
-    const filled = fillFacts(trimmed, facts);
-    if (filled.missing.length > 0) return { ok: false, why: `A sentence named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.` };
-    if (filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS) return { ok: false, why: `A sentence ran past ${MOST_SENTENCE_WORDS} words: "${filled.text}".` };
-    if (/dataforseo|firecrawl/i.test(filled.text)) return { ok: false, why: "A sentence named a supplier." };
-    if (jargon(filled.text)) return { ok: false, why: `A sentence used "${jargon(filled.text)}", which the page never says: use the page's own words.` };
-    if (trackingTalk(filled.text)) return { ok: false, why: `A sentence spoke about tracking or what counts, and tracking health found nothing wrong: "${filled.text}".` };
     says.push(filled.text);
   }
-  if (options.pageKeys) {
-    const beyond = saysRaw.slice(0, MOST_SEES_SAYS).some((line) => typeof line === "string" && namedFacts(line).some((key) => !options.pageKeys!.has(key)));
-    if (!beyond) return { ok: false, why: "It only said the page's own figures again: say what the screens you read show behind them, by their keys." };
+  if (options.pageKeys && says.length > 0 && !namedKept.some((key) => !options.pageKeys!.has(key))) {
+    faults.push("It only said the page's own figures again: say what the screens you read show behind them, by their keys.");
   }
   const stepsRaw = Array.isArray(raw.steps) ? raw.steps : [];
   const steps: Array<{ words: string; link: string; href: string }> = [];
   for (const entry of stepsRaw.slice(0, MOST_SEES_STEPS)) {
     const step = (entry ?? {}) as { words?: unknown; link?: unknown };
-    if (typeof step.words !== "string" || !step.words.trim()) return { ok: false, why: "A step had no words." };
+    if (typeof step.words !== "string" || !step.words.trim()) {
+      fault("A step had no words.");
+      continue;
+    }
     const words = step.words.trim();
-    if (typedNumbers(words).length > 0) return { ok: false, why: `A step typed a number: "${words}".` };
+    if (typedNumbers(words).length > 0) {
+      fault(`A step typed a number: "${words}".`);
+      continue;
+    }
     const filled = fillFacts(words, facts);
-    if (filled.missing.length > 0) return { ok: false, why: `A step named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.` };
-    if (filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS) return { ok: false, why: `A step ran past ${MOST_SENTENCE_WORDS} words.` };
-    if (jargon(filled.text)) return { ok: false, why: `A step used "${jargon(filled.text)}", which the page never says: use the page's own words.` };
-    if (trackingTalk(filled.text)) return { ok: false, why: `A step advised on tracking or what counts, and tracking health found nothing wrong: "${filled.text}".` };
     const at = typeof step.link === "number" ? step.link : Number(step.link);
     const link = Number.isInteger(at) ? links[at] : undefined;
-    if (!link) return { ok: false, why: "A step's link was not one of the page's." };
+    const why = filled.missing.length > 0 ? `A step named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.`
+      : filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS ? `A step ran past ${MOST_SENTENCE_WORDS} words: "${filled.text}".`
+      : jargon(filled.text) ? `A step used "${jargon(filled.text)}", which the page never says: use the page's own words.`
+      : trackingTalk(filled.text) ? `A step advised on tracking or what counts, and tracking health found nothing wrong: "${filled.text}".`
+      : !link ? `A step's link was not one of the page's: "${filled.text}".`
+      : null;
+    if (why || !link) {
+      fault(why ?? "A step's link was not one of the page's.");
+      continue;
+    }
     steps.push({ words: filled.text, link: link.label, href: link.href });
   }
+  if (says.length === 0 && faults.length === 0) faults.push(left.length > 0 ? `Every sentence had a fault: ${left.join(" ")}`.slice(0, 900) : "It said nothing.");
   for (const finding of options.mustCover ?? []) {
-    if (!finding.keys.some((key) => namedKept.includes(key))) return { ok: false, why: `It left out a finding: "${finding.words}". Cover it by naming one of its figures.` };
+    if (!finding.keys.some((key) => namedKept.includes(key))) faults.push(`It left out a finding: "${finding.words}". Cover it by naming one of its figures.`);
   }
-  return { ok: true, says, steps };
+  if (faults.length > 0) return { ok: false, why: faults.join(" ") };
+  return { ok: true, says, steps, ...(left.length > 0 ? { left } : {}) };
 }
 
 /**

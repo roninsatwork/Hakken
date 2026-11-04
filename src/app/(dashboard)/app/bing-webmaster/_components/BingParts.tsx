@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -8,6 +9,8 @@ import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatPosition, formatRate } from "../../search-console/_components/searchConsoleFormat";
+import type { BingEyeNames } from "./bingSeesData";
+import { useBingDates } from "./useBing";
 
 /**
  * The parts every Bing Webmaster page shares (bing-webmaster-plan.md §5, §6):
@@ -32,19 +35,54 @@ export function formatCtr(value: number | null | undefined): string {
  * where it is read. Written from the page's own answer, so it says only what
  * the page shows.
  */
-export function BingSees({ says, steps = [], screen, data }: {
+export function BingSees({ says, steps = [], screen, data, links }: {
   says: (string | null | false | undefined)[];
   steps?: HakkenSeesStep[];
   /** The page in the eye's screen list (`bing.<screen>`) and its own figures (sees-every-page-plan-2026-10-31.md). */
   screen?: string;
   data?: unknown;
+  /** Where a press's "Do first" steps may send the reader beyond the menu's pages: a keyword's or a page's own screen. */
+  links?: ReadonlyArray<{ label: string; href: string }>;
 }) {
   const siteId = useParams<{ siteId?: string }>()?.siteId as Id<"companyWebsites"> | undefined;
   const sentences = says.filter((line): line is string => Boolean(line));
-  const page = screen && data !== undefined && data !== null ? { screen: `bing.${screen}`, ...(siteId ? { siteId } : {}), data } : undefined;
+  const page = screen && data !== undefined && data !== null
+    ? { screen: `bing.${screen}`, ...(siteId ? { siteId } : {}), data, ...(links && links.length > 0 ? { links } : {}) }
+    : undefined;
   if (!page && sentences.length === 0) return null;
   return <HakkenSees says={sentences.slice(0, 3)} steps={steps.slice(0, 3)} {...(page ? { page } : {})} />;
 }
+
+/**
+ * The words the eye's rules name things by, from the section's own translations (`bingSeesData.ts`): Bing and Google as
+ * the charts name them, the span before, the period chosen, a week, and the boxes' own labels.
+ */
+export function useBingEyeNames(): BingEyeNames {
+  const tc = useTranslations("bingWebmaster.chart");
+  const te = useTranslations("bingWebmaster.seen.eye");
+  const tv = useTranslations("bingWebmaster.versus");
+  const tp = useTranslations("common.periods");
+  const { chosen } = useBingDates();
+  return useMemo(() => ({
+    bing: tc("bing"),
+    google: tc("google"),
+    // "The month before", "The same days last week": the span before as the dates menu says it, starting a sentence.
+    before: capital(tp(`before.${chosen}`)),
+    period: chosen === "custom" ? tp("customName") : tp(chosen),
+    weekOf: (day: string) => te("weekOf", { day }),
+    topThree: te("topThree"),
+    bingHigher: tv("bingHigher"),
+    googleHigher: tv("googleHigher"),
+    onlyBing: tv("onlyBing"),
+    inGoogleNotBing: te("inGoogleNotBing"),
+    averageDay: te("averageDay"),
+    home: te("home"),
+    lastSixWeeks: te("lastSixWeeks"),
+    sixWeeksBefore: te("sixWeeksBefore"),
+  }), [tc, te, tv, tp, chosen]);
+}
+
+const capital = (words: string) => words.charAt(0).toLocaleUpperCase() + words.slice(1);
 
 type Totals = { clicks: number; impressions: number };
 

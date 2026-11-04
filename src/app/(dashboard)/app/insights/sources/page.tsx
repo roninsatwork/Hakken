@@ -4,9 +4,7 @@ import { useQuery } from "convex/react";
 import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Plug } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -49,24 +47,10 @@ export default function InsightsSourcesPage() {
     if (row.since) return t("history.since", { day: formatDay(row.since) });
     return "–";
   };
-  const missing = chosen.sources.filter((row) => row.status === "NOT_CONNECTED" || row.status === "NOT_SET");
-  const says = missing.length === 0
-    ? [t("sees.everything", { host: chosen.host })]
-    : [t("sees.missing", { host: chosen.host, count: missing.length, first: t(`unlocks.${missing[0].source}`) })];
-  const fixHref = (source: string, siteId: Id<"companyWebsites">) => {
-    if (source === "searchConsole") return "/app/search-console";
-    if (source === "analytics") return "/app/analytics";
-    if (source === "clarity") return `/app/clarity/${siteId}/connection`;
-    if (source === "enquiryValue") return `/app/analytics/${siteId}/tracking-health`;
-    if (source === "businessProfiles") return `/app/sites/${siteId}/local`;
-    return `/app/sites/${siteId}`;
-  };
-  const steps: HakkenSeesStep[] = missing.slice(0, 3).map((row) => ({ words: t(`fix.${row.source}`), link: t(`fixLink.${row.source}`), href: fixHref(row.source, chosen.siteId) }));
 
   return (
     <>
       {header}
-      <HakkenSees says={says} steps={steps} page={{ screen: "insights.sources", siteId: chosen.siteId, data: chosen }} />
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.source}

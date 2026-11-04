@@ -16,11 +16,13 @@ import { Button } from "./Button";
  * "Panel" (docs/plans/active/sees-side-panel-plan-2026-10-31.md); the eye's panel (`SeesPanel`) is the first to
  * use it. It never decides what goes inside: that is the caller's.
  */
-export function SidePanel({ open, onClose, title, icon, children, foot, id, labelledBy }: {
+export function SidePanel({ open, onClose, title, icon, actions, children, foot, id, labelledBy }: {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
   icon?: ReactNode;
+  /** Quiet buttons beside the close button, for what acts on the whole panel. */
+  actions?: ReactNode;
   children: ReactNode;
   /** What stays at the bottom while the body scrolls: a box to type in, a save button. */
   foot?: ReactNode;
@@ -62,9 +64,12 @@ export function SidePanel({ open, onClose, title, icon, children, foot, id, labe
             {icon}
             <span id={titleId} className="truncate text-[15px] font-medium text-foreground">{title}</span>
           </div>
-          <Button variant="ghost" onClick={onClose} aria-label={t("close")} title={t("close")} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] p-0 text-secondary hover:bg-hover hover:text-foreground">
-            <X className="h-4 w-4" aria-hidden="true" />
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            {actions}
+            <Button variant="ghost" onClick={onClose} aria-label={t("close")} title={t("close")} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] p-0 text-secondary hover:bg-hover hover:text-foreground">
+              <X className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {foot ? <div className="border-t border-border-dim px-6 py-4">{foot}</div> : null}

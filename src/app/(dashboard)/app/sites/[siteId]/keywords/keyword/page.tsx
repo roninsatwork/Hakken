@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -17,10 +17,11 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { SiteFacts, type SiteFact } from "../../../_components/SiteRecordParts";
 import { datedRow } from "../../../_components/datedRows";
-import { formatCpc, formatDay, formatNumber, movement, toCsv } from "../../../_components/siteFormat";
+import { formatDay, formatNumber, movement, toCsv } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { searchSees } from "../_components/keywordSees";
 import { isPartHeld } from "../../../_components/SiteCoverage";
 import { heldIcon } from "../../../_components/siteGroups";
 import { MarkedHost } from "../../../_components/SiteMark";
@@ -33,15 +34,16 @@ import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 const PAGE_ONE = 10;
 
 /** Dollars, whole: what visits would cost as adverts. */
-function formatUsd(value: number | null): string {
-  return value === null ? "–" : `$${formatNumber(value)}`;
-}
-
 /**
  * One search's own screen (Organic search › Keywords › a keyword): where
- * the site ranks for it and how that has moved, what the search is worth, the
+ * the site ranks for it and how that has moved, how often it is searched, the
  * page that ranks, where else the site shows on Google's page for it, and how
  * its competitors do on the same search.
+ *
+ * No guessed money (Anthony, 2026-11-03, on every guessed money figure: "Yes,
+ * all of it"): neither what a click costs advertisers nor what the ranking
+ * page's visits would be worth as ads. Both are our data supplier's guesses,
+ * not money anyone measured; they stay in what is stored.
  *
  * Opened from any list of keywords — never as a modal (Anthony, 2026-09-24:
  * "These are all new screens with a back button") — and Back returns to that
@@ -72,12 +74,19 @@ export default function SiteKeywordPage() {
     record ? { siteId, keywords: [record.keyword], from: range.from, to: range.to, step: range.step } : "skip",
   );
 
+  // The search's figures for the eye: yours and each rival's place on it, its chart, never a cost or a worth.
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(
+    () => searchSees(record, positions, fromAi, site?.host ?? "", { rivals: tn("rivals"), rivalsAbove: tn("rivalsAbove"), rivalsMissing: tn("rivalsMissing") }),
+    [record, positions, fromAi, site?.host, tn],
+  );
+
   if (!asked) {
     return <DetailHeader layout="path" back={back} title={t("missingTitle")} description={t("missingBody")} />;
   }
 
   const rank = record?.rank ?? null;
-  // What the search is worth: this site's own figures, or a competitor's for a search it does not rank for.
+  // What the search is: this site's own figures, or a competitor's for a search it does not rank for.
   const search = record?.search ?? null;
   const points = positions?.[0]?.points ?? [];
   // Where it ranks now, and with which page; nothing for a search it lost.
@@ -204,7 +213,6 @@ export default function SiteKeywordPage() {
       { key: "strength", label: t("rankingPage.strength"), value: rank.pageRank === null ? "–" : t("rankingPage.outOf1000", { value: formatNumber(rank.pageRank) }) },
       { key: "linking", label: t("rankingPage.linkingWebsites"), value: formatNumber(rank.pageReferringDomains) },
       { key: "links", label: t("rankingPage.links"), value: formatNumber(rank.pageBacklinks) },
-      { key: "value", label: t("rankingPage.value"), value: formatUsd(rank.trafficValue) },
     ]
     : checkedResult && checkedPage !== null && check
       ? [
@@ -294,13 +302,13 @@ export default function SiteKeywordPage() {
           </>
         ) : undefined}
       />
-      <SiteSees screen="keywordRecord" seen={record?.seen} data={record && { record, fromAi, positions }} />
+      <SiteSees screen="keywordRecord" seen={record?.seen} data={sees} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
             <Figure
               label={t("figures.position")}
               value={shownAt ?? t(partHeld ? "figures.notInHeld" : "figures.notRanking")}
@@ -310,7 +318,6 @@ export default function SiteKeywordPage() {
             />
             <Figure label={t("figures.volume")} value={formatNumber(search?.volume ?? bought?.volume)} detail={<span className="text-muted">{t("figures.volumeDetail")}</span>} />
             <Figure label={t("figures.traffic")} value={formatNumber(rank?.traffic)} detail={<span className="text-muted">{t("figures.trafficDetail")}</span>} />
-            <Figure label={t("figures.cpc")} value={formatCpc(search?.cpc ?? bought?.cpc ?? null)} detail={<span className="text-muted">{t("figures.cpcDetail")}</span>} />
           </div>
 
           {fromAi ? (

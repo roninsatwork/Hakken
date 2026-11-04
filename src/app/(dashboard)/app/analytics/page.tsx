@@ -15,15 +15,12 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatDateTime } from "@/src/lib/dates";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
-import { websitesSees } from "@/convex/utils/sees/analytics";
 import { formatNumber } from "../sites/_components/siteFormat";
 import { ListDownload } from "../sites/_components/SiteDownloads";
 import { useSitePager } from "../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../sites/_components/useSiteSort";
 import { SiteMark } from "../sites/_components/SiteMark";
-import { formatMoney } from "./_components/analyticsFormat";
-import { AnalyticsSees } from "./_components/AnalyticsSees";
 import { analyticsQuery } from "./_components/useAnalytics";
 
 type SiteRow = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsSites>[number];
@@ -38,11 +35,10 @@ const TONES: Record<SiteRow["status"], StatusTone> = {
 };
 
 /** The website A to Z — the order it opens on — and the most of each figure first. */
-const SORTS: SiteSortColumns<SiteRow, "host" | "visits" | "conversions" | "value" | "updated"> = {
+const SORTS: SiteSortColumns<SiteRow, "host" | "visits" | "conversions" | "updated"> = {
   host: { value: (row) => row.host, first: "asc" },
   visits: { value: (row) => row.visits, first: "desc" },
   conversions: { value: (row) => row.conversions, first: "desc" },
-  value: { value: (row) => row.value, first: "desc" },
   updated: { value: (row) => row.lastCollectedAt, first: "desc" },
 };
 const hostOf = (row: SiteRow) => row.host;
@@ -74,8 +70,6 @@ export default function GoogleAnalyticsPage() {
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader icon={<ChartColumn className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} divider />
 
-        <AnalyticsSees screen="websites" seen={sites && websitesSees(sites)} currency={sites?.find((row) => row.currency)?.currency ?? null} data={sites} />
-
         <DataTable
           rows={paged.pageRows}
           rowKey={(row) => row.siteId}
@@ -94,7 +88,6 @@ export default function GoogleAnalyticsPage() {
                     { header: t("columns.status"), value: (row) => ts(row.status) },
                     { header: t("columns.visits"), value: (row) => row.visits },
                     { header: t("columns.conversions"), value: (row) => row.conversions },
-                    { header: t("columns.value"), value: (row) => (row.value === null ? null : row.value / 100) },
                   ]}
                 />
               }
@@ -120,7 +113,6 @@ export default function GoogleAnalyticsPage() {
             { key: "status", header: t("columns.status"), cell: (row) => <StatusLabel tone={TONES[row.status]}>{ts(row.status)}</StatusLabel> },
             { key: "visits", header: t("columns.visits"), align: "right", sortable: true, cell: (row) => (row.visits !== null ? <span className="font-mono text-[12px] text-foreground">{formatNumber(row.visits)}</span> : dash) },
             { key: "conversions", header: t("columns.conversions"), align: "right", sortable: true, cell: (row) => (row.conversions !== null ? <span className="font-mono text-[12px] text-secondary">{formatNumber(row.conversions)}</span> : dash) },
-            { key: "value", header: t("columns.value"), align: "right", sortable: true, cell: (row) => (row.value ? <span className="font-mono text-[12px] text-secondary">{formatMoney(row.value, row.currency)}</span> : dash) },
             { key: "updated", header: t("columns.updated"), sortable: true, cell: (row) => (row.lastCollectedAt ? <span className="whitespace-nowrap text-[12px] text-secondary">{formatDateTime(row.lastCollectedAt)}</span> : dash) },
           ]}
         />

@@ -1,5 +1,5 @@
 import { compareTermsQuickly, termToken, tokenPlace } from "./utils/searchConsoleTerms";
-import { BANDS, bandOf, emptyRow, filterRows, isBrand, type Band, type BandCounts, type BrandSplit, type Filters, type ListRow, type Summary, type View, type ViewContext } from "./utils/searchConsoleViews";
+import { BANDS, bandOf, crossedOf, emptyRow, filterRows, isBrand, moverInto, type Band, type BandCounts, type BrandSplit, type Filters, type ListRow, type ListSees, type Summary, type View, type ViewContext } from "./utils/searchConsoleViews";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { sortRows, type SortKey } from "./searchConsoleSorts";
 import type { Doc } from "./_generated/dataModel";
@@ -443,6 +443,31 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
     });
   }
   const summary = tally.summary();
+  // What Hakken sees over the whole list (`listSeesOf`, read row by row): the same figures from the columns.
+  if (brandWords && ask.view === "all") summary.wholeList = columnSees();
+  function columnSees(): ListSees {
+    const bandClicks = emptyBands();
+    for (const row of listed) if (impressionsOf(row) > 0) bandClicks[bandOf(positionOf(row))] += clicksOf(row);
+    if (!before) return { bandClicks, bandClicksBefore: null, crossed: null, movers: null };
+    const bandClicksBefore = emptyBands();
+    const placeBefore = new Map<string, number>();
+    const clicked = new Set<string>();
+    for (let row = 0; row < before.length; row += 1) {
+      if (before.clicks[row] > 0) clicked.add(termToken(QUERY, before.key[row]));
+      if (before.impressions[row] <= 0) continue;
+      const position = before.positionSum[row] / before.impressions[row];
+      bandClicksBefore[bandOf(position)] += before.clicks[row];
+      placeBefore.set(termToken(QUERY, before.key[row]), position);
+    }
+    const placeNow = new Map<string, number>();
+    for (const row of listed) {
+      if (impressionsOf(row) > 0) placeNow.set(nameOf(row), positionOf(row));
+      if (clicksOf(row) > 0) clicked.add(nameOf(row));
+    }
+    const movers: NonNullable<ListSees["movers"]> = { brandUp: null, brandDown: null, otherUp: null, otherDown: null };
+    for (const row of listed) if (changeOf(row) !== null) moverInto(movers, brandOf(row) === true, { key: nameOf(row), clicks: clicksOf(row), previousClicks: previousClicksOf(row) ?? 0 });
+    return { bandClicks, bandClicksBefore, crossed: crossedOf(placeNow, placeBefore, clicked), movers };
+  }
   if (competing && pairs) {
     const marked = new Uint8Array(size);
     for (const row of listed) if (source.place[row] !== NONE) marked[source.place[row]] = 1;

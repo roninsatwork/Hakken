@@ -10,8 +10,8 @@ import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { titlesOf } from "./pageTitles";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
-import { siteNameOf, splitBeforeKey, splitChannelKey } from "./googleAnalyticsLists";
-import { landingByChannel } from "./googleAnalyticsChannelReads";
+import { siteNameOf, splitBeforeKey, splitChannelKey, type ListRow, type PartOnly } from "./googleAnalyticsLists";
+import { eachLandingByChannel } from "./googleAnalyticsChannelReads";
 import { readPageSeries } from "./googleAnalyticsPageSeries";
 import { readPageRows } from "./googleAnalyticsPageLists";
 import { OTHER_ROWS } from "./utils/analyticsPageStory";
@@ -42,6 +42,18 @@ import {
  */
 
 const analyticsLandingPageArgs = { siteId: v.id("companyWebsites"), page: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
+
+/** One page's rows of a list, with only the counted events: all a page's own figures read of a long list (2026-11-04). */
+function ownRows(counted: readonly { eventName: string }[], page: string): PartOnly {
+  return { events: new Set(counted.map((event) => event.eventName)), keep: (key) => key === page };
+}
+
+/**
+ * The page list as a page's story reads it (`readPageStory`): each page's figures and the times it was read to its
+ * end, every one kept so the story knows the list counts its reading. Read whole as rows, a year's pages ran the story
+ * out of its 64MB on More Handles (2026-11-04).
+ */
+const PAGE_READING: PartOnly = { events: new Set(["scroll"]), zeros: true };
 
 /**
  * One landing page's figures against the span before, the whole website's
@@ -79,25 +91,29 @@ export async function readLandingPage(ctx: SiteReader, args: ObjectType<typeof a
   const counted = countedOf(connection);
   const [address] = await decodePages(ctx, holdId, [args.page]);
   const path = address.replace(/^https?:\/\/[^/]+/, "") || "/";
-  const now = await readFor(ctx, holdId, "landing", args.period, "NOW", args.device, undefined, country);
-  const before = await readFor(ctx, holdId, "landing", args.period, "BEFORE", args.device, undefined, country);
+  // Its own rows alone, with the counted events: read whole as rows, the landing pages ran this out of its 64MB from
+  // Last 3 months on More Handles (2026-11-04).
+  const only = ownRows(counted, args.page);
+  const now = await readFor(ctx, holdId, "landing", args.period, "NOW", args.device, undefined, country, only);
+  const before = await readFor(ctx, holdId, "landing", args.period, "BEFORE", args.device, undefined, country, only);
   const own = now && now !== "LIVE" ? now.rows.find((row) => row.key === args.page) ?? null : null;
   const was = before && before !== "LIVE" ? before.rows.find((row) => row.key === args.page) ?? null : null;
   const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", args.device, country));
   const whole = total ? figuresOf(total.rows, counted) : null;
   const kinds = await readPageKinds(ctx, holdId, { pages: [address] });
   const kind = kinds?.kindOf(address) ?? null;
-  const every = now && now !== "LIVE" ? now : await readSlot(ctx, holdId, slotKey("landing", args.period, "NOW", "", country));
+  const every = now && now !== "LIVE" ? now : await readSlot(ctx, holdId, slotKey("landing", args.period, "NOW", "", country), only);
   const from = every?.from ?? "";
   const to = every?.to ?? "";
   // Its chart from the page held over time (ga-stored-figures-plan.md SF5), filled by itself after a first collection.
   const stored = await readPageSeries(ctx, connection, "landing", args.page, args.device, from, to, country);
   // Its channels from the landing pages kept by channel (SF5), AI assistants counted once.
-  const byChannel = await landingByChannel(ctx, holdId, args.period, "NOW", country, args.device);
-  const keptChannels = byChannel ? byChannel.rows.flatMap((row) => {
+  const mine: ListRow[] = [];
+  const byChannel = await eachLandingByChannel(ctx, holdId, args.period, "NOW", country, args.device, only, (row) => {
     const { channel: page, source: channel } = splitChannelKey(row.key);
-    return page === args.page ? [{ ...row, key: channel }] : [];
-  }) : null;
+    if (page === args.page) mine.push({ ...row, key: channel });
+  });
+  const keptChannels = byChannel ? mine : null;
   const titles = await titlesOf(ctx, holdId, [address]);
   return {
     address,
@@ -232,7 +248,8 @@ export async function findPage(ctx: SiteReader, args: Omit<ObjectType<typeof ana
   const site = await requireMySite(ctx, args.siteId);
   const holdId = site.hold._id;
   const country = await keptCountry(ctx, site.hold, args.country);
-  const now = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country);
+  // Each page's figures and reading, as its story reads them (`PAGE_READING`): the list is handed on to it.
+  const now = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country, PAGE_READING);
   if (!now || now === "LIVE") return null;
   const asked = args.page.trim();
   // Its views come with it: a page found is one viewed in these dates.
@@ -263,13 +280,16 @@ export async function readPageMain(ctx: SiteReader, args: ObjectType<typeof anal
   const counted = countedOf(connection);
   const [address] = await decodePages(ctx, holdId, [args.page]);
   const path = address.replace(/^https?:\/\/[^/]+/, "") || "/";
-  const now = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country);
-  const before = await readFor(ctx, holdId, "page", args.period, "BEFORE", args.device, undefined, country);
+  // Its own rows alone, with the counted events (`ownRows`): every page's read whole as rows is what ran All pages out
+  // of its 64MB on Last 12 months on More Handles (2026-11-04).
+  const only = ownRows(counted, args.page);
+  const now = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country, only);
+  const before = await readFor(ctx, holdId, "page", args.period, "BEFORE", args.device, undefined, country, only);
   const own = now && now !== "LIVE" ? now.rows.find((row) => row.key === args.page) ?? null : null;
   const was = before && before !== "LIVE" ? before.rows.find((row) => row.key === args.page) ?? null : null;
   const kinds = await readPageKinds(ctx, holdId, { pages: [address] });
   const kind = kinds?.kindOf(address) ?? null;
-  const every = now && now !== "LIVE" ? now : await readSlot(ctx, holdId, slotKey("page", args.period, "NOW", "", country));
+  const every = now && now !== "LIVE" ? now : await readSlot(ctx, holdId, slotKey("page", args.period, "NOW", "", country), only);
   const from = every?.from ?? "";
   const to = every?.to ?? "";
   // Its views over time from the page held (SF5), and where they came from, kept by every collection for each page
@@ -315,7 +335,7 @@ export async function readPageStoryPart(ctx: SiteReader, args: ObjectType<typeof
   if (!connection?.newestDay) return null;
   const counted = countedOf(connection);
   const [address] = await decodePages(ctx, holdId, [args.page]);
-  const now = read ? null : await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country);
+  const now = read ? null : await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country, PAGE_READING);
   const pages = read ?? (now && now !== "LIVE" ? now.rows : []);
   const story = await readPageStory(ctx, { holdId, page: args.page, address, period: args.period, device: args.device, country, counted, pages });
   const viewed = pages.some((row) => row.key === args.page);
@@ -342,8 +362,10 @@ export const analyticsPagesDaily = tenantQuery({
     pages: v.array(v.object({
       ref: v.string(),
       address: v.string(),
+      /** The page's own title, where one is known: the line's name on All pages. */
+      title: v.optional(v.string()),
       /** Its views a day, the days with none left out — past 90 days a week or month to its `lastDay` (SF2b); null until held. */
-      points: v.union(v.null(), v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), views: v.number() }))),
+      points: v.union(v.null(), v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), views: v.number(), visits: v.number(), conversions: v.number() }))),
     })),
   }),
   handler: async (ctx, args) => {
@@ -360,15 +382,26 @@ export const analyticsPagesDaily = tenantQuery({
       .first();
     if (!slot) return { pages: [] };
     const addresses = await decodePages(ctx, holdId, refs);
+    const counted = countedOf(connection);
     const pages = [];
     for (const [index, ref] of refs.entries()) {
       const stored = await readPageSeries(ctx, connection, "page", ref, args.device, slot.from, slot.to, country);
       pages.push({
         ref,
         address: addresses[index],
-        points: stored ? stored.filter((point) => point.row.views > 0).map((point) => ({ day: point.start, ...(point.end !== point.start ? { lastDay: point.end } : {}), views: point.row.views })) : null,
+        points: stored ? stored.filter((point) => point.row.views > 0).map((point) => ({
+          day: point.start,
+          ...(point.end !== point.start ? { lastDay: point.end } : {}),
+          views: point.row.views,
+          visits: point.row.visits,
+          conversions: conversionsOf(point.row, counted).conversions,
+        })) : null,
       });
     }
-    return { pages };
+    const titles = await titlesOf(ctx, holdId, addresses);
+    return { pages: pages.map((page): typeof page & { title?: string } => {
+      const title = titles.get(page.address);
+      return title ? { ...page, title } : page;
+    }) };
   },
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -8,6 +9,7 @@ import { PageFlowChart, type PageFlowBand, type PageFlowNode } from "@/src/ui/co
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../search-console/_components/SearchConsoleChartCard";
 import { useAnalyticsArgs, useAnalyticsStatus, periodWord } from "./useAnalytics";
+import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 
 /**
  * Landing pages' "How visits moved through your website"
@@ -24,6 +26,11 @@ export function LandingFlowCard() {
   const flow = useQuery(api.googleAnalyticsFlowReads.analyticsLandingFlow, status?.connection?.newestDay ? args : "skip");
   const nameOf = (node: { page: string; path: string | null; more: number }) => (node.page === MORE ? t("more", { count: node.more }) : node.path ?? node.page);
   const byId = new Map((flow?.nodes ?? []).map((node) => [node.id, node]));
+  // The eye reads the flow's boxes (ask-hakken-every-chart-page-plan-2026-11-03.md): each page by its path, the step it
+  // is (0 where visits landed), its visits, those that left there and its conversions.
+  const moreWords = t("more", { count: 0 });
+  const seen = useMemo(() => (flow ? { picked: true, rows: flow.nodes.map((node) => ({ name: node.page === MORE ? moreWords : node.path ?? node.page, step: node.column + 1, visits: node.visits, leftThere: node.left, conversions: node.conversions })) } : undefined), [flow, moreWords]);
+  useSeesPart("flow", seen);
   const nodes: PageFlowNode[] = (flow?.nodes ?? []).map((node) => ({
     id: node.id,
     column: node.column,

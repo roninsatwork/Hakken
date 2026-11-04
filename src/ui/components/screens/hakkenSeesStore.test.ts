@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { closeSees, noteSeesThread, resetSees, toggleSees, useSeesThread, withSeesParts } from "./hakkenSeesStore";
+import { closeSees, noteSeesThread, resetSees, seesCharts, toggleSees, useSeesChart, useSeesThread, withSeesParts } from "./hakkenSeesStore";
 
 /**
  * The eye's panel and its conversation (ask-hakken-every-chart-plan-2026-10-31.md, §2b; Anthony: "every time we press
@@ -36,5 +36,19 @@ describe("a page's figures with its panels' own", () => {
     const answer = { figures: { visits: 3 } };
     expect(withSeesParts(answer, {})).toBe(answer);
     expect(withSeesParts(undefined, { channelsTable: table })).toBeUndefined();
+  });
+});
+
+/** Every chart on the page registers what it draws, for Ask Hakken to redraw (ask-hakken-every-chart-page-plan-2026-11-03.md). */
+describe("the page's charts", () => {
+  afterEach(() => resetSees());
+
+  it("are held in the order first drawn, each with its latest figures, and let go as they leave", () => {
+    const first = renderHook(({ figures }) => useSeesChart("a", { title: "Visits by day", csv: () => figures }), { initialProps: { figures: "Day,Visits\n2026-10-01,5" } });
+    renderHook(() => useSeesChart("b", { title: "Visits by channel", csv: () => "Channel,Visits\nDirect,4" }));
+    first.rerender({ figures: "Day,Visits\n2026-10-01,6" });
+    expect(seesCharts().map((chart) => [chart.title, chart.csv()])).toEqual([["Visits by day", "Day,Visits\n2026-10-01,6"], ["Visits by channel", "Channel,Visits\nDirect,4"]]);
+    first.unmount();
+    expect(seesCharts().map((chart) => chart.title)).toEqual(["Visits by channel"]);
   });
 });

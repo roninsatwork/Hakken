@@ -22,6 +22,7 @@ import { formatDay, formatNumber, toCsv } from "../../_components/siteFormat";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { auditSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../../_components/SiteSees";
+import { auditSeen } from "../../_components/siteSeesData";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
@@ -94,6 +95,11 @@ export default function SiteAuditPage() {
       ? (audit.pagesFound > audit.pagesCrawled ? t("pagesFound", { found: formatNumber(audit.pagesFound) }) : t("pagesEvery"))
       : audit.maxPages ? t("pagesOf", { max: formatNumber(audit.maxPages) }) : null;
 
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the newest crawl's boxes and its
+  // problems by their names on screen, the chart's crawls against the crawl before the dates, and the money pages.
+  const te = useTranslations("sites.audit.eye");
+  const seen = useMemo(() => (audit ? auditSeen(audit, series?.[0], money.data, label, { host: site?.host ?? "", errors: te("errors") }) : undefined), [audit, series, money.data, site?.host, label, te]);
+
   if (competitor) {
     return (
       <CompetitorNotCollected
@@ -118,7 +124,7 @@ export default function SiteAuditPage() {
           </span>
         ) : null}
       />
-      <SiteSees screen="audit" seen={audit === undefined ? undefined : auditSees(audit, label)} data={audit && { audit, moneyPages: money.data, series }} />
+      <SiteSees screen="audit" seen={audit === undefined ? undefined : auditSees(audit, label)} data={seen} />
 
       {/* A crawl turned away at the door says so, rather than reading as an empty or a perfect audit (finish-off plan, item 7). */}
       {audit?.turnedAway ? (

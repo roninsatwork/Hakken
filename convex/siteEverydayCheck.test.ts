@@ -300,6 +300,10 @@ describe("the latest check, with everyday pages between the weekly lists", () =>
     // A page that came back short reached the end of the site's list.
     expect(listDayReach([page(0, 807)])).toBe(Number.POSITIVE_INFINITY);
     expect(listDayReach([])).toBeNull();
+    // Unbroken from the first page: a day that kept only its last, empty page reaches nothing (More Handles, 15 October
+    // 2026: it read as the whole list, and the Keywords page listed none of 6,355 searches).
+    expect(listDayReach([page(6_000, 0)])).toBe(0);
+    expect(listDayReach([page(0, 1_000), page(2_000, 1_000), page(3_000, 40)])).toBe(1_000);
   });
 
   test("a list is whole even where the everyday check's short page and the week's full page start at one row", () => {

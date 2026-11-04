@@ -21,6 +21,7 @@ import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { shareSees } from "@/convex/utils/sees/aiAnswers";
 import { SiteSees } from "../../../_components/SiteSees";
+import { shareSeen } from "../../../_components/siteSeesData";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { useSiteSearch } from "../../../_components/useSiteParam";
@@ -91,6 +92,9 @@ export default function SiteShareOfVoicePage() {
     const mine = (engines ?? []).reduce((sum, engine) => sum + (engine.sites.find((entry) => entry.websiteId === websiteId)?.named ?? 0), 0);
     return everyone === 0 ? 0 : Math.round((mine / everyone) * 100);
   };
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): each assistant by its name on screen,
+  // with every website's answers naming it, yours marked.
+  const seen = useMemo(() => (engines ? shareSeen(engines, engineLabel) : undefined), [engines, engineLabel]);
   const nameOf = (entry: { host: string; isYou: boolean }) => (entry.isYou ? tc("you", { host: entry.host }) : entry.host);
 
   const chartRows = (engines ?? []).map((engine) => ({
@@ -101,7 +105,7 @@ export default function SiteShareOfVoicePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<PieChart className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="aiShare" seen={engines && shareSees(engines)} data={engines} />
+      <SiteSees screen="aiShare" seen={engines && shareSees(engines)} data={seen} />
       <Notice>{t("note")}</Notice>
 
       <SiteChartCard

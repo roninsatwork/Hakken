@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
@@ -24,6 +25,7 @@ import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFo
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { bandsSees } from "../_components/keywordSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
@@ -92,9 +94,13 @@ export default function SiteBandsPage() {
   const router = useRouter();
   const listHref = useSiteListHref(siteId);
   const recordHref = useSiteRecordHref(siteId);
-  const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
+  // With the rivals' lines beside yours, for the eye alone (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10):
+  // the chart draws only its own, the first line.
+  const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
   const moves = useQuery(api.siteBands.bandMoves, { siteId });
   const moved = useQuery(api.siteBands.listBandMoves, { siteId });
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(() => bandsSees(series, moves, moved, { rivals: tn("rivals"), pageOne: t("pageOne"), pageTwo: t("pageTwo"), closestOthers: tn("closestOthers") }), [series, moves, moved, t, tn]);
 
   const points = series?.[0]?.points ?? [];
   const everySearch = points.flatMap((point) => (point.allBands ? [{ step: point.day, day: point.lastDay, bands: point.allBands }] : []));
@@ -148,7 +154,7 @@ export default function SiteBandsPage() {
           </span>
         ) : null}
       />
-      <SiteSees screen="keywordsBands" seen={moves?.seen} data={moves && { bands: moves, moved, series }} />
+      <SiteSees screen="keywordsBands" seen={moves?.seen} data={sees} />
 
       {latest ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">

@@ -1,6 +1,8 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { requireMySite } from "./siteAccess";
+import { myRivals, requireMySite } from "./siteAccess";
 
 /**
  * The site's link profile as its newest backlinks summary describes it: how
@@ -31,63 +33,92 @@ function readBreakdown(value: unknown): Array<{ key: string; count: number }> {
 
 const numberOrNull = v.union(v.number(), v.null());
 
+/** A website's newest backlinks summary, as the Backlinks screens read it. */
+const profileValidator = v.object({
+  day: v.string(),
+  backlinks: numberOrNull,
+  referringDomains: numberOrNull,
+  referringMainDomains: numberOrNull,
+  domainRank: numberOrNull,
+  brokenBacklinks: numberOrNull,
+  brokenPages: numberOrNull,
+  spamScore: numberOrNull,
+  nofollowReferringDomains: numberOrNull,
+  /** The servers, networks and pages linking here in all: what the lists kept are of (§4.G). */
+  referringIps: numberOrNull,
+  referringSubnets: numberOrNull,
+  referringPages: numberOrNull,
+  countries: breakdownValidator,
+  tlds: breakdownValidator,
+  platforms: breakdownValidator,
+  linkTypes: breakdownValidator,
+  attributes: breakdownValidator,
+});
+
+/** One read: the newest `backlinks_summary` row for the website; null for a website with none. */
+async function newestLinkProfile(ctx: { db: QueryCtx["db"] }, websiteId: Id<"websites">) {
+  const newest = await ctx.db
+    .query("seoWebsiteMetrics")
+    .withIndex("by_website_operation_day", (q) =>
+      q.eq("websiteId", websiteId).eq("operationId", "backlinks_summary"))
+    .order("desc")
+    .first();
+  if (!newest) return null;
+  let figures: Record<string, unknown> = {};
+  try {
+    figures = JSON.parse(newest.metricsJson) as Record<string, unknown>;
+  } catch {
+    figures = {};
+  }
+  const number = (key: string) => (typeof figures[key] === "number" ? figures[key] as number : null);
+  return {
+    day: newest.day,
+    backlinks: number("backlinks"),
+    referringDomains: number("referringDomains"),
+    referringMainDomains: number("referringMainDomains"),
+    domainRank: number("rank"),
+    brokenBacklinks: number("brokenBacklinks"),
+    brokenPages: number("brokenPages"),
+    spamScore: number("spamScore"),
+    nofollowReferringDomains: number("nofollowReferringDomains"),
+    referringIps: number("referringIps"),
+    referringSubnets: number("referringSubnets"),
+    referringPages: number("referringPages"),
+    countries: readBreakdown(figures.countriesJson),
+    tlds: readBreakdown(figures.tldsJson),
+    platforms: readBreakdown(figures.platformsJson),
+    linkTypes: readBreakdown(figures.linkTypesJson),
+    attributes: readBreakdown(figures.attributesJson),
+  };
+}
+
 export const linkProfile = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: v.union(v.null(), v.object({
-    day: v.string(),
-    backlinks: numberOrNull,
-    referringDomains: numberOrNull,
-    referringMainDomains: numberOrNull,
-    domainRank: numberOrNull,
-    brokenBacklinks: numberOrNull,
-    brokenPages: numberOrNull,
-    spamScore: numberOrNull,
-    nofollowReferringDomains: numberOrNull,
-    /** The servers, networks and pages linking here in all: what the lists kept are of (§4.G). */
-    referringIps: numberOrNull,
-    referringSubnets: numberOrNull,
-    referringPages: numberOrNull,
-    countries: breakdownValidator,
-    tlds: breakdownValidator,
-    platforms: breakdownValidator,
-    linkTypes: breakdownValidator,
-    attributes: breakdownValidator,
-  })),
+  returns: v.union(v.null(), profileValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const newest = await ctx.db
-      .query("seoWebsiteMetrics")
-      .withIndex("by_website_operation_day", (q) =>
-        q.eq("websiteId", site.website._id).eq("operationId", "backlinks_summary"))
-      .order("desc")
-      .first();
-    if (!newest) return null;
-    let figures: Record<string, unknown> = {};
-    try {
-      figures = JSON.parse(newest.metricsJson) as Record<string, unknown>;
-    } catch {
-      figures = {};
+    return await newestLinkProfile(ctx, site.website._id);
+  },
+});
+
+/**
+ * The site's link summary beside each rival's it is watched against, for the eye on Link quality and Where links come
+ * from (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10: "Spam score up from 4 to 12 while rivals sit at
+ * 3–5", "18% of links from your own country against 55% for rivals"). Each website's newest summary, one read each;
+ * a rival with none yet is left out. Rivals' summaries are bought with their checks, so nothing is bought here.
+ */
+export const linkProfilesAgainstRivals = tenantQuery({
+  args: { siteId: v.id("companyWebsites") },
+  returns: v.array(v.object({ host: v.string(), isYou: v.boolean(), profile: profileValidator })),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const everyone = [{ website: site.website, isYou: true }, ...(await myRivals(ctx, site)).map((rival) => ({ website: rival.website, isYou: false }))];
+    const out: Array<{ host: string; isYou: boolean; profile: NonNullable<Awaited<ReturnType<typeof newestLinkProfile>>> }> = [];
+    for (const one of everyone) {
+      const profile = await newestLinkProfile(ctx, one.website._id);
+      if (profile) out.push({ host: one.website.displayHost, isYou: one.isYou, profile });
     }
-    const number = (key: string) => (typeof figures[key] === "number" ? figures[key] as number : null);
-    return {
-      day: newest.day,
-      backlinks: number("backlinks"),
-      referringDomains: number("referringDomains"),
-      referringMainDomains: number("referringMainDomains"),
-      domainRank: number("rank"),
-      brokenBacklinks: number("brokenBacklinks"),
-      brokenPages: number("brokenPages"),
-      spamScore: number("spamScore"),
-      nofollowReferringDomains: number("nofollowReferringDomains"),
-      referringIps: number("referringIps"),
-      referringSubnets: number("referringSubnets"),
-      referringPages: number("referringPages"),
-      countries: readBreakdown(figures.countriesJson),
-      tlds: readBreakdown(figures.tldsJson),
-      platforms: readBreakdown(figures.platformsJson),
-      linkTypes: readBreakdown(figures.linkTypesJson),
-      attributes: readBreakdown(figures.attributesJson),
-    };
+    return out;
   },
 });
 

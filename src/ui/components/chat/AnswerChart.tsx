@@ -4,10 +4,12 @@ import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { AnswerChart as Chart, DaysChart } from "@/convex/utils/assistantCharts";
+import type { PageChart } from "@/convex/utils/assistantPageCharts";
 import { EVERY_OTHER, GROUP_LOOKS, groupsAreShares, type GroupsChart } from "@/convex/utils/assistantGroupCharts";
 import { pathOf } from "@/convex/utils/hakkenTaskRules";
 import { SITE_SERIES_COLOURS, SiteBarChart, SiteLineChart, SitePieChart, SiteScatterChart, type SiteSeries } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
 import { ChannelMap, type ChannelMapRow } from "@/src/ui/components/screens/ChannelMap";
+import { PageMap, arrowMove } from "@/src/ui/components/screens/PageMap";
 import { countryName } from "@/src/app/(dashboard)/app/search-console/_components/countries";
 import { datedRow } from "@/src/app/(dashboard)/app/sites/_components/datedRows";
 import { formatShortDay } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
@@ -22,7 +24,77 @@ import { CHART_COMPARATOR_GREY } from "@/src/ui/components/charts/chartPalette";
  * in the app does; its figures are the look-up's own, kept on the message.
  */
 export function AnswerChart({ chart }: { chart: Chart }) {
+  if (chart.look === "pageChart") return <PageAnswerChart chart={chart} />;
   return isGroupsChart(chart) ? <GroupsAnswerChart chart={chart} /> : <DaysAnswerChart chart={chart} />;
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * A chart from the page the conversation started on, redrawn (ask-hakken-every-chart-page-plan-2026-11-03.md, shared
+ * work 9): the page's own title and figures, drawn another way by the parts the app's screens use — bars to rank, a
+ * pie for shares, a line by day, stacked bars against the column set beside it — with a link back to the page.
+ */
+function PageAnswerChart({ chart }: { chart: PageChart }) {
+  const t = useTranslations("ai.assistant.chart");
+  const locale = useLocale();
+  const number = (value: number) => value.toLocaleString(locale, { maximumFractionDigits: 1 });
+  const hasBefore = chart.groups.some((group) => group.before !== undefined);
+  const title = chart.measure && !chart.title.toLowerCase().includes(chart.measure.toLowerCase()) ? `${chart.title}: ${chart.measure}` : chart.title;
+  const series: SiteSeries[] = [
+    { key: "now", name: chart.measure, colour: SITE_SERIES_COLOURS[0] },
+    ...(hasBefore && chart.against ? [{ key: "before", name: chart.against, colour: CHART_COMPARATOR_GREY, ...(chart.kind === "line" ? { dashed: true } : {}) }] : []),
+  ];
+  const drawn = (() => {
+    if (chart.kind === "map") {
+      return (
+        <PageMap
+          height={320}
+          boxes={chart.groups.map((group, at) => ({
+            id: `${group.name}-${at}`,
+            name: group.name,
+            size: group.value,
+            now: group.value,
+            before: group.before ?? null,
+            figure: number(group.value),
+            readout: [
+              { value: number(group.value), label: chart.measure },
+              ...(group.before !== undefined ? [
+                { value: number(group.before), label: chart.against ?? "" },
+                { value: arrowMove(group.value, group.before) ?? "–", label: t("upOrDown") },
+              ] : []),
+            ],
+          }))}
+        />
+      );
+    }
+    if (chart.kind === "pie") {
+      return <SitePieChart slices={chart.groups.map((group, at) => ({ key: `${group.name}-${at}`, name: group.name, value: group.value, colour: SITE_SERIES_COLOURS[at % SITE_SERIES_COLOURS.length] }))} formatValue={number} />;
+    }
+    if (chart.kind === "line" && chart.groups.every((group) => DAY.test(group.name))) {
+      const rows = chart.groups.map((group) => datedRow({ day: group.name }, { now: group.value, ...(group.before !== undefined ? { before: group.before } : {}) }));
+      return <SiteLineChart data={rows} series={series} sharedScale height={210} />;
+    }
+    // Bars of days stand along the dates, in order, as a line of them would.
+    const days = chart.groups.every((group) => DAY.test(group.name));
+    const rows = chart.groups.map((group) => {
+      const figures = { now: group.value, ...(group.before !== undefined ? { before: group.before } : {}) };
+      return days ? datedRow({ day: group.name }, figures) : { label: group.name, ...figures };
+    });
+    return <SiteBarChart data={rows} series={series} horizontal={chart.kind !== "stacked" && !days} {...(chart.kind === "stacked" ? { stacked: true } : {})} updateKey={false} formatValue={number} />;
+  })();
+  return (
+    <figure data-part="answer-chart" className="mt-2 mb-1 flex flex-col gap-2" aria-label={title}>
+      <div className="flex items-baseline justify-between gap-4">
+        <figcaption data-part-title className="text-[13px] font-medium text-foreground">{title}</figcaption>
+        <Link href={chart.link} className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-secondary hover:text-foreground">
+          {t("openPage")}
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+        </Link>
+      </div>
+      {drawn}
+    </figure>
+  );
 }
 
 /** What a chart's conversion is, in words: "made a purchase", "converted", "did add to cart". */

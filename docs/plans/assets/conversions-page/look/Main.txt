@@ -12,14 +12,14 @@ chart-card: Visits it took for one contact form sent, day by day
   filter: Show
   filter: Compare
 conversions-over-time
-chart-card: Conversions by page kind, channel, device or country
+chart-card: Conversions by classification, channel, device or country
   filter: Count
   filter: Columns
   filter: Compare
 conversions-map
   channel-map
 search: Find an event…
-table: Event | Conversions | Visits | Worth | Change
+table: Event | Conversions | Visits | Change
   table-bar
     download: Download CSV
   table-footer

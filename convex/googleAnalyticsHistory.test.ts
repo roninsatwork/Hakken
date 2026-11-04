@@ -83,7 +83,7 @@ describe("channels over time", () => {
     expect(google.calls.length).toBe(asked);
   });
 
-  test("filled once: Overview, Events, Campaigns and Visitors read this year from each fact a day, never asking Google", async () => {
+  test("filled once: Overview, Events, Campaigns and Visits read this year from each fact a day, never asking Google", async () => {
     const t = harness();
     const { siteId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED);
     const asked = google.calls.length;
@@ -95,8 +95,8 @@ describe("channels over time", () => {
     expect(events.points.some((point) => point.lastDay !== undefined)).toBe(true);
     const campaigns = await user.query(api.googleAnalyticsChartReads.analyticsCampaignChart, year);
     expect(campaigns.live).toBe(false);
-    const visitors = (await user.query(api.googleAnalyticsVisitorReads.analyticsVisitors, year))!;
-    expect(visitors.points.some((point) => point.lastDay !== undefined)).toBe(true);
+    const visits = (await user.query(api.googleAnalyticsVisitorReads.analyticsVisitorDays, year))!;
+    expect(visits.points.some((point) => point.lastDay !== undefined)).toBe(true);
     expect(google.calls.length).toBe(asked);
   });
 

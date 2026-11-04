@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { Inbox } from "lucide-react";
@@ -22,7 +23,8 @@ import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { monthsWords, periodWords, sourceWords } from "../../_components/insightPeriodWords";
-import { useInsightsHref, useInsightsPeriodChoice, useInsightsSite } from "../../_components/useInsights";
+import { useInsightsHref, useInsightsPeriodChoice, useInsightsPeriodView, useInsightsShownSite, useInsightsSite } from "../../_components/useInsights";
+import { enquirySourceNames, enquirySourceSees } from "../../_components/insightsSees";
 
 const rate = (enquiries: number, visits: number) => (visits > 0 ? Math.round((enquiries * 1000) / visits) / 10 : null);
 
@@ -38,8 +40,11 @@ export default function InsightsEnquirySourcePage() {
   const tEnquiries = usePlatformTranslations("insights.enquiries");
   const tPeriod = usePlatformTranslations("insights.period");
   const tWhy = usePlatformTranslations("insights.why");
+  const tAll = usePlatformTranslations("insights");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const period = useInsightsPeriodChoice();
   const name = useSearchParams().get("name") ?? "";
   const data = useQuery(api.insightsPeriod.insightsEnquirySource, { name, ...(site ? { siteId: site } : {}), ...(period ? { period } : {}) });
@@ -50,6 +55,9 @@ export default function InsightsEnquirySourcePage() {
   const pages = full?.pages.filter((row) => !matches || matches(row.path) || matches(row.kind ?? ""));
   const pager = useSitePager(data === undefined ? undefined : pages ?? [], { isLoading: data === undefined });
   const shown = sourceWords(name, full?.group ?? "", { typed: tWhy("groups.TYPED"), unknown: tEnquiries("unknownSource") });
+  // The eye's figures: the source's, and the whole website's for the same period — the view the section's header reads.
+  const view = useInsightsPeriodView();
+  const seesData = useMemo(() => enquirySourceSees(data, view, enquirySourceNames(tAll, shown)), [data, view, tAll, shown]);
   const header = <DetailHeader back={{ href: href("enquiries"), label: t("back") }} icon={<Inbox className="h-5 w-5 text-brand" />} title={t("title", { name: shown })} description={t("description")} />;
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
   if (!full) return <>{header}<HakkenEmptyState icon={Inbox} title={t("emptyTitle")} description={t("emptyDescription")} /></>;
@@ -65,7 +73,7 @@ export default function InsightsEnquirySourcePage() {
   return (
     <>
       {header}
-      <HakkenSees says={[]} steps={[]} page={{ screen: "insights.enquiriesSource", siteId: site, data }} />
+      <HakkenSees says={[]} steps={[]} page={{ screen: "insights.enquiriesSource", siteId: eyeSite, data: seesData }} />
       <FigureRow>
         <Figure label={t("visits", { period: nowWords })} value={formatNumber(full.figures.visits.now)} detail={<span className="text-secondary">{tEnquiries("figures.against", { then: formatNumber(then(full.figures.visits) ?? 0), period: compareWords })}</span>} />
         <Figure label={t("enquiries", { period: nowWords })} value={formatNumber(full.figures.enquiries.now)} detail={<span className="text-secondary">{tEnquiries("figures.against", { then: formatNumber(then(full.figures.enquiries) ?? 0), period: compareWords })}</span>} />

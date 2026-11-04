@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { FileSearch, SearchX } from "lucide-react";
@@ -20,7 +21,8 @@ import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteP
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
 import { BingGate } from "../../_components/BingNotices";
-import { BingSees } from "../../_components/BingParts";
+import { BingSees, useBingEyeNames } from "../../_components/BingParts";
+import { crawlingSeen } from "../../_components/bingSeesData";
 import { BingCrawlChart } from "../../_components/BingCharts";
 import { useBingSiteId, useBingStatus, useBingDates, type BingStatus } from "../../_components/useBing";
 
@@ -64,6 +66,9 @@ function CrawlingBody({ status }: { status: BingStatus }) {
   const siteId = useBingSiteId();
   const { period } = useBingDates();
   const crawling = useQuery(api.bingWebmasterReads.bingCrawling, { siteId, period });
+  // The eye reads every money page, not the table's first page of them, and each day by its name (bingSeesData.ts).
+  const names = useBingEyeNames();
+  const seen = useMemo(() => crawlingSeen(crawling, names), [crawling, names]);
   const [search, setSearch, settled] = useSiteSearch();
   const [filter, setFilter] = useSiteParam<(typeof FILTERS)[number]>("index", "all", FILTERS);
   const matches = wordStartMatcher(settled.toLowerCase());
@@ -80,7 +85,7 @@ function CrawlingBody({ status }: { status: BingStatus }) {
   return (
     <div className="flex flex-col gap-6">
       {crawling ? (
-        <BingSees screen="crawling" data={crawling} says={[
+        <BingSees screen="crawling" data={seen} says={[
           asked.length > 0 && tw("says", { count: formatNumber(inIndex), total: formatNumber(asked.length) }),
           missing && tw("missing", { page: missing.title ?? missing.page }),
           crawling.totals.errors > 0 ? tw("errors", { errors: formatNumber(crawling.totals.errors) }) : crawling.days.length > 0 && tw("noErrors"),

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { beforeKey, joinAsks, journeysOf, siteNameOf, splitBeforeKey } from "./googleAnalyticsLists";
+import { beforeKey, emptyRow, joinAsks, journeysOf, packList, siteNameOf, splitBeforeKey, unpackPart, unpackPartOnly, type ListRow } from "./googleAnalyticsLists";
 import { assistantOf } from "./utils/aiAssistants";
 
 /**
@@ -79,5 +79,47 @@ describe("each counted event on a row, by Google's own counts (conversions-back-
   test("a key event Google counts once a visit counts the visits it happened in", () => {
     const [row] = [...joinAsks("landing", [], main, events, new Set(["generate_lead"])).values()].flat();
     expect([row.counts.get("contact"), row.counts.get("generate_lead")]).toEqual([3, 2]);
+  });
+});
+
+describe("a kept part's rows with only what a read names (2026-11-04: long lists read whole ran out of 64MB)", () => {
+  const row = (key: string, visits: number, events: Record<string, [count: number, value: number, visits: number, times: number]>): ListRow => {
+    const out = { ...emptyRow(key), visits, engaged: Math.max(0, visits - 1), seconds: visits * 30, views: visits * 2, people: visits, newPeople: 1, length: visits * 60, converting: 1 };
+    for (const [event, [count, value, eventVisits, times]] of Object.entries(events)) {
+      out.counts.set(event, count);
+      out.values.set(event, value);
+      out.eventVisits!.set(event, eventVisits);
+      out.eventTimes!.set(event, times);
+    }
+    return out;
+  };
+  const [part] = packList("landingChannel", [
+    row("/a/", 9, { generate_lead: [2, 500, 2, 3], contact: [0, 0, 0, 0] }),
+    row("/b/", 4, { generate_lead: [0, 0, 0, 0], contact: [1, 0, 1, 1] }),
+    row("/c/", 0, {}),
+  ], ["generate_lead", "contact"]);
+
+  test("every event, its visits and times and its noughts give each row as it is kept", () => {
+    expect(unpackPartOnly(part, { events: null, units: true, zeros: true })).toEqual(unpackPart(part));
+  });
+
+  test("only the events named, an event's nought left out, and no visits or times unless asked", () => {
+    const rows = unpackPartOnly(part, { events: new Set(["generate_lead"]) });
+    expect(rows.map((one) => [one.key, one.visits, one.engaged, one.views, one.converting, [...one.counts], [...one.values]])).toEqual([
+      ["/a/", 9, 8, 18, 1, [["generate_lead", 2]], [["generate_lead", 500]]],
+      ["/b/", 4, 3, 8, 1, [], []],
+      ["/c/", 0, 0, 0, 1, [], []],
+    ]);
+    expect(rows.every((one) => one.eventVisits === undefined && one.eventTimes === undefined)).toBe(true);
+    // Asked, each named event's visits and times come as kept, nought or not.
+    const units = unpackPartOnly(part, { events: new Set(["contact"]), units: true });
+    expect(units.map((one) => [[...one.eventVisits!], [...one.eventTimes!]])).toEqual([[[["contact", 0]], [["contact", 0]]], [[["contact", 1]], [["contact", 1]]], [[["contact", 0]], [["contact", 0]]]]);
+    // Its noughts kept, a read can ask whether the list counts the event at all.
+    expect(unpackPartOnly(part, { events: new Set(["contact", "scroll"]), zeros: true }).map((one) => [one.counts.has("contact"), one.counts.has("scroll")])).toEqual([[true, false], [true, false], [true, false]]);
+  });
+
+  test("only the rows whose key it keeps", () => {
+    expect(unpackPartOnly(part, { events: new Set(), keep: (key) => key === "/b/" }).map((one) => [one.key, one.visits, one.counts.size])).toEqual([["/b/", 4, 0]]);
+    expect(unpackPartOnly(part, { events: null, keep: () => false })).toEqual([]);
   });
 });

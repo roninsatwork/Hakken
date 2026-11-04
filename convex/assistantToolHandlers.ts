@@ -1,8 +1,11 @@
 import type { FunctionArgs } from "convex/server";
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
-import { ANALYTICS_SCREENS, analyticsPartsOf } from "./utils/analyticsScreens";
+import { ALL_PAGES_ORDER_NAMES, ANALYTICS_SCREENS, analyticsPartsOf, type AllPagesOrder } from "./utils/analyticsScreens";
+import { PAGE_MOVES, type PageMove } from "./utils/pageMoves";
 import { BING_SCREENS } from "./utils/bingScreens";
+import { SEARCH_CONSOLE_SCREENS } from "./utils/searchConsoleAskScreens";
+import { VISIBILITY_SCREENS } from "./utils/visibilityAskScreens";
 import { OPENING_PERIOD, isCalendarPeriod, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
@@ -61,6 +64,20 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
   },
   "assistant.site.overview": async (input) => {
     if (!input.companyId) return NO_COMPANY_FIGURES;
+    // One Visibility screen, read through its own reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10),
+    // where the model names one; the website's headline figures, as before, where it names none.
+    const screen = optionalStringArg(input.args, "screen");
+    if (screen) {
+      if (!(VISIBILITY_SCREENS as readonly string[]).includes(screen)) return { ok: false, problem: `screen must be one of: ${VISIBILITY_SCREENS.join(", ")}.` };
+      const rival = optionalStringArg(input.args, "rival");
+      return await input.ctx.runQuery(internal.assistantVisibilityReads.visibilityScreenInternal, {
+        companyId: input.companyId,
+        website: stringArg(input.args, "website"),
+        screen: screen as (typeof VISIBILITY_SCREENS)[number],
+        period: periodArg(input.args),
+        ...(rival ? { rival } : {}),
+      });
+    }
     return await input.ctx.runQuery(internal.assistantReads.siteOverviewInternal, {
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
@@ -68,6 +85,22 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
   },
   "assistant.searchConsole": async (input) => {
     if (!input.companyId) return NO_COMPANY_FIGURES;
+    // One Search Console screen, read through its own read (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6),
+    // where the model names one; the website's totals, as before, where it names none.
+    const screen = optionalStringArg(input.args, "screen");
+    if (screen) {
+      if (!(SEARCH_CONSOLE_SCREENS as readonly string[]).includes(screen)) return { ok: false, problem: `screen must be one of: ${SEARCH_CONSOLE_SCREENS.join(", ")}.` };
+      const key = optionalStringArg(input.args, "key");
+      const search = optionalStringArg(input.args, "search");
+      return await input.ctx.runQuery(internal.assistantSearchConsoleReads.searchConsoleScreenInternal, {
+        companyId: input.companyId,
+        website: stringArg(input.args, "website"),
+        screen: screen as (typeof SEARCH_CONSOLE_SCREENS)[number],
+        period: periodArg(input.args),
+        ...(key ? { key } : {}),
+        ...(search ? { search } : {}),
+      });
+    }
     const page = optionalStringArg(input.args, "page");
     return await input.ctx.runQuery(internal.assistantReads.searchConsoleInternal, {
       companyId: input.companyId,
@@ -113,6 +146,9 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
     const country = optionalStringArg(input.args, "country");
     const key = optionalStringArg(input.args, "key");
     const search = optionalStringArg(input.args, "search");
+    const order = optionalStringArg(input.args, "order");
+    const classification = optionalStringArg(input.args, "classification");
+    const move = optionalStringArg(input.args, "move");
     const asked: FunctionArgs<typeof internal.assistantAnalyticsReads.googleAnalyticsInternal> = {
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
@@ -122,6 +158,10 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       ...(country ? { country: country.toLowerCase() } : {}),
       ...(key ? { key } : {}),
       ...(search ? { search } : {}),
+      ...((ALL_PAGES_ORDER_NAMES as readonly string[]).includes(order ?? "") ? { order: order as AllPagesOrder } : {}),
+      ...(classification ? { classification } : {}),
+      ...((PAGE_MOVES as readonly string[]).includes(move ?? "") ? { move: move as PageMove } : {}),
+      ...(input.args.everyPage === true ? { everyPage: true } : {}),
       ...(list === "visitorType" || list === "browser" || list === "system" || list === "age" || list === "gender" || list === "interest" ? { list } : {}),
     };
     const answer = await input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, asked);

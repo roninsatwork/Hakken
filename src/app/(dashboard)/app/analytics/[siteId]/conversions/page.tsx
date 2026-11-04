@@ -23,7 +23,7 @@ import { formatNumber } from "../../../sites/_components/siteFormat";
 import { AnalyticsGate, NothingCounted, countsAnything } from "../../_components/AnalyticsNotices";
 import { BeforeLine } from "../../_components/AnalyticsFigures";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
-import { changeOf, formatMoney, formatPercent } from "../../_components/analyticsFormat";
+import { changeOf, formatPercent } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus, periodWord } from "../../_components/useAnalytics";
 import { useFlowKindName } from "../../_components/ConversionParts";
@@ -71,7 +71,7 @@ function NothingCountedBody({ status }: { status: AnalyticsStatus }) {
     <div className="flex flex-col gap-6">
       <AnalyticsSees screen="conversions" seen={answer?.seen} currency={status.connection?.currency} data={answer} />
       <NothingCounted status={status} siteId={args.siteId} />
-      <EventsTable status={status} worthOf={() => null} every />
+      <EventsTable status={status} every />
     </div>
   );
 }
@@ -101,7 +101,6 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
     ? { eventName: purchase.eventName, count: shop.purchases, countBefore: shop.purchasesBefore }
     : kinds[0] ?? null;
   const fourth = kinds.find((kind) => kind.eventName === ADDED_TO_BASKET && kind.eventName !== second?.eventName) ?? kinds.find((kind) => kind.eventName !== second?.eventName) ?? null;
-  const worthOf = (eventName: string) => kinds.find((kind) => kind.eventName === eventName)?.value ?? null;
   // The conversion rate is the second box's conversion in every hundred visits (3.5% on the board: purchases over
   // visits), never every conversion over the visits, which counts a basket, a checkout and a purchase three times.
   const rate = answer && second && answer.visits > 0 ? second.count / answer.visits : null;
@@ -120,7 +119,7 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
       visits: answer.visits, visitsBefore: answer.visitsBefore, total, totalBefore,
       // The shop's purchases as the page shows them (the orders Google counted), never the kind's visits that bought.
       kinds: kinds.map((kind) => (purchase && shop && kind.eventName === PURCHASE ? { ...kind, count: shop.purchases, countBefore: shop.purchasesBefore } : kind)),
-      rateOf: second?.eventName ?? null, rate, rateBefore, currency, sells, nameOf, hrefFor,
+      rateOf: second?.eventName ?? null, rate, rateBefore, sells, nameOf, hrefFor,
     },
   ) : undefined;
 
@@ -158,20 +157,19 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
           <h2 className="text-[14px] font-medium text-foreground">{t("whatCountsTitle")}</h2>
           <p className="text-[12px] text-secondary">{t("whatCountsDescription")}</p>
         </div>
-        <EventsTable status={status} worthOf={worthOf} />
+        <EventsTable status={status} />
       </div>
     </div>
   );
 }
 
 type EventRow = NonNullable<FunctionReturnType<typeof api.googleAnalyticsEventReads.analyticsEvents>>["rows"][number];
-type NamedRow = EventRow & { name: string; worth: number | null };
+type NamedRow = EventRow & { name: string };
 
-const SORTS: SiteSortColumns<NamedRow, "name" | "times" | "visits" | "worth" | "change"> = {
+const SORTS: SiteSortColumns<NamedRow, "name" | "times" | "visits" | "change"> = {
   name: { value: (row) => row.name, first: "asc" },
   times: { value: (row) => row.times, first: "desc" },
   visits: { value: (row) => row.visits, first: "desc" },
-  worth: { value: (row) => row.worth, first: "desc" },
   change: { value: (row) => changeOf(row.times, row.timesBefore), first: "desc" },
 };
 const nameOfRow = (row: { name: string }) => row.name;
@@ -179,26 +177,26 @@ const nameOfRow = (row: { name: string }) => row.name;
 /**
  * What counts as a conversion (board "Main", 2026-10-30): a row an event
  * this website counts, by its own name and Google's; how many times, the
- * visits that did it, what it was worth, and the change on the span before;
- * the busiest first, the search box above, "13 events" on its bar. Each row
- * opens the conversion's own screen. With `every`, on a website where
- * nothing counts yet, every event Google recorded instead (CV1).
+ * visits that did it, and the change on the span before — never its money
+ * (Anthony, 2026-11-03: "Take money off"); the busiest first, the search box
+ * above, "13 events" on its bar. Each row opens the conversion's own screen.
+ * With `every`, on a website where nothing counts yet, every event Google
+ * recorded instead (CV1).
  */
-function EventsTable({ status, worthOf, every = false }: { status: AnalyticsStatus; worthOf: (eventName: string) => number | null; every?: boolean }) {
+function EventsTable({ status, every = false }: { status: AnalyticsStatus; every?: boolean }) {
   const t = useTranslations("googleAnalytics.eventList");
   const tc = useTranslations("googleAnalytics.conversions");
   const router = useRouter();
   const args = useAnalyticsArgs();
   const hrefFor = useAnalyticsHref(args.siteId);
   const nameOf = useEventName();
-  const currency = status.connection?.currency ?? null;
   const answer = useQuery(api.googleAnalyticsEventReads.analyticsEvents, args);
   // Read for itself, so the page's eye is handed it here (sees-every-page-plan-2026-10-31.md).
   useSeesPart("eventsTable", answer);
   const [search, setSearch, term] = useSiteSearch();
   const named: NamedRow[] | undefined = answer?.rows
     .filter((row) => every || row.counted)
-    .map((row) => ({ ...row, name: nameOf(row.eventName), worth: worthOf(row.eventName) }));
+    .map((row) => ({ ...row, name: nameOf(row.eventName) }));
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = named?.filter((row) => !matches || matches(row.name) || matches(row.eventName));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "times", name: nameOfRow });
@@ -225,7 +223,6 @@ function EventsTable({ status, worthOf, every = false }: { status: AnalyticsStat
                 { header: t("csv.google"), value: (row) => row.eventName },
                 { header: tc("columns.conversions"), value: (row) => row.times },
                 { header: t("csv.visits"), value: (row) => row.visits },
-                { header: tc("columns.worth"), value: (row) => (row.worth === null ? null : row.worth / 100) },
                 { header: t("csv.change"), value: (row) => { const change = changeOf(row.times, row.timesBefore); return change === null ? null : Math.round(change * 1000) / 10; } },
               ]}
             />
@@ -254,13 +251,6 @@ function EventsTable({ status, worthOf, every = false }: { status: AnalyticsStat
         },
         { key: "times", header: tc("columns.conversions"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.times)}</span> },
         { key: "visits", header: tc("columns.visits"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.visits)}</span> },
-        {
-          key: "worth",
-          header: tc("columns.worth"),
-          align: "right",
-          sortable: true,
-          cell: (row) => (row.worth ? <span className="font-mono text-[12px] text-foreground">{formatMoney(row.worth, currency)}</span> : <span className="text-[12px] text-muted">–</span>),
-        },
         { key: "change", header: <span title={tc("columns.changeTitle")}>{t("columns.change")}</span>, align: "right", sortable: true, cell: (row) => <ChangeCell change={changeOf(row.times, row.timesBefore)} /> },
       ]}
     />

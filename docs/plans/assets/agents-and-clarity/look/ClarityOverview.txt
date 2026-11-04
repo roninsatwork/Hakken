@@ -18,7 +18,7 @@ chart-card: Recordings worth watching
 compact-list: Recording | From | Length | Pages | ·
 chart-card: Pages where visitors give up
 compact-list: Page | Visits | Scrolled | Change | Went straight back | ·
-chart-card: How far down each kind of page is scrolled
+chart-card: How far down each classification's pages are scrolled
 chart-card: Phones and computers
 compact-list: Device | Visits | Share | Scrolled | Change | Time engaged | Went straight back
 chart-card: Where visitors came from

@@ -15,7 +15,7 @@ chart-card: Each assistant's visits, by how Google Analytics filed them
 search: Find an assistant…
 filter: Filed as
 choice: Show: Assistants | Landing pages | Classifications | Key events
-table: Assistant | Visits | Filed elsewhere | Engaged | Conversions | Value | Change
+table: Assistant | Visits | Filed elsewhere | Engaged | Conversions | Change
   table-bar
     download: Download CSV
   table-footer

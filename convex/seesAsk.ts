@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { creditSeesPress } from "./creditHooks";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
-import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, type TenantMutationCtx } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
@@ -14,6 +14,7 @@ import { creditBalance, ensurePlanBatch, readCreditPrice } from "./creditLedger"
 import { creditsForUnits } from "./creditKinds";
 import { pageDataFor, pageFacts } from "./utils/sees/pageData";
 import { seesScreenFor } from "./utils/sees/screens";
+import { seesStageRowValidator, seesStageValidator, withStage } from "./utils/sees/stages";
 
 /**
  * What Hakken sees, asked of the Insights team when the eye is pressed
@@ -33,7 +34,12 @@ const answerValidator = v.object({
   writtenAt: v.union(v.number(), v.null()),
   /** The findings as Jev ordered them when the words were written; absent before code found any. */
   findings: v.optional(v.array(findingValidator)),
+  /** What the press has done so far, the last line being what it is doing now: only while it is writing. */
+  stages: v.optional(v.array(seesStageRowValidator)),
 });
+
+/** What a press says back: the key its answer is read by, and how that answer stands. */
+const pressedValidator = v.object({ key: v.string(), status: v.union(v.literal("RESEARCHING"), v.literal("WRITTEN"), v.literal("FAILED"), v.literal("NO_CREDITS")) });
 
 /** Whether a kept answer still stands: written within three hours, or being written within ten minutes. */
 export function stillStands(row: Pick<Doc<"seesAnswers">, "status" | "askedAt" | "writtenAt">, now: number): boolean {
@@ -63,70 +69,86 @@ export async function seesCreditsLeft(ctx: MutationCtx, companyId: Id<"companies
  */
 export const askSees = tenantMutation({
   args: seesAskValidator,
-  returns: v.object({ key: v.string(), status: v.union(v.literal("RESEARCHING"), v.literal("WRITTEN"), v.literal("FAILED"), v.literal("NO_CREDITS")) }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const key = seesKey(args);
-    const now = Date.now();
-    const screen = seesScreenFor(args.screen);
-    if (!screen) throw appError("INVALID_INPUT", "That page has no eye.");
-    if (!screen.writes) throw appError("INVALID_INPUT", "That page's words are the team's own: pressing writes nothing new.");
-    const data = args.data !== undefined ? pageDataFor(args.data, args.screen) : undefined;
-    // The page's own facts, or its figures keyed as the writer will name them.
-    const facts = (args.facts.length > 0 ? args.facts : pageFacts(args.screen, data, { ...(args.from ? { from: args.from } : {}), ...(args.to ? { to: args.to } : {}) }).facts.map(({ key: factKey, value, unit, label }) => ({ key: factKey, value, unit, label })))
-      .slice(0, MOST_SEES_FACTS);
-    const held = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).first();
-    // Kept three hours while nothing on the page changed (S3; Anthony: "dont cache if things change"): new figures, new words.
-    if (held && stillStands(held, now) && (held.status === "RESEARCHING" || sameFigures(held.facts, facts))) return { key, status: held.status };
-    if (!/^\/app\/[^\s]{1,300}$/.test(args.path)) throw appError("INVALID_INPUT", "The screen's address is not one of the app's.");
-    if (facts.length === 0) throw appError("INVALID_INPUT", "The page handed over no figures.");
-    const lead = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", INSIGHTS_LEAD_ROLE)).first();
-    if (!lead || lead.isActive === false) {
-      // No team to ask: the bubble keeps the rule's words, and nothing is kept.
-      return { key, status: "FAILED" as const };
-    }
-    const companyId = site.hold.companyId;
-    if (!(await seesCreditsLeft(ctx, companyId))) return { key, status: "NO_CREDITS" as const };
-    // The page's own words for what it is where it gave them (the Conversions screens'); the list's otherwise.
-    const about = args.facts.length > 0 && args.about.trim() ? args.about : screen.about;
-    const kept = { path: args.path, about, facts, links: args.links, shop: args.shop ?? false, askedBy: ctx.userId, ...(data !== undefined && data !== null ? { pageData: data } : {}) };
-    const answerId: Id<"seesAnswers"> = held
-      // A new press clears the last one's findings too: its answer shows its own, never the press before's.
-      ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, findings: undefined, week: weekOf(now), pageData: undefined, ...kept }), held._id)
-      : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), ...kept });
-    const runId = await ctx.db.insert("agentRuns", {
-      agentId: lead._id,
-      triggerType: "EVENT",
-      objective: `The eye on ${args.about} for ${site.website.host}: hand the page's figures to the right specialist, have the Editor check the words, and save the bubble.`,
-      title: `The eye: ${site.website.host}`,
-      status: "QUEUED",
-      companyId,
-      startedAt: now,
-      updatedAt: now,
-    });
-    await ctx.db.patch(answerId, { runId });
-    await ctx.scheduler.runAfter(0, internal.seesAskActions.writeSeesAnswer, {
-      runId,
-      answerId,
-      holdId,
-      companyId,
-      host: site.website.host,
-      screen: args.screen,
-      about,
-      period: args.period,
-      from: args.from,
-      to: args.to,
-      country: args.country,
-      device: args.device,
-      facts,
-      links: args.links,
-      shop: args.shop ?? false,
-      ...(data !== undefined && data !== null ? { data } : {}),
-    });
-    return { key, status: "RESEARCHING" as const };
-  },
+  returns: pressedValidator,
+  handler: async (ctx, args) => await startPress(ctx, args, false),
 });
+
+/**
+ * A super admin's refresh (Anthony, 2026-11-04: "force refresh the data and don't have to wait the 3 hours … this is for
+ * super admin only"): the words written again now, kept answer or not, on the page's figures as they stand. It is the
+ * platform checking its own work, so it spends none of the company's credits and needs none: what it cost stays on the
+ * run. An answer still being written is left to finish, never written twice at once.
+ */
+export const refreshSees = superAdminMutation({
+  args: seesAskValidator,
+  returns: pressedValidator,
+  handler: async (ctx, args) => await startPress(ctx, args, true),
+});
+
+/** A press: the kept answer where one stands (never for a refresh), or a new one started. */
+async function startPress(ctx: TenantMutationCtx, args: ObjectType<typeof seesAskValidator>, refresh: boolean) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const key = seesKey(args);
+  const now = Date.now();
+  const screen = seesScreenFor(args.screen);
+  if (!screen) throw appError("INVALID_INPUT", "That page has no eye.");
+  if (!screen.writes) throw appError("INVALID_INPUT", "That page's words are the team's own: pressing writes nothing new.");
+  const data = args.data !== undefined ? pageDataFor(args.data, args.screen) : undefined;
+  // The page's own facts, or its figures keyed as the writer will name them.
+  const facts = (args.facts.length > 0 ? args.facts : pageFacts(args.screen, data, { ...(args.from ? { from: args.from } : {}), ...(args.to ? { to: args.to } : {}) }).facts.map(({ key: factKey, value, unit, label }) => ({ key: factKey, value, unit, label })))
+    .slice(0, MOST_SEES_FACTS);
+  const held = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).first();
+  // Kept three hours while nothing on the page changed (S3; Anthony: "dont cache if things change"): new figures, new words.
+  if (held && stillStands(held, now) && (held.status === "RESEARCHING" || (!refresh && sameFigures(held.facts, facts)))) return { key, status: held.status };
+  if (!/^\/app\/[^\s]{1,300}$/.test(args.path)) throw appError("INVALID_INPUT", "The screen's address is not one of the app's.");
+  if (facts.length === 0) throw appError("INVALID_INPUT", "The page handed over no figures.");
+  const lead = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", INSIGHTS_LEAD_ROLE)).first();
+  if (!lead || lead.isActive === false) {
+    // No team to ask: the bubble keeps the rule's words, and nothing is kept.
+    return { key, status: "FAILED" as const };
+  }
+  const companyId = site.hold.companyId;
+  if (!refresh && !(await seesCreditsLeft(ctx, companyId))) return { key, status: "NO_CREDITS" as const };
+  // The page's own words for what it is where it gave them (the Conversions screens'); the list's otherwise.
+  const about = args.facts.length > 0 && args.about.trim() ? args.about : screen.about;
+  const kept = { path: args.path, about, facts, links: args.links, shop: args.shop ?? false, askedBy: ctx.userId, stages: [{ stage: "reading" as const }], ...(data !== undefined && data !== null ? { pageData: data } : {}) };
+  const uncharged = refresh ? { notCharged: true } : {};
+  const answerId: Id<"seesAnswers"> = held
+    // A new press clears the last one's findings too: its answer shows its own, never the press before's.
+    ? (await ctx.db.patch(held._id, { status: "RESEARCHING", says: [], steps: [], role: undefined, runId: undefined, askedAt: now, writtenAt: undefined, failedWhy: undefined, findings: undefined, week: weekOf(now), pageData: undefined, notCharged: undefined, ...kept, ...uncharged }), held._id)
+    : await ctx.db.insert("seesAnswers", { companyId, companyWebsiteId: holdId, key, screen: args.screen, status: "RESEARCHING", says: [], steps: [], askedAt: now, week: weekOf(now), ...kept, ...uncharged });
+  const runId = await ctx.db.insert("agentRuns", {
+    agentId: lead._id,
+    triggerType: "EVENT",
+    objective: `The eye on ${args.about} for ${site.website.host}: hand the page's figures to the right specialist, have the Editor check the words, and save the bubble.`,
+    title: `The eye: ${site.website.host}`,
+    status: "QUEUED",
+    companyId,
+    startedAt: now,
+    updatedAt: now,
+  });
+  await ctx.db.patch(answerId, { runId });
+  await ctx.scheduler.runAfter(0, internal.seesAskActions.writeSeesAnswer, {
+    runId,
+    answerId,
+    holdId,
+    companyId,
+    host: site.website.host,
+    screen: args.screen,
+    about,
+    period: args.period,
+    from: args.from,
+    to: args.to,
+    country: args.country,
+    device: args.device,
+    facts,
+    links: args.links,
+    shop: args.shop ?? false,
+    ...(data !== undefined && data !== null ? { data } : {}),
+  });
+  return { key, status: "RESEARCHING" as const };
+}
 
 /** The bubble's answer for a page, as it stands: null until the eye has asked. */
 export const seesAnswer = tenantQuery({
@@ -138,7 +160,22 @@ export const seesAnswer = tenantQuery({
     if (!row) return null;
     // An answer past its three hours reads as none: the next press writes afresh.
     if (!stillStands(row, Date.now()) && row.status !== "FAILED") return null;
-    return { status: row.status, says: row.says, steps: row.steps, role: row.role ?? null, writtenAt: row.writtenAt ?? null, ...(row.findings ? { findings: row.findings } : {}) };
+    return { status: row.status, says: row.says, steps: row.steps, role: row.role ?? null, writtenAt: row.writtenAt ?? null, ...(row.findings ? { findings: row.findings } : {}), ...(row.status === "RESEARCHING" && row.stages ? { stages: row.stages } : {}) };
+  },
+});
+
+/**
+ * A press has moved on to its next stage (`utils/sees/stages.ts`): the panel, reading the answer, shows it as it happens.
+ * Only for the press still writing this answer: a run overtaken by a newer press adds nothing to that press's list.
+ */
+export const noteSeesStage = internalMutation({
+  args: { answerId: v.id("seesAnswers"), runId: v.id("agentRuns"), stage: seesStageValidator, count: v.optional(v.number()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.answerId);
+    if (!row || row.status !== "RESEARCHING" || row.runId !== args.runId) return null;
+    await ctx.db.patch(args.answerId, { stages: withStage(row.stages ?? [], args.stage, args.count) });
+    return null;
   },
 });
 
@@ -168,7 +205,7 @@ export const saveSeesAnswer = internalMutation({
     });
     // New words written: the press is charged, once, with what the run cost us. A failed one, or one answered from the
     // three hours kept, costs nothing (ask-hakken-every-chart-plan-2026-10-31.md, §3).
-    if (args.status === "WRITTEN") await creditSeesPress(ctx, row);
+    if (args.status === "WRITTEN" && !row.notCharged) await creditSeesPress(ctx, row);
     return null;
   },
 });

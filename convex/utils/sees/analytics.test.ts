@@ -18,13 +18,9 @@ import {
   pageSees,
   pageStoryFacts,
   pathOfAddress,
-  trackingHealthSees,
-  trackingCheckSees,
   HEALTH_CHECKS_WITH_STEPS,
-  websitesSees,
   type ListRowFacts,
   type PageStoryFacts,
-  type WebsiteFacts,
 } from "./analytics";
 
 /**
@@ -40,67 +36,16 @@ function worded(screen: string, ...boxes: Seen[]) {
 }
 
 const row = (key: string, figures: Partial<ListRowFacts> = {}): ListRowFacts => ({
-  key, label: key, visits: 0, engagementRate: null, views: 0, conversions: 0, value: 0, change: null, conversionsBefore: null, ...figures,
-});
-
-describe("1 · Your websites", () => {
-  const ronins: WebsiteFacts = {
-    siteId: "s1", host: "ronins.co.uk", status: "CONNECTED", visits: 826, conversions: 12, value: 24_000,
-    visitsBefore: 744, valueBefore: 34_000, counting: true, failing: 3, checks: 8, unknownShare: 0.104,
-  };
-
-  test("value down though visits rose; tracking to fix; the website to open", () => {
-    const box = websitesSees([ronins]);
-    expect(box).toEqual({
-      says: [
-        { code: "fellVisitsUp", text: "ronins.co.uk", a: 24_000, b: 34_000, c: (826 - 744) / 744 },
-        { code: "unknown", text: "ronins.co.uk", a: 0.104 },
-      ],
-      steps: [
-        { code: "whereLost", text: "ronins.co.uk", link: "overview", to: { url: "/app/analytics/s1" } },
-        { code: "fixTracking", text: "ronins.co.uk", link: "trackingHealth", to: { url: "/app/analytics/s1/tracking-health" } },
-      ],
-    });
-    worded("websites", box);
-  });
-
-  test("the other ways it moved, a website not connected, nothing counted, nothing held", () => {
-    const other: WebsiteFacts = { ...ronins, siteId: "s2", host: "morehandles.co.uk", status: "NOT_CONNECTED", visits: null, conversions: null, value: null, visitsBefore: null, valueBefore: null, failing: 0, checks: 0, unknownShare: null };
-    const up = websitesSees([{ ...ronins, value: 40_000, failing: 1, unknownShare: null }, other]);
-    expect(up.says).toEqual([
-      { code: "value.up", text: "ronins.co.uk", a: 40_000, b: 34_000 },
-      { code: "tracking", text: "ronins.co.uk", a: 1, b: 8 },
-      { code: "notConnected", a: 1 },
-    ]);
-    expect(up.steps.map((step) => step.code)).toEqual(["open", "fixTracking", "connect"]);
-    expect(up.steps[2].to).toEqual({ url: "/app/analytics/s2/connection" });
-    const quiet = websitesSees([{ ...ronins, failing: 0, value: 34_000, visits: 600, unknownShare: null }]);
-    expect(quiet.says).toEqual([{ code: "value.same", text: "ronins.co.uk", a: 34_000, b: 34_000 }]);
-    const down = websitesSees([{ ...ronins, visits: 700, failing: 0 }]);
-    expect(down.says[0]).toMatchObject({ code: "value.down" });
-    const fresh = websitesSees([{ ...ronins, visitsBefore: null, valueBefore: null, failing: 0 }]);
-    expect(fresh.says).toEqual([{ code: "made", text: "ronins.co.uk", a: 24_000, b: 12 }]);
-    const counting = websitesSees([{ ...ronins, counting: false, failing: 0 }]);
-    expect(counting).toEqual({
-      says: [{ code: "notCounting", text: "ronins.co.uk", a: 826 }],
-      steps: [{ code: "count", text: "ronins.co.uk", link: "chooseWhatCounts", to: { url: "/app/analytics/s1/connection?change=1" } }],
-    });
-    expect(websitesSees([other])).toEqual({
-      says: [{ code: "noneConnected", a: 1 }],
-      steps: [{ code: "connect", text: "morehandles.co.uk", link: "connection", to: { url: "/app/analytics/s2/connection" } }],
-    });
-    expect(websitesSees([])).toEqual({ says: [{ code: "none" }], steps: [] });
-    worded("websites", up, quiet, down, fresh, counting, websitesSees([other]), websitesSees([]));
-  });
+  key, label: key, visits: 0, engagementRate: null, views: 0, conversions: 0, change: null, conversionsBefore: null, ...figures,
 });
 
 describe("2 · Overview", () => {
-  const now = { visits: 826, engaged: 410, conversions: 12, value: 24_000 };
-  const before = { visits: 744, engaged: 376, conversions: 17, value: 34_000 };
+  const now = { visits: 826, engaged: 410, conversions: 12 };
+  const before = { visits: 744, engaged: 376, conversions: 17 };
   const changedMost = [
-    { kind: "channel" as const, key: "Direct", label: "Direct", conversions: -6, value: -12_000, conversionsNow: 5 },
-    { kind: "landing" as const, key: "~0", label: "https://ronins.co.uk/", conversions: -3, value: -6_000, conversionsNow: 4 },
-    { kind: "landing" as const, key: "~1", label: "https://ronins.co.uk/author/anthony/", conversions: 2, value: 4_000, conversionsNow: 2 },
+    { kind: "channel" as const, key: "Direct", label: "Direct", conversions: -6, conversionsNow: 5 },
+    { kind: "landing" as const, key: "~0", label: "https://ronins.co.uk/", conversions: -3, conversionsNow: 4 },
+    { kind: "landing" as const, key: "~1", label: "https://ronins.co.uk/author/anthony/", conversions: 2, conversionsNow: 2 },
   ];
   const searchConsole = { clicks: 367, impressions: 264_403 };
   const SITE = "site_1";
@@ -155,7 +100,7 @@ describe("2 · Overview", () => {
       ],
     });
     const first = overviewSees({ siteId: SITE, now, before: null, counting: true, changedMost: [], searchConsole: null });
-    expect(first).toEqual({ says: [{ code: "made", a: 12, b: 24_000 }], steps: [] });
+    expect(first).toEqual({ says: [{ code: "made", a: 12 }], steps: [] });
     expect(overviewSees({ siteId: SITE, now: null, before: null, counting: true, changedMost: [], searchConsole: null })).toEqual({ says: [], steps: [] });
     worded("overview", ...boxes, rose, channelOnly, pageOnly, both, roseChannel, notCounting, first);
   });
@@ -163,18 +108,18 @@ describe("2 · Overview", () => {
 
 describe("4 · Channels", () => {
   const channels = [
-    row("Organic Search", { visits: 475, engagementRate: 0.526, conversions: 6, value: 12_000, change: 0.044, conversionsBefore: 6 }),
-    row("Direct", { visits: 226, engagementRate: 0.527, conversions: 5, value: 10_000, change: 0.051, conversionsBefore: 11 }),
+    row("Organic Search", { visits: 475, engagementRate: 0.526, conversions: 6, change: 0.044, conversionsBefore: 6 }),
+    row("Direct", { visits: 226, engagementRate: 0.527, conversions: 5, change: 0.051, conversionsBefore: 11 }),
     row("AI assistants", { visits: 61, engagementRate: 0.279, conversions: 0, change: 5.1, conversionsBefore: 0 }),
     row("Referral", { visits: 39, engagementRate: 0.436, change: -0.025, conversionsBefore: 0 }),
-    row("Unassigned", { visits: 12, engagementRate: 0, conversions: 1, value: 2_000, change: -0.368, conversionsBefore: 0 }),
+    row("Unassigned", { visits: 12, engagementRate: 0, conversions: 1, change: -0.368, conversionsBefore: 0 }),
   ];
 
-  test("Google's share of the value; direct converting less; AI assistants' visitors leaving", () => {
+  test("Google's share of the conversions; direct converting less; AI assistants' visitors leaving", () => {
     const box = channelsSees(channels);
     expect(box).toEqual({
       says: [
-        { code: "lead", text: "Organic Search", a: 475, b: 813, c: 12_000 },
+        { code: "lead", text: "Organic Search", a: 475, b: 813, c: 6 },
         { code: "fell", text: "Direct", a: 5, b: 11 },
         { code: "assistants", a: 61, b: 0.279, c: 0 },
       ],
@@ -187,21 +132,24 @@ describe("4 · Channels", () => {
     worded("channels", box);
   });
 
-  test("conversions up, assistants converting, nothing valued, no visits", () => {
+  test("conversions up, assistants converting, nothing converted, no visits", () => {
     const rising = channelsSees([row("Direct", { visits: 100, conversions: 4, conversionsBefore: 1 }), row("AI assistants", { visits: 20, engagementRate: 0.6, conversions: 2 })]);
     expect(rising.says).toEqual([
-      { code: "leadVisits", text: "Direct", a: 100, b: 120 },
+      { code: "lead", text: "Direct", a: 100, b: 120, c: 4 },
       { code: "rose", text: "Direct", a: 4, b: 1 },
       { code: "assistantsConverted", a: 20, b: 0.6, c: 2 },
     ]);
     expect(rising.steps).toEqual([]);
+    // Nothing converted: the channel bringing most visits leads.
+    const unconverted = channelsSees([row("Referral", { visits: 20 }), row("Direct", { visits: 100 })]);
+    expect(unconverted.says).toEqual([{ code: "leadVisits", text: "Direct", a: 100, b: 120 }]);
     expect(channelsSees([])).toEqual({ says: [{ code: "none" }], steps: [] });
-    worded("channels", rising, channelsSees([]));
+    worded("channels", rising, unconverted, channelsSees([]));
   });
 });
 
 describe("5 · A channel's own screen", () => {
-  const figures = { visits: 61, visitsBefore: 10, engaged: 17, conversions: 0, conversionsBefore: 0, value: 0, valueBefore: 0, siteVisits: 826, siteEngaged: 410 };
+  const figures = { visits: 61, visitsBefore: 10, engaged: 17, conversions: 0, conversionsBefore: 0, siteVisits: 826, siteEngaged: 410 };
   const assistants = [
     row("ChatGPT", { visits: 57, engagementRate: 0.298, change: (57 - 7) / 7, conversionsBefore: 0 }),
     row("Perplexity", { visits: 4, engagementRate: 0, change: 3, conversionsBefore: 0 }),
@@ -224,7 +172,7 @@ describe("5 · A channel's own screen", () => {
   });
 
   test("a source down, the same, new or unknown before; visitors that stay and convert; nothing from it", () => {
-    const staying = { ...figures, engaged: 50, conversions: 3, value: 6_000 };
+    const staying = { ...figures, engaged: 50, conversions: 3 };
     const boxes = [
       channelSees("Referral", [row("clutch.co", { visits: 30, change: -0.25, conversionsBefore: 0 })], staying, "s1"),
       channelSees("Referral", [row("clutch.co", { visits: 30, change: 0, conversionsBefore: 0 })], staying, "s1"),
@@ -237,7 +185,7 @@ describe("5 · A channel's own screen", () => {
       { code: "topNew", text: "clutch.co", a: 30 },
       { code: "topOnly", text: "clutch.co", a: 30 },
     ]);
-    expect(boxes[0].says.slice(1)).toEqual([{ code: "stayLonger", a: 50 / 61, b: 410 / 826 }, { code: "converted", a: 3, b: 6_000 }]);
+    expect(boxes[0].says.slice(1)).toEqual([{ code: "stayLonger", a: 50 / 61, b: 410 / 826 }, { code: "converted", a: 3 }]);
     expect(boxes[0].steps).toEqual([]);
     expect(channelSees("Email", [], null, "s1")).toEqual({ says: [{ code: "none", text: "Email" }], steps: [] });
     worded("channel", ...boxes, channelSees("Email", [], null, "s1"));
@@ -246,19 +194,19 @@ describe("5 · A channel's own screen", () => {
 
 describe("6 · Landing pages, and 17 · a device asked of Google", () => {
   const pages = [
-    row("~0", { label: "https://ronins.co.uk/", visits: 141, engagementRate: 0.61, conversions: 4, value: 8_000 }),
-    row("~1", { label: "https://ronins.co.uk/ai-agency/", visits: 84, engagementRate: 0.69, conversions: 3, value: 6_000 }),
+    row("~0", { label: "https://ronins.co.uk/", visits: 141, engagementRate: 0.61, conversions: 4 }),
+    row("~1", { label: "https://ronins.co.uk/ai-agency/", visits: 84, engagementRate: 0.69, conversions: 3 }),
     row("(not set)", { visits: 86, engagementRate: 0.035 }),
     row("~2", { label: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", visits: 188, engagementRate: 0.431 }),
-    row("~3", { label: "https://ronins.co.uk/venture-studio/", visits: 12, conversions: 1, value: 2_000 }),
+    row("~3", { label: "https://ronins.co.uk/venture-studio/", visits: 12, conversions: 1 }),
   ];
 
-  test("the guide bringing most visits and none converting; the pages making the money; the visits with no landing page", () => {
+  test("the guide bringing most visits and none converting; the pages bringing the most conversions; the visits with no landing page", () => {
     const box = landingSees(pages, { groups: false, device: "", everyDevice: null });
     expect(box).toEqual({
       says: [
         { code: "leakTop", text: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", a: 188 },
-        { code: "earners", text: "https://ronins.co.uk/", more: "https://ronins.co.uk/ai-agency/", a: 14_000, b: 16_000 },
+        { code: "topConverters", text: "https://ronins.co.uk/", more: "https://ronins.co.uk/ai-agency/", a: 7, b: 8 },
         { code: "notSet", a: 86, b: 86 / 511 },
       ],
       steps: [
@@ -269,27 +217,27 @@ describe("6 · Landing pages, and 17 · a device asked of Google", () => {
     worded("landing", box);
   });
 
-  test("a leak that is not the busiest, one earner, nothing converted, nothing at all", () => {
-    const leak = landingSees([row("~0", { visits: 300, conversions: 2, value: 1_000 }), row("~1", { visits: 60 })], { groups: false, device: "", everyDevice: null });
-    expect(leak.says).toEqual([{ code: "leak", text: "~1", a: 60 }, { code: "earner", text: "~0", a: 1_000, b: 1_000 }]);
+  test("a leak that is not the busiest, one page converting, nothing converted, nothing at all", () => {
+    const leak = landingSees([row("~0", { visits: 300, conversions: 2 }), row("~1", { visits: 60 })], { groups: false, device: "", everyDevice: null });
+    expect(leak.says).toEqual([{ code: "leak", text: "~1", a: 60 }, { code: "topConverter", text: "~0", a: 2, b: 2 }]);
     const quiet = landingSees([row("~0", { visits: 20 })], { groups: false, device: "", everyDevice: null });
     expect(quiet).toEqual({ says: [{ code: "noConversions", a: 20 }], steps: [] });
     expect(landingSees([], { groups: false, device: "", everyDevice: null }).says).toEqual([{ code: "none" }]);
     worded("landing", leak, quiet, landingSees([], { groups: false, device: "", everyDevice: null }));
   });
 
-  test("page groups: the group making the most, and the pages in none", () => {
+  test("page groups: the group bringing the most conversions, and the pages in none", () => {
     const groups = [
-      row("service", { label: "Service", visits: 172, conversions: 5, value: 10_000, members: 26 }),
+      row("service", { label: "Service", visits: 172, conversions: 5, members: 26 }),
       row("NOT_SORTED", { label: "NOT_SORTED", visits: 91, members: 6 }),
     ];
     const box = landingSees(groups, { groups: true, device: "", everyDevice: null });
     expect(box).toEqual({
-      says: [{ code: "groupLead", text: "Service", a: 10_000, b: 10_000 }, { code: "unsorted", a: 6, b: 91 }],
+      says: [{ code: "groupLead", text: "Service", a: 5, b: 5 }, { code: "unsorted", a: 6, b: 91 }],
       steps: [{ code: "seeUnsorted", a: 6, link: "unsortedPages", to: { segment: "funnel", filters: { view: "pages", group: "NOT_SORTED" } } }],
     });
     const none = landingSees([row("service", { label: "Service", visits: 3, members: 2 })], { groups: true, device: "", everyDevice: null });
-    expect(none).toEqual({ says: [{ code: "groupsNoValue", a: 1 }], steps: [] });
+    expect(none).toEqual({ says: [{ code: "groupsNone", a: 1 }], steps: [] });
     worded("landing", box, none);
   });
 
@@ -297,20 +245,20 @@ describe("6 · Landing pages, and 17 · a device asked of Google", () => {
     const every = [row("~2", { visits: 188, engagementRate: 0.43 }), row("~0", { visits: 141, engagementRate: 0.61 }), row("(not set)", { visits: 497 })];
     const phones = [
       row("~2", { visits: 31, engagementRate: 0.32 }),
-      row("~0", { visits: 25, engagementRate: 0.6, conversions: 2, value: 4_000 }),
+      row("~0", { visits: 25, engagementRate: 0.6, conversions: 2 }),
       row("(not set)", { visits: 62 }),
     ];
     const box = landingSees(phones, { groups: false, device: "mobile", everyDevice: every });
     expect(box).toEqual({
       says: [
         { code: "device.mobile", a: 118, b: 826, c: 2 },
-        { code: "allFrom", text: "~0", a: 2, b: 4_000 },
+        { code: "allFrom", text: "~0", a: 2 },
         { code: "engagesLess", text: "~2", a: 31, b: 0.32, c: 0.43 },
       ],
       steps: [{ code: "readOn.mobile", text: "~2", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~2" } } }],
     });
-    const desktop = landingSees([...phones, row("~3", { visits: 5, conversions: 1, value: 500 })], { groups: false, device: "desktop", everyDevice: every });
-    expect(desktop.says[1]).toEqual({ code: "mostFrom", text: "~0", a: 2, b: 4_000 });
+    const desktop = landingSees([...phones, row("~3", { visits: 5, conversions: 1 })], { groups: false, device: "desktop", everyDevice: every });
+    expect(desktop.says[1]).toEqual({ code: "mostFrom", text: "~0", a: 2 });
     const tablet = landingSees(phones, { groups: false, device: "tablet", everyDevice: every });
     worded("landing", box, desktop, tablet);
     expectAnalyticsWords("landing", { says: [], steps: ["desktop", "tablet"].map((device) => ({ code: `readOn.${device}`, text: "/", link: "seePage", to: { segment: "" } })) });
@@ -320,8 +268,8 @@ describe("6 · Landing pages, and 17 · a device asked of Google", () => {
 describe("8 · All pages", () => {
   // all-pages-rethink-plan.md AP6: never money; how pages moved, the biggest drop, the pages nobody visited.
   const pages = [
-    row("~0", { label: "https://ronins.co.uk/", views: 508, viewsBefore: 400, conversions: 2, value: 4_000 }),
-    row("~1", { label: "https://ronins.co.uk/ai-agency/", views: 318, viewsBefore: 400, conversions: 4, value: 8_000 }),
+    row("~0", { label: "https://ronins.co.uk/", views: 508, viewsBefore: 400, conversions: 2 }),
+    row("~1", { label: "https://ronins.co.uk/ai-agency/", views: 318, viewsBefore: 400, conversions: 4 }),
     row("~2", { label: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", views: 417, viewsBefore: 416 }),
     row("https://ronins.co.uk/web-design-surrey/", { label: "https://ronins.co.uk/web-design-surrey/", views: 0, viewsBefore: 0 }),
   ];
@@ -453,10 +401,10 @@ describe("21 · A page's own screen, redone (page-screen-redo-plan-2026-11-03.md
 
 describe("9 · Conversions and 16 · Nothing counted yet", () => {
   const kinds = [
-    { eventName: "form_submission", count: 12, countBefore: 17, setIn: "HAKKEN" },
-    { eventName: "live_chat_event", count: 0, countBefore: 0, setIn: "HAKKEN" },
-    { eventName: "phone_number_click", count: 0, countBefore: 0, setIn: "HAKKEN" },
-    { eventName: "email_link_click", count: 0, countBefore: 0, setIn: "HAKKEN" },
+    { eventName: "form_submission", count: 12, countBefore: 17 },
+    { eventName: "live_chat_event", count: 0, countBefore: 0 },
+    { eventName: "phone_number_click", count: 0, countBefore: 0 },
+    { eventName: "email_link_click", count: 0, countBefore: 0 },
   ];
 
   test("all were form submissions; chat, phone and email never happen; the share converting fell", () => {
@@ -472,15 +420,15 @@ describe("9 · Conversions and 16 · Nothing counted yet", () => {
     worded("conversions", box);
   });
 
-  test("several kinds, one with no value, the share rising, none happened", () => {
+  test("several kinds, the share rising, none happened; never asks what one is worth", () => {
     const several = conversionsSees({
       from: "2026-09-10", visits: 500, visitsBefore: 1000,
-      kinds: [{ eventName: "generate_lead", count: 5, countBefore: 2, setIn: "HAKKEN" }, { eventName: "click_tel", count: 2, countBefore: 1, setIn: null }],
+      kinds: [{ eventName: "generate_lead", count: 5, countBefore: 2 }, { eventName: "click_tel", count: 2, countBefore: 1 }],
       fired: [],
     });
     expect(several).toEqual({
       says: [{ code: "topKind", text: "generate_lead", a: 5, b: 7 }, { code: "rateUp", a: 3 / 1000, b: 7 / 500 }],
-      steps: [{ code: "setValue", text: "click_tel", a: 1, link: "changeWhatCounts", to: { segment: "connection", filters: { change: "1" } } }],
+      steps: [],
     });
     const none = conversionsSees({ from: "2026-09-10", visits: 500, visitsBefore: null, kinds: kinds.map((kind) => ({ ...kind, count: 0 })), fired: [] });
     expect(none.says).toEqual([{ code: "noneHappened", a: 4 }]);
@@ -490,7 +438,7 @@ describe("9 · Conversions and 16 · Nothing counted yet", () => {
 
   test("with the flow and the actions (ga-conversions-visitors-plan.md CV6): where they came from, the biggest channel converting nothing, the form not counted", () => {
     // ronins.co.uk's last 30 days: three Contacts, all typed in to the home page; search converting nothing; forms not counted.
-    const contact = [{ eventName: "contact", count: 3, countBefore: 3, setIn: "HAKKEN" }, ...kinds.slice(1)];
+    const contact = [{ eventName: "contact", count: 3, countBefore: 3 }, ...kinds.slice(1)];
     const flow = {
       visits: 249,
       channels: [{ key: "Organic Search", visits: 192, conversions: 0 }, { key: "Direct", visits: 40, conversions: 3 }, { key: "~more", visits: 17, conversions: 0 }],
@@ -510,7 +458,7 @@ describe("9 · Conversions and 16 · Nothing counted yet", () => {
     ]);
     // Spread across channels: most from one; the action above the website's rate on enough people; the form not counted.
     const spread = conversionsSees({
-      from: "2026-09-14", visits: 1000, visitsBefore: null, kinds: [{ eventName: "contact", count: 10, countBefore: null, setIn: "HAKKEN" }], fired: [{ eventName: "form_submission", count: 7 }],
+      from: "2026-09-14", visits: 1000, visitsBefore: null, kinds: [{ eventName: "contact", count: 10, countBefore: null }], fired: [{ eventName: "form_submission", count: 7 }],
       flow: { visits: 1000, channels: [{ key: "Organic Search", visits: 700, conversions: 6 }, { key: "Direct", visits: 300, conversions: 4 }], kinds: [{ kind: "service", visits: 600, conversions: 7 }, { kind: "brand", visits: 400, conversions: 3 }] },
       before,
     });
@@ -519,7 +467,7 @@ describe("9 · Conversions and 16 · Nothing counted yet", () => {
       { code: "cameMost", a: 6, b: 10, text: "Organic Search", more: "service" },
       { code: "beforeBest", text: "scroll", a: 19 / 702, b: 0.015 },
     ]);
-    const quiet = conversionsSees({ from: "2026-09-14", visits: 1000, visitsBefore: null, kinds: [{ eventName: "contact", count: 10, countBefore: null, setIn: "HAKKEN" }], fired: [{ eventName: "form_submission", count: 7 }] });
+    const quiet = conversionsSees({ from: "2026-09-14", visits: 1000, visitsBefore: null, kinds: [{ eventName: "contact", count: 10, countBefore: null }], fired: [{ eventName: "form_submission", count: 7 }] });
     expect(quiet.says).toEqual([{ code: "allOne", text: "contact", a: 10 }, { code: "uncounted", text: "form_submission", a: 7 }]);
     worded("conversions", box, spread, quiet);
   });
@@ -538,105 +486,10 @@ describe("9 · Conversions and 16 · Nothing counted yet", () => {
 });
 
 describe("10 · Tracking health", () => {
-  const checks = [
-    { check: "NOTHING_COUNTED", passing: true },
-    { check: "NO_VALUE", passing: true },
-    { check: "TRACKING_STOPPED", passing: true },
-    { check: "SUDDEN_FALL", passing: false, names: ["conversions"], share: 0.53 },
-    { check: "SELF_REFERRAL", passing: true },
-    { check: "PAYMENT_REFERRALS", passing: true },
-    { check: "TOO_MUCH_UNKNOWN", passing: false, share: 0.104, count: 86 },
-    { check: "STRANGERS", passing: false, names: ["nclnet.org"], count: 38 },
-  ];
-
-  test("three of eight fail: the unknown visits first, then the sudden fall, and how to fix each", () => {
-    const box = trackingHealthSees({ checks });
-    expect(box).toEqual({
-      says: [
-        { code: "failing", a: 3, b: 8 },
-        { code: "check.TOO_MUCH_UNKNOWN", a: 0.104, b: 86 },
-        { code: "check.SUDDEN_FALL.conversions", a: 0.53, b: 0 },
-      ],
-      steps: [
-        { code: "fix.TOO_MUCH_UNKNOWN", link: "landingPages", to: { segment: "funnel" } },
-        { code: "fix.SUDDEN_FALL", link: "conversions", to: { segment: "conversions" } },
-        { code: "fix.STRANGERS", link: "connection", to: { segment: "connection" } },
-      ],
-    });
-    worded("trackingHealth", box);
-  });
-
-  test("every check has its sentence and its fix; all passing; not checked yet", () => {
-    // Every check Tracking health runs, so one added without its words fails here (check 9 had none until 2026-10-13).
-    const events = new Set(["NO_VALUE", "SOMETHING_ELSE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS"]);
-    for (const check of HEALTH_CHECKS) {
-      const box = trackingHealthSees({ checks: [{ check, passing: false, names: events.has(check) ? ["click_email"] : ["visits"], others: ["click"], count: 3, share: 0.2 }] });
-      expect(box.says[1].code.startsWith(`check.${check}`)).toBe(true);
-      expect(box.steps).toHaveLength(1);
-      worded("trackingHealth", box);
-    }
-    expect(trackingHealthSees({ checks: checks.map((check) => ({ ...check, passing: true })) })).toEqual({ says: [{ code: "allPassing", a: 8 }], steps: [] });
-    expect(trackingHealthSees(null)).toEqual({ says: [], steps: [] });
-    worded("trackingHealth", trackingHealthSees({ checks: [{ check: "NOTHING_COUNTED", passing: true }] }));
-  });
-
-  test("ronins.co.uk before 2026-10-13: Form sent is its link clicks, its forms uncounted, its chat, phone and email silent", () => {
-    const box = trackingHealthSees({ checks: [
-      { check: "SOMETHING_ELSE", passing: false, names: ["form_submission"], others: ["click"], count: 7 },
-      { check: "ENQUIRY_UNCOUNTED", passing: false, names: ["contact"], count: 179 },
-      { check: "NEVER_HAPPENS", passing: false, names: ["live_chat_event", "phone_number_click", "email_link_click"], count: 90 },
-    ] });
-    expect(box).toEqual({
-      says: [
-        { code: "failing", a: 3, b: 3 },
-        // Both named in the reader's words: "“Form sent” and “Clicked a link to another website” match on each of the last 7 days…".
-        { code: "check.SOMETHING_ELSE", a: 7, b: 7, text: "form_submission,click", c: 1 },
-        { code: "check.ENQUIRY_UNCOUNTED", a: 179, b: 179, text: "contact", c: 1 },
-      ],
-      steps: [
-        { code: "fix.SOMETHING_ELSE", link: "conversions", to: { segment: "conversions" } },
-        { code: "fix.ENQUIRY_UNCOUNTED", link: "chooseWhatCounts", to: { segment: "connection", filters: { change: "1" } } },
-        { code: "fix.NEVER_HAPPENS", link: "conversions", to: { segment: "conversions" } },
-      ],
-    });
-    worded("trackingHealth", box);
-  });
-});
-
-describe("10 · A tracking health check's own screen (ga-tracking-health-plan.md TH2)", () => {
-  test("ronins.co.uk's conversions that never happen: what it found, why it matters, and three steps", () => {
-    const box = trackingCheckSees({ check: "NEVER_HAPPENS", passing: false, names: ["live_chat_event", "phone_number_click", "email_link_click"], count: 90 }, "ronins.co.uk");
-    expect(box).toEqual({
-      says: [
-        { code: "check.NEVER_HAPPENS", a: 90, b: 90, text: "live_chat_event,phone_number_click,email_link_click", c: 3 },
-        { code: "why.NEVER_HAPPENS" },
-      ],
-      steps: [
-        // Try each one on the website itself, look for it in Google Analytics, then check Conversions.
-        { code: "step.NEVER_HAPPENS.s1", text: "live_chat_event,phone_number_click,email_link_click", c: 3, link: "yourWebsite", to: { url: "https://ronins.co.uk/" } },
-        { code: "step.NEVER_HAPPENS.s2", text: "live_chat_event,phone_number_click,email_link_click", c: 3, link: "googleAnalytics", to: { url: "https://analytics.google.com/" } },
-        { code: "step.NEVER_HAPPENS.s3", text: "live_chat_event,phone_number_click,email_link_click", c: 3, link: "conversions", to: { segment: "conversions" } },
-      ],
-    });
-    worded("trackingHealth", box);
-  });
-
-  test("every check has its steps and its words, failing or passing; an unknown check says nothing", () => {
-    // Every check Tracking health runs has a screen of its own: one added without its steps fails here.
+  // Its eye went on 2026-11-04 (Anthony, 2026-11-03: "We dont need the eye on non website data related pages"); its
+  // check's own screen still knows every check.
+  test("a check's own screen knows every check", () => {
     expect([...HEALTH_CHECKS_WITH_STEPS].sort()).toEqual([...HEALTH_CHECKS].sort());
-    const events = new Set(["NO_VALUE", "SOMETHING_ELSE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS"]);
-    for (const check of HEALTH_CHECKS) {
-      const box = trackingCheckSees({ check, passing: false, names: events.has(check) ? ["click_email"] : ["visits"], others: ["click"], count: 3, share: 0.2 }, "acme-shop.test");
-      expect(box.says.map((phrase) => phrase.code)).toEqual([expect.stringMatching(new RegExp(`^check\\.${check}`)), `why.${check}`]);
-      expect(box.steps.length).toBeGreaterThan(0);
-      expect(box.steps.map((step) => step.code)).toEqual(box.steps.map((_, at) => `step.${check}.s${at + 1}`));
-      worded("trackingHealth", box);
-      const passing = trackingCheckSees({ check, passing: true }, "acme-shop.test");
-      expect(passing).toEqual({ says: [{ code: `passing.${check}` }], steps: [] });
-      worded("trackingHealth", passing);
-    }
-    expect(trackingCheckSees({ check: "NOT_A_CHECK", passing: false }, "acme-shop.test")).toEqual({ says: [], steps: [] });
-    expect(trackingCheckSees(null, "acme-shop.test")).toEqual({ says: [], steps: [] });
   });
 });
 

@@ -7,7 +7,7 @@ figures
   figure: To merge or redirect
   figure: To remove
   figure: To keep
-chart-card: What to do with your pages, by kind of page
+chart-card: What to do with your pages, by classification
 chart-card: Enquiries a year, the pages in the plan
 search: Search pages
 filter: What to do
@@ -17,7 +17,7 @@ table: Page | Should win | What to do | Why
   table-footer
 search: Find a page…
 filter: Decision
-table: Page | Kind of page | Decision | Why | Visits, # months | Enquiries, # months | Google clicks, # days | Websites linking
+table: Page | Classification | Decision | Why | Visits, # months | Enquiries, # months | Google clicks, # days | Websites linking
   table-bar: Each page's decision
     download: Download CSV
   table-footer

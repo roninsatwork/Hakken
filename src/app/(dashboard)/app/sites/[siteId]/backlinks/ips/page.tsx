@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Server } from "lucide-react";
@@ -15,6 +16,7 @@ import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { ipsSees } from "@/convex/utils/sees/backlinks";
 import { SiteSees } from "../../../_components/SiteSees";
+import { ipsSees as ipsFigures } from "../_components/linkSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
@@ -56,6 +58,14 @@ export default function SiteReferringIpsPage() {
   // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
+  // Every server summed on the server, for the eye (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10: "One
+  // network holds 14% of linking websites"): the table shows one page of them. Skipped on a competitor, whose are not bought.
+  const figures = useQuery(api.siteLinkLists.serverFigures, competitor ? "skip" : { siteId });
+  const tn = useTranslations("sites.seesNames");
+  const sees = useMemo(
+    () => ipsFigures(profile, subnets, table.result, figures, { oneWebsite: tn("oneWebsite"), busiestThree: tn("busiestThree") }),
+    [profile, subnets, table.result, figures, tn],
+  );
   const heldIps = !term && !subnet ? table.result?.total : undefined;
 
   // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
@@ -74,7 +84,7 @@ export default function SiteReferringIpsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Server className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksIps" seen={profile === undefined || subnets === undefined ? undefined : ipsSees(profile, subnets)} data={profile && subnets && { profile, subnets, totals, ips: table.result }} />
+      <SiteSees screen="backlinksIps" seen={profile === undefined || subnets === undefined ? undefined : ipsSees(profile, subnets)} data={sees} />
       <ListHeldLine held={!term && !subnet ? table.result?.total : undefined} total={totals?.ips} />
 
       <SiteChartCard

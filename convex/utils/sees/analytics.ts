@@ -17,8 +17,8 @@ import type { PageBoxes } from "../../googleAnalyticsPageBoxes";
  * DS5) — most important first, sent as codes with their numbers for the
  * screen's words (`googleAnalytics.seen.<screen>`).
  *
- * Numbers go as they are, money in hundredths (`{aMoney}`), shares as
- * fractions (`{aRate}`). A conversion's own name goes as its event in `text`,
+ * Numbers go as they are, shares as fractions (`{aRate}`); never money
+ * (Anthony, 2026-11-03: "Take money off"). A conversion's own name goes as its event in `text`,
  * several joined by commas, for the screen to name in the reader's words
  * (`{event}`). A page goes as its address, or its shared page number (`~…`)
  * for the query to name (`namedSeen`): the box shows its path.
@@ -71,73 +71,15 @@ function visitsMove(now: number, before: number): { way: "up" | "down" | "same";
   return { way: Math.abs(share) < STEADY_SHARE ? "same" : share > 0 ? "up" : "down", share: Math.abs(share) };
 }
 
-const byValue = <Row extends { value: number; visits: number }>(left: Row, right: Row) => right.value - left.value || right.visits - left.visits;
+const byConversions = <Row extends { conversions: number; visits: number }>(left: Row, right: Row) => right.conversions - left.conversions || right.visits - left.visits;
 const byVisits = <Row extends { visits: number }>(left: Row, right: Row) => right.visits - left.visits;
 const sum = <Row>(rows: readonly Row[], of: (row: Row) => number) => rows.reduce((total, row) => total + of(row), 0);
-
-// ---------------------------------------------------------------------------
-// 1 · Your websites
-// ---------------------------------------------------------------------------
-
-export type WebsiteFacts = {
-  siteId: string;
-  host: string;
-  status: string;
-  visits: number | null;
-  conversions: number | null;
-  value: number | null;
-  /** The 30 days before, when held. */
-  visitsBefore: number | null;
-  valueBefore: number | null;
-  /** Whether anything counts as a conversion. */
-  counting: boolean;
-  /** Tracking health: checks failing of all, and the unknown share when that check fails. */
-  failing: number;
-  checks: number;
-  unknownShare: number | null;
-};
-
-/** Your websites: the website making the most and how it moved, its tracking, and the websites not connected yet. */
-export function websitesSees(rows: readonly WebsiteFacts[]): Seen {
-  if (rows.length === 0) return seen([{ code: "none" }]);
-  const page = (row: WebsiteFacts, segment = "") => ({ url: `/app/analytics/${row.siteId}${segment ? `/${segment}` : ""}` });
-  const unconnected = rows.filter((row) => row.status === "NOT_CONNECTED");
-  const held = rows.filter((row) => row.visits !== null).sort((left, right) => (right.value ?? 0) - (left.value ?? 0) || (right.visits ?? 0) - (left.visits ?? 0));
-  const connect: Maybe<SeenStep> = unconnected[0] && { code: "connect", text: unconnected[0].host, link: "connection", to: page(unconnected[0], "connection") };
-  if (held.length === 0) return seen([{ code: "noneConnected", a: rows.length }], [connect]);
-  const lead = held[0];
-  const fell = lead.valueBefore !== null && (lead.value ?? 0) < lead.valueBefore;
-  const leadSays = (): SeenPhrase => {
-    const visits = lead.visits ?? 0;
-    const value = lead.value ?? 0;
-    if (!lead.counting) return { code: "notCounting", text: lead.host, a: visits };
-    if (lead.valueBefore === null || lead.visitsBefore === null) return { code: "made", text: lead.host, a: value, b: lead.conversions ?? 0 };
-    const visitsWay = visitsMove(visits, lead.visitsBefore);
-    const valueWay = direction(value, lead.valueBefore);
-    if (valueWay === "down" && visitsWay.way === "up") return { code: "fellVisitsUp", text: lead.host, a: value, b: lead.valueBefore, c: visitsWay.share };
-    return { code: `value.${valueWay}`, text: lead.host, a: value, b: lead.valueBefore };
-  };
-  const shaky = [lead, ...held.slice(1)].find((row) => row.failing > 0) ?? null;
-  const says: Array<Maybe<SeenPhrase>> = [
-    leadSays(),
-    shaky && (shaky.unknownShare !== null
-      ? { code: "unknown", text: shaky.host, a: shaky.unknownShare }
-      : { code: "tracking", text: shaky.host, a: shaky.failing, b: shaky.checks }),
-    unconnected.length > 0 && { code: "notConnected", a: unconnected.length },
-  ];
-  const steps: Array<Maybe<SeenStep>> = [
-    { code: !lead.counting ? "count" : fell ? "whereLost" : "open", text: lead.host, link: lead.counting ? "overview" : "chooseWhatCounts", to: lead.counting ? page(lead) : page(lead, "connection?change=1") },
-    shaky && { code: "fixTracking", text: shaky.host, link: "trackingHealth", to: page(shaky, "tracking-health") },
-    connect,
-  ];
-  return seen(says, steps);
-}
 
 // ---------------------------------------------------------------------------
 // 2 · Overview (and 18 · Needs reconnecting, over the figures kept)
 // ---------------------------------------------------------------------------
 
-type Figures = { visits: number; engaged: number; conversions: number; value: number };
+type Figures = { visits: number; engaged: number; conversions: number };
 
 export type OverviewFacts = {
   /** The website's hold: Search Console's screens for it share the id. */
@@ -147,7 +89,7 @@ export type OverviewFacts = {
   /** Whether anything counts as a conversion. */
   counting: boolean;
   /** What changed most, biggest first: the change, and the conversions now. */
-  changedMost: ReadonlyArray<{ kind: "landing" | "channel"; key: string; label: string; conversions: number; value: number; conversionsNow: number }>;
+  changedMost: ReadonlyArray<{ kind: "landing" | "channel"; key: string; label: string; conversions: number; conversionsNow: number }>;
   /** Search Console's last 30 days, when it is connected. */
   searchConsole: { clicks: number; impressions: number } | null;
 };
@@ -169,7 +111,7 @@ export function overviewSees(facts: OverviewFacts): Seen {
   if (!facts.counting) {
     return seen([{ code: "notCounting", a: now.visits }, google], [{ code: "chooseWhatCounts", link: "chooseWhatCounts", to: CHOOSE }, push]);
   }
-  if (!before) return seen([{ code: "made", a: now.conversions, b: now.value }, google], [push]);
+  if (!before) return seen([{ code: "made", a: now.conversions }, google], [push]);
   const conversions = direction(now.conversions, before.conversions);
   const visits = visitsMove(now.visits, before.visits);
   const sign = conversions === "down" ? -1 : 1;
@@ -208,7 +150,6 @@ export type ListRowFacts = {
   engagementRate: number | null;
   views: number;
   conversions: number;
-  value: number;
   /** Visits against the span before, as a fraction. */
   change: number | null;
   conversionsBefore: number | null;
@@ -222,14 +163,14 @@ function visitsBeforeOf(row: ListRowFacts): number | null {
   return row.change === null ? null : Math.round(row.visits / (1 + row.change));
 }
 
-/** Channels: the channel making the most, the one converting less than before, and AI assistants' visits. */
+/** Channels: the channel bringing the most conversions, the one converting less than before, and AI assistants' visits. */
 export function channelsSees(rows: readonly ListRowFacts[]): Seen {
   if (rows.length === 0) return seen([{ code: "none" }]);
   const visits = sum(rows, (row) => row.visits);
   const engaged = sum(rows, (row) => row.visits * (row.engagementRate ?? 0));
   const siteRate = visits > 0 ? engaged / visits : 0;
-  const value = sum(rows, (row) => row.value);
-  const lead = [...rows].sort(byValue)[0];
+  const conversions = sum(rows, (row) => row.conversions);
+  const lead = [...rows].sort(byConversions)[0];
   const moved = rows
     .filter((row) => row.conversionsBefore !== null && row.conversions !== row.conversionsBefore)
     .map((row) => ({ row, by: row.conversions - (row.conversionsBefore ?? 0) }));
@@ -238,8 +179,8 @@ export function channelsSees(rows: readonly ListRowFacts[]): Seen {
   const assistants = rows.find((row) => row.label === AI_ASSISTANTS_CHANNEL && row.visits > 0) ?? null;
   const unassigned = rows.find((row) => row.label === "Unassigned" && row.visits > 0) ?? null;
   const says: Array<Maybe<SeenPhrase>> = [
-    value > 0 && lead.value > 0
-      ? { code: "lead", text: lead.label, a: lead.visits, b: visits, c: lead.value }
+    conversions > 0 && lead.conversions > 0
+      ? { code: "lead", text: lead.label, a: lead.visits, b: visits, c: lead.conversions }
       : { code: "leadVisits", text: [...rows].sort(byVisits)[0].label, a: [...rows].sort(byVisits)[0].visits, b: visits },
     fell ? { code: "fell", text: fell.row.label, a: fell.row.conversions, b: fell.row.conversionsBefore ?? 0 }
       : rose && { code: "rose", text: rose.row.label, a: rose.row.conversions, b: rose.row.conversionsBefore ?? 0 },
@@ -261,8 +202,6 @@ export type ChannelFigures = {
   engaged: number;
   conversions: number;
   conversionsBefore: number | null;
-  value: number;
-  valueBefore: number | null;
   siteVisits: number;
   siteEngaged: number;
 };
@@ -281,7 +220,7 @@ export function channelSees(channel: string, rows: readonly ListRowFacts[], figu
       ? { code: top.change === null && top.conversionsBefore !== null ? "topNew" : "topOnly", text: top.label, a: top.visits }
       : { code: `top.${direction(top.visits, before)}`, text: top.label, a: top.visits, b: before },
     leaves ? { code: "leaveSooner", a: rate, b: siteRate ?? 0 } : stays && { code: "stayLonger", a: rate, b: siteRate ?? 0 },
-    figures.conversions > 0 ? { code: "converted", a: figures.conversions, b: figures.value } : { code: "noneConverted" },
+    figures.conversions > 0 ? { code: "converted", a: figures.conversions } : { code: "noneConverted" },
   ];
   const steps: Array<Maybe<SeenStep>> = [
     (figures.conversions === 0 || leaves) && { code: "nextStep", text: top.label, link: "landingPages", to: toPage("funnel") },
@@ -299,27 +238,27 @@ export type LandingFacts = {
   everyDevice: readonly ListRowFacts[] | null;
 };
 
-/** Landing pages: the busiest page that converts nothing, the pages that make the money, and the visits with no landing page. */
+/** Landing pages: the busiest page that converts nothing, the pages bringing the most conversions, and the visits with no landing page. */
 export function landingSees(rows: readonly ListRowFacts[], facts: LandingFacts): Seen {
   if (rows.length === 0) return seen([{ code: "none" }]);
   if (facts.groups) return groupsSees(rows);
   if (facts.device && facts.everyDevice) return deviceSees(rows, facts.device, facts.everyDevice);
   const visits = sum(rows, (row) => row.visits);
-  const value = sum(rows, (row) => row.value);
+  const conversions = sum(rows, (row) => row.conversions);
   const pages = rows.filter((row) => row.key !== NOT_SET);
   const busiest = [...pages].sort(byVisits)[0] ?? null;
   const leak = [...pages].filter((row) => row.conversions === 0 && row.visits >= LEAK_VISITS).sort(byVisits)[0] ?? null;
-  const earners = [...pages].filter((row) => row.value > 0).sort(byValue);
+  const converters = [...pages].filter((row) => row.conversions > 0).sort(byConversions);
   const notSet = rows.find((row) => row.key === NOT_SET) ?? null;
   const unknown = notSet && visits > 0 && notSet.visits / visits > UNKNOWN_SHARE ? notSet : null;
   const leakTo = leak ? pageTarget(leak.key) : null;
   const says: Array<Maybe<SeenPhrase>> = [
     leak && { code: leak === busiest ? "leakTop" : "leak", text: leak.label, a: leak.visits },
-    earners.length > 1
-      ? { code: "earners", text: earners[0].label, more: earners[1].label, a: earners[0].value + earners[1].value, b: value }
-      : earners.length === 1 && { code: "earner", text: earners[0].label, a: earners[0].value, b: value },
+    converters.length > 1
+      ? { code: "topConverters", text: converters[0].label, more: converters[1].label, a: converters[0].conversions + converters[1].conversions, b: conversions }
+      : converters.length === 1 && { code: "topConverter", text: converters[0].label, a: converters[0].conversions, b: conversions },
     unknown && { code: "notSet", a: unknown.visits, b: unknown.visits / visits },
-    !leak && earners.length === 0 && { code: "noConversions", a: visits },
+    !leak && converters.length === 0 && { code: "noConversions", a: visits },
   ];
   const steps: Array<Maybe<SeenStep>> = [
     leak && leakTo && { code: "nextStep", text: leak.label, link: "seePage", to: leakTo },
@@ -328,13 +267,13 @@ export function landingSees(rows: readonly ListRowFacts[], facts: LandingFacts):
   return seen(says, steps);
 }
 
-/** Landing pages by page group: the group making the most, and the pages in none. */
+/** Landing pages by page group: the group bringing the most conversions, and the pages in none. */
 function groupsSees(rows: readonly ListRowFacts[]): Seen {
-  const value = sum(rows, (row) => row.value);
-  const lead = [...rows].filter((row) => row.key !== NOT_SORTED && row.value > 0).sort(byValue)[0] ?? null;
+  const conversions = sum(rows, (row) => row.conversions);
+  const lead = [...rows].filter((row) => row.key !== NOT_SORTED && row.conversions > 0).sort(byConversions)[0] ?? null;
   const unsorted = rows.find((row) => row.key === NOT_SORTED && (row.members ?? 0) > 0) ?? null;
   return seen([
-    lead ? { code: "groupLead", text: lead.label, a: lead.value, b: value } : { code: "groupsNoValue", a: rows.length },
+    lead ? { code: "groupLead", text: lead.label, a: lead.conversions, b: conversions } : { code: "groupsNone", a: rows.length },
     unsorted && { code: "unsorted", a: unsorted.members ?? 0, b: unsorted.visits },
   ], [
     unsorted && { code: "seeUnsorted", a: unsorted.members ?? 0, link: "unsortedPages", to: toPage("funnel", { view: "pages", group: NOT_SORTED }) },
@@ -346,14 +285,14 @@ function deviceSees(rows: readonly ListRowFacts[], device: string, every: readon
   const visits = sum(rows, (row) => row.visits);
   const conversions = sum(rows, (row) => row.conversions);
   const pages = rows.filter((row) => row.key !== NOT_SET);
-  const earner = [...pages].filter((row) => row.conversions > 0).sort(byValue)[0] ?? null;
+  const earner = [...pages].filter((row) => row.conversions > 0).sort(byConversions)[0] ?? null;
   const top = [...pages].sort(byVisits)[0] ?? null;
   const everyTop = top ? every.find((row) => row.key === top.key) ?? null : null;
   const less = top && everyTop && top.engagementRate !== null && everyTop.engagementRate !== null && top.engagementRate < everyTop.engagementRate - ENGAGEMENT_GAP;
   const topTo = top ? pageTarget(top.key) : null;
   return seen([
     { code: `device.${device}`, a: visits, b: sum(every, (row) => row.visits), c: conversions },
-    earner && { code: earner.conversions === conversions ? "allFrom" : "mostFrom", text: earner.label, a: earner.conversions, b: earner.value },
+    earner && { code: earner.conversions === conversions ? "allFrom" : "mostFrom", text: earner.label, a: earner.conversions },
     less && top && everyTop && { code: "engagesLess", text: top.label, a: top.visits, b: top.engagementRate ?? 0, c: everyTop.engagementRate ?? 0 },
   ], [
     less && top && topTo && { code: `readOn.${device}`, text: top.label, link: "seePage", to: topTo },
@@ -563,7 +502,7 @@ export type ConversionsFacts = {
   from: string | null;
   visits: number;
   visitsBefore: number | null;
-  kinds: ReadonlyArray<{ eventName: string; count: number; countBefore: number | null; setIn: string | null }>;
+  kinds: ReadonlyArray<{ eventName: string; count: number; countBefore: number | null }>;
   /** The key events not counted that happened, most first. */
   fired: ReadonlyArray<{ eventName: string; count: number }>;
   /**
@@ -598,7 +537,6 @@ export function conversionsSees(facts: ConversionsFacts): Seen {
   }
   const happened = [...facts.kinds].filter((kind) => kind.count > 0).sort((left, right) => right.count - left.count);
   const silent = facts.kinds.filter((kind) => kind.count === 0);
-  const unvalued = happened.filter((kind) => kind.setIn === null);
   const total = sum(happened, (kind) => kind.count);
   const before = facts.kinds.every((kind) => kind.countBefore !== null) ? sum(facts.kinds, (kind) => kind.countBefore ?? 0) : null;
   const rate = facts.visits > 0 ? total / facts.visits : null;
@@ -638,7 +576,6 @@ export function conversionsSees(facts: ConversionsFacts): Seen {
     biggestNone && { code: "openChannel", text: biggestNone.text, link: "channel", to: toPage("channels/channel", { key: biggestNone.text }) },
     fired.length > 0 && { code: "countUncounted", text: names(fired), a: fired.length, link: "changeWhatCounts", to: CHOOSE },
     silent.length > 0 && { code: "trySilent", text: names(silent), a: silent.length, link: "trackingHealth", to: toPage("tracking-health") },
-    unvalued.length > 0 && { code: "setValue", text: names(unvalued), a: unvalued.length, link: "changeWhatCounts", to: CHOOSE },
   ];
   return seen(says, steps);
 }
@@ -647,8 +584,6 @@ export function conversionsSees(facts: ConversionsFacts): Seen {
 // The website's connection: 10 · Tracking health, 11 · Connection,
 // 12 · Not connected yet, 14 · Choose what counts
 // ---------------------------------------------------------------------------
-
-type Check = { check: string; passing: boolean; names?: string[]; others?: string[]; count?: number; share?: number };
 
 /**
  * The checks, the one that costs most first: no figures at all, then none of
@@ -666,104 +601,11 @@ export function inCheckOrder<T extends { check: string }>(checks: readonly T[]):
   return [...checks].sort((left, right) => rank(left.check) - rank(right.check));
 }
 
-/** Where each check is fixed. */
-const CHECK_FIX: Record<string, { link: string; to: SeenTarget }> = {
-  TRACKING_STOPPED: { link: "overview", to: toPage("") },
-  NOTHING_COUNTED: { link: "chooseWhatCounts", to: CHOOSE },
-  SOMETHING_ELSE: { link: "conversions", to: toPage("conversions") },
-  TOO_MUCH_UNKNOWN: { link: "landingPages", to: toPage("funnel") },
-  ENQUIRY_UNCOUNTED: { link: "chooseWhatCounts", to: CHOOSE },
-  CONVERSIONS_ELSEWHERE: { link: "changeWhatCounts", to: CHOOSE },
-  NEVER_HAPPENS: { link: "conversions", to: toPage("conversions") },
-  SUDDEN_FALL: { link: "conversions", to: toPage("conversions") },
-  NO_VALUE: { link: "changeWhatCounts", to: CHOOSE },
-  PAYMENT_REFERRALS: { link: "referrals", to: toPage("channels/channel", { key: "Referral" }) },
-  SELF_REFERRAL: { link: "referrals", to: toPage("channels/channel", { key: "Referral" }) },
-  STRANGERS: { link: "connection", to: toPage("connection") },
-  COUNTED_AGAIN: { link: "allPages", to: toPage("all-pages") },
-};
-
-/** The checks whose names are conversions or events, named in the reader's words (`{event}`). */
-const NAMES_EVENTS = new Set(["NO_VALUE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS"]);
-/** The checks whose names are addresses, said as they are (`{text}`). */
-const NAMES_ADDRESSES = new Set(["CONVERSIONS_ELSEWHERE"]);
-
 /**
- * One failing check in a sentence: its share (or count) and count, which way
- * a sudden fall went, and the events it names by their own names — for a
- * conversion that is really something else, the first and what it really is.
+ * The checks a check's own screen knows. Its box went on 2026-11-04 with every Tracking health eye (Anthony,
+ * 2026-11-03: "We dont need the eye on non website data related pages"); the screen still names each check it knows.
  */
-function checkSays(check: Check): SeenPhrase {
-  const fell = check.check === "SUDDEN_FALL" ? `.${check.names?.[0] === "conversions" ? "conversions" : "visits"}` : "";
-  const named = check.check === "SOMETHING_ELSE" && check.names?.length
-    ? { text: [check.names[0], check.others?.[0] ?? ""].filter(Boolean).join(","), c: check.names.length }
-    : NAMES_EVENTS.has(check.check) && check.names?.length ? { text: check.names.join(","), c: check.names.length }
-      : NAMES_ADDRESSES.has(check.check) && check.names?.length ? { text: check.names.join(", "), c: check.names.length } : {};
-  return {
-    code: `check.${check.check}${fell}`,
-    a: check.share ?? check.count ?? 0,
-    b: check.count ?? 0,
-    ...named,
-  };
-}
-
-/** Tracking health: how many checks need a look, the costliest two, and how to fix each. */
-export function trackingHealthSees(health: { checks: readonly Check[] } | null): Seen {
-  if (!health || health.checks.length === 0) return seen([]);
-  const failing = inCheckOrder(health.checks.filter((check) => !check.passing));
-  if (failing.length === 0) return seen([{ code: "allPassing", a: health.checks.length }]);
-  return seen(
-    [{ code: "failing", a: failing.length, b: health.checks.length }, ...failing.slice(0, 2).map(checkSays)],
-    failing.map((check): SeenStep => ({ code: `fix.${check.check}`, ...CHECK_FIX[check.check] })),
-  );
-}
-
-/** Google Analytics itself, where most fixes are made. */
-const GOOGLE_ANALYTICS: SeenTarget = { url: "https://analytics.google.com/" };
-const theWebsite = (host: string): SeenTarget => ({ url: `https://${host}/` });
-
-/**
- * Where each step of a check's fix is done (ga-tracking-health-plan.md TH2),
- * in the order of its steps' words (`step.<check>.s1`, `s2`, …): a page of
- * this section, the website itself, or Google Analytics.
- */
-const CHECK_STEPS: Record<string, (host: string) => Array<{ link: string; to: SeenTarget }>> = {
-  TRACKING_STOPPED: (host) => [{ link: "yourWebsite", to: theWebsite(host) }, { link: "googleAnalytics", to: GOOGLE_ANALYTICS }],
-  NOTHING_COUNTED: () => [{ link: "chooseWhatCounts", to: CHOOSE }],
-  SOMETHING_ELSE: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "conversions", to: toPage("conversions") }],
-  TOO_MUCH_UNKNOWN: () => [{ link: "campaigns", to: toPage("campaigns") }, { link: "landingPages", to: toPage("funnel") }],
-  ENQUIRY_UNCOUNTED: () => [{ link: "chooseWhatCounts", to: CHOOSE }],
-  CONVERSIONS_ELSEWHERE: () => [{ link: "changeWhatCounts", to: CHOOSE }, { link: "googleAnalytics", to: GOOGLE_ANALYTICS }],
-  NEVER_HAPPENS: (host) => [
-    { link: "yourWebsite", to: theWebsite(host) }, { link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "conversions", to: toPage("conversions") },
-  ],
-  SUDDEN_FALL: (host) => [{ link: "yourWebsite", to: theWebsite(host) }, { link: "conversions", to: toPage("conversions") }],
-  NO_VALUE: () => [{ link: "changeWhatCounts", to: CHOOSE }],
-  PAYMENT_REFERRALS: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "referrals", to: toPage("channels/channel", { key: "Referral" }) }],
-  SELF_REFERRAL: (host) => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "yourWebsite", to: theWebsite(host) }],
-  STRANGERS: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }],
-  COUNTED_AGAIN: () => [{ link: "googleAnalytics", to: GOOGLE_ANALYTICS }, { link: "allPages", to: toPage("all-pages") }],
-};
-
-/** The checks a check's own screen knows, each with its steps. */
-export const HEALTH_CHECKS_WITH_STEPS = Object.keys(CHECK_STEPS);
-
-/**
- * A check's own screen (ga-tracking-health-plan.md TH2): what it found and
- * why that matters, then its fix as numbered steps, each with where it is
- * done; a passing check says so in a sentence.
- */
-export function trackingCheckSees(check: Check | null, host: string): Seen {
-  if (!check || !CHECK_STEPS[check.check]) return seen([]);
-  if (check.passing) return seen([{ code: `passing.${check.check}` }]);
-  const found = checkSays(check);
-  // The steps that name its events say them as its sentence does.
-  const named = found.text !== undefined ? { text: found.text, ...(found.c !== undefined ? { c: found.c } : {}) } : {};
-  return seen(
-    [found, { code: `why.${check.check}` }],
-    CHECK_STEPS[check.check](host).map((step, at): SeenStep => ({ code: `step.${check.check}.s${at + 1}`, ...named, ...step })),
-  );
-}
+export const HEALTH_CHECKS_WITH_STEPS: readonly string[] = [...CHECK_ORDER];
 
 type CountedEvent = { eventName: string; counted: boolean; analyticsValue: number | null; hakkenValue: number | null; lastThirtyDays: number };
 

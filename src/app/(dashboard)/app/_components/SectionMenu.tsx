@@ -9,6 +9,7 @@ import { NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT, NAV_IDLE_TEXT } from "@/src/ui/compon
 import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import { Select } from "@/src/ui/components/screens/Select";
+import { useSeesSectionLinks } from "@/src/ui/components/screens/hakkenSeesStore";
 
 export type SectionMenuItem = {
   id: string;
@@ -71,6 +72,9 @@ export function SectionMenu({
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState("");
+  // The section's other pages, for What Hakken sees to point its "Do first" steps at (ask-hakken-every-chart-page-plan-
+  // 2026-11-03.md, shared work 6). A menu of filters is no list of places.
+  useSeesSectionLinks(currentIds ? null : groups.flatMap((group) => group.items).filter((item) => item.href && item.id !== currentId).map((item) => ({ label: item.label, href: item.href! })));
   const isChosen = (id: string) => (currentIds ? currentIds.includes(id) : id === currentId);
   const currentGroup = groups.find((group) => group.items.some((item) => item.id === currentId))?.id ?? null;
 

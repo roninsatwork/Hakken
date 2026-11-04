@@ -52,7 +52,7 @@ function standoutsOf(rows: readonly Rated[], visitsOf: ReadonlyMap<string, numbe
 function columnName(key: string, name: string | null): string {
   if (name) return name;
   if (key === NO_PAGE_KIND) return "no page recorded";
-  if (key === OTHER_KIND) return "other kinds of page";
+  if (key === OTHER_KIND) return "other classifications";
   if (key === NOT_SORTED_KIND) return "unclassified";
   return key;
 }

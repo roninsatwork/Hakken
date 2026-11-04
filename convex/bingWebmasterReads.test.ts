@@ -5,6 +5,8 @@ import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
+import { packBingRows } from "./utils/bingWebmasterWeeks";
+import { packNumbers } from "./utils/searchConsolePacks";
 
 /**
  * What the Bing Webmaster screens and Ask Hakken read, from a website Bing has
@@ -175,6 +177,71 @@ describe("what the Bing Webmaster screens read", () => {
     expect(versus).toMatchObject({ ok: true, summary: { bingRanksHigher: 2, googleRanksHigher: 1, onlyOnBing: 1 } });
     const other = await t.run(async (ctx) => await ctx.db.insert("companies", { name: "Rival", createdAt: 1 }));
     expect(await t.query(internal.assistantBingReads.bingWebmasterInternal, { companyId: other, website: "ronins.co.uk", screen: "performance", period: "lastMonth" })).toMatchObject({ ok: false });
+  });
+
+  test("the eye's figures: each read's span before, the whole list's movers and gaps, and never a part of a span set against a whole one", async () => {
+    // ask-hakken-every-chart-page-plan-2026-11-03.md, section 7: "Bing keeps each row's span before and its days, but no
+    // screen reads them". Written straight into the tables, as the build leaves them.
+    const t = harness();
+    const { siteId, userId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Shop", createdAt: 1 });
+      const websiteId = await ctx.db.insert("websites", { host: "shop.co.uk", displayHost: "shop.co.uk", firstSeenAt: 1 });
+      const hold = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
+      const userId = await ctx.db.insert("users", { name: "User", email: "user@shop.test", role: "USER", companyId, createdAt: 1 });
+      await ctx.db.insert("bingConnections", {
+        companyId, companyWebsiteId: hold, websiteId, status: "CONNECTED", site: "https://www.shop.co.uk/", dataSite: "https://www.shop.co.uk/",
+        newestDay: "2026-10-31", oldestDay: "2026-09-01", newestWeek: "2026-10-25", createdAt: 1, updatedAt: 1,
+      });
+      const crawl = { crawled: 400, errors: 2, inIndex: 3_000, inLinks: 0, blockedByRobots: 5, malware: 0, code2xx: 0, code301: 0, code302: 0, code4xx: 0, code5xx: 0, otherCodes: 0, dnsFailures: 0, timeouts: 0 };
+      for (const [day, clicks, inIndex] of [["2026-09-30", 40, 3_100], ["2026-10-31", 30, 2_950]] as const) {
+        await ctx.db.insert("bingDays", { companyWebsiteId: hold, day, clicks, impressions: clicks * 50, crawl: { ...crawl, inIndex }, fetchedAt: 1 });
+      }
+      // Google's every day of September, and one of October: a span before is set against only where nearly whole.
+      for (let date = 1; date <= 30; date += 1) {
+        await ctx.db.insert("searchConsoleDays", { companyWebsiteId: hold, searchType: "web", day: `2026-09-${String(date).padStart(2, "0")}`, clicks: 20, impressions: 2_000, ctr: 0.01, position: 9, fetchedAt: 1 });
+      }
+      await ctx.db.insert("searchConsoleDays", { companyWebsiteId: hold, searchType: "web", day: "2026-10-31", clicks: 600, impressions: 60_000, ctr: 0.01, position: 9, fetchedAt: 1 });
+      await ctx.db.insert("bingKeywordBooks", { companyWebsiteId: hold, chunk: 0, keywords: ["door handles", "brass knobs", "sash locks", "pewter pulls"] });
+      const part = (period: string, which: "NOW" | "BEFORE", from: string, to: string, rows: Array<[number, number, number, number]>, google?: Array<[number, number, number]>) => ctx.db.insert("bingPeriods", {
+        companyWebsiteId: hold, list: "query", period, which, part: 0, from, to,
+        ...packBingRows(rows.map(([key, clicks, impressions, position]) => ({ key, clicks, impressions, positionSum: position * impressions })))[0],
+        ...(google ? {
+          googleClicks: packNumbers(google.map(([clicks]) => clicks)),
+          googleImpressions: packNumbers(google.map(([, impressions]) => impressions)),
+          googlePositionSums: packNumbers(google.map(([, impressions, position]) => impressions * position)),
+        } : {}),
+        builtAt: 1,
+      });
+      // Busiest first, as the build packs them: door handles fell, brass knobs rose, sash locks is new, pewter pulls gone.
+      await part("lastMonth", "NOW", "2026-09-28", "2026-10-25", [[0, 30, 600, 3], [1, 12, 300, 11], [2, 6, 100, 4]], [[200, 9_000, 16], [150, 4_000, 2], [-1, -1, -1]]);
+      await part("lastMonth", "BEFORE", "2026-08-31", "2026-09-27", [[0, 50, 700, 2], [3, 8, 90, 5], [1, 4, 250, 12]]);
+      // Last 12 months' span before, built from the weeks still kept: five of them, not fifty-two.
+      await part("last12Months", "NOW", "2025-10-27", "2026-10-25", [[0, 300, 7_000, 3]], [[2_000, 90_000, 15]]);
+      await part("last12Months", "BEFORE", "2025-09-22", "2025-10-26", [[0, 20, 500, 3]]);
+      return { siteId: hold, userId };
+    });
+    const user = t.withIdentity({ subject: userId });
+
+    const performance = (await user.query(api.bingWebmasterReads.bingPerformance, { siteId, period: "lastMonth" }))!;
+    expect(performance.before).toEqual({ from: "2026-09-01", to: "2026-09-30", totals: { clicks: 40, impressions: 2_000 }, google: { clicks: 600, impressions: 60_000 } });
+    const crawling = (await user.query(api.bingWebmasterReads.bingCrawling, { siteId, period: "lastMonth" }))!;
+    expect(crawling.before).toEqual({ from: "2026-09-01", to: "2026-09-30", totals: { crawled: 400, errors: 2, blocked: 5 }, inIndex: 3_100 });
+
+    const seen = (await user.query(api.bingWebmasterReads.bingListSeen, { siteId, list: "query", period: "lastMonth" }))!;
+    expect(seen).toMatchObject({ totals: { rows: 3, clicks: 48 }, before: { rows: 3, clicks: 62 }, newLost: { gained: 1, lost: 1 }, who: { bingHigher: 1, googleHigher: 1, onlyBing: 1, onlyBingClicks: 6 } });
+    expect(seen.down[0]).toMatchObject({ name: "door handles", clicks: 30, clicksBefore: 50, ref: "0" });
+    expect(seen.up[0]).toMatchObject({ name: "brass knobs", clicks: 12, clicksBefore: 4 });
+    expect(seen.down.map((row) => row.name)).toContain("pewter pulls");
+    expect(seen.bingAhead).toMatchObject({ name: "door handles", position: 3, googlePosition: 16 });
+    expect(seen.googleAhead).toMatchObject({ name: "brass knobs", position: 11, googlePosition: 2 });
+    expect(seen.bands.find((band) => band.band === "top3")).toMatchObject({ rows: 1, clicks: 30, googleRows: 1, googleClicks: 150 });
+
+    const year = (await user.query(api.bingWebmasterReads.bingListSeen, { siteId, list: "query", period: "last12Months" }))!;
+    expect(year.before).toBeNull();
+    expect(year.up).toEqual([]);
+    const record = (await user.query(api.bingWebmasterReads.bingRecord, { siteId, list: "query", ref: "0", period: "lastMonth" }))!;
+    expect(record.before).toEqual({ from: "2026-08-31", to: "2026-09-27", clicks: 50, impressions: 700, position: 2 });
+    expect((await user.query(api.bingWebmasterReads.bingRecord, { siteId, list: "query", ref: "0", period: "last12Months" }))!.before).toBeNull();
   });
 
   test("another company reads nothing of it", async () => {

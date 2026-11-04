@@ -1,9 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Bug } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
@@ -25,7 +26,8 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
-import { Judged, Moved, wayOf, WatchLink, mono, percent, quiet, tooFew, useBeforeWords, useCountedWords, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
+import { Judged, Moved, wayOf, WatchLink, mono, percent, quiet, tooFew, useBeforeWords, useClaritySeesWords, useCountedWords, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
+import { errorsSees, pageLinks } from "../../_components/claritySees";
 import { useClarityArgs, useClarityPageHref, useClarityStatus, useClarityChosen } from "../../_components/useClarity";
 
 type ErrorRow = FunctionReturnType<typeof api.clarityScreens.clarityErrors>["pages"][number];
@@ -63,6 +65,11 @@ export default function ClarityErrorsPage() {
   const beforeWords = useBeforeWords();
   const waitingWords = useWaitingWords();
   const data = useQuery(api.clarityScreens.clarityErrors, args);
+  // What the eye reads: the answer, its days and browsers in the screen's own words (claritySees.ts).
+  const seesWords = useClaritySeesWords(chosen);
+  const locale = useLocale();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const seen = useMemo(() => (data ? errorsSees(data, seesWords) : undefined), [data, chosen, status?.host, locale]);
   const [search, setSearch, settled] = useSiteSearch();
   const [browser, setBrowser] = useSiteParam<string>("browser", "");
   const matches = settled ? wordStartMatcher(settled.toLowerCase()) : null;
@@ -106,7 +113,7 @@ export default function ClarityErrorsPage() {
       {header}
       {waiting ? <Notice>{waiting}</Notice> : null}
       {period.countedFrom ? <Notice>{tc("countedFrom", { day: formatDay(period.countedFrom) })}</Notice> : null}
-      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.errors", siteId: args.siteId, data }} />
+      <HakkenSees says={says} steps={steps} page={{ screen: "clarity.errors", siteId: args.siteId, data: seen, links: pageLinks(data.pages.slice(0, 3).map((row) => row.line.page), pageHref) }} />
       <FigureRow columns={4}>
         <Figure label={t("figures.visits")} value={formatNumber(now.errors)} detail={<span className="flex flex-col">{before ? <Moved by={now.errors - before.errors} neutral>{tc("plainOn", { way: wayOf(now.errors - before.errors), value: Math.abs(now.errors - before.errors), against })}</Moved> : <span className="text-muted">{against}</span>}<span className="text-secondary">{t("figures.ofVisits", { share: percent(now.shares.errors ?? 0) })}</span></span>} />
         <Figure label={t("figures.clicks")} value={formatNumber(now.errorClicks)} detail={<span className="flex flex-col">{before ? <Moved by={now.errorClicks - before.errorClicks} neutral>{tc("plainOn", { way: wayOf(now.errorClicks - before.errorClicks), value: Math.abs(now.errorClicks - before.errorClicks), against })}</Moved> : null}<span className="text-secondary">{t("figures.clicksDetail")}</span></span>} />

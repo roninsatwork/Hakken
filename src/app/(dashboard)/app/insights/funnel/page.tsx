@@ -21,9 +21,10 @@ import { formatPosition } from "../../search-console/_components/searchConsoleFo
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../sites/_components/useSiteParam";
-import { useInsightsBox, useInsightsHref, useInsightsPeriodView, useInsightsSite } from "../_components/useInsights";
+import { useInsightsBox, useInsightsHref, useInsightsPeriodView, useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
 import { boxedSays } from "../_components/insightBoxSays";
 import { KindsRateChart } from "../_components/PeriodCharts";
+import { funnelNames, funnelSees } from "../_components/insightsSees";
 
 const rate = (top: number | null, bottom: number | null) => (top !== null && bottom ? Math.round((top / bottom) * 1000) / 10 : null);
 const moved = (now: number | null, before: number | null) => (now !== null && before ? Math.round(((now - before) / before) * 100) : null);
@@ -37,14 +38,17 @@ const moved = (now: number | null, before: number | null) => (now !== null && be
 export default function InsightsFunnelPage() {
   const t = usePlatformTranslations("insights.funnel");
   const tBox = usePlatformTranslations("insights.box");
+  const tAll = usePlatformTranslations("insights");
   // The Conversion specialist's box, when it wrote one this week (insights-one-voice-plan.md); else the screen's own sentences.
   const box = useInsightsBox("FUNNEL");
   const href = useInsightsHref();
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const data = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});
   const view = useInsightsPeriodView();
   // The eye's page figures (sees-every-page-plan-2026-10-31.md): one object while its answers stay the same, so it is not handed over again on every render.
-  const seesData = useMemo(() => ({ funnel: data, period: view, box }), [data, view, box]);
+  const seesData = useMemo(() => funnelSees(data, view, box, funnelNames(tAll)), [data, view, box, tAll]);
   const [search, setSearch, term] = useSiteSearch("q", "sources");
   const [stepSearch, setStepSearch, stepTerm] = useSiteSearch("sq", "steps");
   const matches = wordStartMatcher(term.toLowerCase());
@@ -79,7 +83,7 @@ export default function InsightsFunnelPage() {
   return (
     <>
       {header}
-      <HakkenSees says={boxedSays(box, says, tBox)} steps={[{ words: t("do"), link: t("seeReviews"), href: href("page-reviews") }]} page={{ screen: "insights.funnel", siteId: site, data: seesData }} />
+      <HakkenSees says={boxedSays(box, says, tBox)} steps={[{ words: t("do"), link: t("seeReviews"), href: href("page-reviews") }]} page={{ screen: "insights.funnel", siteId: eyeSite, data: seesData }} />
       <ChartCard title={t("chart.title")} hint={t("chart.hint")} exportName={`${data.host}-funnel`} csv={csv} enoughData={bars.length > 0}>
         <SiteBarChart data={bars} series={[{ key: "year", name: t("chart.year"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal labels={(value) => formatNumber(value)} />
       </ChartCard>

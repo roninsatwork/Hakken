@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,7 @@ import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { reviewsRivalsSeen } from "../../../_components/siteSeesData";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -75,6 +77,10 @@ export default function ReviewsAgainstRivalsPage() {
   const { rows: sorted, tableSort } = useSiteSortedList(rows, SORTS, { opening: "reviews", name: nameOf });
   const pager = useSitePager(sorted, { isLoading: data === undefined });
 
+  // What the eye reads (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): each business's profile, its rating,
+  // reviews, new ones in the dates, answered and days to answer, and the chart's counts by step.
+  const te = useTranslations("sites.reviews.rivals.eye");
+  const seen = useMemo(() => (data ? reviewsRivalsSeen(data, (source) => tr(`sources.${source}` as "sources.GOOGLE"), { answering: te("answering") }) : undefined), [data, tr, te]);
   const google = (rows ?? []).filter((row) => row.source === "GOOGLE");
   const you = google.find((row) => row.you);
   const byReviews = [...google].sort((left, right) => (right.reviews ?? 0) - (left.reviews ?? 0));
@@ -98,7 +104,7 @@ export default function ReviewsAgainstRivalsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={data.office?.listingId ?? null} /> : undefined}
       />
-      <SiteSees screen="reviewsRivals" seen={data?.seen} data={data} />
+      <SiteSees screen="reviewsRivals" seen={data?.seen} data={seen} />
       {data && !data.office ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {data?.office && you ? (

@@ -13,7 +13,7 @@ import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { ReportDownloadAction } from "../_components/ReportDownload";
 import { ReportTop } from "../_components/ReportParts";
-import { useInsightsSite } from "../_components/useInsights";
+import { useInsightsShownSite, useInsightsSite } from "../_components/useInsights";
 
 /**
  * Your month (docs/plans/active/insights-analyst-plan.md §4.1, drawn as the
@@ -25,6 +25,8 @@ export default function InsightsYourMonthPage() {
   const t = usePlatformTranslations("insights.month");
   const tr = usePlatformTranslations("insights.reports");
   const site = useInsightsSite();
+  // The website the eye is pressed for: the address's, else the one Insights opened on.
+  const eyeSite = useInsightsShownSite();
   const report = useQuery(api.insightsReads.insightsLatestReport, site ? { kind: "MONTHLY", siteId: site } : { kind: "MONTHLY" });
   const did = report?.body.did;
   const pages = useSitePager(did, { isLoading: report === undefined });
@@ -42,7 +44,7 @@ export default function InsightsYourMonthPage() {
   return (
     <>
       {header}
-      <ReportTop report={report} page={{ screen: "insights.yourMonth", siteId: site, data: report }} />
+      <ReportTop report={report} page={{ screen: "insights.yourMonth", siteId: eyeSite }} />
       <DataTable
         rows={pages.pageRows}
         rowKey={(row) => row.work}

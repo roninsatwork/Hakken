@@ -10,7 +10,7 @@ import { campaignsSees } from "./analyticsCampaigns";
  */
 
 const campaign = (label: string, visits: number, conversions = 0): ListRowFacts => ({
-  key: label, label, visits, engagementRate: null, views: visits, conversions, value: 0, change: null, conversionsBefore: null,
+  key: label, label, visits, engagementRate: null, views: visits, conversions, change: null, conversionsBefore: null,
 });
 
 describe("17 · Campaigns", () => {

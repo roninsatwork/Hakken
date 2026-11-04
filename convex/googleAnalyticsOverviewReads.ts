@@ -78,7 +78,6 @@ const productRowValidator = v.object({
   looks: v.number(),
   basket: v.number(),
   bought: v.number(),
-  revenue: v.number(),
 });
 
 /**
@@ -102,7 +101,6 @@ export const overviewPanelsValidator = v.object({
     count: v.number(),
     basket: v.number(),
     bought: v.number(),
-    revenue: v.number(),
   })),
 });
 
@@ -167,7 +165,7 @@ export async function readOverviewPanels(ctx: SiteReader, args: PanelArgs): Prom
     },
     conversions: await conversionsPanel(ctx, args, holdId, country),
     who: await whoVisited(ctx, holdId, listArgs),
-    shop: connection.shop === true ? shopPanel(await productList(ctx, site.hold, listArgs)) : null,
+    shop: connection.shop === true ? shopPanel(await productList(ctx, site.hold, { ...listArgs, sort: "bought" })) : null,
   };
 }
 
@@ -281,14 +279,13 @@ function biggestOf(answer: ListAnswer, every: { now: number | null; before: numb
   return { label: top.label, share: top.visits / every.now, shareBefore: every.before && topBefore !== null ? topBefore / every.before : null };
 }
 
-/** OV7: the best sellers, and the shop's baskets, sales and revenue added up. */
+/** OV7: the best sellers, the most bought first, and the shop's baskets and sales added up: items, never money (Anthony, 2026-11-03). */
 function shopPanel(list: Awaited<ReturnType<typeof productList>>) {
   const rows = list.rows;
   return {
-    rows: rows.slice(0, OVERVIEW_TOP).map((row) => ({ key: row.key, name: row.name, looks: row.looks, basket: row.basket, bought: row.bought, revenue: row.revenue })),
+    rows: rows.slice(0, OVERVIEW_TOP).map((row) => ({ key: row.key, name: row.name, looks: row.looks, basket: row.basket, bought: row.bought })),
     count: rows.length,
     basket: rows.reduce((sum, row) => sum + row.basket, 0),
     bought: rows.reduce((sum, row) => sum + row.bought, 0),
-    revenue: rows.reduce((sum, row) => sum + row.revenue, 0),
   };
 }

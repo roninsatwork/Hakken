@@ -1,5 +1,11 @@
 import type { InsightsRole } from "../agentRoles";
 import type { FactSource } from "../insightFacts";
+import { BING_SCREENS } from "./screenEntries/bing";
+import { CLARITY_SCREENS } from "./screenEntries/clarity";
+import { GOOGLE_ANALYTICS_SCREENS } from "./screenEntries/googleAnalytics";
+import { INSIGHTS_SCREENS } from "./screenEntries/insights";
+import { SEARCH_CONSOLE_SCREENS } from "./screenEntries/searchConsole";
+import { VISIBILITY_SCREENS } from "./screenEntries/visibility";
 
 /**
  * Every page's eye, described once (docs/plans/active/sees-every-page-plan-2026-10-31.md, phase 1; Anthony: "extend
@@ -38,164 +44,19 @@ const SECTION: Record<SeesSection, { writer: InsightsRole; source: FactSource; n
   insights: { writer: "INSIGHTS_ANALYST", source: "analytics", name: "Insights" },
 };
 
-/** Never money on the Conversions screens (Anthony, 2026-10-30: "i just dont want it focusing on money"). */
-const NO_MONEY = ["money: sales value or what anything earned. Speak in conversions and purchases"];
-
 /**
  * The pages, by key: the section, then the screen as the section's own words name it (`googleAnalytics.seen.<screen>`,
  * `searchConsole.seen.<screen>`, `sites.seen.<screen>`…). A key ending in ":" is a family (a conversion's own screen,
- * `googleAnalytics.event:purchase`). A page missing here still has an eye, written by its section's specialist.
+ * `googleAnalytics.event:purchase`). A page missing here still has an eye, written by its section's specialist. Each
+ * section's entries are in a file of their own (`screenEntries/<section>.ts`).
  */
 export const SEES_SCREENS: Readonly<Record<string, Partial<SeesScreen> & { about: string }>> = {
-  // Google Analytics.
-  "googleAnalytics.conversions": {
-    writer: "INSIGHTS_CONVERSION",
-    about: "Conversions: every conversion this website counts",
-    parts: [
-      "the chart: how many visits it took for one conversion, day by day",
-      "the map: each conversion by kind of page, channel, device or country, as visits, a rate or events",
-      "the table: each event the website counts, with its conversions, visits and change",
-    ],
-    never: NO_MONEY,
-  },
-  "googleAnalytics.event:": {
-    writer: "INSIGHTS_CONVERSION",
-    about: "one conversion's own screen",
-    parts: ["the chart: the share of each day's visits that did it", "the lines: the conversion by channel, day by day", "when people convert: by hour and day of the week"],
-    never: NO_MONEY,
-  },
-  "googleAnalytics.event": { about: "one event's own screen: how often it happened, and where" },
-  "googleAnalytics.websites": { about: "the company's websites in Google Analytics" },
-  "googleAnalytics.overview": { about: "the Google Analytics overview: visits, conversions and where they came from" },
-  // Live's figures are asked of Google each minute, never saved: its eye shows findings and the chat, and writes nothing.
-  "googleAnalytics.live": { about: "the visits on the website right now", writes: false },
-  "googleAnalytics.channelsPage": { about: "the channels visits came by, each with its conversions" },
-  "googleAnalytics.channels": { about: "the channels visits came by, each with its conversions" },
-  "googleAnalytics.channelPage": { about: "one channel's own screen: its visits, pages and conversions" },
-  "googleAnalytics.channel": { about: "one channel's own screen: its visits, pages and conversions" },
-  "googleAnalytics.campaigns": { about: "the website's campaigns and the visits and conversions each brought" },
-  "googleAnalytics.landing": { about: "landing pages as a flow: where visits start and how many go on to convert" },
-  "googleAnalytics.landingPage": { about: "one landing page's own screen" },
-  "googleAnalytics.allPages": { about: "every page of the website, with its visits and conversions" },
-  // A page's own screen, redone (page-screen-redo-plan-2026-11-03.md, step 2; boards 2 and 3, approved 2026-11-03).
-  "googleAnalytics.page": {
-    about: "one page's own screen: how often it was seen, the visitors who started on it and where they came from, who looks at it, and on a product's page the items added to baskets and bought",
-    parts: [
-      "the four boxes: on a product's page views, items added to basket, items bought and visits that started here; on any other page views, visits that started here, visitors who bought and how many scrolled to the bottom",
-      "views each day",
-      "visitors each day, a line for each channel they came by",
-      "the websites that sent visitors",
-      "who looks at the page: by device, country, age or gender, against the whole website",
-      "the busiest days of the week",
-      "where visitors came from: a row for each source",
-    ],
-    never: [
-      ...NO_MONEY,
-      "people as a count of persons, time spent, pages a visit, the page before or links clicked: this page no longer shows them",
-    ],
-  },
-  "googleAnalytics.conversionPages": { about: "the pages behind one square of the Conversions map" },
-  // Screen 4 of the canvas "Products page, three ways" (products-screen-4-plan-2026-11-02.md): visits and items, never money.
-  "googleAnalytics.products": {
-    about: "the shop's products: the visits left at each of the shop's steps before a sale, and the products bought, left in baskets, and selling more or less",
-    // Its figures as the page hands them (page-screen-redo-plan-2026-11-03.md, step 3): the boxes with the period before,
-    // the shop's steps, Selling more and Selling less with each product's items bought now and before, the table's page.
-    parts: [
-      "the four boxes: baskets left behind, checkouts not finished, visits that bought, products added and never bought",
-      "Bought or left behind, for the steps and sale the shop picked",
-      "the products chart: the view on screen, and the products selling more and selling less than before",
-      "the products table: the page of products on screen",
-    ],
-    // Seen on MoreHandles, 2026-11-02: the writer brought in Referral and Paid Search, which this page never shows.
-    never: [...NO_MONEY, "where visits came from: channels, sources and campaigns are on their own pages, never on this one"],
-  },
-  "googleAnalytics.visitors": { about: "who the visitors are: their ages, interests, devices and places" },
-  "googleAnalytics.trackingHealth": { writer: "INSIGHTS_MEASUREMENT", about: "tracking health: whether the website's Google Analytics figures can be trusted" },
-
-  // Search Console.
-  "searchConsole.websites": { about: "the company's websites in Search Console" },
-  "searchConsole.performance": { about: "the website's clicks and times shown in Google, day by day" },
-  "searchConsole.keywords": { about: "the searches that bring the website visitors from Google" },
-  "searchConsole.pages": { about: "the website's pages in Google: clicks, times shown and position" },
-  "searchConsole.record": { about: "one search's or one page's own screen in Search Console" },
-  "searchConsole.almost": { about: "searches just off Google's first page, where a small rise would bring visitors" },
-  "searchConsole.brand": { about: "searches for the business's own name against every other search" },
-  "searchConsole.ctrCurve": { about: "how often each Google position is clicked on this website" },
-  "searchConsole.places": { about: "clicks from Google by country and device" },
-  "searchConsole.services": { about: "demand for each of the business's services on Google" },
-  "searchConsole.updates": { about: "Google's announced updates and what moved around them" },
-  "searchConsole.indexing": { writer: "INSIGHTS_TECHNICAL", about: "which pages Google has in its index, and why others are left out" },
-  "searchConsole.demand": { about: "searches people make that the website barely shows for" },
-  "searchConsole.newLost": { about: "searches and pages new this period, and those lost" },
-  "searchConsole.competing": { writer: "INSIGHTS_CANNIBALISATION", about: "pages of the website competing for the same searches" },
-  "searchConsole.bands": { about: "searches by their place on Google: top 3, first page, second page" },
-  "searchConsole.estimates": { about: "Google's real clicks against Visibility's estimate for the same searches" },
-  "searchConsole.appearance": { writer: "INSIGHTS_TECHNICAL", about: "rich results: how the website's listings appear in Google" },
-  "searchConsole.lowCtr": { about: "searches where the website is shown often but rarely clicked" },
-  "searchConsole.trackedKeywords": { about: "the searches the company tracks in Search Console" },
-  "searchConsole.trackedPages": { about: "the pages the company tracks in Search Console" },
-  "searchConsole.types": { about: "clicks from Google's web, image, video and news results" },
-  "searchConsole.volatility": { about: "how much the website's places on Google moved day to day" },
-  "searchConsole.moves": { about: "the searches and pages that won and lost the most clicks" },
-
-  // Bing Webmaster.
-  "bing.websites": { about: "the company's websites in Bing Webmaster" },
-  "bing.performance": { about: "the website's clicks and times shown in Bing, beside Google's" },
-  "bing.versus": { about: "Bing against Google: where each ranks the website higher" },
-  "bing.crawling": { writer: "INSIGHTS_TECHNICAL", about: "how Bing reads the website: pages crawled, errors and pages in its index" },
-  "bing.keywords": { about: "the searches that bring the website visitors from Bing" },
-  "bing.pages": { about: "the website's pages in Bing" },
-  "bing.record": { about: "one search's or one page's own screen in Bing" },
-
-  // Microsoft Clarity: how people behave on the pages (a specialist of its own, 2026-10-31).
-  "clarity.websites": { about: "the company's websites in Microsoft Clarity" },
-  "clarity.overview": { about: "how people behave on the website: scrolling, quick backs, angry and dead clicks, errors" },
-  "clarity.pages": { about: "each page's visits and how people behave on it" },
-  "clarity.page": { about: "one page's own screen in Clarity" },
-  "clarity.errors": { about: "the pages where visitors hit errors, and where they happen" },
-  "clarity.recordings": { about: "recordings of visits that show where people give up" },
-
-  // Visibility: the pages the prefixes below don't already describe.
-  "visibility.websites": { about: "the company's websites and its competitors in Visibility" },
-  "visibility.overview": { about: "the website on Google at a glance, against its competitors" },
-  "visibility.keywords": { about: "the searches the website ranks for on Google" },
-  "visibility.keywordRecord": { about: "one search's own screen: who ranks and how it moved" },
-  "visibility.keywordsBands": { about: "the website's searches by their place on Google" },
-  "visibility.keywordsBandsMoved": { about: "the searches that moved between places on Google" },
-  "visibility.keywordsPages": { about: "the website's pages that rank on Google" },
-  "visibility.pageRecord": { about: "one page's own screen: the searches it ranks for" },
-  "visibility.keywordsStructure": { about: "the website's sections and how each ranks on Google" },
-  "visibility.yourPages": { about: "the pages the company chose to watch" },
-  "visibility.draft": { about: "a draft written for the business by the team" },
-
-  // Insights: its weekly boxes are the team's words already; the rest by the specialist whose work it is.
-  "insights.aiSearch": { writer: "INSIGHTS_AI_VISIBILITY", about: "AI search: how AI answers treat the business", writes: false },
-  "insights.enquiries": { writer: "INSIGHTS_ANALYST", about: "enquiries and where they came from", writes: false },
-  "insights.funnel": { writer: "INSIGHTS_CONVERSION", about: "the funnel from search to enquiry", writes: false },
-  "insights.leaderboards": { writer: "INSIGHTS_MARKET", about: "leaderboards: the business against its market", writes: false },
-  "insights.measurement": { writer: "INSIGHTS_MEASUREMENT", about: "measurement: whether the figures can be trusted", writes: false },
-  "insights.opportunities": { writer: "INSIGHTS_SEARCH", about: "the opportunities the team found", writes: false },
-  "insights.pagePlan": { writer: "INSIGHTS_PAGE_DECISIONS", about: "the page plan: what to do with each page", writes: false },
-  "insights.strategy": { writer: "INSIGHTS_ANALYST", about: "the strategy: each service and what to do for it", writes: false },
-  "insights.trackRecord": { writer: "INSIGHTS_ANALYST", about: "the team's track record: what it advised and what happened", writes: false },
-  "insights.cannibalisation": { writer: "INSIGHTS_CANNIBALISATION", about: "searches where the website's pages compete" },
-  "insights.cannibalisationGroup": { writer: "INSIGHTS_CANNIBALISATION", about: "one group of pages competing for the same searches" },
-  "insights.pageReviews": { writer: "INSIGHTS_PAGE_DECISIONS", about: "page reviews: each page's verdict" },
-  "insights.pageReview": { writer: "INSIGHTS_PAGE_DECISIONS", about: "one page's review: its verdict and first steps" },
-  "insights.sources": { writer: "INSIGHTS_MEASUREMENT", about: "the data sources Insights reads, and their health" },
-  "insights.leaderboard": { writer: "INSIGHTS_MARKET", about: "one league of the business's market" },
-  "insights.experiments": { writer: "INSIGHTS_ANALYST", about: "the experiments the team suggested and how they went" },
-  "insights.findings": { writer: "INSIGHTS_ANALYST", about: "every finding the team made" },
-  "insights.finding": { writer: "INSIGHTS_ANALYST", about: "one finding the team made, with its evidence" },
-  "insights.findingsSection": { writer: "INSIGHTS_ANALYST", about: "the team's findings in one section" },
-  "insights.thisWeek": { writer: "INSIGHTS_ANALYST", about: "this week: what changed and what to do first" },
-  "insights.report": { writer: "INSIGHTS_ANALYST", about: "one of the team's reports" },
-  "insights.yourMonth": { writer: "INSIGHTS_ANALYST", about: "the month's report" },
-  "insights.strategyService": { writer: "INSIGHTS_ANALYST", about: "one service in the strategy" },
-  "insights.enquiriesSource": { writer: "INSIGHTS_ANALYST", about: "one source of enquiries and what it brought" },
-  "insights.reports": { writer: "INSIGHTS_ANALYST", about: "the team's reports, newest first" },
-  // The Summary's own words are the Head of Strategy's note: pressing writes nothing new.
-  "insights.summary": { writer: "INSIGHTS_ANALYST", about: "the summary: the business at a glance and the strategy's note", writes: false },
+  ...GOOGLE_ANALYTICS_SCREENS,
+  ...SEARCH_CONSOLE_SCREENS,
+  ...BING_SCREENS,
+  ...CLARITY_SCREENS,
+  ...VISIBILITY_SCREENS,
+  ...INSIGHTS_SCREENS,
 };
 
 /**

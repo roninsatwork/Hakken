@@ -173,10 +173,12 @@ describe("a channel's own page", () => {
     const { siteId, user } = await collectedShifting();
     const events = await user.query(api.googleAnalyticsChannelReads.analyticsChannelEvents, { siteId, ...args, channel: "Organic Search" });
     expect(events.rows.map((row) => row.eventName).sort()).toEqual(["click_tel", "form_submit", "generate_lead", "sign_up"]);
-    expect(events.rows.find((row) => row.eventName === "generate_lead")).toMatchObject({ counted: true, count: 30, countBefore: 60, value: 30 * 25_000 });
+    expect(events.rows.find((row) => row.eventName === "generate_lead")).toMatchObject({ counted: true, count: 30, countBefore: 60 });
     expect(events.rows.find((row) => row.eventName === "form_submit")).toMatchObject({
-      counted: false, count: 30, countBefore: 0, value: 0, landed: [{ address: "https://www.acme-shop.test/blog/a/", count: 30 }],
+      counted: false, count: 30, countBefore: 0, landed: [{ address: "https://www.acme-shop.test/blog/a/", count: 30 }],
     });
+    // Never money (Anthony, 2026-11-03: "Take money off").
+    expect(events.rows.every((row) => !("value" in row))).toBe(true);
   });
 
   test("the channel a day, against the span before, from the days kept", async () => {
@@ -216,7 +218,7 @@ describe("a channel's own page", () => {
 });
 
 describe("Channels", () => {
-  test("each channel by page group, what a visit is worth, and What Hakken sees", async () => {
+  test("each channel by page group, how often a visit converts, and What Hakken sees", async () => {
     const { siteId, user } = await collectedShifting();
     const top = await user.query(api.googleAnalyticsChannelReads.analyticsChannelsTop, { siteId, ...args });
     expect(top.state).toBe("READY");
@@ -225,7 +227,10 @@ describe("Channels", () => {
     const organic = top.map.rows.find((row) => row.channel === "Organic Search");
     expect(organic?.visits).toBe(390);
     expect(organic?.cells.find((cell) => cell.kind === "HOME")).toMatchObject({ visits: 300, conversions: 30 });
-    expect(top.worth.rows.map((row) => row.channel)).toContain("AI assistants");
+    expect(top.perVisit.rows.map((row) => row.channel)).toContain("AI assistants");
+    // Conversions out of visits, never money (Anthony, 2026-11-03: "Take money off").
+    expect(top.perVisit.rows.every((row) => !("value" in row))).toBe(true);
+    expect(top.figures && "value" in top.figures).toBe(false);
     expect(top.figures?.uncounted).toEqual([{ eventName: "form_submit", count: 30, enquiry: false }]);
     expect(top.seen.says[0].code).toMatch(/^lead\./);
   });

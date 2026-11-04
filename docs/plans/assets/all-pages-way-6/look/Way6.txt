@@ -1,0 +1,24 @@
+# Google Analytics → All pages — the approved look (board "Way6" of docs/plans/assets/all-pages-way-6/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: All pages
+figures
+  figure: Page views
+  figure: Pages a visit
+  figure: Busy pages, fewer views
+  figure: Quiet pages, more views
+chart-card: A map of your pages
+filter: Count
+filter: Classification
+filter: Colour shows
+page-map
+chart-card: Views each day
+filter: Show
+filter: Your whole website
+search: Find a page…
+filter: Classification
+filter: Show
+table: On the chart | Page | Visits | Views | Up or down | Time on page | Conversions | Up or down
+  table-bar
+    download: Download CSV
+  table-footer

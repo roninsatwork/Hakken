@@ -6,9 +6,7 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { CompactList, type CompactListColumn } from "@/src/ui/components/screens/CompactList";
-import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatNumber } from "../../sites/_components/siteFormat";
-import { formatMoney } from "./analyticsFormat";
 import { PageLink } from "./AnalyticsCells";
 
 /**
@@ -38,17 +36,16 @@ export function AnalyticsPanel({ title, description, seeAll, controls, children 
   );
 }
 
-type TopRow = { key: string; label: string; visits: number; conversions: number; value: number; purchases: number; revenue: number; title?: string };
+type TopRow = { key: string; label: string; visits: number; conversions: number; purchases: number; title?: string };
 
-/** The first five of a list by value: a channel's name, or a page's path linking to its own screen. */
-export function TopList({ rows, kind, currency, pageHref, channelHref, showVisits = true, sales = false, empty }: {
+/** The first five of a list: a channel's name, or a page's path linking to its own screen. Never money (Anthony, 2026-11-03). */
+export function TopList({ rows, kind, pageHref, channelHref, showVisits = true, sales = false, empty }: {
   rows: TopRow[] | undefined;
   kind: "channel" | "page";
-  currency: string | null;
   pageHref?: (row: TopRow) => string | null;
   channelHref?: (row: TopRow) => string;
   showVisits?: boolean;
-  /** A shop's sales (GA7; §11 board 8): purchases, revenue and the average order. */
+  /** A shop's sales (GA7; §11 board 8): its purchases. */
   sales?: boolean;
   empty: string;
 }) {
@@ -61,8 +58,6 @@ export function TopList({ rows, kind, currency, pageHref, channelHref, showVisit
         cell: (row) => (kind === "page" ? <PageLink address={row.label} href={pageHref ? pageHref(row) : null} title={row.title} /> : <span className="text-[13px] text-foreground">{row.label}</span>),
       },
       { key: "purchases", header: t("columns.purchases"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.purchases)}</span> },
-      { key: "revenue", header: t("columns.revenue"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatMoney(row.revenue, currency)}</span> },
-      { key: "average", header: t("columns.averageOrder"), align: "right", cell: (row) => (row.purchases > 0 ? <span className="font-mono text-[12px] text-secondary">{formatMoney(Math.round(row.revenue / row.purchases), currency)}</span> : <NoFigure />) },
     ];
     return <CompactList rows={rows} columns={salesColumns} rowKey={(row) => row.key} empty={empty} />;
   }
@@ -76,7 +71,6 @@ export function TopList({ rows, kind, currency, pageHref, channelHref, showVisit
     },
     ...(showVisits ? [{ key: "visits", header: t("columns.visits"), align: "right" as const, cell: (row: TopRow) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.visits)}</span> }] : []),
     { key: "conversions", header: t("columns.conversions"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.conversions)}</span> },
-    { key: "value", header: t("columns.value"), align: "right", cell: (row) => (row.value ? <span className="font-mono text-[12px] text-secondary">{formatMoney(row.value, currency)}</span> : <NoFigure />) },
   ];
   return <CompactList rows={rows} columns={columns} rowKey={(row) => row.key} empty={empty} />;
 }

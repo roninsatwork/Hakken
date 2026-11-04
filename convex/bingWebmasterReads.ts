@@ -15,11 +15,14 @@ import { listOrder, pageOfList, sortDirectionArg, type ListSorts } from "./siteL
 import { unpackNumbers } from "./utils/searchConsolePacks";
 import { bingKeywordsAt, wholeBingBookInQuery } from "./bingWebmasterBook";
 import { bingStatusValidator } from "./bingWebmasterSchema";
-import { OPENING_PERIOD, periodSpan, ukDay } from "./utils/calendarPeriods";
+import { OPENING_PERIOD, customSpans, periodSpan, spanBefore, ukDay } from "./utils/calendarPeriods";
 import { bingPeriodArgValidator, bingPeriodKey, type BingPeriodArg } from "./bingWebmasterSchema";
 import { accessTokenFor } from "./bingWebmasterConnect";
 import { keywordPages, pageKeywords } from "./bingWebmasterApi";
-import { addUpRows, keywordMatch, pageNumberOf, pageRefOf, rowsOfBingPart, shiftBingDay, type BingRow } from "./utils/bingWebmasterWeeks";
+import { addUpRows, keywordMatch, pageNumberOf, pageRefOf, positionOfRow, rowsOfBingPart, shiftBingDay, type BingRow } from "./utils/bingWebmasterWeeks";
+import { bandOf, beforeIsWhole, bingListSeen as wholeListOf, namedListSeen, pageNameOf, seenNumbers, whoRanksHigher } from "./utils/bingWebmasterSeen";
+
+export { whoRanksHigher };
 
 /**
  * What the Bing Webmaster screens read (docs/plans/active/bing-webmaster-plan.md
@@ -138,6 +141,22 @@ function daysOfPeriod(newestDay: string | undefined, period: BingPeriodArg): { f
   return period.from <= to ? { from: period.from, to } : null;
 }
 
+/**
+ * The span a period's days are set against (calendar-periods-plan.md, rule 4): the period before, whole or its same
+ * days; custom dates, the same number of days straight before. Null where Bing's days don't reach back to its first day,
+ * so a part of a span is never read as the whole of it (ask-hakken-every-chart-page-plan-2026-11-03.md, section 7: "the
+ * span before (held, not read)").
+ */
+function daysBefore(period: BingPeriodArg, span: { from: string; to: string; whole?: boolean }, oldestDay: string | undefined): { from: string; to: string } | null {
+  const before = typeof period === "string" ? spanBefore(period, { from: span.from, to: span.to, whole: span.whole ?? true }) : customSpans(span.from, span.to).before;
+  return oldestDay && oldestDay <= before.from ? { from: before.from, to: before.to } : null;
+}
+
+const hasTotals = (day: Doc<"bingDays">) => day.clicks !== undefined || day.impressions !== undefined;
+const daysIn = (span: { from: string; to: string }) => Math.round((Date.parse(`${span.to}T00:00:00Z`) - Date.parse(`${span.from}T00:00:00Z`)) / 86_400_000) + 1;
+/** A span before holding fewer of its days than this share is a part of one. */
+const WHOLE_DAYS = 0.9;
+
 /** Performance's figures for a website over a calendar period: the screen and Ask Hakken read them alike. */
 export async function readPerformance(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, period: BingPeriodArg) {
   const connection = await connectionOf(ctx, holdId);
@@ -146,8 +165,18 @@ export async function readPerformance(ctx: { db: QueryCtx["db"] }, holdId: Id<"c
   const { from, to } = span;
   const bing = await bingDaysBetween(ctx, holdId, from, to);
   const google = await googleDaysBetween(ctx, holdId, from, to);
-  const days = bing.filter((day) => day.clicks !== undefined || day.impressions !== undefined)
+  const days = bing.filter(hasTotals)
     .map((day) => ({ day: day.day, clicks: day.clicks ?? 0, impressions: day.impressions ?? 0 }));
+  // The span before's totals, Bing's and Google's, for the eye to set this span against (they were held, never read).
+  const spanOf = daysBefore(period, span, connection?.oldestDay);
+  const bingBefore = spanOf ? (await bingDaysBetween(ctx, holdId, spanOf.from, spanOf.to)).filter(hasTotals) : [];
+  const googleBefore = spanOf ? await googleDaysBetween(ctx, holdId, spanOf.from, spanOf.to) : [];
+  // Google's span before only where Search Console holds nearly every day of it: More Handles' days begin 23 April 2026
+  // (checked 2026-11-04), so Last 6 months' span before holds ten days of Google's, and a change on them would be a
+  // tenfold rise that never happened.
+  const before = spanOf && bingBefore.length > 0
+    ? { from: spanOf.from, to: spanOf.to, totals: total(bingBefore), google: googleBefore.length >= daysIn(spanOf) * WHOLE_DAYS ? total(googleBefore) : null }
+    : null;
   const weeks = new Map<string, { bing: number; google: number }>();
   for (const day of days) {
     const week = weeks.get(weekOf(day.day)) ?? { bing: 0, google: 0 };
@@ -166,8 +195,12 @@ export async function readPerformance(ctx: { db: QueryCtx["db"] }, holdId: Id<"c
     google: google.length > 0 ? total(google) : null,
     weeks: [...weeks.entries()].sort(([left], [right]) => left.localeCompare(right))
       .map(([week, figures]) => ({ week, bing: figures.bing, google: google.length > 0 ? figures.google : null })),
+    before,
   };
 }
+
+/** Bing's and Google's clicks and impressions over a span: a period's totals, or the span before's. */
+const totalsValidator = v.object({ clicks: v.number(), impressions: v.number() });
 
 /**
  * The website's clicks and impressions on Bing day by day, for chosen days
@@ -180,9 +213,11 @@ export const bingPerformance = tenantQuery({
     from: v.string(),
     to: v.string(),
     days: v.array(v.object({ day: v.string(), clicks: v.number(), impressions: v.number() })),
-    totals: v.object({ clicks: v.number(), impressions: v.number() }),
-    google: v.union(v.null(), v.object({ clicks: v.number(), impressions: v.number() })),
+    totals: totalsValidator,
+    google: v.union(v.null(), totalsValidator),
     weeks: v.array(v.object({ week: v.string(), bing: v.number(), google: v.union(v.number(), v.null()) })),
+    /** The span before: its days, Bing's totals and Google's; null where Bing's days don't reach back to it. */
+    before: v.union(v.null(), v.object({ from: v.string(), to: v.string(), totals: totalsValidator, google: v.union(v.null(), totalsValidator) })),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -221,14 +256,6 @@ type ListRow = {
   googleImpressions: number | null;
   googlePosition: number | null;
 };
-
-/** Which engine ranks the website higher for a row: Bing, Google, the same, or only Bing shows it. */
-export function whoRanksHigher(row: { position: number | null; googlePosition: number | null; googleImpressions: number | null }): "BING" | "GOOGLE" | "SAME" | "ONLY_BING" | null {
-  if (row.position === null) return null;
-  if (row.googlePosition === null || !row.googleImpressions) return "ONLY_BING";
-  const gap = row.googlePosition - row.position;
-  return Math.abs(gap) < 0.5 ? "SAME" : gap > 0 ? "BING" : "GOOGLE";
-}
 
 const SORTS: ListSorts<ListRow, "name" | "clicks" | "impressions" | "ctr" | "position" | "googleClicks" | "googlePosition" | "gap"> = {
   // A to Z by the place the build gave each name, so no list reads its words to sort.
@@ -306,11 +333,6 @@ function topOf(rows: readonly ListRow[], by: (row: ListRow) => number): ListRow 
   return best && by(best) > 0 ? best : null;
 }
 
-function band(position: number | null): string {
-  if (position === null) return "none";
-  return position <= 3 ? "top3" : position <= 10 ? "top10" : position <= 20 ? "top20" : "rest";
-}
-
 /**
  * The names of a few rows: a keyword's words from the website's book, a
  * page's address from its page numbering, reading only the records they fall
@@ -354,7 +376,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyW
   const filtered = rows.filter((row) => {
     if (names && words.length > 0 && !words.every((word) => (names.get(row.number) ?? "").toLowerCase().includes(word))) return false;
     if (kinds && names && kinds.kindOf(names.get(row.number) ?? "") !== args.kind) return false;
-    if (args.band && band(row.position) !== args.band) return false;
+    if (args.band && bandOf(row.position) !== args.band) return false;
     if (args.google === "both" && row.googleImpressions === null) return false;
     if (args.google === "onlyBing" && row.googleImpressions !== null) return false;
     if (args.who && whoRanksHigher(row) !== args.who) return false;
@@ -393,6 +415,13 @@ export async function readList(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyW
 export async function beforeClicksOf(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, list: "query" | "page", period: BingPeriodArg): Promise<Map<number, number> | null> {
   const parts = await periodParts(ctx, holdId, list, period, "BEFORE");
   if (parts.length === 0) return null;
+  // Never a part of a span set against the whole of one: Last 12 months' span before holds only the weeks still kept
+  // (`beforeIsWhole`, found 2026-11-04). Its span from its first part alone, so the list itself is not read twice.
+  const now = await ctx.db
+    .query("bingPeriods")
+    .withIndex("by_hold_list_period_which_part", (q) => q.eq("companyWebsiteId", holdId).eq("list", list).eq("period", bingPeriodKey(period)).eq("which", "NOW").eq("part", 0))
+    .first();
+  if (!now || !beforeIsWhole(now, parts[0])) return null;
   return new Map(rowsOfParts(parts).map((row) => [row.number, row.clicks]));
 }
 
@@ -501,6 +530,90 @@ export const bingListAll = tenantQuery({
 });
 
 // ---------------------------------------------------------------------------
+// What the eye reads of a whole list
+// ---------------------------------------------------------------------------
+
+const seenTotalsValidator = v.object({ rows: v.number(), clicks: v.number(), impressions: v.number() });
+const seenPickValidator = v.object({
+  name: v.string(),
+  ref: v.string(),
+  clicks: v.number(),
+  impressions: v.number(),
+  position: orNull(v.number()),
+  googleClicks: orNull(v.number()),
+  googleImpressions: orNull(v.number()),
+  googlePosition: orNull(v.number()),
+  clicksBefore: orNull(v.number()),
+  impressionsBefore: orNull(v.number()),
+  positionBefore: orNull(v.number()),
+});
+
+/**
+ * A whole list's figures for the eye (`utils/bingWebmasterSeen.ts`): its totals now and the span before, who ranks the
+ * website higher, each place band on both engines, the rows new and lost, the biggest movers, the widest gaps between
+ * the engines, and for Pages each kind of page. The page's table shows one page of the list; the eye reads this beside
+ * it. One read for Keywords and Bing against Google, whatever the table is sorted or filtered by, so paging never runs
+ * it again: the span before was held for every list, and no screen read it.
+ */
+export async function readListSeen(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, list: "query" | "page", period: BingPeriodArg) {
+  const parts = await periodParts(ctx, holdId, list, period);
+  if (parts.length === 0) return null;
+  const rows = rowsOfParts(parts);
+  // The span before only where it is whole: Last 12 months' holds only the weeks still kept (`beforeIsWhole`).
+  const built = await periodParts(ctx, holdId, list, period, "BEFORE");
+  const beforeParts = built[0] && beforeIsWhole(parts[0], built[0]) ? built : [];
+  const before = beforeParts.length > 0
+    ? beforeParts.flatMap(rowsOfBingPart).map((row) => ({ number: row.key, clicks: row.clicks, impressions: row.impressions, position: positionOfRow(row) }))
+    : null;
+  // Pages: each page's kind from its address, as the Pages filter works it out (`pageKinds.ts`), the span before's too.
+  const kinds = list === "page" ? await readPageKinds(ctx, holdId) : null;
+  const addresses = kinds ? await namesOf(ctx, holdId, "page", [...new Set([...rows.map((row) => row.number), ...(before ?? []).map((row) => row.number)])]) : null;
+  const seen = wholeListOf(rows, before, kinds && addresses ? (number) => kinds.kindOf(addresses.get(number) ?? "") : undefined);
+  const picked = seenNumbers(seen);
+  const names = addresses ?? await namesOf(ctx, holdId, list, picked);
+  const titles = list === "page" ? await titlesOf(ctx, holdId, picked.map((number) => names.get(number) ?? "")) : new Map<string, string>();
+  return {
+    from: parts[0].from,
+    to: parts[0].to,
+    beforeFrom: beforeParts[0]?.from ?? null,
+    beforeTo: beforeParts[0]?.to ?? null,
+    ...namedListSeen(seen, (number) => {
+      const key = names.get(number);
+      if (!key || key.startsWith("~")) return null;
+      return { name: list === "page" ? pageNameOf(key, titles.get(key) ?? null) : key, ref: list === "page" ? pageRefOf(number) : String(number) };
+    }, (kind) => kinds?.nameOf(kind) ?? null),
+  };
+}
+
+/** A Bing list read whole for the eye: Keywords, Pages and Bing against Google hand it beside their table's page. */
+export const bingListSeen = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), list: v.union(v.literal("query"), v.literal("page")), period: bingPeriodArgValidator },
+  returns: v.union(v.null(), v.object({
+    from: v.string(),
+    to: v.string(),
+    beforeFrom: v.union(v.string(), v.null()),
+    beforeTo: v.union(v.string(), v.null()),
+    totals: seenTotalsValidator,
+    before: v.union(v.null(), seenTotalsValidator),
+    both: v.object({ rows: v.number(), clicks: v.number(), impressions: v.number(), googleClicks: v.number(), googleImpressions: v.number() }),
+    who: v.object({ bingHigher: v.number(), googleHigher: v.number(), same: v.number(), onlyBing: v.number(), onlyBingClicks: v.number() }),
+    bands: v.array(v.object({ band: v.string(), rows: v.number(), clicks: v.number(), impressions: v.number(), googleRows: v.number(), googleClicks: v.number(), googleImpressions: v.number() })),
+    newLost: v.union(v.null(), v.object({ gained: v.number(), lost: v.number(), gainedClicks: v.number(), lostClicks: v.number() })),
+    up: v.array(seenPickValidator),
+    down: v.array(seenPickValidator),
+    bingAhead: v.union(v.null(), seenPickValidator),
+    googleAhead: v.union(v.null(), seenPickValidator),
+    shareHigh: v.union(v.null(), seenPickValidator),
+    shareLow: v.union(v.null(), seenPickValidator),
+    kinds: v.array(v.object({ name: v.string(), sorted: v.boolean(), rows: v.number(), clicks: v.number(), clicksBefore: orNull(v.number()), impressions: v.number(), googleClicks: v.number() })),
+  })),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    return await readListSeen(ctx, site.hold._id, args.list, args.period);
+  },
+});
+
+// ---------------------------------------------------------------------------
 // A keyword's or a page's own screen
 // ---------------------------------------------------------------------------
 
@@ -518,6 +631,8 @@ export const bingRecord = tenantQuery({
     figures: v.union(v.null(), shownRowValidator),
     from: v.union(v.string(), v.null()),
     to: v.union(v.string(), v.null()),
+    /** Its figures on Bing the span before; null where the span before isn't built. */
+    before: v.optional(v.union(v.null(), v.object({ from: v.string(), to: v.string(), clicks: v.number(), impressions: v.number(), position: orNull(v.number()) }))),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -552,7 +667,16 @@ export const bingRecord = tenantQuery({
     const row = rowsOfParts(parts).find((entry) => entry.number === number);
     const [figures] = row ? await shownRows(ctx, holdId, args.list, [row], new Map([[number, key]])) : [null];
     const title = args.list === "page" ? (await titlesOf(ctx, holdId, [key])).get(key) ?? null : null;
-    return { key, title, weeks, figures: figures ?? null, from: parts[0]?.from ?? null, to: parts[0]?.to ?? null };
+    // The same keyword or page the span before, as its list's span before keeps it (ask-hakken-every-chart-page-plan-
+    // 2026-11-03.md, section 7: held, never read): nothing there is no clicks then.
+    const built = await periodParts(ctx, holdId, args.list, args.period ?? OPENING_PERIOD, "BEFORE");
+    // Only a whole span before: Last 12 months' holds only the weeks still kept (`beforeIsWhole`).
+    const beforeParts = built[0] && parts[0] && beforeIsWhole(parts[0], built[0]) ? built : [];
+    const then = beforeParts.flatMap(rowsOfBingPart).find((entry) => entry.key === number);
+    const before = beforeParts[0]
+      ? { from: beforeParts[0].from, to: beforeParts[0].to, clicks: then?.clicks ?? 0, impressions: then?.impressions ?? 0, position: then ? positionOfRow(then) : null }
+      : null;
+    return { key, title, weeks, figures: figures ?? null, from: parts[0]?.from ?? null, to: parts[0]?.to ?? null, before };
   },
 });
 
@@ -642,9 +766,14 @@ export async function readCrawling(ctx: { db: QueryCtx["db"] }, holdId: Id<"comp
   const span = connection ? daysOfPeriod(connection.newestDay, period) : null;
   if (!connection || !span) return null;
   const { from, to } = span;
-  const days = (await bingDaysBetween(ctx, holdId, from, to)).flatMap((day) => day.crawl
+  const crawlOf = (rows: readonly Doc<"bingDays">[]) => rows.flatMap((day) => day.crawl
     ? [{ day: day.day, crawled: day.crawl.crawled, errors: day.crawl.errors, inIndex: day.crawl.inIndex, blocked: day.crawl.blockedByRobots }]
     : []);
+  const days = crawlOf(await bingDaysBetween(ctx, holdId, from, to));
+  // The span before: its pages read, errors and pages blocked, and how many pages Bing held in its index on its last
+  // day, for the eye to set this span against (ask-hakken-every-chart-page-plan-2026-11-03.md, section 7).
+  const spanOf = daysBefore(period, span, connection.oldestDay);
+  const daysThen = spanOf ? crawlOf(await bingDaysBetween(ctx, holdId, spanOf.from, spanOf.to)) : [];
   const money = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", holdId)).take(48);
   const bing = new Map((await ctx.db.query("bingPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", holdId)).take(100)).map((row) => [row.page, row]));
   const pages = [];
@@ -664,11 +793,18 @@ export async function readCrawling(ctx: { db: QueryCtx["db"] }, holdId: Id<"comp
     from,
     to,
     days,
-    totals: days.reduce((sum, day) => ({ crawled: sum.crawled + day.crawled, errors: sum.errors + day.errors, blocked: sum.blocked + day.blocked }), { crawled: 0, errors: 0, blocked: 0 }),
+    totals: crawlTotals(days),
     pages,
     checkedAt: connection.pagesCheckedAt ?? null,
+    before: spanOf && daysThen.length > 0
+      ? { from: spanOf.from, to: spanOf.to, totals: crawlTotals(daysThen), inIndex: [...daysThen].sort((left, right) => left.day.localeCompare(right.day)).at(-1)!.inIndex }
+      : null,
   };
 }
+
+const crawlTotals = (days: readonly { crawled: number; errors: number; blocked: number }[]) =>
+  days.reduce((sum, day) => ({ crawled: sum.crawled + day.crawled, errors: sum.errors + day.errors, blocked: sum.blocked + day.blocked }), { crawled: 0, errors: 0, blocked: 0 });
+const crawlTotalsValidator = v.object({ crawled: v.number(), errors: v.number(), blocked: v.number() });
 
 /** How Bing read the website day by day, and each money page in its index beside Google's. */
 export const bingCrawling = tenantQuery({
@@ -677,7 +813,7 @@ export const bingCrawling = tenantQuery({
     from: v.string(),
     to: v.string(),
     days: v.array(v.object({ day: v.string(), crawled: v.number(), errors: v.number(), inIndex: v.number(), blocked: v.number() })),
-    totals: v.object({ crawled: v.number(), errors: v.number(), blocked: v.number() }),
+    totals: crawlTotalsValidator,
     pages: v.array(v.object({
       page: v.string(),
       title: v.union(v.string(), v.null()),
@@ -687,6 +823,8 @@ export const bingCrawling = tenantQuery({
       googleLastRead: v.union(v.string(), v.null()),
     })),
     checkedAt: orNull(v.number()),
+    /** The span before: its totals and the pages in Bing's index on its last day; null where Bing's days don't reach back to it. */
+    before: v.union(v.null(), v.object({ from: v.string(), to: v.string(), totals: crawlTotalsValidator, inIndex: v.number() })),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
