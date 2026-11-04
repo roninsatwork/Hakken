@@ -134,9 +134,29 @@ is real money on a metered allowance, and in July 2026 the account reached 90%
 of its 3,000 monthly minutes with three days to go — 221 pushes to `dev`, most
 of them one-per-step rather than one-per-finished-piece.
 
-- A check takes about five to six minutes. It was nine and a half until the
-  installed packages were cached between runs; the tree is 1.1GB and was
-  refetched every time.
+- **A check takes about 20 minutes, not the five or six it once did** (measured
+  2026-11-04). CI #53 took 26m 33s: 18m 46s of tests with coverage, 3m 49s of
+  types and 2m 9s of lint. It was 10 minutes on 2026-09-21, with half the test
+  files. The same code can take 1.6 times as long on one of GitHub's machines as
+  another, so one run proves little: compare steps, not totals. The billed time is
+  the job's on the run's Usage tab; the list can show more.
+- **What made it faster on 2026-11-04.** The test database goes straight to a
+  value's records (below), which took a fifth off the backend's time. The type
+  check runs on TypeScript 7 (`typescript-7` in `package.json`): 26 seconds here
+  against two and a half minutes. Lint and the scripts stay on TypeScript 6 until
+  `typescript-eslint` takes 7, so don't remove either. A push to `dev` leaves out
+  the Arcade game's tests (`HAKKEN_SKIP_ARCADE_TESTS`, `vitest.config.ts`): pull
+  requests, deploys and `npm run check` still run them.
+- **Tried on 2026-11-04 and left out, so don't try them again without something
+  new.** Measured with two workers and coverage, as on GitHub:
+  - A fake browser per worker (`pool: 'vmThreads'` or `'vmForks'`, as Vitest's own
+    hint suggests): 61 seconds became 18 with no coverage, but with coverage it
+    saved 9%, and memory reached 10 to 11GB against 4.5GB, on a machine of about 8GB.
+  - Keeping prepared code between GitHub's runs (`fsModuleCache`): 684 seconds
+    became 673, which restoring a 199MB cache would use up. It saves 45% with no
+    coverage, so it stays on here.
+  - Bigger machines: only on GitHub's paid organisation plans, and this is a
+    personal account.
 - Superseded checks are cancelled, so a burst of pushes costs one check rather
   than one each. `main` is exempt — those gate a deploy and each must stand on
   its own.
@@ -191,7 +211,9 @@ its tests since 2026-09-21 — runs 6, 7, 14, 15 and 18 — failed on a clock, n
 a result):
 
 - **One time limit, set in `vitest.config.ts` and nowhere else**: three minutes
-  on GitHub, where it only catches a test that hangs, and thirty seconds here.
+  on GitHub, where it only catches a test that hangs, and ninety seconds here
+  (thirty failed tests at random on the first run after a package changes, with
+  nothing prepared yet: 2026-11-04).
   Never give a test or a hook its own limit (`}, 15_000);`, `{ timeout }`):
   it overrides the config on GitHub too. `src/test-time-limits-drift.test.ts`
   fails one.
@@ -289,7 +311,11 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   whole, so a `t.run` returns only what is asserted: a 45,000-row list
   returned to have its length checked took 1.6 seconds to copy and a quarter
   of a second to read (`convex/googleAnalyticsLoad.test.ts`, 2026-11-02).
-- **The test database reads a table's own rows** (2026-10-15). `convex-test`
+- **The test database reads a table's own rows** (2026-10-15), and since
+  2026-11-04 goes straight to the records with a field's value, kept in buckets
+  as they're saved: a collection spent a third of its time scanning before.
+  `convex/testDatabaseShortcuts.test.ts` holds it to what reading the whole table
+  finds, however records were added, changed or removed. `convex-test`
   went through every row of every table on each lookup; the backend project
   loads it through Vite with a change that keeps each table's ids
   (`src/test/convexTestTables.ts`, wired in `vitest.config.ts`), which took

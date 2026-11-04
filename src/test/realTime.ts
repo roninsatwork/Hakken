@@ -21,7 +21,7 @@ const realClearTimeout = globalThis.clearTimeout;
 
 /**
  * Real time a test may wait on its work, however slowly the work's code loads:
- * well inside the test's own limit (thirty seconds here, three minutes on
+ * well inside the test's own limit (ninety seconds here, three minutes on
  * GitHub, which runs ten times slower), so a genuine hang fails with its own
  * words rather than as a timeout.
  */

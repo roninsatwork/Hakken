@@ -7,7 +7,7 @@ import { repoRoot } from './test/driftUtils'
  * No test sets its own time limit (AGENTS.md, "Test time limits").
  *
  * There is one, in `vitest.config.ts`: three minutes on GitHub, where it only
- * catches a hang, and thirty seconds here. A limit given to one test overrides
+ * catches a hang, and ninety seconds here. A limit given to one test overrides
  * it on GitHub too — which is how a 15-second limit failed a push on
  * 2026-09-28, the fifth CI run in a week to fail on a clock alone. Speed is
  * judged here instead, test by test on its own (`scripts/check-test-speed.mjs`).
@@ -301,7 +301,7 @@ describe('test time limits', () => {
 
   test('the one limit is where it is said to be', () => {
     const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
-    expect(config).toMatch(/const TEST_TIMEOUT_MS = process\.env\.GITHUB_ACTIONS \? 180_000 : 30_000/)
+    expect(config).toMatch(/const TEST_TIMEOUT_MS = process\.env\.GITHUB_ACTIONS \? 180_000 : 90_000/)
     expect(config.match(/testTimeout: TEST_TIMEOUT_MS/g)).toHaveLength(2)
   })
 })

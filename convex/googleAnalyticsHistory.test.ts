@@ -5,7 +5,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
 import { finishScheduled } from "@/src/test/finishScheduled";
-import { NEWEST, dayOf, type Visit } from "@/src/test/googleAnalyticsFake";
+import { fakeGoogle, NEWEST, dayOf, type Visit } from "@/src/test/googleAnalyticsFake";
 import { FINISHED_ON_9_OCTOBER, collectedWebsite } from "@/src/test/googleAnalyticsCollected";
 import { shiftDay } from "./searchConsoleDays";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
@@ -60,12 +60,22 @@ describe("the fill's pieces", () => {
   });
 });
 
+/**
+ * A website filled by its first night (ga-big-site-reliability-plan.md BR7), shared by the tests that only read it: a
+ * fill of two years is this file's slowest step. Each stubs Google afresh, as a stub lasts one test, to show it's never asked.
+ */
+let filled: ReturnType<typeof fillWebsite> | undefined;
+function fillWebsite() {
+  const t = harness();
+  return collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED).then((held) => ({ ...held, t }));
+}
+const filledWebsite = () => (filled ??= fillWebsite());
+
 describe("channels over time", () => {
   test("filled once: the last 12 months and the 12 before read from what is held, by day, week and month, never asking Google", async () => {
-    const t = harness();
-    // Filled by its first night (ga-big-site-reliability-plan.md BR7).
-    const { siteId, connectionId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED);
+    const { t, siteId, connectionId, user } = await filledWebsite();
     expect((await t.run(async (ctx) => await ctx.db.get(connectionId)))?.historyFilled).toContain("channel");
+    const google = fakeGoogle([]);
     const asked = google.calls.length;
     const year = await user.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, period: "last12Months", ...args });
     expect(year).toMatchObject({ live: false, liveBefore: false, from: "2025-10-09", to: NEWEST });
@@ -84,8 +94,8 @@ describe("channels over time", () => {
   });
 
   test("filled once: Overview, Events, Campaigns and Visits read this year from each fact a day, never asking Google", async () => {
-    const t = harness();
-    const { siteId, user, google } = await collectedWebsite(t, twoYears(), encryptConnectorToken, FETCHED);
+    const { siteId, user } = await filledWebsite();
+    const google = fakeGoogle([]);
     const asked = google.calls.length;
     const year = { siteId, period: "last12Months" as const, device: "" };
     const overview = await user.query(api.googleAnalyticsChartReads.analyticsChart, year);

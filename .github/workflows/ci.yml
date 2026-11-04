@@ -111,7 +111,13 @@ jobs:
       # accumulated changes with no coverage enforcement at all. This runs the
       # full unit/integration suite, so no separate test:run step is needed.
       # The browser suite stays in the full gate below.
+      #
+      # A push to dev leaves out the Arcade game's tests, which run on every pull
+      # request, every deploy to main and every local `npm run check`: 14% of the
+      # time spent running tests, for a game that rarely changes (2026-11-04).
       - name: Run unit and integration tests with coverage
+        env:
+          HAKKEN_SKIP_ARCADE_TESTS: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' && '1' || '' }}
         run: npm run test:coverage
 
       - name: Check coverage thresholds

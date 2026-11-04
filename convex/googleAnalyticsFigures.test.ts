@@ -85,13 +85,21 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** A website's first collection, shared by the tests that only read it: a collection is this file's slowest step. */
+let collected: ReturnType<typeof firstCollection> | undefined;
+async function firstCollection() {
+  const t = harness();
+  const { siteId, admin } = await connected(t);
+  fakeGoogle(history(70));
+  await save(admin, siteId);
+  await finishScheduled(t);
+  return { t, siteId, admin };
+}
+const firstCollected = () => (collected ??= firstCollection());
+
 describe("the second round's figures", () => {
   test("people for every device are the website's counted whole, never the devices' added up", async () => {
-    const t = harness();
-    const { siteId, admin } = await connected(t);
-    fakeGoogle(history(70));
-    await save(admin, siteId);
-    await finishScheduled(t);
+    const { t, siteId } = await firstCollected();
 
     const [every] = await rowsIn(t, siteId, "total|lastMonth|NOW|");
     expect(every).toMatchObject({ visits: MOBILE + DESKTOP, people: peopleOf(MOBILE + DESKTOP) });
@@ -103,11 +111,7 @@ describe("the second round's figures", () => {
   });
 
   test("Overview reads page views, people, visit length and bounce rate's makings; the lists read them a row", async () => {
-    const t = harness();
-    const { siteId, admin } = await connected(t);
-    fakeGoogle(history(70));
-    await save(admin, siteId);
-    await finishScheduled(t);
+    const { siteId, admin } = await firstCollected();
 
     const args = { siteId, period: "lastMonth" as const, device: "" };
     const overview = await admin.query(api.googleAnalyticsReads.analyticsOverview, args);

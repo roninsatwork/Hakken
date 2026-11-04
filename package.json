@@ -34,7 +34,7 @@
     "template:build": "node scripts/strip-verticals.mjs",
     "verify:env": "node scripts/verify-local-environment.mjs",
     "verify:deployment": "node scripts/verify-deployment-environment.mjs",
-    "typecheck": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit",
+    "typecheck": "node ./node_modules/typescript-7/bin/tsc --noEmit",
     "typecheck:cold": "node -e \"require('fs').rmSync('tsconfig.tsbuildinfo',{force:true})\" && npm run typecheck",
     "check": "npm run verify:env && npm run check:guards && npm run check:theme && npm run lint && npm run typecheck:cold && npm run test:run",
     "gate": "npm run check:guards && npm run lint && npm run typecheck:cold && npm run test:run && npm run test:e2e && npm run test:coverage && npm run coverage:check",
@@ -108,6 +108,7 @@
     "knip": "^6.42.1",
     "tailwindcss": "^4.3.3",
     "typescript": "6.0.3",
+    "typescript-7": "npm:typescript@7.0.2",
     "vitest": "^5.0.5"
   },
   "overrides": {

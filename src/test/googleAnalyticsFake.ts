@@ -60,21 +60,39 @@ export type Visit = {
   events?: Record<string, [number, number]>;
 };
 
-const FIELD: Record<string, (visit: Visit) => string> = {
-  date: (visit) => visit.date.replaceAll("-", ""),
-  // Google's day of the week: 0 is Sunday.
-  dayOfWeek: (visit) => String(new Date(`${visit.date}T00:00:00Z`).getUTCDay()),
-  // Google's hour of the day, "00" to "23": every visit of a day at one hour, 9am to 4pm by its day of the month.
-  hour: (visit) => String(9 + (Number(visit.date.slice(8, 10)) % 8)).padStart(2, "0"),
-  yearMonth: (visit) => visit.date.slice(0, 7).replace("-", ""),
-  // Google's ISO week, `202641`: the week of the year's Thursday, Monday to Sunday.
-  isoYearIsoWeek: (visit) => {
-    const at = Date.parse(`${visit.date}T00:00:00Z`);
+/**
+ * A day's own fields, worked out once for each day: each ask reads every line of the log, and a collection asks hundreds
+ * of times (a tenth of a collection's time was spent here, 2026-11-04).
+ */
+const DAY_FIELDS = new Map<string, { date: string; dayOfWeek: string; hour: string; yearMonth: string; isoYearIsoWeek: string }>();
+function dayFields(day: string) {
+  let held = DAY_FIELDS.get(day);
+  if (!held) {
+    const at = Date.parse(`${day}T00:00:00Z`);
+    // Google's ISO week, `202641`: the week of the year's Thursday, Monday to Sunday.
     const thursday = at + (3 - ((new Date(at).getUTCDay() + 6) % 7)) * 86_400_000;
     const year = new Date(thursday).getUTCFullYear();
     const week = Math.floor((thursday - Date.UTC(year, 0, 1)) / (7 * 86_400_000)) + 1;
-    return `${year}${String(week).padStart(2, "0")}`;
-  },
+    held = {
+      date: day.replaceAll("-", ""),
+      // Google's day of the week: 0 is Sunday.
+      dayOfWeek: String(new Date(at).getUTCDay()),
+      // Google's hour of the day, "00" to "23": every visit of a day at one hour, 9am to 4pm by its day of the month.
+      hour: String(9 + (Number(day.slice(8, 10)) % 8)).padStart(2, "0"),
+      yearMonth: day.slice(0, 7).replace("-", ""),
+      isoYearIsoWeek: `${year}${String(week).padStart(2, "0")}`,
+    };
+    DAY_FIELDS.set(day, held);
+  }
+  return held;
+}
+
+const FIELD: Record<string, (visit: Visit) => string> = {
+  date: (visit) => dayFields(visit.date).date,
+  dayOfWeek: (visit) => dayFields(visit.date).dayOfWeek,
+  hour: (visit) => dayFields(visit.date).hour,
+  yearMonth: (visit) => dayFields(visit.date).yearMonth,
+  isoYearIsoWeek: (visit) => dayFields(visit.date).isoYearIsoWeek,
   deviceCategory: (visit) => visit.device,
   sessionDefaultChannelGroup: (visit) => visit.channel,
   firstUserDefaultChannelGroup: (visit) => visit.firstChannel ?? visit.channel,
@@ -140,13 +158,52 @@ function eventNamesIn(filter: Filter | undefined): string[] | null {
   return filter.filter?.fieldName === "eventName" ? filter.filter.inListFilter?.values ?? [filter.filter.stringFilter?.value ?? ""] : null;
 }
 
+/** A filter's own words, lowered once for each filter rather than again for each line of the log. */
+const LOWERED = new WeakMap<object, Set<string>>();
+function wordsOf(field: NonNullable<Filter["filter"]>): Set<string> {
+  let words = LOWERED.get(field);
+  if (!words) {
+    words = new Set((field.inListFilter ? field.inListFilter.values : [field.stringFilter?.value ?? ""]).map((entry) => entry.toLowerCase()));
+    LOWERED.set(field, words);
+  }
+  return words;
+}
+
 function passes(visit: Visit, filter: Filter | undefined, eventName?: string): boolean {
   if (!filter) return true;
   if (filter.andGroup) return filter.andGroup.expressions.every((one) => passes(visit, one, eventName));
   const field = filter.filter!;
   const value = field.fieldName === "eventName" ? eventName ?? "" : FIELD[field.fieldName](visit);
-  if (field.inListFilter) return field.inListFilter.values.map((entry) => entry.toLowerCase()).includes(value.toLowerCase());
-  return value.toLowerCase() === (field.stringFilter?.value ?? "").toLowerCase();
+  return wordsOf(field).has(value.toLowerCase());
+}
+
+/**
+ * The log's lines between two days, in the log's own order, so each row of an answer comes where it always came. An ask
+ * for one month no longer reads two years of lines to find them (a collection asks hundreds of times). A log a test adds
+ * to is read afresh, as its length has changed.
+ */
+const BY_DAY = new WeakMap<Visit[], { length: number; lines: Array<{ day: string; at: number; visit: Visit }> }>();
+function linesBetween(visits: Visit[], from: string, to: string): Visit[] {
+  let held = BY_DAY.get(visits);
+  if (!held || held.length !== visits.length) {
+    const lines = visits.map((visit, at) => ({ day: visit.date, at, visit })).sort((left, right) => (left.day < right.day ? -1 : left.day > right.day ? 1 : left.at - right.at));
+    held = { length: visits.length, lines };
+    BY_DAY.set(visits, held);
+  }
+  const firstFrom = (day: string) => {
+    let low = 0;
+    let high = held!.lines.length;
+    while (low < high) {
+      const middle = (low + high) >> 1;
+      if (held!.lines[middle].day < day) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  const start = firstFrom(from);
+  // The first line after `to`: every day's text sorts below the same day with anything after it.
+  const end = firstFrom(`${to}~`);
+  return held.lines.slice(start, end).sort((left, right) => left.at - right.at).map((line) => line.visit);
 }
 
 export function fakeGoogle(visits: Visit[]): Google {
@@ -201,8 +258,8 @@ export function fakeGoogle(visits: Visit[]): Google {
       // A product list (§18.6.6): each product of each line, by its own name and category, never mixed with visits.
       if (metrics.includes("itemsViewed")) {
         const items = new Map<string, { keys: string[]; values: number[] }>();
-        for (const visit of google.visits) {
-          if (visit.date < ask.dateRanges[0].startDate || visit.date > ask.dateRanges[0].endDate || !passes(visit, ask.dimensionFilter)) continue;
+        for (const visit of linesBetween(google.visits, startDate, endDate)) {
+          if (!passes(visit, ask.dimensionFilter)) continue;
           for (const item of visit.items ?? []) {
             const keys = ask.dimensions.map(({ name }) => (name === "itemName" ? item.name : name === "itemCategory" ? item.category : FIELD[name](visit)));
             const sum = items.get(keys.join("|")) ?? { keys, values: [0, 0, 0, 0] };
@@ -220,8 +277,7 @@ export function fakeGoogle(visits: Visit[]): Google {
       // that made one, once each however many they made — at most the line's visits.
       const withAny = !byEvent ? eventNamesIn(ask.dimensionFilter) : null;
       const sums = new Map<string, { keys: string[]; values: number[] }>();
-      for (const visit of google.visits) {
-        if (visit.date < startDate || visit.date > endDate) continue;
+      for (const visit of linesBetween(google.visits, startDate, endDate)) {
         const happened: Array<[string, number]> = everyEvent
           ? [["page_view", visit.views], ["session_start", visit.sessions], ...Object.entries(visit.events ?? {}).map(([eventName, [count]]) => [eventName, count] as [string, number])]
           : [];

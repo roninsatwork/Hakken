@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import type { ViteUserConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { convexTestTables } from './src/test/convexTestTables'
@@ -15,6 +15,15 @@ const reactPlugin = react() as unknown as VitestPlugin
 const coverageThresholds = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, './coverage-thresholds.json'), 'utf8'),
 ).current
+
+/*
+ * The Arcade game's tests run on the way to main, not on every push to dev (Anthony, 2026-11-04: "do them all"): 29 files
+ * that play whole maps, 14% of the time GitHub's check spends running tests, for a game that rarely changes. `npm run
+ * check` here still runs them before every push, and a pull request or a deploy to main runs them too. Their code leaves
+ * the coverage figures with them, or it would count as untested.
+ */
+const SKIP_ARCADE_TESTS = process.env.HAKKEN_SKIP_ARCADE_TESTS === '1'
+const ARCADE_CODE = 'src/app/(dashboard)/app/arcade/**'
 
 type HakkenCoverageConfig = {
   provider: 'v8'
@@ -46,6 +55,7 @@ const coverageConfig = {
     'src/e2e/**',
     'src/**/_generated/**',
     'vitest.setup.ts',
+    ...(SKIP_ARCADE_TESTS ? [ARCADE_CODE] : []),
   ],
   thresholds: coverageThresholds,
 } satisfies HakkenCoverageConfig
@@ -59,12 +69,15 @@ const coverageConfig = {
  * laptop — 1.25s became over 15s, 3.4s over 30s, 4s became 45s — and every CI
  * run that failed in its tests from 2026-09-21 to 2026-09-28 (runs 6, 7, 14, 15
  * and 18) failed on a clock alone, each fixed one test at a time until the
- * next. Here it is thirty seconds, and speed itself is checked by the speed
+ * next. Here it is ninety seconds: thirty failed tests at random on a run with
+ * nothing prepared yet, the first after a package changes, when a test that
+ * takes one second waits for the app's code to load (2026-11-04). Speed itself
+ * is checked by the speed
  * budget `npm run test:run` applies (`scripts/check-test-speed.mjs`): a test
  * over five seconds here fails the local check, which on GitHub is about a
  * minute, well inside three.
  */
-const TEST_TIMEOUT_MS = process.env.GITHUB_ACTIONS ? 180_000 : 30_000
+const TEST_TIMEOUT_MS = process.env.GITHUB_ACTIONS ? 180_000 : 90_000
 
 /*
  * How hard a run here drives the machine (AGENTS.md, "Tests that never
@@ -82,7 +95,9 @@ const TEST_TIMEOUT_MS = process.env.GITHUB_ACTIONS ? 180_000 : 30_000
  * So here: half the cores, and the transformed files kept on disk between
  * runs (`node_modules/.vite/vitest`), redone for any file that changed.
  * GitHub's runs are left as they were: its three-minute limit has the room,
- * and its own cache of `node_modules` must never carry this one.
+ * and its own cache of `node_modules` must never carry this one. Keeping them
+ * between GitHub's runs was tried on 2026-11-04 and saves 1.6% with coverage on,
+ * less than restoring them costs (AGENTS.md, "What a push costs").
  */
 const LOCAL_RUN = !process.env.GITHUB_ACTIONS
 
@@ -127,6 +142,7 @@ export default defineConfig({
           globals: true,
           environment: 'jsdom',
           include: ['src/**/*.test.{ts,tsx}'],
+          ...(SKIP_ARCADE_TESTS ? { exclude: [...configDefaults.exclude, ARCADE_CODE] } : {}),
           setupFiles: ['./vitest.setup.ts'],
           /*
            * The same reasoning as the backend project below: the Arcade engine
@@ -184,7 +200,7 @@ export default defineConfig({
            * test, which then failed instantly on a response it never asked for. One
            * slow test, two red results, neither of them a real defect.
            *
-           * A genuine deadlock still fails, thirty seconds later here and three minutes
+           * A genuine deadlock still fails, ninety seconds later here and three minutes
            * on GitHub (`TEST_TIMEOUT_MS` above).
            */
           testTimeout: TEST_TIMEOUT_MS,
