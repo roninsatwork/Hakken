@@ -452,6 +452,12 @@ drifted from the app: "We cannot go through this with every agent").
   publishing** a canvas, and fix what it names.
 - **Tables fit the page**: no minimum width, no sideways scrolling.
 - **Words are Inter, numbers JetBrains Mono.**
+- **A chart never grows with the screen** (Anthony, 2026-11-05: "why is this so
+  huge on full screen"). Anthony's screen is 3,200 wide. An `<svg>` with a fixed
+  `viewBox` and `width="100%"` stretches, words and all: Funnel's chart had 33px
+  words there and stood 1,410px tall. Draw in real pixels at the measured width
+  (`useElementWidth`), and check a chart at 3,200 wide as well as a laptop's.
+  `src/chart-size-drift.test.ts` fails a stretched one.
 - **A part not in the kit** is new to the screen kit: name it to Anthony
   before drawing it.
 

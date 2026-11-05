@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import { PageFlowChart, type PageFlowBand, type PageFlowNode } from "./PageFlowChart";
@@ -53,6 +53,60 @@ describe("PageFlowChart", () => {
     expect(route("0:/>1:/about-us/").getAttribute("fill")).toBe(CHART_SERIES_ORANGE);
     expect(route("1:/about-us/>2:/contact/").getAttribute("fill")).toBe(CHART_SERIES_ORANGE);
     expect(box("0:/ai-agency/").getAttribute("opacity")).toBe("0.3");
+  });
+
+  // On a screen 3,200 wide the stretched chart's words were 33 pixels and it stood 1,410 tall (Anthony, 2026-11-05: "why is this so huge").
+  describe("drawn at the page's real width, never stretched", () => {
+    const pageWide = (width: number) => vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width, height: 0, top: 0, left: 0, right: width, bottom: 0, x: 0, y: 0, toJSON: () => ({}) });
+    const svg = () => document.querySelector('[data-part="page-flow"] svg') as SVGSVGElement;
+    const wholeRect = (id: string) => box(id).querySelector("rect.text-border-dim") as SVGRectElement;
+    const longName = "Cupboard Handles and Knobs";
+    const named = { ...props, compact: true, nodes: props.nodes.map((one) => (one.id === "1:/about-us/" ? { ...one, label: longName } : one)) };
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it("one unit is one pixel, on any screen, so the words stay the app's 13 pixels", () => {
+      pageWide(2576);
+      render(<PageFlowChart {...named} />);
+      expect(svg().getAttribute("width")).toBe("2576");
+      expect(svg().getAttribute("viewBox")?.startsWith("0 0 2576 ")).toBe(true);
+      expect(svg().getAttribute("height")).toBe(svg().getAttribute("viewBox")?.split(" ")[3]);
+      expect(box("0:/").querySelector("text")?.getAttribute("font-size")).toBe("13");
+    });
+
+    it("the chart is the same height on a wide screen as on a laptop", () => {
+      pageWide(2576);
+      const { unmount } = render(<PageFlowChart {...named} scale={0.5} />);
+      const wide = svg().getAttribute("height");
+      unmount();
+      pageWide(876);
+      render(<PageFlowChart {...named} scale={0.5} />);
+      expect(svg().getAttribute("height")).toBe(wide);
+    });
+
+    it("a wider page gives wider boxes up to a limit, then longer routes, and a name shows whole when it fits", () => {
+      pageWide(2576);
+      const { unmount } = render(<PageFlowChart {...named} />);
+      expect(Number(wholeRect("0:/").getAttribute("width"))).toBe(258);
+      expect(box("1:/about-us/").querySelector("text")?.textContent).toBe(longName);
+      unmount();
+      pageWide(860);
+      render(<PageFlowChart {...named} />);
+      expect(Number(wholeRect("0:/").getAttribute("width"))).toBe(144);
+      expect(box("1:/about-us/").querySelector("text")?.textContent).toBe("Cupboard Handl…");
+    });
+
+    it("a box too narrow for both keeps its name, and the hover has the figure", () => {
+      pageWide(340);
+      render(<PageFlowChart {...named} />);
+      const words = [...box("1:/about-us/").querySelectorAll("text")].map((one) => one.textContent);
+      expect(words).toEqual(["Cupb…"]);
+    });
+
+    it("draws at the usual width until the page's width can be read", () => {
+      render(<PageFlowChart {...named} />);
+      expect(svg().getAttribute("width")).toBe("860");
+    });
   });
 
   // Funnel's Way 1 (funnel-way-1-plan-2026-11-05.md, step 3): a panel beside the mouse, one line a box, and a route lit to its end.

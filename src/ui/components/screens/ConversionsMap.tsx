@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useElementWidth } from "@/src/hooks/useElementWidth";
 import { CHART_ENGAGEMENT_RAMP } from "@/src/ui/components/charts/chartPalette";
 import { ChartCard } from "./ChartCard";
 import { ChannelMap, type ChannelMapRow } from "./ChannelMap";
@@ -36,21 +37,6 @@ function shadeOf(share: number): string {
   return CHART_ENGAGEMENT_RAMP[0];
 }
 
-/**
- * The width of the part's box, kept up to date, so it can choose the grid or the list. The box arrives with the
- * figures, after the card's first render, so it is watched from whenever it mounts, not from the first render.
- */
-function useWidth(): [(node: HTMLDivElement | null) => void, number] {
-  const [node, setNode] = useState<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    if (!node || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver((entries) => setWidth(Math.round(entries[0]?.contentRect.width ?? 0)));
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [node]);
-  return [setNode, width];
-}
 export type ConversionsCount = "visits" | "rate" | "events";
 export type ConversionsMapColumn = { key: string; name: string; visits: number; visitsBefore: number | null };
 export type ConversionsMapCell = { visits: number; times: number; visitsBefore: number | null; timesBefore: number | null };
@@ -113,7 +99,7 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
   /** The narrow form, forced: the drawing kit's example and tests; left out, the part measures itself. */
   narrow?: boolean;
 }) {
-  const [box, width] = useWidth();
+  const [box, width] = useElementWidth();
   const narrow = narrowGiven ?? (width > 0 && width / (columns.length + 1) < NARROW_SQUARE);
   const [picked, setPicked] = useState<string | null>(null);
   const pickedRow = rows.find((row) => row.eventName === picked) ?? rows[0];

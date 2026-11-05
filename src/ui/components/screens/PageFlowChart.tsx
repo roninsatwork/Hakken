@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useElementWidth } from "@/src/hooks/useElementWidth";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
 import { MouseReadout } from "@/src/ui/components/charts/MouseReadout";
 import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
@@ -16,6 +17,10 @@ import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/cha
  * roll over states on the funnel too"). A route or a dot lights itself and the two boxes it joins. Click a box to keep it
  * followed, and again to let go. It opens with none followed. Every box is a button for the keyboard too, and a screen reader
  * is given the routes as a list.
+ *
+ * It's drawn in real pixels at the width of the page, never stretched (Anthony, 2026-11-05: "why is this so huge on full screen"):
+ * on a screen 3,200 wide a stretched chart's words were 33 pixels and it stood 1,410 tall. Words stay the app's 13 pixels and a box
+ * its height on any screen. A wider page gives wider boxes up to `MOST_BOX`, then longer routes.
  *
  * `compact` is one line a box, its name on the left and its figure on the right. `followOn` carries a followed box's routes
  * on through the later columns. `scale` and `mostHeight` set the size: a chart that changes with what's ticked keeps one scale.
@@ -67,20 +72,27 @@ export type PageFlowBand = {
   readout?: FlowReadout;
 };
 
-const W = 860;
+/** How wide it's drawn until the page's width can be read. */
+const USUAL_WIDTH = 860;
+/** The widest a box gets: past this, the room goes to the routes between the boxes. */
+const MOST_BOX = 260;
+/** Room for a box's red tail past the last column. */
+const TAIL = 6;
+/** About how wide a letter of a name, and of a figure, is at 13 pixels: a box's name is cut to what fits. */
+const LETTER = 6.4;
+const DIGIT = 8;
+/** A compact box narrower than this has room for its name or its figure, not both. It keeps its name: the hover has the figure. */
+const BOTH_NEED = 100;
 /** The most a box is drawn for each visit, on a small website. */
 const MOST_SCALE = 0.45;
 const dotRadius = (conversions: number) => 3.5 + Math.min(conversions, 3) * 1.3;
 
-/** Where the columns stand. Three columns keep the place they were approved in. */
-function layoutOf(columns: number, compact: boolean) {
-  if (compact) {
-    const nodeW = 138;
-    return { nodeW, x: Array.from({ length: columns }, (_, at) => (at * (W - nodeW)) / Math.max(1, columns - 1)), minH: 22, gap: 6, mostH: 240 };
-  }
-  if (columns === 3) return { nodeW: 146, x: [0, 352, 702], minH: 30, gap: 14, mostH: 420 };
-  const nodeW = 118;
-  return { nodeW, x: Array.from({ length: columns }, (_, at) => (at * (W - nodeW - 6)) / Math.max(1, columns - 1)), minH: 30, gap: 14, mostH: 420 };
+/** Where the columns stand, across this width. */
+function layoutOf(columns: number, compact: boolean, width: number) {
+  const share = compact ? 0.17 : columns === 3 ? 0.17 : 0.137;
+  const nodeW = Math.min(MOST_BOX, Math.round(width * share));
+  const x = Array.from({ length: columns }, (_, at) => (at * (width - nodeW - TAIL)) / Math.max(1, columns - 1));
+  return compact ? { nodeW, x, minH: 28, gap: 6, mostH: 240 } : { nodeW, x, minH: 40, gap: 14, mostH: 420 };
 }
 
 const bandKey = (band: Pick<PageFlowBand, "from" | "to">) => `${band.from}>${band.to}`;
@@ -130,7 +142,13 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compac
   const [overBox, setOverBox] = useState<string | null>(null);
   const [overBand, setOverBand] = useState<string | null>(null);
   const area = useRef<HTMLDivElement>(null);
-  const { nodeW, x: X, minH, gap, mostH } = layoutOf(columns.length, compact);
+  const [watchWidth, measured] = useElementWidth();
+  const areaRef = useCallback((node: HTMLDivElement | null) => {
+    area.current = node;
+    return watchWidth(node);
+  }, [watchWidth]);
+  const W = measured > 0 ? measured : USUAL_WIDTH;
+  const { nodeW, x: X, minH, gap, mostH } = layoutOf(columns.length, compact, W);
   const byColumn = columns.map((_, column) => nodes.filter((node) => node.column === column));
   const tallest = Math.max(1, ...byColumn.map((column) => column.reduce((all, node) => all + node.visits, 0)));
   const scale = fixedScale ?? Math.min(MOST_SCALE, (mostHeight ?? mostH) / tallest);
@@ -191,10 +209,10 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compac
   const hoveredBox = overBox ? placed.get(overBox) : null;
   const panel = hoveredBand ? words(hoveredBand.hover, hoveredBand.readout) : hoveredBox ? words(hoveredBox.hover, hoveredBox.readout) : null;
 
-  const cols = { gridTemplateColumns: columns.map((_, index) => (index === 0 ? `${nodeW}fr` : `${X[index] - X[index - 1] - nodeW}fr ${nodeW}fr`)).join(" ") };
+  const cols = { gridTemplateColumns: columns.map((_, index) => (index === 0 ? `${nodeW}px` : `${Math.max(0, X[index] - X[index - 1] - nodeW)}px ${nodeW}px`)).join(" ") };
   const fade = { transition: "fill-opacity 120ms ease-out, opacity 120ms ease-out" };
   return (
-    <div ref={area} data-part="page-flow" className="relative flex flex-col gap-3">
+    <div ref={areaRef} data-part="page-flow" className="relative flex min-w-0 flex-col gap-3">
       <div className="grid" style={cols}>
         {columns.flatMap((column, index) => [
           ...(index > 0 ? [<span key={`gap-${index}`} />] : []),
@@ -204,7 +222,7 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compac
           </div>,
         ])}
       </div>
-      <svg role="img" aria-label={columns.map((column) => column.title).join(", then ")} viewBox={`0 0 ${W} ${height}`} width="100%" className="block">
+      <svg role="img" aria-label={columns.map((column) => column.title).join(", then ")} viewBox={`0 0 ${W} ${height}`} width={W} height={height} className="block max-w-full">
         {[...ends.entries()].map(([band, [y1, y2]]) => {
           const from = placed.get(band.from);
           const to = placed.get(band.to);
@@ -253,8 +271,9 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compac
         {[...placed.values()].map((node) => {
           const going = (node.visits - node.left) * scale;
           const figures = figuresOf(node);
-          const room = compact ? Math.max(4, 18 - figures.length) : 22;
-          const name = node.label.length > room ? `${node.label.slice(0, room - 1)}…` : node.label;
+          const both = !compact || nodeW >= BOTH_NEED;
+          const room = Math.max(4, Math.floor((nodeW - (compact && both ? 30 + figures.length * DIGIT : 20)) / LETTER));
+          const name = node.label.length > room ? `${node.label.slice(0, room - 1).trimEnd()}…` : node.label;
           const outlined = overBox === node.id || picked === node.id;
           return (
             <g
@@ -292,8 +311,8 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compac
               ) : (
                 <rect x={node.x} y={node.y} width={4} height={node.h} rx={2} fill={node.ending === "uncounted" ? CHART_SERIES_SLATE : CHART_SERIES_ORANGE} />
               )}
-              <text x={node.x + 12} y={node.y + (compact ? 15 : 13)} fontSize={11} fill="currentColor" className="text-foreground">{name}</text>
-              <text x={compact ? node.x + nodeW - 8 : node.x + 12} y={node.y + (compact ? 15 : 25)} textAnchor={compact ? "end" : undefined} fontSize={11} fill="currentColor" className="font-mono text-secondary">{figures}</text>
+              <text x={node.x + 12} y={node.y + (compact ? 18 : 17)} fontSize={13} fill="currentColor" className="text-foreground">{name}</text>
+              {both ? <text x={compact ? node.x + nodeW - 8 : node.x + 12} y={node.y + (compact ? 18 : 33)} textAnchor={compact ? "end" : undefined} fontSize={13} fill="currentColor" className="font-mono text-secondary">{figures}</text> : null}
               {!compact && (node.column === 0 || node.ending === "counted") && node.conversions > 0 ? (
                 <circle cx={node.x + nodeW - 16} cy={node.y + 12} r={dotRadius(node.conversions)} fill={CHART_SERIES_ORANGE} stroke="currentColor" strokeWidth={1.5} className="text-foreground" />
               ) : null}
