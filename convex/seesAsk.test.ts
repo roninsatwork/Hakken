@@ -161,6 +161,24 @@ describe("the eye asks the Insights team", () => {
     expect(await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect()).length)).toBe(2);
   });
 
+  test("a rewrite that never comes loses nothing: what was sound in the first words stands, and what was wrong is left off (2026-11-05)", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    answers({ specialist: "INSIGHTS_CONVERSION" }, { says: ["[[conv.total.now]] conversions last month.", "3 in 4 baskets were left without buying."], steps: [] });
+    const answered = stream.getMockImplementation()!;
+    let calls = 0;
+    stream.mockImplementation(async (...args: never[]) => {
+      calls += 1;
+      if (calls > 1) throw new Error("The model gave no answer within 128 seconds, so it was given up.");
+      return await answered(...args);
+    });
+    const first = await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    expect(calls).toBe(2);
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["28,623 conversions last month."] });
+  });
+
   test("the specialist reads the website's screens for itself: a screen that cannot answer goes back to it as words, and it writes (A1)", async () => {
     const t = harness();
     const { siteId, userId } = await seed(t);

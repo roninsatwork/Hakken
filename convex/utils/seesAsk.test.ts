@@ -139,6 +139,20 @@ describe("once the team has read the website's screens (A1)", () => {
 });
 
 describe("a bubble readable in one go (2026-10-30: \"a wall of numbers\")", () => {
+  test("a sentence that leans on one left off goes too, so it never points at the wrong thing (Campaigns, 2026-11-05: \"Its purchases also jumped\" read as another campaign's)", () => {
+    const facts = factsByKey(factsOf(ask));
+    const crowded = "Purchases reached [[conv.purchases.now]], worth [[conv.worth.now]], at [[conv.rate.now]].";
+    const answer = { says: ["Conversions fell to [[conv.total.now]].", crowded, "Its share rose to [[conv.rate.now]].", "Purchases reached [[conv.purchases.now]]."], steps: [] };
+    expect(seesFrom(answer, facts, links)).toMatchObject({ ok: true, says: ["Conversions fell to 28,623.", "Purchases reached 1,258."] });
+    // Each word that leans on the last, and a sentence that stands by itself is kept.
+    for (const leaning of ["It rose to [[conv.rate.now]].", "They rose to [[conv.rate.now]].", "This rose to [[conv.rate.now]].", "Those rose to [[conv.rate.now]].", "Also, it rose to [[conv.rate.now]]."]) {
+      expect(seesFrom({ says: ["Conversions fell to [[conv.total.now]].", crowded, leaning], steps: [] }, facts, links)).toMatchObject({ ok: true, says: ["Conversions fell to 28,623."] });
+    }
+    expect(seesFrom({ says: ["Conversions fell to [[conv.total.now]].", crowded, "Italy rose to [[conv.rate.now]]."], steps: [] }, facts, links)).toMatchObject({ says: ["Conversions fell to 28,623.", "Italy rose to 3.5%."] });
+    // With the last one kept, it has something to lean on.
+    expect(seesFrom({ says: ["Conversions fell to [[conv.total.now]].", "Its rate is [[conv.rate.now]]."], steps: [] }, facts, links)).toMatchObject({ says: ["Conversions fell to 28,623.", "Its rate is 3.5%."] });
+  });
+
   test("a first sentence with more than two figures goes back, a later one is left off; past eight figures the rest is left off; words the page never says go back", () => {
     const facts = factsByKey(factsOf(ask));
     expect(seesFrom({ says: ["[[conv.total.now]], [[conv.total.before]] and [[conv.purchases.now]] all moved."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("more than 2 figures") });

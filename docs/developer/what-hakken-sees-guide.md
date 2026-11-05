@@ -165,6 +165,7 @@ and the rule that came from it. Every rule is now in the code.
 - No tracking advice unless tracking health found a fault that breaks the
   conversion figures.
 - Each step uses one of the page's links.
+- A sentence left off takes with it the next one if that one leans on it ("Its purchases also jumped from 5 to 22"), so nothing points at the wrong thing (Campaigns, 2026-11-05).
 - What fails goes back to the agent once, with why, in the same conversation.
 
 **The second look** was removed on 31 October 2026: it said "useful" every

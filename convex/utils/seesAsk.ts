@@ -267,6 +267,12 @@ export type SeesVerdict = { ok: true; says: string[]; steps: Array<{ words: stri
  * is left off and the rest stand, as a crowded later sentence always was; only
  * nothing left, or a first sentence naming no figure, sends the words back.
  */
+/**
+ * A sentence that leans on the one before: "Its purchases also jumped from 5 to 22." If that one's left off, this one points at
+ * whatever's left above it, and says something untrue (Campaigns, 2026-11-05: Low Bid's purchases read as Performance Max's). So it goes too.
+ */
+const LEANS_ON_THE_LAST = /^(?:it|it's|its|they|they're|their|them|this|that|these|those|both|also|he|she|his|her)\b/i;
+
 export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, links: readonly SeesLink[], options: {
   /**
    * The page's own keys, when the team read the website's screens (A1): at least one sentence must then name a figure
@@ -302,14 +308,22 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     if (salvage) left.push(why);
     else faults.push(why);
   };
+  // Whether the sentence before this one was left off.
+  let lastLeftOff = false;
   for (const line of saysRaw.slice(0, MOST_SEES_SAYS)) {
     if (typeof line !== "string" || !line.trim()) {
       fault("A sentence was empty.");
+      lastLeftOff = true;
       continue;
     }
     const cut = line.trim().replace(LEADING_PART, "");
     // A capital to start, but a name that starts small keeps its spelling: never "IOS led the growth".
     const trimmed = /^\p{Ll}+\p{Lu}/u.test(cut) ? cut : cut.charAt(0).toUpperCase() + cut.slice(1);
+    if (lastLeftOff && LEANS_ON_THE_LAST.test(trimmed)) {
+      if (salvage) left.push(`A sentence leaned on one that was left off: "${trimmed}".`);
+      continue;
+    }
+    lastLeftOff = true;
     if (typedNumbers(trimmed).length > 0) {
       fault(`A sentence typed a number: "${trimmed}".`);
       continue;
@@ -341,6 +355,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     figures += namedFacts(trimmed).length;
     namedKept.push(...namedFacts(trimmed));
     says.push(filled.text);
+    lastLeftOff = false;
   }
   if (options.pageKeys && says.length > 0 && !namedKept.some((key) => !options.pageKeys!.has(key))) {
     faults.push("It only said the page's own figures again: say what the screens you read show behind them, by their keys.");

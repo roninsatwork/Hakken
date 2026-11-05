@@ -151,6 +151,9 @@ export async function askWithTools(
       responseContent: (failed ? failure : response!.toolCalls.length > 0 ? JSON.stringify(response!.toolCalls) : response!.text).slice(0, RECORDED),
       failed,
     });
+    // A rewrite that never came: the words already written stand as sent back, and the Editor leaves off what's wrong with them. A press
+    // on a small website took two minutes a call, and its whole bubble was lost to the second call running out of time (2026-11-05).
+    if ((failed || !response) && sentBackTimes > 0 && lastAnswer !== null) return { answer: lastAnswer, found: [...found.values()], reads, sentBack: lastWhy, turns: turn };
     if (failed || !response) throw appError("UPSTREAM_FAILURE", failure || `${what} gave no answer.`);
     if (response.outcome === "REFUSED") throw appError("UPSTREAM_FAILURE", `The model refused ${what}.`);
 
