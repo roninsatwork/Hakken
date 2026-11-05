@@ -11,7 +11,7 @@ export const ANALYTICS_SCREENS = [
 export type AnalyticsScreen = (typeof ANALYTICS_SCREENS)[number];
 
 /** Every further read a screen may have, each asked on its own after the screen's first. */
-export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website"] as const;
+export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website", "chart"] as const;
 
 /**
  * The orders Ask Hakken can read All pages in, each as the screen's own headings sort it (Anthony, 2026-11-04): read only
@@ -28,11 +28,23 @@ export const ALL_PAGES_ORDERS = {
 export type AllPagesOrder = keyof typeof ALL_PAGES_ORDERS;
 export const ALL_PAGES_ORDER_NAMES = Object.keys(ALL_PAGES_ORDERS) as AllPagesOrder[];
 
+/** Funnel's orders (funnel-way-1-plan-2026-11-05.md, step 8), by how many people, so a page's size counts: the table's own headings sort by share. */
+export const FUNNEL_ORDERS = {
+  mostVisits: { sort: "visits", direction: "desc" },
+  mostPeopleLeft: { sort: "leftVisits", direction: "desc" },
+  mostPeopleStayed: { sort: "onwardVisits", direction: "desc" },
+  mostConversions: { sort: "conversions", direction: "desc" },
+} as const;
+export type FunnelOrder = keyof typeof FUNNEL_ORDERS;
+export const FUNNEL_ORDER_NAMES = Object.keys(FUNNEL_ORDERS) as FunnelOrder[];
+/** Every order Ask Hakken can name, on either list. */
+export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder>([...ALL_PAGES_ORDER_NAMES, ...FUNNEL_ORDER_NAMES])];
+
 /**
  * The further reads a screen's figures come in, each with Convex's second to itself: overview's page panels
  * (calendar-periods audit, 2026-10-21), and a page's four boxes and its story (page-screen-redo-plan-2026-11-03.md),
  * as its screen reads them, and All pages' whole website. Read whole, a page ran past the second.
  */
 export function analyticsPartsOf(screen: string): ReadonlyArray<(typeof ANALYTICS_PARTS)[number]> {
-  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : [];
+  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : screen === "landingPages" ? ["boxes", "chart"] : [];
 }

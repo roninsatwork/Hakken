@@ -93,7 +93,7 @@ export {
   type ShownRow,
 } from "./googleAnalyticsRows";
 
-const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange" | "started" | "elsewhere" | "share" | "left" | "onward" | "next"> = {
+const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange" | "started" | "elsewhere" | "share" | "left" | "onward" | "next" | "leftVisits" | "onwardVisits"> = {
   name: { value: (row) => row.label, first: "asc" },
   visits: { value: (row) => row.visits, first: "desc" },
   engaged: { value: (row) => row.engagementRate, first: "desc" },
@@ -117,11 +117,12 @@ const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pag
   elsewhere: { value: (row) => row.elsewhere ?? null, first: "desc" },
   // A channel's classifications by their share of its visits (CH7): the same order as their visits.
   share: { value: (row) => row.visits, first: "desc" },
-  // Landing pages' funnel (landing-pages-flow-plan.md LF4), by share, so a page's size does not decide: the fewest
-  // leaving first, the most going on first, the strongest single next step first.
+  // Landing pages' funnel (LF4), by share, so a page's size does not decide: the fewest leaving first, the most going on first,
+  // the strongest single next step first. Ask Hakken's orders (leftVisits, onwardVisits) by how many people, so it does.
   left: { value: (row) => (row.onward == null || row.visits === 0 ? null : (row.visits - row.onward) / row.visits), first: "asc" },
   onward: { value: (row) => (row.onward == null || row.visits === 0 ? null : row.onward / row.visits), first: "desc" },
   next: { value: (row) => row.next?.share ?? null, first: "desc" },
+  leftVisits: { value: (row) => (row.onward == null ? null : row.visits - row.onward), first: "desc" }, onwardVisits: { value: (row) => row.onward ?? null, first: "desc" },
 };
 /** The order a list opens in (GA26): All pages by views, Landing pages and page groups by visits, the channels by value. */
 export function openingSort(list: ListKind): keyof typeof SORTS {
@@ -196,8 +197,10 @@ type ListArgs = {
   sort?: keyof typeof SORTS;
   direction?: "asc" | "desc";
   move?: PageMove | "all";
-  /** All pages: without the shop's search, basket and account pages (`isShopPage`). */
+  /** All pages and Funnel: without the shop's search, basket and account pages (`isShopPage`). */
   leaveOut?: boolean;
+  /** Every row with its address, for a read that sorts them itself (Funnel's chart). */
+  named?: boolean;
   /**
    * All pages whole: the pages viewed only before and the website's own pages
    * nobody viewed join the list, with each filter's count (`withQuietPages`).
@@ -344,8 +347,8 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   const kinds = pageList ? await readPageKinds(ctx, holdId) : null;
   // A channel's pages are grouped as its chart groups them (CH5): Hakken's page types while the website has no classifications.
   const classes = ofChannel !== null ? await classifierFor(ctx, holdId) : kinds;
-  const shopSplit = args.list === "page" && (args.leaveOut === true || args.group === SHOP_PAGES_KIND);
-  const needAll = pageList && (Boolean(args.q?.trim()) || args.list === "groups" || args.group !== undefined || args.sort === "name" || shopSplit);
+  const shopSplit = (args.list === "page" || args.list === "landing") && (args.leaveOut === true || args.group === SHOP_PAGES_KIND);
+  const needAll = pageList && (Boolean(args.q?.trim()) || args.list === "groups" || args.group !== undefined || args.sort === "name" || shopSplit || args.named === true);
   const addresses = new Map<string, string>();
   const members = new Map<string, number>();
   if (needAll) {
@@ -609,7 +612,7 @@ export const analyticsListPage = tenantQuery({
     /** All pages: the dates the figures are set against, so the page can name them ("September"). */
     spanBefore: v.union(v.null(), v.object({ from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()) })),
     /** One classification's pages added up, with those that went quiet in its figures before; null for a whole list. */
-    groupTotals: v.union(v.null(), v.object({ views: v.number(), viewsBefore: v.union(v.number(), v.null()), conversions: v.number(), conversionsBefore: v.union(v.number(), v.null()) })),
+    groupTotals: v.union(v.null(), v.object({ visits: v.number(), onward: v.number(), views: v.number(), viewsBefore: v.union(v.number(), v.null()), conversions: v.number(), conversionsBefore: v.union(v.number(), v.null()) })),
   }),
   handler: async (ctx, args) => await readListPage(ctx, args),
 });
@@ -654,7 +657,7 @@ export async function readListPage(ctx: SiteReader, args: ObjectType<typeof anal
     shop: list.shop,
     spanBefore: list.spanBefore,
     groupTotals: args.group !== undefined && list.totals
-      ? { views: list.totals.now.views, viewsBefore: list.totals.before?.views ?? null, conversions: list.totals.now.conversions, conversionsBefore: list.totals.before?.conversions ?? null }
+      ? { visits: list.rows.reduce((sum, row) => sum + row.visits, 0), onward: list.rows.reduce((sum, row) => sum + (row.onward ?? 0), 0), views: list.totals.now.views, viewsBefore: list.totals.before?.views ?? null, conversions: list.totals.now.conversions, conversionsBefore: list.totals.before?.conversions ?? null }
       : null,
   };
 }

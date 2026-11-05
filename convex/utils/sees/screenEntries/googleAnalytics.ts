@@ -91,12 +91,14 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
   },
   // Funnel (was Landing pages: its eye key kept).
   "googleAnalytics.landing": {
-    about: "Funnel: where visits start, how many leave without seeing another page, where the rest go next and how many convert",
+    about: "Funnel: where people arrive on the website and what they do next. Two figures say leaving. Left straight away is people who stayed under 10 seconds and did nothing. Left in the table is people who saw one page, however long they stayed",
     parts: [
-      "how visits moved through the website: landing pages, the next page and the page after",
-      "the table: each landing page (or page group) with its visits, those that left here, those that went on, the page most went to next, and its conversions",
+      "the four boxes: visits, left straight away, pages a visit and conversions, each against the span before",
+      "people who left straight away each day, or those who stayed, or conversions, against the same days of the span before",
+      "where people went next: the first page and the four after it, ten pages by name in each column and every other page in its Classification. Ticks in the table choose the pages in the first column",
+      "the table: each page people started on, with its visits, those that left, those that stayed, the page most went to next, and its conversions per 100 visits",
     ],
-    never: [...NO_MONEY, CONVERSIONS_AS_TIMES, "pages not sorted into a group yet: they are sorted for the reader"],
+    never: [...NO_MONEY, CONVERSIONS_AS_TIMES, "pages not sorted into a group yet: they are sorted for the reader", "search, basket or account pages as a page people left: only ever together"],
   },
   "googleAnalytics.landingPage": { about: "one landing page's own screen", never: NO_MONEY },
   "googleAnalytics.allPages": {

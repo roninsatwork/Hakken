@@ -19,7 +19,11 @@ import { pathOfAddress } from "./utils/sees/analytics";
 import { MOVE_VIEWS, PAGE_MOVES } from "./utils/pageMoves";
 import { readPageKinds } from "./pageKinds";
 import { SHOP_PAGES_KIND } from "./utils/shopPages";
-import { ALL_PAGES_ORDERS, ALL_PAGES_ORDER_NAMES, ANALYTICS_PARTS, ANALYTICS_SCREENS, type AnalyticsScreen } from "./utils/analyticsScreens";
+import { ALL_PAGES_ORDERS, ANALYTICS_PARTS, ANALYTICS_SCREENS, FUNNEL_ORDERS, LIST_ORDER_NAMES, type AllPagesOrder, type AnalyticsScreen, type FunnelOrder } from "./utils/analyticsScreens";
+import { readLandingFlow } from "./googleAnalyticsFlowReads";
+import { funnelFigures } from "./utils/landingFlowFigures";
+import { flowBoxes, type BoxNames, type RouteBox } from "./utils/landingFlowRoutes";
+import { pageName } from "./utils/pageNames";
 import { viewsCountedDifferently } from "./utils/viewsCounted";
 import { readChannelTop, readChannelsTop } from "./googleAnalyticsChannelReads";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
@@ -113,7 +117,7 @@ function pageRowOf(row: ShownRow) {
 }
 
 /** What All pages' conversion figure means, so a basket's 302 is never told as 302% (Anthony, 2026-11-04). */
-const PAGE_CONVERSIONS_RULE = "conversionsPer100Visits counts every time something the website counts happened, for every 100 visits to the page. One visit can do several of those things, so a page everyone passes through, like the basket, can show well over 100, such as 302. It is not a percentage of visits or people: never call it a conversion rate of 302%. If someone asks about a high figure, explain this.";
+const PAGE_CONVERSIONS_RULE = "conversionsPer100Visits counts every time something the website counts happened, for every 100 visits to the page. One visit can do several of those things, so a page everyone passes through, like the basket, can show well over 100, such as 302. It is not a percentage of visits or people: never call it a conversion rate of 302%. If someone asks about a high figure, explain this in plain words, with no formula, and say conversions per 100 visits, not conversion rate.";
 
 /** Said first when page views look counted differently (`viewsCountedDifferently`), wherever whole-website views are read. */
 function viewsWarning(now: { views: number; visits: number } | null | undefined, before: { views: number; visits: number } | null | undefined) {
@@ -121,6 +125,110 @@ function viewsWarning(now: { views: number; visits: number } | null | undefined,
   return counted ? {
     warning: `Say this first, in plain words. Pages a visit went from ${counted.pagesAVisitBefore} to ${counted.pagesAVisit} on these dates. That is too big a jump for people to have changed what they do, and it usually means page views were being counted differently for part of these dates. So page views, and every page's ups and downs in views, may not be real. Use visits to judge how the website did, and never explain these moves in views as something people did.`,
   } : {};
+}
+
+/**
+ * Funnel for Ask Hakken (funnel-way-1-plan-2026-11-05.md, step 8): what the page says, in the page's own names. The boxes and
+ * the chart are reads of their own, as on the screen, and every figure comes from what the chart draws (`flowBoxes`).
+ */
+const FUNNEL_NAMES: BoxNames = {
+  shop: "Search and basket",
+  notSorted: "Not sorted yet",
+  otherPages: "Other pages",
+  otherGroups: (count) => `${count} other ${count === 1 ? "group" : "groups"}`,
+  pageNotKnown: "Page not known",
+};
+const FUNNEL_COLUMNS = ["First page", "Second page", "Third page", "Fourth page", "Fifth page"];
+/** A box's biggest routes, as a chat can't carry all of them: a page asked about by `key` has all of its own. */
+const WENT_TO_MOST = 2;
+const TWO_MEANINGS_OF_LEFT = "Two figures say leaving, and they aren't the same people. Left straight away means stayed under 10 seconds and did nothing. Left in the table and chart means saw one page and no other, however long they stayed. Always say which one you mean. Use the page's own words: left, stayed, the page people started on. Never exit rate, exits, bounce rate or landing page.";
+const FUNNEL_CHART_RULE = "The first two columns are Google's own figures. Google gives one step at a time, not whole journeys, so they're joined up here. From the third page on, the figures are close rather than exact, and a visit that goes back and forth counts each step. A group is every page in that Classification that isn't named in the column.";
+
+function oneDecimalShare(part: number, whole: number) {
+  return whole > 0 ? Math.round((1000 * part) / whole) / 10 : null;
+}
+
+function funnelBoxesPart(now: { visits: number; views: number; engaged: number; conversions: number } | null | undefined, before: { visits: number; views: number; engaged: number; conversions: number } | null | undefined) {
+  if (!now) return {};
+  const left = (figure: typeof before) => (figure ? oneDecimalShare(figure.visits - figure.engaged, figure.visits) : null);
+  const pages = (figure: typeof before) => (figure && figure.visits > 0 ? Math.round((figure.views / figure.visits) * 10) / 10 : null);
+  return {
+    boxes: {
+      visits: now.visits, visitsBefore: before?.visits ?? null,
+      leftStraightAwayPercent: left(now), leftStraightAwayPercentBefore: left(before),
+      pagesAVisit: pages(now), pagesAVisitBefore: pages(before),
+      conversions: now.conversions, conversionsBefore: before?.conversions ?? null,
+    },
+    twoMeaningsOfLeft: TWO_MEANINGS_OF_LEFT,
+    ...viewsWarning(now, before),
+  };
+}
+
+/** A row of Funnel's table, as its headings say it. */
+function funnelRowOf(row: ShownRow) {
+  const unknown = row.label.startsWith("(");
+  const left = row.onward == null ? null : Math.max(0, row.visits - row.onward);
+  return {
+    name: unknown ? FUNNEL_NAMES.pageNotKnown : pageName(row.label),
+    ...(unknown ? {} : { address: pathOfAddress(row.label) }),
+    visits: row.visits,
+    changeInVisitsPercent: percent(row.change),
+    left,
+    leftPercent: left === null ? null : oneDecimalShare(left, row.visits),
+    stayed: row.onward ?? null,
+    mostWentTo: row.next ? { page: pageName(row.next.page), sharePercent: Math.round(row.next.share * 100) } : null,
+    conversions: row.conversions,
+    conversionsPer100Visits: percent(row.conversionRate),
+  };
+}
+
+/** Funnel's chart, as the screen draws it: each column's boxes with where most went next, and what the eye reads off it. */
+function funnelChartPart(flow: Awaited<ReturnType<typeof readLandingFlow>>, websiteVisits: number | null, trackingHealth: string, askedKey: string | undefined) {
+  const figures = funnelFigures(flow, FUNNEL_NAMES);
+  const built = flowBoxes(flow, FUNNEL_NAMES);
+  const wentTo = (box: RouteBox, most: number) => built.routes
+    .filter((route) => route.from === box.id)
+    .map((route) => ({ to: built.byId.get(route.to)?.name ?? "", visits: built.saidRoute(route), ...(route.conversions > 0 ? { conversions: route.conversions } : {}) }))
+    .filter((route) => route.visits > 0)
+    .sort((one, other) => other.visits - one.visits)
+    .slice(0, most);
+  const boxOf = (box: RouteBox, most: number) => ({
+    name: box.name,
+    ...(box.isGroup ? { isAClassification: true } : {}),
+    visits: built.said(box),
+    left: built.saidLeft(box),
+    ...(box.conversions > 0 ? { conversions: box.conversions } : {}),
+    wentTo: wentTo(box, most),
+  });
+  const everyVisit = flow.onward + flow.left;
+  const asked = askedKey ? built.boxes.find((box) => built.tickedIds.has(box.id)) : undefined;
+  return {
+    twoMeaningsOfLeft: TWO_MEANINGS_OF_LEFT,
+    chart: {
+      rule: FUNNEL_CHART_RULE,
+      columns: Array.from({ length: built.lastColumn + 1 }, (_, column) => ({
+        column: FUNNEL_COLUMNS[column] ?? `Page ${column + 1}`,
+        visits: column === 0 ? websiteVisits ?? everyVisit : column === 1 ? flow.onward : Math.round(built.columnVisits[column] ?? 0),
+        ...(column === 0 ? { left: flow.left } : {}),
+        boxes: built.boxes.filter((box) => box.column === column).map((box) => boxOf(box, WENT_TO_MOST)),
+      })),
+    },
+    ...(asked ? { thePageAsked: { ...boxOf(asked, Number.MAX_SAFE_INTEGER), address: pathOfAddress(asked.address ?? ""), stayed: Math.max(0, built.said(asked) - built.saidLeft(asked)) } } : {}),
+    busyPages: {
+      rule: `A busy page has ${figures.busy.visits} visits or more on these dates. It loses people if more leave it than leave the website as a whole, which is ${figures.leftPercent ?? 0}%. Search, basket and account pages don't count.`,
+      busyPages: figures.busy.pages,
+      pagesThatLosePeople: figures.busy.losing,
+      peopleTheyLost: figures.busy.lost,
+      theMostPeopleLost: figures.busy.top.map((page) => ({ name: page.name, address: pathOfAddress(page.address), visits: page.visits, left: page.left, leftPercent: page.leftPercent })),
+    },
+    classifications: figures.classifications.map(({ name, visits, left, leftPercent, conversions }) => ({ name, visits, left, stayed: Math.max(0, visits - left), leftPercent, conversions })),
+    pageNotKnown: {
+      visits: figures.noPageVisits,
+      shareOfAllVisitsPercent: oneDecimalShare(figures.noPageVisits, everyVisit),
+      rule: "Visits Google recorded without a page. Tracking health is the place to look into it, with this link.",
+      link: trackingHealth,
+    },
+  };
 }
 
 /** The screen's menu choice for the shop's own pages, in its own words. */
@@ -274,13 +382,13 @@ export const googleAnalyticsInternal = internalQuery({
     list: v.optional(v.union(...VISITOR_VIEWS.map((view) => v.literal(view)))),
     /** A screen's further read (`analyticsPartsOf`), which the tool asks after the rest. */
     part: v.optional(v.union(...ANALYTICS_PARTS.map((part) => v.literal(part)))),
-    /** All pages: the order to read its pages in. Most views if left out. */
-    order: v.optional(v.union(...ALL_PAGES_ORDER_NAMES.map((order) => v.literal(order)))),
-    /** All pages: only one classification's pages, by its name, with their totals. */
+    /** All pages and Funnel: the order to read their pages in. Most views, or on Funnel most visits, if left out. */
+    order: v.optional(v.union(...LIST_ORDER_NAMES.map((order) => v.literal(order)))),
+    /** All pages and Funnel: only one classification's pages, by its name, with their totals. */
     classification: v.optional(v.string()),
     /** All pages: only the pages that gained, dropped, stayed static or had no visits. */
     move: v.optional(v.union(...PAGE_MOVES.map((move) => v.literal(move)))),
-    /** All pages: put the shop's search, basket and account pages back in, which it leaves out as the screen opens. */
+    /** All pages and Funnel: put the shop's search, basket and account pages back in, which they leave out as they open. */
     everyPage: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -333,14 +441,34 @@ export const googleAnalyticsInternal = internalQuery({
       };
     }
 
+    // Funnel's boxes and its chart: reads of their own, as on the screen, each with Convex's second to itself.
+    if (args.screen === "landingPages" && args.part === "boxes") {
+      const overview = await readOverview(site, common);
+      return { ...base, ...funnelBoxesPart(overview.now, overview.before) };
+    }
+    if (args.screen === "landingPages" && args.part === "chart") {
+      // A page asked about comes out of its group, as a tick does on the screen, and brings every route it has.
+      const wanted = args.key ? pathOfAddress(args.key.trim()).replace(/\/+$/, "") : null;
+      const matches = wanted !== null ? await readListPage(site, { ...common, list: "landing", ...(wanted ? { q: wanted } : {}), page: 1, rows: 25 }) : null;
+      const row = matches ? (matches.rows.find((one) => pathOfAddress(one.label).replace(/\/+$/, "") === wanted) ?? matches.rows[0]) : null;
+      if (wanted !== null && !row) return { ...base, thePageAsked: `No page of ${host} matching ${wanted || "/"} started a visit in these dates.` };
+      const flow = await readLandingFlow(site, { ...common, ...(row ? { pages: [row.key] } : {}), leaveOut: true });
+      if (!flow.held) return { ...base, chart: { message: flow.counting ? "These dates' routes aren't collected yet. They fill at the next collection." : "This website counts no conversions yet, so its routes aren't kept." } };
+      const overview = await readOverview(site, common);
+      return { ...base, ...funnelChartPart(flow, overview.now?.visits ?? null, linkTo("tracking-health"), row?.key) };
+    }
+
     const list = LISTS[args.screen];
     if (list) {
       const allPages = args.screen === "allPages";
-      const chosen = allPages && args.classification ? await classificationNamed(ctx, hold._id, args.classification) : null;
+      const funnelScreen = args.screen === "landingPages";
+      const chosen = (allPages || funnelScreen) && args.classification ? await classificationNamed(ctx, hold._id, args.classification) : null;
       if (chosen && "problem" in chosen) return { ok: false, problem: chosen.problem };
-      const order = allPages && args.order ? ALL_PAGES_ORDERS[args.order] : null;
+      const order = allPages && args.order && args.order in ALL_PAGES_ORDERS ? ALL_PAGES_ORDERS[args.order as AllPagesOrder]
+        : funnelScreen && args.order && args.order in FUNNEL_ORDERS ? FUNNEL_ORDERS[args.order as FunnelOrder]
+          : null;
       // As the screen opens: without the shop's own pages, unless a search or the question reaches for them.
-      const leaveOut = allPages && !chosen && !args.search && args.everyPage !== true;
+      const leaveOut = (allPages || funnelScreen) && !chosen && !args.search && args.everyPage !== true;
       const answer = await readListPage(site, {
         ...common, list: list.list, ...(args.screen === "channel" ? { channel: args.key ?? "" } : {}), ...(args.search ? { q: args.search } : {}), page: 1, rows: ROWS,
         ...(order ?? {}), ...(chosen ? { group: chosen.id } : {}), ...(allPages && args.move ? { move: args.move } : {}), ...(leaveOut ? { leaveOut: true } : {}),
@@ -354,8 +482,9 @@ export const googleAnalyticsInternal = internalQuery({
         ...parts,
         listed: answer.total,
         // All pages has no money and counts each page's moves (all-pages-rethink-plan.md AP1, AP5), as its screen does.
-        rows: list.list === "page" ? answer.rows.map(pageRowOf) : answer.rows.map(rowOf),
+        rows: list.list === "page" ? answer.rows.map(pageRowOf) : funnelScreen ? answer.rows.map(funnelRowOf) : answer.rows.map(rowOf),
         ...(allPages ? { rows_are: `The first ${ROWS} of ${answer.total} pages, ${args.order ?? "mostViews"}.`, conversionsRule: PAGE_CONVERSIONS_RULE } : {}),
+        ...(funnelScreen ? { rows_are: `The first ${ROWS} of ${answer.total} pages people started on, ${args.order ?? "mostVisits"}.`, conversionsRule: PAGE_CONVERSIONS_RULE } : {}),
         ...(leaveOut && answer.shop && answer.shop.pages > 0 ? {
           leftOut: {
             what: "Search, basket and account pages. Say they're left out, as the screen does, and ask with everyPage to read them too. Never name one as a page that moved unless asked about them.",
@@ -374,7 +503,13 @@ export const googleAnalyticsInternal = internalQuery({
             pagesWithNoViews: answer.concentration.noViews, pagesWithNoViewsBefore: answer.concentration.noViewsBefore,
           },
         } : {}),
-        ...(chosen && answer.groupTotals ? {
+        ...(funnelScreen && chosen && answer.groupTotals ? {
+          classification: {
+            name: chosen.name, pages: answer.total, visits: answer.groupTotals.visits, stayed: answer.groupTotals.onward,
+            left: Math.max(0, answer.groupTotals.visits - answer.groupTotals.onward), conversions: answer.groupTotals.conversions, conversionsBefore: answer.groupTotals.conversionsBefore,
+          },
+        } : {}),
+        ...(allPages && chosen && answer.groupTotals ? {
           classification: {
             name: chosen.name, pages: answer.total, pageViews: answer.groupTotals.views, pageViewsBefore: answer.groupTotals.viewsBefore,
             conversionsMadeHere: answer.groupTotals.conversions, conversionsMadeHereBefore: answer.groupTotals.conversionsBefore,
@@ -388,7 +523,7 @@ export const googleAnalyticsInternal = internalQuery({
           ...(args.screen === "channel" && args.key ? { key: args.key } : {}),
           ...(order ? { sort: order.sort, dir: order.direction } : {}),
           ...(allPages && args.move ? { move: args.move } : {}),
-          ...(chosen ? { classification: chosen.id } : allPages && !leaveOut && !args.search ? { classification: "every" } : {}),
+          ...(chosen ? { classification: chosen.id } : (allPages || funnelScreen) && !leaveOut && !args.search ? { classification: "every" } : {}),
         }),
       };
     }

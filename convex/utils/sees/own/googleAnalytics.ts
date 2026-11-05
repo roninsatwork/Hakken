@@ -1,3 +1,4 @@
+import { pageName } from "../../pageNames";
 import { isShopPage } from "../../shopPages";
 import { viewsCountedDifferently } from "../../viewsCounted";
 import { couldBeChance } from "../../insightEditor";
@@ -616,38 +617,91 @@ function campaignsFindings(data: Row): OwnFound[] {
 // Funnel --------------------------------------------------------------------
 
 /**
- * Funnel: the landing pages (or page groups) whose visits moved most against the whole website's, the one people leave
- * without seeing another page furthest from every landing page, those converting furthest from the website, and one
- * whose conversions moved apart from its visits. The table's page is the busiest landing pages, picked from many.
+ * Funnel (funnel-way-1-plan-2026-11-05.md, step 7): what a shop owner would miss on it, each set against something. The whole
+ * website's visits, how many left straight away and how many pages a visit saw, against the dates before; the busy pages people
+ * leave, against the website's own leaving; the Classification people leave most; the biggest route between two named pages,
+ * against how many reached the first; and the visits with no page known. Whatever the dates, it ranks what's biggest.
  */
 function funnelFindings(data: Row): OwnFound[] {
   const names = namesOf(data);
   const site = websiteOf(data, names);
-  const rows = rowsOf(data).filter((row) => !(typeof row.key === "string" && HOUSEKEEPING.has(row.key)));
+  const whole = isRow(data.website) ? data.website : {};
+  const figures = isRow(data.funnel) ? data.funnel : {};
+  const website = nameIn(names, "website", "The whole website");
+  // A page by the name the chart and table give it, and never the shop's own pages: nobody chooses to start on a basket.
+  const rows = rowsOf(data)
+    .filter((row) => !(typeof row.key === "string" && HOUSEKEEPING.has(row.key)) && !(typeof row.label === "string" && isShopPage(row.label)))
+    .map((row) => (typeof row.label === "string" && !row.label.startsWith("(") ? { ...row, title: pageName(row.label) } : row));
   const found: OwnFound[] = [];
+  // The page's first box always leads, or the warning that its dates can't be trusted.
   if (site) {
     const head = headline("whole", site.name, "visits", site.visits, site.visitsBefore, { name: nameIn(names, "conversions", "Conversions"), now: site.conversions, before: site.conversionsBefore });
-    if (head) found.push({ ...head, score: head.score - 0.3 });
+    if (head) found.push({ ...head, score: 2.5 });
+  }
+  // Left straight away, against the dates before: the page's second box.
+  if (isNumber(whole.visits) && isNumber(whole.engaged) && isNumber(whole.visitsBefore) && isNumber(whole.engagedBefore) && whole.visits > 0 && whole.visitsBefore > 0) {
+    const now = round1((100 * (whole.visits - whole.engaged)) / whole.visits);
+    const before = round1((100 * (whole.visitsBefore - whole.engagedBefore)) / whole.visitsBefore);
+    if (before > 0 && Math.abs(now - before) / before >= LEAST_CHANGE) found.push(moved("whole", website, "leftAtOncePercent", now, before, 1.6));
+  }
+  // Pages a visit, or a warning first where views look counted differently on these dates.
+  const counted = viewsCountedDifferently({ views: whole.views, viewsBefore: whole.viewsBefore, visits: whole.visits, visitsBefore: whole.visitsBefore });
+  if (counted) {
+    found.push({
+      id: "countedDifferently:whole:views", kind: "countedDifferently", list: "whole", score: 3, params: { now: counted.pagesAVisit, before: counted.pagesAVisitBefore },
+      facts: [{ key: "now", value: counted.pagesAVisit, unit: "ratio", label: "Pages a visit, these dates" }, { key: "before", value: counted.pagesAVisitBefore, unit: "ratio", label: "Pages a visit, the span before" }],
+    });
+  } else if (isNumber(whole.views) && isNumber(whole.viewsBefore) && isNumber(whole.visits) && isNumber(whole.visitsBefore) && whole.visits > 0 && whole.visitsBefore > 0) {
+    const now = round1(whole.views / whole.visits);
+    const before = round1(whole.viewsBefore / whole.visitsBefore);
+    if (before > 0 && Math.abs(now - before) / before >= LEAST_CHANGE) found.push(moved("whole", website, "pagesAVisit", now, before, 1));
   }
   found.push(...visitMovers("landing", rows, site ? { name: site.name, change: changeOf(site.visits, site.visitsBefore) } : null));
-  // Left without seeing another page: of a landing page's visits, those that went on to none (`onward`), against every landing page's.
-  const all = isRow(data.landingAll) && isNumber(data.landingAll.leftPercent) ? (data.landingAll.leftPercent as number) : null;
-  // Only where its onward visits agree with its leaving at once: a visit that left at once saw no other page, so fewer
-  // leaving than left at once, or none going on from a page most stay on, is a figure kept wrongly (the home page's on
-  // More Handles' short spans, 2026-11-04), never said.
-  const leaving = trustedRows(rows.filter((row) => isNumber(row.onward) && (row.onward as number) > 0)).map((one) => ({ ...one, left: 100 * Math.max(0, one.visits - (one.row.onward as number)) / one.visits }))
-    .filter((one) => !isNumber(one.row.bounceRatePercent) || (one.left >= (one.row.bounceRatePercent as number) - LEFT_APART_POINTS && one.left <= (one.row.bounceRatePercent as number) + ONWARD_GAP_MOST));
+
+  // The busy pages people leave most, against every landing page's leaving.
+  const all = isNumber(figures.leftPercent) ? figures.leftPercent : isRow(data.landingAll) && isNumber(data.landingAll.leftPercent) ? (data.landingAll.leftPercent as number) : null;
+  // The page says the whole website, not every landing page: Funnel's words have no landing pages in them.
+  const allName = website;
+  const busy = isRow(figures.busy) ? figures.busy : null;
+  const worst = rowsOf(busy?.top).flatMap((row) => (typeof row.name === "string" && isNumber(row.left) && isNumber(row.visits) && isNumber(row.leftPercent) ? [{ name: row.name, left: row.left, percent: row.leftPercent }] : []));
   if (all !== null) {
-    const total = leaving.reduce((sum, one) => sum + one.visits, 0);
-    const best = leaving.filter((one) => Math.abs(one.left - all) >= LEFT_APART_POINTS)
-      .sort((left, right) => Math.abs(right.left - all) * Math.sqrt(right.visits / total) - Math.abs(left.left - all) * Math.sqrt(left.visits / total))[0];
-    if (best) found.push(beside("landing:left", best.name, "leftWithoutAnotherPercent", best.left, all, 0.8 + Math.min(0.6, Math.abs(best.left - all) / 30), nameIn(names, "landing", "All landing pages")));
+    worst.slice(0, 2).forEach((one, at) => {
+      if (one.percent - all >= LEFT_APART_POINTS) found.push(beside("landing:left", one.name, "leftWithoutAnotherPercent", one.percent, all, 1.4 - at * 0.3, allName));
+    });
+    // The Classification furthest from the website's own leaving, weighed by its visits.
+    const groups = rowsOf(figures.classifications).flatMap((row) => (typeof row.name === "string" && isNumber(row.visits) && isNumber(row.leftPercent) && row.visits >= GROUP_LEAST ? [{ name: row.name, visits: row.visits, percent: row.leftPercent }] : []));
+    const biggest = [...groups].filter((one) => Math.abs(one.percent - all) >= LEFT_APART_POINTS).sort((left, right) => Math.abs(right.percent - all) * Math.sqrt(right.visits) - Math.abs(left.percent - all) * Math.sqrt(left.visits))[0];
+    if (biggest) found.push(beside("groups:left", biggest.name, "leftWithoutAnotherPercent", biggest.percent, all, 1.3, allName));
+  }
+  if (busy && isNumber(busy.pages) && isNumber(busy.losing) && isNumber(busy.visits) && busy.pages >= BUSY_LEAST && busy.losing > 0) {
+    found.push({
+      id: "busyLeaving:busy:left", kind: "busyLeaving", list: "busy", score: 1.5, params: { losing: busy.losing, busy: busy.pages, visits: busy.visits, ...(worst[0] ? { name: worst[0].name } : {}) },
+      facts: [{ key: "losing", value: busy.losing, unit: "count", label: "Busy pages people leave more than the website's average" }, { key: "busy", value: busy.pages, unit: "count", label: "Busy pages" }, { key: "visits", value: busy.visits, unit: "count", label: "The visits a page needs to be busy" }],
+    });
+  }
+  // The biggest route between two named pages, against how many reached the first.
+  const route = rowsOf(figures.routes).find((row) => typeof row.from === "string" && typeof row.to === "string" && isNumber(row.visits) && isNumber(row.fromVisits) && row.fromVisits >= GROUP_LEAST);
+  if (route) {
+    found.push({
+      id: "routeOn:routes:visits", kind: "routeOn", list: "routes", score: 1.45, params: { name: route.from as string, next: route.to as string, reached: route.fromVisits as number, on: route.visits as number },
+      facts: [{ key: "reached", value: route.fromVisits as number, unit: "count", label: `Visits that went to ${String(route.from)} next` }, { key: "on", value: route.visits as number, unit: "count", label: `Of those, visits that then went to ${String(route.to)}` }],
+    });
+  }
+  // Visits with no page known say the tracking missed them.
+  if (isNumber(figures.noPageVisits) && isNumber(figures.everyVisit) && figures.everyVisit > 0 && figures.noPageVisits / figures.everyVisit >= NO_PAGE_LEAST) {
+    const share = round1((100 * figures.noPageVisits) / figures.everyVisit);
+    found.push({
+      id: "noPageKnown:whole:visits", kind: "noPageKnown", list: "whole", score: 0.95 + Math.min(0.4, share / 40), params: { visits: figures.noPageVisits, share },
+      facts: [{ key: "visits", value: figures.noPageVisits, unit: "count", label: "Visits with no page known" }, { key: "share", value: share, unit: "percent", label: "Their share of all visits" }],
+    });
   }
   found.push(...perHundredApart("landing", rows, site ? perHundred(site.conversions, site.visits) : null, null));
   const apart = conversionsApartFromVisits("landing", rows, nameIn(names, "visits", "Visits"));
   if (apart) found.push(apart);
   return found;
 }
+/** Visits with no page known worth saying: this share of all visits. */
+const NO_PAGE_LEAST = 0.02;
 
 // All pages -----------------------------------------------------------------
 
@@ -793,12 +847,6 @@ function fewEach(find: (data: Row) => OwnFound[]): (data: Row) => OwnFound[] {
 
 /** A page's views moved by fewer than this is no page worth naming. */
 const MOVE_LEAST_VIEWS = 50;
-/**
- * A landing page's "left without seeing another page" this far over its leaving at once is a figure kept wrongly, never
- * said: More Handles' cart read 99.9% left on Last 3 months with 43% leaving at once (2026-11-04).
- */
-const ONWARD_GAP_MOST = 50;
-
 // A page's own screen -------------------------------------------------------
 
 /**

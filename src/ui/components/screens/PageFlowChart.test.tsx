@@ -54,4 +54,48 @@ describe("PageFlowChart", () => {
     expect(route("1:/about-us/>2:/contact/").getAttribute("fill")).toBe(CHART_SERIES_ORANGE);
     expect(box("0:/ai-agency/").getAttribute("opacity")).toBe("0.3");
   });
+
+  // Funnel's Way 1 (funnel-way-1-plan-2026-11-05.md, step 3): a panel beside the mouse, one line a box, and a route lit to its end.
+  describe("hovers and rollovers", () => {
+    const withReadout = {
+      ...props,
+      nodes: props.nodes.map((one) => ({ ...one, readout: { heading: one.label, lines: [{ value: String(one.visits), label: "Visits" }] } })),
+      bands: props.bands.map((one) => ({ ...one, readout: { heading: `${one.from} to ${one.to}`, lines: [{ value: String(one.visits), label: "Visits" }] } })),
+    };
+    const area = () => document.querySelector('[data-part="page-flow"]') as HTMLElement;
+
+    it("rolling over a box shows its panel, and leaving it takes the panel away", () => {
+      render(<PageFlowChart {...withReadout} />);
+      fireEvent.mouseEnter(box("1:/about-us/"));
+      fireEvent.mouseMove(area(), { clientX: 10, clientY: 10 });
+      expect(screen.getByText("Visits")).toBeInTheDocument();
+      fireEvent.mouseLeave(box("1:/about-us/"));
+      fireEvent.mouseMove(area(), { clientX: 11, clientY: 10 });
+      expect(screen.queryByText("Visits")).not.toBeInTheDocument();
+    });
+
+    it("rolling over a route shows its own panel and lights it", () => {
+      render(<PageFlowChart {...withReadout} />);
+      const before = route("0:/>1:/about-us/").getAttribute("fill-opacity");
+      fireEvent.mouseEnter(route("0:/>1:/about-us/"));
+      fireEvent.mouseMove(area(), { clientX: 10, clientY: 10 });
+      expect(screen.getByText("0:/ to 1:/about-us/")).toBeInTheDocument();
+      expect(route("0:/>1:/about-us/").getAttribute("fill-opacity")).not.toBe(before);
+    });
+
+    it("compact is one line a box: its name left and its figure right", () => {
+      render(<PageFlowChart {...props} compact />);
+      const figure = [...box("1:/about-us/").querySelectorAll("text")].find((one) => one.textContent === "60");
+      expect(figure?.getAttribute("text-anchor")).toBe("end");
+    });
+
+    it("a fixed scale keeps every box the same size whatever else is on the chart", () => {
+      const { unmount } = render(<PageFlowChart {...props} scale={0.5} />);
+      const height = () => Number(box("0:/").querySelector("rect")?.getAttribute("height"));
+      const first = height();
+      unmount();
+      render(<PageFlowChart {...props} nodes={props.nodes.filter((one) => one.id !== "0:/ai-agency/")} scale={0.5} />);
+      expect(height()).toBe(first);
+    });
+  });
 });

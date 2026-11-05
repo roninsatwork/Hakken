@@ -264,9 +264,9 @@ export async function askList(
    * `converting`: a third ask, the visits that made any listed event, each once (`sessions` filtered to the events, no
    * split by event) — landing pages by channel for the dates now (ga-conversions-visitors-plan.md CV8).
    * `trim`: a page list's own cut (ga-big-site-reliability-plan.md BR3), made as Google's answers arrive once more than
-   * `TRIM_ABOVE` rows are held, so a big website's list is never held whole.
+   * `TRIM_ABOVE` rows are held, so a big website's list is never held whole. `visitsOnly`: for a list that reads nothing else (a flow's routes).
    */
-  also: { converting?: boolean; trim?: (rows: ListRow[]) => ListRow[]; hold?: number } = {},
+  also: { converting?: boolean; trim?: (rows: ListRow[]) => ListRow[]; hold?: number; visitsOnly?: boolean } = {},
 ): Promise<Asked> {
   const dimensions = [...lead, ...LIST_DIMENSIONS[list]];
   // Conversions, sales and products read on the website's conversion addresses too (conversion-addresses-plan.md): a
@@ -287,7 +287,7 @@ export async function askList(
           // Only the counted events, by day of the week and hour: every event's 168 cells would be a website's longest list.
           : list === "eventHour" ? { only: { dimension: "eventName", values: [...target.events] } } : {}),
   };
-  const metrics = isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
+  const metrics = also.visitsOnly ? MAIN_METRICS.slice(0, 1) : isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
   // Sales asked apart only where they happen on another address: a booking page's list asks nothing more.
   const salesApart = wide && target.salesElsewhere && !isEventList(list) && !isItemList(list);
   // Each answer joined as it arrives, and a page list trimmed while it is read (BR2, BR3).

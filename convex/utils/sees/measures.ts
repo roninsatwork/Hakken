@@ -270,7 +270,7 @@ const PERCENTS: Record<string, Measure> = {
   newPercent: { words: "of its searches were new at the newest check", kind: "percent" },
   // Google Analytics' (own/googleAnalytics.ts, 2026-11-04): the share of visits that left at once, as it moved against the
   // span before; and a landing page's visits that left without seeing another page. Worked out by its rules.
-  leftAtOncePercent: { words: "share of visits that left at once", kind: "percent", lessIsBetter: true },
+  leftAtOncePercent: { words: "share of visits that left straight away", kind: "percent", lessIsBetter: true },
   leftWithoutAnotherPercent: { words: "share who left without seeing another page", kind: "percent", lessIsBetter: true, weighBy: "visits" },
 };
 

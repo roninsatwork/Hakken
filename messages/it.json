@@ -10608,6 +10608,11 @@
       "agents": "{count, plural, =1 {# agente} other {# agenti}}",
       "recordings": "{count, plural, =1 {# registrazione} other {# registrazioni}}"
     },
+    "tableTicks": {
+      "clearAll": "Deseleziona tutto",
+      "selectTop": "Seleziona i primi {most}",
+      "onChart": "{count} di {most} nel grafico"
+    },
     "chart": {
       "download": "Scarica",
       "png": "Immagine (PNG)",
@@ -10711,7 +10716,11 @@
         "countedDifferently": "Le pagine per visita sono passate da <n>{before}</n> a <n>{now}</n>. Di solito significa che le visualizzazioni di pagina sono state conteggiate in modo diverso in queste date, quindi aumenti e cali potrebbero non essere reali.",
         "halfOfViews": "Metà delle tue visualizzazioni è arrivata da <n>{pages}</n> pagine, contro <n>{before}</n> prima.",
         "busyFewer": "<n>{fewer}</n> delle tue <n>{busy}</n> pagine molto viste hanno avuto meno visualizzazioni. Una pagina molto vista ha <n>{visits}</n> visite o più.",
-        "busyFewerNamed": "<n>{fewer}</n> delle tue <n>{busy}</n> pagine molto viste hanno avuto meno visualizzazioni, soprattutto <b>{name}</b>. Una pagina molto vista ha <n>{visits}</n> visite o più."
+        "busyFewerNamed": "<n>{fewer}</n> delle tue <n>{busy}</n> pagine molto viste hanno avuto meno visualizzazioni, soprattutto <b>{name}</b>. Una pagina molto vista ha <n>{visits}</n> visite o più.",
+        "busyLeaving": "<n>{losing}</n> delle tue <n>{busy}</n> pagine più visitate perdono più persone del tuo sito. Una pagina molto visitata ha <n>{visits}</n> visite o più.",
+        "busyLeavingNamed": "<n>{losing}</n> delle tue <n>{busy}</n> pagine più visitate perdono più persone del tuo sito, soprattutto <b>{name}</b>. Una pagina molto visitata ha <n>{visits}</n> visite o più.",
+        "routeOn": "<n>{reached}</n> visite sono passate a <b>{name}</b>. <n>{on}</n> di queste sono poi passate a <b>{next}</b>.",
+        "noPageKnown": "<n>{visits}</n> visite non hanno una pagina nota. È <n>{share}</n> di tutte le visite."
       },
       "askBelow": "Chiedi qualcosa su questa pagina qui sotto.",
       "noCredits": "La tua azienda ha usato tutti i crediti, quindi {platformName} non può scrivere nuovi consigli per questa pagina. Aggiungi crediti in <billing>Fatturazione</billing>.",
@@ -16660,7 +16669,7 @@
         "viewsChangeTitle": "Visualizzazioni: {now} rispetto a {before}. Una differenza di 1 o {most} visualizzazioni appare come Uguale.",
         "conversionsChangeTitle": "Conversioni: {now} rispetto a {before}.",
         "conversionsStarted": "Conversioni dalle visite",
-        "conversionsStartedTitle": "Conversioni nelle visite iniziate sulla pagina, fatte ovunque sul sito",
+        "conversionsStartedTitle": "Conversioni nelle visite iniziate da questa pagina. Possono avvenire su qualsiasi pagina.",
         "change": "Variazione",
         "changeTitle": "Visite rispetto al periodo precedente",
         "purchases": "Acquisti",
@@ -16681,15 +16690,16 @@
         "startedTitle": "Conversioni da persone portate per prime da questo canale, in qualsiasi visita",
         "landsMost": "Arriva più spesso su",
         "landsMostTitle": "La classificazione delle pagine su cui è iniziata la maggior parte delle visite del canale, e la sua quota",
-        "left": "Uscite qui",
-        "leftTitle": "Visite uscite dal sito da questa pagina senza aprirne un'altra, e la loro quota sulle sue visite",
-        "onward": "Proseguite",
-        "onwardTitle": "Visite che dopo questa hanno aperto un'altra pagina, contate una volta per visita, e la loro quota sulle sue visite",
-        "next": "Andate soprattutto a",
-        "nextTitle": "La pagina che la maggior parte di quelle visite ha aperto subito dopo, e la sua quota",
+        "left": "Usciti",
+        "leftTitle": "Persone uscite dal sito da questa pagina senza vederne un'altra. Usciti subito, nel riquadro sopra, è diverso. Conta chi è rimasto meno di 10 secondi e non ha fatto nulla.",
+        "onward": "Rimasti",
+        "onwardTitle": "Persone passate a vedere un'altra pagina.",
+        "next": "I più sono andati a",
+        "nextTitle": "La pagina dove i più sono andati dopo, e la loro quota.",
         "upOrDown": "Su o giù",
         "timeOnPage": "Tempo sulla pagina",
-        "conversionsHereTitle": "Conversioni fatte su questa pagina"
+        "conversionsHereTitle": "Conversioni fatte su questa pagina",
+        "conversionsOfVisit": "Conversioni"
       },
       "notSorted": "Non classificate",
       "pagesCount": "{count, plural, =1 {1 pagina} other {# pagine}}",
@@ -16734,7 +16744,8 @@
         "none": "Nessuna visita {count}"
       },
       "noPageLost": "Google Analytics ha perso la pagina",
-      "per100Visits": "<figure>{rate}</figure> ogni 100 visite"
+      "per100Visits": "<figure>{rate}</figure> ogni 100 visite",
+      "pageNotKnown": "Pagina non nota"
     },
     "chart": {
       "title": "Visite e conversioni nel tempo",
@@ -16846,28 +16857,44 @@
         "week": "Prima degli ultimi 12 mesi, ogni punto è la media settimanale di un mese."
       },
       "flow": {
-        "title": "Come si sono mosse le visite nel tuo sito",
-        "hint": "{period}: dove sono arrivate le visite, la pagina aperta subito dopo e quella successiva. Fai clic su una pagina per seguirne i percorsi in entrata e in uscita; fai di nuovo clic per vederli tutti.",
-        "landing": "Pagine di destinazione",
-        "next": "Pagina successiva",
-        "after": "Pagina dopo ancora",
-        "summary": "{visits} visite · ▼ {left} uscite",
-        "summaryConverted": "{visits} visite · ▼ {left} uscite · ● {conversions}",
-        "more": "({count, plural, one {# altra pagina} other {altre # pagine}})",
-        "nodeHover": "{page}: {visits} visite, {on} sono proseguite, {left} sono uscite. Fai clic per seguirne i percorsi.",
-        "nodeHoverConverted": "{page}: {visits} visite, {on} sono proseguite, {left} sono uscite, {conversions, plural, one {# conversione} other {# conversioni}}. Fai clic per seguirne i percorsi.",
-        "bandHover": "{from} → {to}: {visits} visite",
-        "bandHoverConverted": "{from} → {to}: {visits} visite, {conversions, plural, one {# conversione} other {# conversioni}}",
-        "figuresConverted": "{visits} · ● {conversions}",
-        "legendConversions": "Conversioni, su una pagina o sul percorso che vi ha portato — più grandi se di più",
-        "legendLeft": "Visite uscite da lì",
-        "loading": "Lettura del flusso…",
-        "collecting": "Ancora in raccolta: la prossima raccolta conserva come si sono mosse le visite in queste date.",
+        "title": "Dove sono andate le persone",
+        "hint": "La prima pagina vista a {month}, poi le pagine successive. Spunta le pagine nella tabella per scegliere quali mostrare qui.",
+        "first": "Prima pagina",
+        "second": "Seconda pagina",
+        "column3": "Terza pagina",
+        "column4": "Quarta pagina",
+        "column5": "Quinta pagina",
+        "visitsCount": "{visits} visite",
+        "leftCount": "{left} usciti qui",
+        "under": "Ogni pagina senza spunta è nel suo gruppo. Una visita che apre due pagine conta in entrambe.",
+        "shop": "Ricerca e carrello",
+        "notSorted": "Non ancora ordinate",
+        "otherPages": "Altre pagine",
+        "otherGroups": "{count, plural, one {# altro gruppo} other {# altri gruppi}}",
+        "otherPagesOf": "Altre pagine di questo gruppo",
+        "pagesNotTicked": "Pagine senza spunta",
+        "pagesNotTickedLower": "pagine senza spunta",
+        "visits": "Visite",
+        "visitsInBefore": "Visite a {before}",
+        "wentOn": "Passati a un'altra pagina",
+        "leftHere": "Usciti qui",
+        "mostWent": "I più sono andati qui",
+        "conversions": "Conversioni",
+        "ofVisitsOn": "Delle visite su {name}",
+        "conversionsAfter": "Conversioni dopo questo",
+        "route": "Da {from} a {to}",
+        "legendConversions": "I punti arancioni indicano i percorsi con più conversioni",
+        "legendLeft": "Il rosso mostra chi è uscito qui",
+        "legendGroup": "Un bordo grigio indica un gruppo di pagine",
+        "loading": "Lettura dei percorsi…",
+        "collecting": "Ancora in raccolta. La prossima raccolta salva dove sono andate le persone in queste date.",
         "empty": "Nessuna visita in queste date.",
         "csvFrom": "Da",
         "csvTo": "A",
         "csvVisits": "Visite",
-        "csvConversions": "Conversioni"
+        "csvConversions": "Conversioni",
+        "pageNotKnown": "Pagina non nota",
+        "nothingTicked": "Nessuna pagina selezionata. Seleziona una pagina nella tabella per vedere dove sono andate le persone."
       },
       "viewsOnlyLine": "Visualizzazioni"
     },
@@ -17298,18 +17325,49 @@
     },
     "landing": {
       "title": "Funnel",
-      "description": "Dove è iniziata ogni visita e cosa hanno fatto poi quelle visite: sono uscite, sono passate a un'altra pagina o hanno convertito.",
-      "groupFilter": "Gruppo di pagine",
-      "notSorted": "Non classificate",
-      "everyGroup": "Ogni gruppo di pagine",
-      "viewLabel": "Mostra",
-      "views": {
-        "pages": "Pagine",
-        "groups": "Gruppi di pagine"
-      },
-      "findGroup": "Trova un gruppo di pagine…",
+      "description": "Dove le persone arrivano sul tuo sito e cosa fanno dopo.",
       "findPage": "Trova una pagina…",
-      "empty": "Nessuna pagina di destinazione in queste date."
+      "empty": "Nessuna pagina in queste date.",
+      "tickLimit": "Puoi mostrare al massimo {most} pagine. Prima togli la spunta a una.",
+      "boxes": {
+        "visits": "Visite",
+        "leftAtOnce": "Usciti subito",
+        "pagesAVisit": "Pagine per visita",
+        "conversions": "Conversioni",
+        "was": "Era {figure} a {before}.",
+        "pagesBefore": "{figure} a {before}"
+      },
+      "daily": {
+        "showLabel": "Mostra",
+        "compareWith": "Confronta con",
+        "nothing": "Nessun confronto",
+        "hint": "{now}.",
+        "hintAgainst": "{now} rispetto agli stessi giorni di {before}.",
+        "empty": "Nessuna visita in queste date.",
+        "csvDay": "Giorno",
+        "show": {
+          "left": "Usciti subito",
+          "stayed": "Rimasti a guardare",
+          "conversions": "Conversioni"
+        },
+        "title": {
+          "left": {
+            "day": "Persone uscite subito, ogni giorno",
+            "week": "Persone uscite subito, ogni settimana",
+            "month": "Persone uscite subito, ogni mese"
+          },
+          "stayed": {
+            "day": "Persone rimaste a guardare, ogni giorno",
+            "week": "Persone rimaste a guardare, ogni settimana",
+            "month": "Persone rimaste a guardare, ogni mese"
+          },
+          "conversions": {
+            "day": "Conversioni ogni giorno",
+            "week": "Conversioni ogni settimana",
+            "month": "Conversioni ogni mese"
+          }
+        }
+      }
     },
     "allPages": {
       "title": "Tutte le pagine",

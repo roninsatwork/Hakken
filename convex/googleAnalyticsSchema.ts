@@ -147,7 +147,7 @@ export const heldAddressValidator = v.object({
  */
 export const PAGE_FACT_LISTS = [
   "landingSource", "pageReferrer", "pageNext", "pageClicks", "pageWho", "landingWho", "pageCountry", "landingPagesSeen", "pageWeekday", "pageDevice",
-  "eventPage", "eventDetail", "landingFlow", "landingOnward",
+  "eventPage", "eventDetail", "landingFlow", "landingOnward", "landingRoutes",
   // Each landing page by the visitors' browser, operating system and interests: Visitors' "where each kind of visitor
   // lands" (ga-conversions-visitors-plan.md CV7, CV8). Its new or returning, age and gender come from `landingSource`
   // and `landingWho`.
@@ -209,6 +209,7 @@ export const analyticsListValidator = v.union(
   v.literal("eventDetail"),
   v.literal("landingFlow"),
   v.literal("landingOnward"),
+  v.literal("landingRoutes"),
 );
 
 /**

@@ -1,82 +1,151 @@
 import { describe, expect, test } from "vitest";
-import { FLOW_NODES, MORE, buildFlow, flowChart, type KeptFlowRow, type Route } from "./landingFlow";
+import { FLOW_NODES, GROUPS_BY_NAME, OTHER_GROUPS, buildFlow, flowChart, groupNode, isCurrentFlow, type KeptFlowRow, type Route } from "./landingFlow";
 
 /**
- * The website's flow from its landing pages (docs/plans/active/landing-pages-flow-plan.md
- * LF2, LF5, §3b), from routes shaped as ronins.co.uk's were on 14 Oct 2026.
+ * The website's flow from its landing pages (docs/plans/active/funnel-way-1-plan-2026-11-05.md, step 1), from routes shaped
+ * as ronins.co.uk's were on 14 Oct 2026.
  */
 
 const none = new Map<string, number>();
 const route = (landing: string, before: string, page: string, visits: number, counts: Map<string, number> = none): Route => ({ landing, before, page, visits, counts });
+const kindOf = (page: string) => (page.startsWith("/blog") ? "blog" : page.startsWith("/shop") ? "shop" : "other");
 
 /** The kept rows read back as the reads give them: each conversion counted. */
 const keptOf = (rows: ReturnType<typeof buildFlow>["flow"]): KeptFlowRow[] =>
   rows.map((row) => ({ parts: row.parts, visits: row.visits, times: row.times, conversions: [...row.counts.values()].reduce((all, count) => all + count, 0) }));
 
-describe("the website's flow from its landing pages", () => {
-  const routes = [
-    // Visits landing on / from Google, one converting there; then on to /about-us/ and /case-study/.
-    route("/", "", "/", 155, new Map([["contact", 1]])),
-    route("/", "/", "/about-us/", 43),
-    route("/", "/", "/case-study/", 41),
-    // From /about-us/, in the visits that landed on /, on to /ai-consultancy/ — converting there.
-    route("/", "/about-us/", "/ai-consultancy/", 6, new Map([["contact", 1]])),
-    // /ai-agency/'s own visits: most leave; a few go to /case-study/.
-    route("/ai-agency/", "", "/ai-agency/", 138, new Map([["contact", 4]])),
-    route("/ai-agency/", "/ai-agency/", "/case-study/", 22),
-    // A view from elsewhere in the middle of a visit is not a step from its landing page.
-    route("/ai-agency/", "", "/about-us/", 3),
-  ];
-  const onward = [
-    { landing: "/", before: "/", visits: 46 },
-    { landing: "/", before: "/about-us/", visits: 20 },
-    { landing: "/ai-agency/", before: "/ai-agency/", visits: 32 },
-  ];
+const routes = [
+  route("/", "", "/", 155, new Map([["contact", 1]])),
+  route("/", "/", "/about/", 43),
+  route("/", "/", "/case/", 41),
+  // A reload is not a step.
+  route("/", "/", "/", 90),
+  route("/", "/about/", "/consult/", 6, new Map([["contact", 1]])),
+  route("/agency/", "", "/agency/", 138, new Map([["contact", 4]])),
+  route("/agency/", "/agency/", "/case/", 22),
+  // A view from elsewhere in the middle of a visit is not a step from its landing page.
+  route("/agency/", "", "/about/", 3),
+];
+const onward = [
+  { landing: "/", before: "/", visits: 46 },
+  { landing: "/", before: "/about/", visits: 20 },
+  { landing: "/agency/", before: "/agency/", visits: 32 },
+];
 
-  test("each landing page: its visits, those that went on counted once a visit, and the page most opened next", () => {
-    const built = buildFlow(routes, onward);
-    expect(built.onward).toEqual([
-      { landing: "/", next: "/about-us/", visits: 46, times: 43 },
-      { landing: "/ai-agency/", next: "/case-study/", visits: 32, times: 22 },
+describe("what the flow keeps", () => {
+  test("each landing page: those that went on counted once a visit, and the page most opened next", () => {
+    expect(buildFlow(routes, onward, kindOf).onward).toEqual([
+      { landing: "/", next: "/about/", visits: 46, times: 43 },
+      // 32 went on by Google's count, but only 22 took a route: the rest were reloads.
+      { landing: "/agency/", next: "/case/", visits: 22, times: 22 },
     ]);
   });
 
-  test("the chart: what left each landing page, the routes on, and conversions where they were made", () => {
-    const chart = flowChart(keptOf(buildFlow(routes, onward).flow));
-    const node = (id: string) => chart.nodes.find((one) => one.id === id)!;
-    // 155 landed on /, 46 went on: 109 left. 138 on /ai-agency/, 32 went on: 106 left.
-    expect(node("0:/")).toMatchObject({ visits: 155, left: 109, conversions: 1 });
-    expect(node("0:/ai-agency/")).toMatchObject({ visits: 138, left: 106, conversions: 4 });
-    // /case-study/ next from both landing pages; /about-us/ from / alone, 20 of its 43 going on.
-    expect(node("1:/case-study/")).toMatchObject({ visits: 63 });
-    expect(node("1:/about-us/")).toMatchObject({ visits: 43, left: 23 });
-    // The conversion on /ai-consultancy/, after /about-us/, sits on that route and that page.
-    expect(chart.bands.find((band) => band.from === "1:/about-us/" && band.to === "2:/ai-consultancy/")).toMatchObject({ visits: 6, conversions: 1, landings: ["/"] });
-    expect(node("2:/ai-consultancy/").conversions).toBe(1);
-    expect(chart.columns[0]).toEqual({ visits: 293, left: 215, conversions: 5 });
-  });
-
-  test("the visits with no landing page recorded all count as landed; went on further along counts only visits that landed elsewhere", () => {
-    const more = [
+  test("its routes are joined up from the landing page outwards, each step used once, and reloads left out", () => {
+    const steps = [
       ...routes,
-      // Google recorded no landing page: these visits show their first page as /ai-agency/.
-      route("(not set)", "", "/ai-agency/", 94),
-      // A visit that landed on / and went on from / later, and one that landed on /ai-agency/ and reached / next.
-      route("/ai-agency/", "/ai-agency/", "/", 10),
+      // /case/ reached second, then the step back to /about/ and on: /about/ -> /consult/ is used at the third page only.
+      route("/", "/case/", "/about/", 5),
     ];
-    const chart = flowChart(keptOf(buildFlow(more, [...onward, { landing: "/ai-agency/", before: "/", visits: 4 }]).flow));
-    expect(chart.nodes.find((one) => one.id === "0:(not set)")).toMatchObject({ visits: 94, left: 94 });
-    // / as the next page: 10 arrived from /ai-agency/, 4 of them went on — /'s own 46 as a landing page are not counted here.
-    expect(chart.nodes.find((one) => one.id === "1:/")).toMatchObject({ visits: 10, left: 6 });
+    const chart = flowChart(keptOf(buildFlow(steps, onward, kindOf).flow), []);
+    const node = (id: string) => chart.nodes.find((one) => one.id === id)!;
+    expect(node("1:/case/").visits).toBe(63);
+    expect(node("1:/about/").visits).toBe(43);
+    expect(node("2:/consult/").visits).toBe(6);
+    expect(node("2:/about/").visits).toBe(5);
+    expect(chart.nodes.find((one) => one.id === "1:/")).toBeUndefined();
   });
 
-  test("five pages a column by name, the rest one box that says how many it holds", () => {
-    const many = Array.from({ length: FLOW_NODES + 3 }, (_, at) => route(`/p${at}/`, "", `/p${at}/`, 100 - at));
-    const chart = flowChart(keptOf(buildFlow(many, []).flow));
-    const landing = chart.nodes.filter((node) => node.column === 0);
-    expect(landing).toHaveLength(FLOW_NODES + 1);
-    expect(landing.at(-1)).toMatchObject({ page: MORE, more: 3, visits: 93 + 94 + 95 });
-    // With nobody going on, every landing page's visits left there.
-    expect(chart.columns[0].left).toBe(chart.columns[0].visits);
+  test("five columns: a route four steps on is kept, a fifth step isn't", () => {
+    const line = [
+      route("/a", "", "/a", 100),
+      route("/a", "/a", "/b", 90),
+      route("/a", "/b", "/c", 80),
+      route("/a", "/c", "/d", 70),
+      route("/a", "/d", "/e", 60),
+      route("/a", "/e", "/f", 50),
+    ];
+    const chart = flowChart(keptOf(buildFlow(line, [{ landing: "/a", before: "/a", visits: 90 }], kindOf).flow), []);
+    expect(chart.nodes.find((one) => one.id === "4:/e")?.visits).toBe(60);
+    expect(chart.nodes.some((one) => one.id.endsWith("/f"))).toBe(false);
+  });
+
+  test("ten pages a column by name, and every other page in its group", () => {
+    const many = [route("/", "", "/", 500), ...Array.from({ length: FLOW_NODES + 3 }, (_, at) => route("/", "/", `/blog/p${at}`, 100 - at))];
+    const built = buildFlow(many, [{ landing: "/", before: "/", visits: 400 }], kindOf);
+    const chart = flowChart(keptOf(built.flow), []);
+    const second = chart.nodes.filter((node) => node.column === 1);
+    expect(second.filter((node) => !node.node.startsWith("g:"))).toHaveLength(FLOW_NODES);
+    expect(second.find((node) => node.node === groupNode("blog"))?.visits).toBe(88 + 89 + 90);
+  });
+
+  test("a big website's smallest routes, added up by group, still reach the chart", () => {
+    const folded = [
+      ...routes,
+      route("/", "/", groupNode("shop"), 30),
+      route("/", groupNode("shop"), groupNode("shop"), 12),
+      route("/", "/about/", "/shop/x", 3),
+    ];
+    const chart = flowChart(keptOf(buildFlow(folded, onward, kindOf).flow), []);
+    expect(chart.nodes.find((one) => one.id === `1:${groupNode("shop")}`)?.visits).toBe(30);
+    // A step inside one group is a real step between two pages: it's kept.
+    expect(chart.bands.find((band) => band.from === `1:${groupNode("shop")}` && band.to === `2:${groupNode("shop")}`)?.visits).toBe(12);
+  });
+
+  test("a visit went on only if it took a route: a reload looks like going on, and isn't", () => {
+    const built = buildFlow([route("/blog/a", "", "/blog/a", 100), route("/blog/a", "/blog/a", "/blog/a", 50), route("/blog/a", "/blog/a", "/b", 10)], [{ landing: "/blog/a", before: "/blog/a", visits: 60 }], kindOf);
+    expect(built.onward[0].visits).toBe(10);
+  });
+
+  test("a landing page keeps its routes against the chart's own boxes, with their conversions", () => {
+    const built = buildFlow([...routes, route("/", "/", "/case/", 2, new Map([["contact", 2]]))], onward, kindOf);
+    const own = built.routes.filter((row) => row.landing === "/");
+    expect(own.find((row) => row.to === "/case/")).toMatchObject({ visits: 43 });
+    expect(own.find((row) => row.to === "/case/")?.counts.get("contact")).toBe(2);
+  });
+
+  test("the first column's routes run from each landing page's group", () => {
+    const chart = flowChart(keptOf(buildFlow(routes, onward, kindOf).flow), [{ kind: "other", visits: 293, left: 215, conversions: 5 }]);
+    expect(chart.bands.find((band) => band.from === `0:${groupNode("other")}` && band.to === "1:/case/")?.visits).toBe(63);
+    expect(chart.nodes.find((node) => node.id === `0:${groupNode("other")}`)).toMatchObject({ visits: 293, left: 215, conversions: 5 });
+  });
+
+  test("the number that left a page further along: its visits, less the share that went on from it", () => {
+    const chart = flowChart(keptOf(buildFlow(routes, onward, kindOf).flow), []);
+    expect(chart.nodes.find((one) => one.id === "1:/about/")).toMatchObject({ visits: 43, left: 23 });
+  });
+
+  test("a group's own pages say how many went on from it", () => {
+    const steps = [route("/", "", "/", 100), route("/", "/", "/blog/a", 40), route("/", "/", groupNode("blog"), 10)];
+    const chart = flowChart(keptOf(buildFlow(steps, [{ landing: "/", before: "/blog/a", visits: 20 }, { landing: "/", before: "/", visits: 50 }], (page) => (page === "/blog/a" ? "blog" : "other")).flow), []);
+    // /blog/a keeps its name in this small column: half of its 40 went on.
+    expect(chart.nodes.find((one) => one.id === "1:/blog/a")).toMatchObject({ visits: 40, left: 20 });
+    // 20 went on from the group's 50 visits: a group's routes added up by group count as arrivals, so 10 go on 4.
+    expect(chart.nodes.find((one) => one.id === `1:${groupNode("blog")}`)).toMatchObject({ visits: 10, left: 6 });
+  });
+});
+
+describe("reading it back", () => {
+  test("eight groups by name and the rest together, in each column", () => {
+    const sizes = Array.from({ length: GROUPS_BY_NAME + 3 }, (_, at) => ({ kind: `k${at}`, visits: 100 - at, left: 10, conversions: 1 }));
+    const chart = flowChart([{ parts: ["n", "1", "/a"], visits: 1, times: 0, conversions: 0 }], sizes);
+    const first = chart.nodes.filter((node) => node.column === 0);
+    expect(first).toHaveLength(GROUPS_BY_NAME + 1);
+    expect(first.at(-1)).toMatchObject({ node: groupNode(OTHER_GROUPS), more: 3, visits: 92 + 91 + 90, left: 30 });
+    expect(chart.firstColumn.get(`k${GROUPS_BY_NAME + 2}`)).toBe(groupNode(OTHER_GROUPS));
+    expect(chart.firstColumn.get("k0")).toBe(groupNode("k0"));
+  });
+
+  test("a column lists its pages first, then its groups, then the smaller groups", () => {
+    const rows: KeptFlowRow[] = [
+      { parts: ["n", "1", groupNode("big")], visits: 900, times: 0, conversions: 0 },
+      { parts: ["n", "1", "/small"], visits: 5, times: 0, conversions: 0 },
+    ];
+    expect(flowChart(rows, []).nodes.map((node) => node.node)).toEqual(["/small", groupNode("big")]);
+  });
+
+  test("a flow kept in the old shape reads as not collected yet", () => {
+    expect(isCurrentFlow([{ parts: ["a", "/"] }, { parts: ["b", "/", "/x"] }])).toBe(false);
+    expect(isCurrentFlow([{ parts: ["n", "1", "/x"] }])).toBe(true);
   });
 });

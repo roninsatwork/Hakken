@@ -38,8 +38,7 @@ export const analyticsChart = tenantQuery({
       day: v.string(),
       /** A week's or month's last day: the past beyond 90 days is held by week, then month (SF2b). */
       lastDay: v.optional(v.string()),
-      visits: v.number(),
-      engaged: v.number(),
+      visits: v.number(), engaged: v.number(),
       /** Page views (GA26): Overview's chart leads with them. */
       views: v.number(),
       conversions: v.number(),
@@ -118,7 +117,8 @@ export const analyticsPeriodBeforeChart = tenantQuery({
     held: v.boolean(),
     /** The days each point is moved forward by: the period's length. */
     shift: v.number(),
-    points: v.array(v.object({ day: v.string(), visits: v.number(), conversions: v.number(), events: v.array(v.number()), eventVisits: v.optional(v.array(v.number())), eventTimes: v.optional(v.array(v.number())) })),
+    points: v.array(v.object({ day: v.string(), visits: v.number(),
+      engaged: v.number(), conversions: v.number(), events: v.array(v.number()), eventVisits: v.optional(v.array(v.number())), eventTimes: v.optional(v.array(v.number())) })),
     /** The counted events, in the order of each point's `events`: the chart's own order. */
     events: v.array(v.string()),
   }),
@@ -156,6 +156,7 @@ export async function readPeriodBeforeChart(ctx: SiteReader, args: ObjectType<ty
           // Its place in the span before, laid over the same place in the period.
           day: shiftDay(total.from, daysBetween(before.from, point.start)),
           visits: row.visits,
+          engaged: row.engaged,
           conversions: conversionsOf(row, counted).conversions,
           events: events.map((event) => row.counts.get(event) ?? 0),
           eventVisits: events.map((event) => row.eventVisits?.get(event) ?? row.counts.get(event) ?? 0),

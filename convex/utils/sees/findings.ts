@@ -35,7 +35,7 @@ export type FindingView = {
  * before.
  */
 export type FindingKind = "visitsForOne" | "step" | "groupAbove" | "groupBelow" | "rose" | "fell" | "trackingGap" | "wholeUp" | "wholeDown" | "rowUp" | "rowDown" | "holdsMost" | "rowAbove" | "rowBelow" | "movedUp" | "movedDown"
-  | "placeUp" | "placeDown" | "rivalUp" | "rivalDown" | "newLost" | "shareMoved" | "countedDifferently" | "halfOfViews" | "busyFewer";
+  | "placeUp" | "placeDown" | "rivalUp" | "rivalDown" | "newLost" | "shareMoved" | "countedDifferently" | "halfOfViews" | "busyFewer" | "busyLeaving" | "routeOn" | "noPageKnown";
 
 /** A figure a finding names, keyed so the team names it and the Editor fills it in. */
 export type FindingFact = { key: string; value: number; unit: "count" | "percent" | "ratio" | "score"; label: string };
@@ -358,6 +358,12 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
       return `Half the views came from ${p.pages} pages, against ${p.pagesBefore} the span before.`;
     case "busyFewer":
       return `${p.fewer} of the ${p.busy} busy pages, those with ${p.visits} visits or more, had fewer views${p.name !== undefined ? `, most of all ${p.name}` : ""}.`;
+    case "busyLeaving":
+      return `${p.losing} of the ${p.busy} busy pages, those with ${p.visits} visits or more, lose more people than the website does${p.name !== undefined ? `, most of all ${p.name}` : ""}.`;
+    case "routeOn":
+      return `${p.reached} visits went to ${p.name} next. ${p.on} of them then went to ${p.next}.`;
+    case "noPageKnown":
+      return `${p.visits} visits have no page known, ${p.share}% of all visits.`;
     case "countedDifferently":
       return `Pages a visit went to ${p.now} from ${p.before} the span before. That usually means page views were counted differently on these dates, so ups and downs in views may not be real.`;
   }

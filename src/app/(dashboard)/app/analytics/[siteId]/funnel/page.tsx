@@ -5,89 +5,93 @@ import { useQuery } from "convex/react";
 import { LogIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { Select } from "@/src/ui/components/screens/Select";
-import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
-import { useSiteParam } from "../../../sites/_components/useSiteParam";
+import { funnelFigures } from "@/convex/utils/landingFlowFigures";
+import { pageName } from "@/convex/utils/pageNames";
 import { AnalyticsListScreen, type ListPageAnswer } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
+import { ClassificationSelect, useClassificationChoice } from "../../_components/AllPagesParts";
+import { FunnelBoxes, LeftEachDayCard, useFunnelFlow } from "../../_components/FunnelParts";
 import { LandingFlowCard } from "../../_components/LandingFlow";
-import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, usePageHref } from "../../_components/useAnalytics";
+import type { FlowAnswer } from "../../_components/funnelRoutes";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsStatus, usePageHref } from "../../_components/useAnalytics";
 import { useEyeNames, useWebsiteForEye } from "../../_components/useEyeFigures";
-
-const VIEWS = ["pages", "groups"] as const;
-type View = (typeof VIEWS)[number];
-const ANY_GROUP = "all";
+import { spansOfList, useSpanInWords } from "../../_components/VisitsCharts";
 
 /**
- * Landing pages (docs/plans/active/landing-pages-flow-plan.md, drawn and
- * approved 2026-10-14): What Hakken sees, then "How visits moved through
- * your website" — landing pages, the next page and the page after, click a
- * page to follow its routes (LF2) — then each landing page's own funnel:
- * visits, left here, went on, the page most went to, conversions (LF4) —
- * each page, or the website's page groups (GA15), with a Page group filter.
- * Every page opens its own screen (GA22). A website with no groups shows
- * pages only.
+ * Funnel, as Way 1 (docs/plans/active/funnel-way-1-plan-2026-11-05.md; board "Way 1" on the canvas "Hakken — Funnel, three
+ * ways"). Four boxes, People who left straight away each day, the route chart five pages deep, then the table of the pages
+ * people started on. Ticks in the table choose which pages stand on their own in the route chart. Every page opens its own screen.
  */
-export default function AnalyticsLandingPagesPage() {
+export default function AnalyticsFunnelPage() {
   const t = useTranslations("googleAnalytics.landing");
-  const siteId = useAnalyticsSiteId();
   const pageHref = usePageHref();
   const currency = useAnalyticsStatus()?.connection?.currency ?? null;
-  const choices = useQuery(api.pageKinds.pageKindChoices, { siteId });
-  const [view, setView] = useSiteParam<View>("view", "pages", VIEWS);
-  const [group, setGroup] = useSiteParam<string>("group", ANY_GROUP);
-  const groups = choices ?? [];
-  const byGroups = view === "groups" && groups.length > 0;
-  const filters = groups.length > 0 ? (
-    <div className="flex flex-wrap items-center gap-3">
-      {!byGroups ? (
-        <Select aria-label={t("groupFilter")} value={group} onChange={setGroup} chip={{ label: t("groupFilter"), choice: group === ANY_GROUP ? null : groups.find((one) => one.id === group)?.name ?? t("notSorted") }}>
-          <option value={ANY_GROUP}>{t("everyGroup")}</option>
-          {groups.map((one) => <option key={one.id} value={one.id}>{one.name}</option>)}
-          <option value="NOT_SORTED">{t("notSorted")}</option>
-        </Select>
-      ) : null}
-      <SiteViewSwitch label={t("viewLabel")} options={VIEWS.map((value) => ({ value, label: t(`views.${value}`) }))} value={view} onChange={setView} />
-    </div>
-  ) : null;
+  const choice = useClassificationChoice();
+  const { flow, ticks } = useFunnelFlow(choice);
   return (
     <AnalyticsListScreen
-      key={byGroups ? "groups" : "pages"}
       header={{ icon: <LogIn className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
       head={(answer) => (
         <>
-          <FunnelSees answer={answer} currency={currency} />
-          <LandingFlowCard />
+          <FunnelSees answer={answer} currency={currency} flow={flow} />
+          <FunnelBoxes answer={answer} />
+          <LeftEachDayCard answer={answer} />
+          <FunnelFlow answer={answer} flow={flow} nothingTicked={ticks.keys.length === 0} most={ticks.most} onSelectTop={() => ticks.set([...(flow?.starts ?? [])])} />
         </>
       )}
-      list={byGroups ? "groups" : "landing"}
-      {...(!byGroups && group !== ANY_GROUP ? { group } : {})}
-      noun={byGroups ? "groups" : "landingPages"}
+      list="landing"
+      group={choice.group}
+      leaveOut={choice.leaveOut}
+      ticks={ticks}
+      noun="pages"
       opening="visits"
-      searchPlaceholder={byGroups ? t("findGroup") : t("findPage")}
-      rowHref={byGroups ? undefined : (row) => (row.key.startsWith("~") ? pageHref(row.key) : null)}
-      filters={filters}
+      searchPlaceholder={t("findPage")}
+      rowHref={(row) => (row.key.startsWith("~") ? pageHref(row.key) : null)}
+      filters={<ClassificationSelect choice={choice} />}
       emptyLabel={t("empty")}
     />
   );
 }
 
+/** The route chart, told the website's visits and the dates in words. */
+function FunnelFlow({ answer, flow, nothingTicked, most, onSelectTop }: { answer: ListPageAnswer | undefined; flow: Parameters<typeof LandingFlowCard>[0]["flow"]; nothingTicked: boolean; most: number; onSelectTop: () => void }) {
+  const website = useWebsiteForEye();
+  const inWords = useSpanInWords(...spansOfList(answer));
+  return <LandingFlowCard flow={flow} visits={website?.visits ?? null} month={inWords.now} before={inWords.before} nothingTicked={nothingTicked} most={most} onSelectTop={onSelectTop} />;
+}
+
 /**
- * The page's eye: the table's page as shown, the whole website's figures (`website`) to set each landing page or group
- * beside, and the share of every landing page's visits that left without seeing another page (`landingAll`, Overview's
- * own figure), as no one page of the table holds every landing page (ask-hakken-every-chart-page-plan-2026-11-03.md).
+ * The page's eye: the table's page as shown, the whole website's figures (`website`) to set each landing page beside, and the
+ * share of every landing page's visits that left without seeing another page (`landingAll`, Overview's own figure), as no one
+ * page of the table holds every landing page (ask-hakken-every-chart-page-plan-2026-11-03.md).
  */
-function FunnelSees({ answer, currency }: { answer: ListPageAnswer | undefined; currency: string | null }) {
+function FunnelSees({ answer, currency, flow }: { answer: ListPageAnswer | undefined; currency: string | null; flow: FlowAnswer | undefined }) {
+  const t = useTranslations("googleAnalytics.chart.flow");
+  const tm = useTranslations("googleAnalytics.menu");
+  const pageHref = usePageHref();
+  const hrefFor = useAnalyticsHref(useAnalyticsArgs().siteId);
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const names = useEyeNames();
   const website = useWebsiteForEye();
   const panels = useQuery(api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels, status?.connection?.newestDay ? args : "skip");
   const left = panels?.landing?.left ?? null;
+  // The chart's figures, whatever is ticked: the same read Ask Hakken has.
+  const funnel = useMemo(() => (flow?.held ? funnelFigures(flow, { shop: t("shop"), notSorted: t("notSorted"), otherPages: t("otherPages"), otherGroups: (count) => t("otherGroups", { count }), pageNotKnown: t("pageNotKnown") }) : null), [flow, t]);
   const data = useMemo(() => (answer ? {
     ...answer, names, ...(website ? { website } : {}),
     // As a percentage already, so `pageData.ts` turns it round once only.
     ...(left !== null ? { landingAll: { leftPercent: Math.round(left * 1000) / 10 } } : {}),
-  } : answer), [answer, names, website, left]);
-  return <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} data={data} />;
+    ...(funnel ? { funnel } : {}),
+  } : answer), [answer, names, website, left, funnel]);
+  // Where "Do first" may send the reader: the pages people leave most, and where their figures are looked into.
+  const worst = flow?.busy?.top ?? [];
+  const links = useMemo(() => [
+    ...worst.slice(0, 3).filter((page) => page.key.startsWith("~")).map((page) => ({ label: pageName(page.address), href: pageHref(page.key) })),
+    { label: tm("allPages"), href: hrefFor("all-pages") },
+    { label: tm("conversions"), href: hrefFor("conversions") },
+    { label: tm("trackingHealth"), href: hrefFor("tracking-health") },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pageHref and hrefFor are new each draw; the pages and the dates decide.
+  ], [worst, tm, args.period, args.device, args.country]);
+  return <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} data={data} links={links} />;
 }

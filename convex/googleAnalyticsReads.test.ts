@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import { analyticsPartsOf, type ANALYTICS_SCREENS } from "./utils/analyticsScreens";
+import { flowBoxes } from "./utils/landingFlowRoutes";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
@@ -706,7 +707,7 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
 
     const landing = await read("landingPages");
     const landingShown = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
-    expect(landing.rows!.map((row) => [row.name, row.visits, row.conversions])).toEqual(landingShown.rows.map((row) => [row.label.replace("https://www.acme-shop.test", ""), row.visits, row.conversions]));
+    expect(landing.rows!.map((row) => [row.address, row.visits, row.conversions])).toEqual(landingShown.rows.map((row) => [row.label.replace("https://www.acme-shop.test", ""), row.visits, row.conversions]));
 
     const channel = await read("channel", { key: "Organic Search" });
     expect(channel.rows!.map((row) => row.name)).toEqual(["google"]);
@@ -1025,15 +1026,31 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
     const flow = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "" });
     expect(google.calls.length).toBe(asked);
     expect(flow.held).toBe(true);
-    const node = (column: number, path: string) => flow.nodes.find((one) => one.column === column && one.path?.endsWith(path));
-    // 150 landed on /, 60 of them went on (counted once a visit): 90 left. All 90 on /ai-agency/ left.
-    expect(node(0, "/")).toMatchObject({ visits: 150, left: 90, conversions: 0 });
-    expect(node(0, "/ai-agency/")).toMatchObject({ visits: 90, left: 90 });
+    const node = (column: number, path: string) => flow.nodes.find((one) => one.column === column && one.address?.endsWith(path));
     // On to /about-us/, 30 of its 60 going on to /contact/, where the 30 conversions were made.
     expect(node(1, "/about-us/")).toMatchObject({ visits: 60, left: 30 });
     expect(node(2, "/contact/")).toMatchObject({ visits: 30, conversions: 30 });
     expect(flow.bands.find((band) => band.to === node(2, "/contact/")!.id)).toMatchObject({ visits: 30, conversions: 30 });
-    expect(flow.columns[0]).toMatchObject({ visits: 240, left: 180 });
+    // The first column is the table's own figures, by group: this website has no classifications, so one group. The test's
+    // Google counts each line of its log as visits of their own, so / holds 240 here, and 90 on /ai-agency/.
+    expect(flow.nodes.filter((one) => one.column === 0)).toEqual([expect.objectContaining({ kind: "NOT_SORTED", visits: 330, left: 270 })]);
+    expect(flow.onward).toBe(60);
+    expect(flow.left).toBe(270);
+    // It opens with the busiest pages ticked, each with the table's figures and its own routes.
+    expect(flow.ticked.map((page) => [page.address.replace("https://www.acme-shop.test", ""), page.visits, page.left])).toEqual([["/", 240, 180], ["/ai-agency/", 90, 90]]);
+    expect(flow.ticked[0].routes).toEqual([{ to: node(1, "/about-us/")!.id, visits: 60, conversions: 0 }]);
+    expect(flow.starts).toEqual(flow.ticked.map((page) => page.key));
+  });
+
+  test("the chart can be told which pages are ticked, and the menu sets which it opens with", async () => {
+    const { siteId, user } = await collectedRoutes();
+    const opening = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "" });
+    const one = opening.starts[1];
+    const ticked = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "", pages: [one] });
+    expect(ticked.ticked.map((page) => page.key)).toEqual([one]);
+    expect(ticked.starts).toEqual(opening.starts);
+    const none = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "", pages: [] });
+    expect(none.ticked).toEqual([]);
   });
 
   test("the table: each landing page's visits that went on, and the page most of them opened next, sorted over the whole list", async () => {
@@ -1046,6 +1063,104 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
       ["/ai-agency/", 90, 0, null],
     ]);
     expect(list.rows[0].next?.share).toBe(1);
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each read's own shape: what's asserted is its figures.
+  type FunnelRead = Record<string, any>;
+  describe("Ask Hakken says what Funnel says (funnel-way-1-plan-2026-11-05.md, step 8)", () => {
+    const NAMES = { shop: "Search and basket", notSorted: "Not sorted yet", otherPages: "Other pages", otherGroups: (count: number) => `${count} other groups`, pageNotKnown: "Page not known" };
+    const asking = async (extra: Record<string, unknown>) => {
+      const { t, siteId } = await collectedRoutes();
+      const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+      return await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "acme-shop.test", screen: "landingPages", period: "lastMonth", ...extra }) as FunnelRead;
+    };
+
+    test("the tool asks for the boxes and the chart after the rest, each a read of its own", () => {
+      expect(analyticsPartsOf("landingPages")).toEqual(["boxes", "chart"]);
+    });
+
+    test("its four boxes are the screen's, and it explains the two meanings of left", async () => {
+      const { siteId, user } = await collectedRoutes();
+      const shown = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
+      const { boxes, twoMeaningsOfLeft } = await asking({ part: "boxes" });
+      expect(boxes).toMatchObject({ visits: shown.now!.visits, conversions: shown.now!.conversions, pagesAVisit: Math.round((shown.now!.views / shown.now!.visits) * 10) / 10 });
+      expect(boxes.leftStraightAwayPercent).toBe(Math.round((1000 * (shown.now!.visits - shown.now!.engaged)) / shown.now!.visits) / 10);
+      expect(twoMeaningsOfLeft).toMatch(/under 10 seconds/);
+      expect(twoMeaningsOfLeft).toMatch(/saw one page/);
+    });
+
+    test("its chart's columns and figures are what the chart draws, and it says the later figures are close", async () => {
+      const { siteId, user } = await collectedRoutes();
+      const shown = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
+      const flow = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "", leaveOut: true });
+      const built = flowBoxes(flow, NAMES);
+      const { chart, pageNotKnown, classifications, busyPages } = await asking({ part: "chart" });
+      expect(chart.rule).toMatch(/close rather than exact/);
+      expect(chart.columns.map((column: { column: string }) => column.column).slice(0, 2)).toEqual(["First page", "Second page"]);
+      expect(chart.columns[0]).toMatchObject({ visits: shown.now!.visits, left: flow.left });
+      expect(chart.columns[1].visits).toBe(flow.onward);
+      for (const box of built.boxes) {
+        expect(chart.columns[box.column].boxes.find((one: { name: string }) => one.name === box.name)).toMatchObject({ visits: built.said(box), left: built.saidLeft(box) });
+      }
+      expect(pageNotKnown).toMatchObject({ visits: flow.noPageVisits, link: expect.stringContaining("/tracking-health") });
+      // Each classification's whole figures, whatever the first column has ticked out of it.
+      expect(classifications.map((one: { visits: number }) => one.visits)).toEqual(flowBoxes({ ...flow, ticked: [] }, NAMES).boxes.filter((box) => box.column === 0 && box.isGroup).map((box) => box.visits));
+      expect(busyPages.rule).toMatch(/visits or more/);
+    });
+
+    test("a page asked about comes out of its group with every route it has", async () => {
+      const { thePageAsked } = await asking({ part: "chart", key: "https://www.acme-shop.test/" });
+      expect(thePageAsked).toMatchObject({ name: "Home page", address: "/", visits: 240, left: 180, stayed: 60, wentTo: [{ to: "About us", visits: 60 }] });
+      const unknown = await asking({ part: "chart", key: "/never-there/" });
+      expect(String(unknown.thePageAsked)).toMatch(/No page/);
+    });
+
+    test("its table comes in the order a question needs, and never as money", async () => {
+      const mostLeft = await asking({ order: "mostPeopleLeft" });
+      expect(mostLeft.rows.map((row: { address: string; left: number; stayed: number }) => [row.address, row.left, row.stayed])).toEqual([["/", 180, 60], ["/ai-agency/", 90, 0]]);
+      const mostStayed = await asking({ order: "mostPeopleStayed" });
+      expect(mostStayed.rows[0]).toMatchObject({ address: "/", stayed: 60, mostWentTo: { page: "About us", sharePercent: 100 } });
+      expect(JSON.stringify(mostLeft.rows)).not.toMatch(/"value"|revenue/);
+      expect(mostLeft.conversionsRule).toMatch(/never call it a conversion rate/);
+    });
+
+    test("a classification with its totals, and a name that isn't one says which there are", async () => {
+      const { t, siteId } = await collectedRoutes();
+      const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+      const answer = await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "acme-shop.test", screen: "landingPages", period: "lastMonth", classification: "not sorted" }) as FunnelRead;
+      expect(answer.classification).toMatchObject({ name: "Not sorted yet", visits: 330, stayed: 60, left: 270 });
+    });
+  });
+
+  test("a page is one page however Google spells it: one row without its slash doesn't lose its routes", async () => {
+    const t = harness();
+    const base = { device: "desktop", channel: "Organic Search", source: "google", seconds: 30, date: shiftDay(TOP, -3) };
+    const { siteId, user } = await collected(t, [
+      { ...base, landing: "/guide", page: "/guide/", sessions: 10, engaged: 8, views: 10 },
+      { ...base, landing: "/guide", page: "/next/", referrer: "https://www.acme-shop.test/guide/", sessions: 4, engaged: 4, views: 4 },
+      // The one row that spells it the other way.
+      { ...base, landing: "/other/", page: "/guide", referrer: "https://www.acme-shop.test/other/", sessions: 1, engaged: 1, views: 1 },
+    ]);
+    const list = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
+    const guide = list.rows.find((row) => row.label.endsWith("/guide"));
+    expect(guide?.onward).toBe(4);
+    expect(guide?.next?.page).toMatch(/\/next\/$/);
+  });
+
+  test("a date's flow asks Google three things, as it did before routes were kept: routes, their conversions, and who went on", async () => {
+    const { google } = await collectedRoutes();
+    const asks = google.calls
+      .filter((call) => call.url.endsWith(":runReport"))
+      .map((call) => JSON.parse(call.body) as { dimensions?: Array<{ name: string }>; dateRanges?: Array<{ startDate: string; endDate: string }>; dimensionFilter?: unknown })
+      .filter((body) => ["landingPage", "pageReferrer"].every((name) => body.dimensions?.some((one) => one.name === name)));
+    expect(asks.length).toBeGreaterThan(0);
+    const byDate = new Map<string, number>();
+    for (const body of asks) {
+      const device = JSON.stringify(body.dimensionFilter ?? "").match(/"deviceCategory".*?"value":"(\w+)"/)?.[1] ?? "";
+      const date = `${body.dateRanges?.[0]?.startDate}|${body.dateRanges?.[0]?.endDate}|${device}`;
+      byDate.set(date, (byDate.get(date) ?? 0) + 1);
+    }
+    expect(Math.max(...byDate.values())).toBeLessThanOrEqual(3);
   });
 
   test("only the caller's own website", async () => {

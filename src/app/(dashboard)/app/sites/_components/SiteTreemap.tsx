@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useRef, useState } from "react";
 import { ResponsiveContainer, Treemap } from "recharts";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { MouseReadout } from "@/src/ui/components/charts/MouseReadout";
 import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 import { CHART_SERIES_BLUE } from "@/src/ui/components/charts/chartPalette";
-import { LAYER } from "@/src/ui/lib/layers";
-import { cn } from "@/src/ui/lib/utils";
 
 /**
  * Parts of a whole as boxes sized by their share — Site structure's folders,
@@ -103,42 +102,6 @@ function Box(props: Partial<Node> & { hovered?: string | null; onHover?: (id: st
   );
 }
 
-/** How far the hover sits from the mouse, and how much room it wants before it turns back on itself. */
-const READOUT_GAP = 14;
-const READOUT_ROOM = { width: 270, height: 170 };
-
-/** The hovered box's figures, beside the mouse and turned back at the map's edges. Keeps the mouse to itself, so the map isn't drawn again each time it moves. */
-function BoxReadout({ item, map }: { item: SiteTreemapItem | undefined; map: RefObject<HTMLDivElement | null> }) {
-  const [mouse, setMouse] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  useEffect(() => {
-    const element = map.current;
-    if (!element) return;
-    const moved = (event: MouseEvent) => {
-      const box = element.getBoundingClientRect();
-      setMouse({ x: event.clientX - box.left, y: event.clientY - box.top, width: box.width, height: box.height });
-    };
-    element.addEventListener("mousemove", moved);
-    return () => element.removeEventListener("mousemove", moved);
-  }, [map]);
-  if (!item?.readout || !mouse) return null;
-  const left = mouse.x + READOUT_GAP + READOUT_ROOM.width > mouse.width;
-  const above = mouse.y + READOUT_GAP + READOUT_ROOM.height > mouse.height;
-  return (
-    <div
-      className={cn("pointer-events-none absolute", LAYER.RAISED)}
-      style={{
-        left: mouse.x + (left ? -READOUT_GAP : READOUT_GAP),
-        top: mouse.y + (above ? -READOUT_GAP : READOUT_GAP),
-        transform: `translate(${left ? "-100%" : "0"}, ${above ? "-100%" : "0"})`,
-      }}
-    >
-      <ChartTooltipSurface heading={item.name}>
-        {item.readout.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}
-      </ChartTooltipSurface>
-    </div>
-  );
-}
-
 export function SiteTreemap({ items, onOpen, height = 320 }: {
   items: SiteTreemapItem[];
   /** A box clicked: open its screen. Left out, a box is read on hover and shows no pointer, as a click does nothing. */
@@ -151,6 +114,7 @@ export function SiteTreemap({ items, onOpen, height = 320 }: {
   const total = items.reduce((sum, item) => sum + item.value, 0);
   const floor = total > 0 ? total / 5_000 : 1;
   const data = items.map((item) => ({ ...item, size: Math.max(item.value, floor) }));
+  const shownItem = items.find((item) => item.id === hovered);
   return (
     <div ref={map} className="relative" onMouseLeave={() => setHovered(null)}>
       {/* The boxes run along nothing, so they fade in. */}
@@ -169,7 +133,13 @@ export function SiteTreemap({ items, onOpen, height = 320 }: {
           />
         </ResponsiveContainer>
       </ChartReveal>
-      <BoxReadout item={items.find((item) => item.id === hovered)} map={map} />
+      <MouseReadout area={map}>
+        {shownItem?.readout ? (
+          <ChartTooltipSurface heading={shownItem.name}>
+            {shownItem.readout.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}
+          </ChartTooltipSurface>
+        ) : null}
+      </MouseReadout>
     </div>
   );
 }

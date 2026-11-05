@@ -32,6 +32,7 @@ export const ASSISTANT_PAGE_CHARTS_CONNECTOR: ToolConnectorDefinition = {
           measure: { type: "string", description: "The column of figures to draw, by its name as listed. Leave out for the chart's first column of figures." },
           against: { type: "string", description: "Another column of figures to set beside it as the period before, by its name as listed." },
           top: { type: "number", description: "Draw only the biggest so many rows, e.g. 10." },
+          only: { type: "string", description: "Only one thing's rows, by its name as the chart says it: a page's routes on a route chart, each bar then named by the page it went to or came from." },
         },
       }),
     },

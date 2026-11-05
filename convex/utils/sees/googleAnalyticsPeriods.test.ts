@@ -2,6 +2,7 @@ import { appendFileSync } from "fs";
 import { readFixture } from "@/src/test/readFixture";
 import { describe, expect, test } from "vitest";
 import en from "@/messages/en.json";
+import { funnelFigures } from "../landingFlowFigures";
 import { findingWords, type Finding } from "./findings";
 import { pageDataFor } from "./pageData";
 import { pageFindings } from "./pageFindings";
@@ -111,10 +112,15 @@ function campaignsPage(period: Period) {
   return { rows: one.rows.slice(0, 25), total: one.total, untagged: one.untagged, campaignsAll: { rows: one.rows }, names: NAMES };
 }
 
-// Funnel: the table's page of landing pages, the whole website (`website`) and every landing page's leaving (`landingAll`).
+// Funnel: the table's page of landing pages, the whole website (`website`), every landing page's leaving (`landingAll`), and
+// the route chart's figures (`funnel`), as `FunnelSees` hands them, from the chart's own read.
 function funnelPage(period: Period) {
-  const one = (funnel as Record<string, { rows: Rows; total: number; website: unknown; landingLeft: number | null }>)[period];
-  return { rows: one.rows, total: one.total, page: 1, pages: Math.ceil(one.total / 25), website: one.website, ...(one.landingLeft !== null ? { landingAll: { leftPercent: one.landingLeft * 100 } } : {}), names: NAMES };
+  const one = (funnel as Record<string, { rows: Rows; total: number; website: unknown; landingLeft: number | null; flow: Parameters<typeof funnelFigures>[0] | null }>)[period];
+  return {
+    rows: one.rows, total: one.total, page: 1, pages: Math.ceil(one.total / 25), website: one.website, names: NAMES,
+    ...(one.landingLeft !== null ? { landingAll: { leftPercent: one.landingLeft } } : {}),
+    ...(one.flow ? { funnel: funnelFigures(one.flow, { shop: "Search and basket", notSorted: "Not sorted yet", otherPages: "Other pages", otherGroups: (count) => `${count} other groups`, pageNotKnown: "Page not known" }) } : {}),
+  };
 }
 
 // All pages: the website's views (`website`), the pages that gained, lost and lost conversions most, as the server sorts
@@ -191,7 +197,7 @@ describe("Google Analytics' pages find the biggest things on every period the da
   describe("A channel's own screen: the channel's visits beside the whole website's", () => everyPeriod("googleAnalytics.channelPage", channelPage, startsWith("Organic Search: visits")));
   // Two days in, no campaign has the hundred visits a campaign's own figures need to be trusted: its headline alone.
   describe("Campaigns: every campaign visit together", () => everyPeriod("googleAnalytics.campaigns", campaignsPage, startsWith(`${NAMES.tagged}: visits`), {}, 1));
-  describe("Funnel: the landing pages that moved and that people leave", () => everyPeriod("googleAnalytics.landing", funnelPage, (_words, findings) => findings.some((one) => String(one.params.measure) === "leftWithoutAnotherPercent" || one.id.includes(":landing"))));
+  describe("Funnel: the whole website's visits, and never the shop's own pages as a page that moved", () => everyPeriod("googleAnalytics.landing", funnelPage, (words) => startsWith(`${NAMES.website}: visits`)(words) && !words.some((line) => /\/checkout|\/catalogsearch/.test(line) || /^(Basket|Checkout|Search results|Log in|Your account)[^:]*:/.test(line))));
   describe("All pages: the whole website's views", () => everyPeriod("googleAnalytics.allPages", allPagesPage, startsWith(`${NAMES.website}: views`)));
   describe("A page's own screen: its views", () => everyPeriod("googleAnalytics.page", pagePage, startsWith(`${NAMES.thisPage}: views`), { lastWeek: 3 }));
   describe("The pages behind a square: the pages that made most of its conversions", () => everyPeriod("googleAnalytics.conversionPages", conversionPagesPage, (_words, findings) => findings.some((one) => one.kind === "holdsMost"), { lastWeek: 2, lastMonth: 3, last3Months: 3, last6Months: 3 }, 1));

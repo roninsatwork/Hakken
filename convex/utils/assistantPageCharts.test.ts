@@ -45,6 +45,19 @@ describe("a chart on the page, redrawn", () => {
     expect(pageChartFrom(days, { measure: "money", link: "/x" })).toEqual({ ok: false, problem: "\"Visits by day\" has no column of figures called \"money\". Its columns: Day, New, Returning." });
   });
 
+  it("draws one thing's rows named by the next column of words, the same name added up, as a page's routes on Funnel", () => {
+    const routes = tableFromCsv("Where people went next", toCsv(["From", "To", "Visits", "Conversions"], [["Home page", "Brand", 2005, 8], ["Home page", "Basket", 40, 3], ["Basket", "Checkout", 372, 0], ["Home page", "Brand", 5, 0]]))!;
+    expect(pageChartFrom(routes, { only: "home page", link: "/x" })).toMatchObject({ ok: true, chart: { groups: [{ name: "Brand", value: 2010 }, { name: "Basket", value: 40 }] } });
+    // Where it was reached from, by the same word.
+    expect(pageChartFrom(routes, { only: "Checkout", link: "/x" })).toMatchObject({ ok: true, chart: { groups: [{ name: "Basket", value: 372 }] } });
+    expect(pageChartFrom(routes, { only: "Blog", link: "/x" })).toEqual({ ok: false, problem: "\"Where people went next\" has no rows for \"Blog\"." });
+  });
+
+  it("a name that repeats takes the next column of words too, so no two bars read the same", () => {
+    const routes = tableFromCsv("Where people went next", toCsv(["From", "To", "Visits"], [["Home page", "Brand", 2005], ["Home page", "Basket", 40]]))!;
+    expect(pageChartFrom(routes, { link: "/x" })).toMatchObject({ ok: true, chart: { groups: [{ name: "Home page · Brand", value: 2005 }, { name: "Home page · Basket", value: 40 }] } });
+  });
+
   it("is told to Ask Hakken by number, title and columns, and kept to its size", () => {
     expect(pageChartLines([channels])).toEqual(["1. Visits by channel — columns: Channel, Visits, Visits before, Note (4 rows)"]);
     const lines = startedOnLines({ path: "/app/analytics/s1/channels", about: "Channels", dates: "lastMonth", findings: [], said: [], charts: [channels] });

@@ -102,13 +102,24 @@ const DAY = /^\d{4}-\d{2}(-\d{2})?$/;
 
 /**
  * A page's chart redrawn: `measure` the column drawn (the first column of figures when none is named), `against` a
- * column set beside it as the span before, `top` the biggest so many, `kind` bars, a pie, a line, stacked bars or a map. The
- * rows are named by the first column of words; a line or a chart of days keeps the page's order, every other kind the biggest first.
+ * column set beside it as the span before, `top` the biggest so many, `only` one thing's rows (a page's routes on Funnel),
+ * `kind` bars, a pie, a line, stacked bars or a map. The rows are named by the first column of words; a line or a chart of days keeps the page's order, every other kind the biggest first.
  */
-export function pageChartFrom(table: PageChartTable, ask: { kind?: string; measure?: string; against?: string; top?: number; link: string }): { ok: true; chart: PageChart } | { ok: false; problem: string } {
-  const named = table.columns.findIndex((_, at) => !isNumberColumn(table, at));
-  const figures = table.columns.map((_, at) => at).filter((at) => isNumberColumn(table, at));
-  if (named < 0 || figures.length === 0) return { ok: false, problem: `"${table.title}" holds no figures to draw.` };
+export function pageChartFrom(whole: PageChartTable, ask: { kind?: string; measure?: string; against?: string; top?: number; only?: string; link: string }): { ok: true; chart: PageChart } | { ok: false; problem: string } {
+  const figures = whole.columns.map((_, at) => at).filter((at) => isNumberColumn(whole, at));
+  const words = whole.columns.map((_, at) => at).filter((at) => !isNumberColumn(whole, at));
+  if (words.length === 0 || figures.length === 0) return { ok: false, problem: `"${whole.title}" holds no figures to draw.` };
+  // One thing's rows, such as a page's routes: named by the next column of words, the same name added up.
+  const wanted = ask.only?.trim().toLowerCase();
+  const says = (row: PageChartTable["rows"][number], at: number) => typeof row[at] === "string" && (row[at] as string).trim().toLowerCase() === wanted;
+  const heldIn = wanted ? words.find((at) => whole.rows.some((row) => says(row, at))) : undefined;
+  if (wanted && heldIn === undefined) return { ok: false, problem: `"${whole.title}" has no rows for "${ask.only}".` };
+  const table = heldIn === undefined ? whole : { ...whole, rows: whole.rows.filter((row) => says(row, heldIn)) };
+  const named = heldIn === undefined ? words[0] : (words.find((at) => at !== heldIn) ?? heldIn);
+  // Two columns of words name a row together when the first alone repeats: a route is its from and its to.
+  const firstNames = table.rows.map((row) => String(row[named] ?? ""));
+  const nameBoth = heldIn === undefined && words.length > 1 && new Set(firstNames).size < firstNames.length;
+  const nameOf = (row: PageChartTable["rows"][number]) => (nameBoth ? `${String(row[named])} · ${String(row[words[1]])}` : String(row[named]));
   const value = ask.measure ? columnAt(table, ask.measure) : figures[0];
   if (value < 0 || !figures.includes(value)) return { ok: false, problem: `"${table.title}" has no column of figures called "${ask.measure}". Its columns: ${table.columns.join(", ")}.` };
   const before = ask.against ? columnAt(table, ask.against) : -1;
@@ -117,7 +128,16 @@ export function pageChartFrom(table: PageChartTable, ask: { kind?: string; measu
   const kind: PageChartKind = (PAGE_CHART_KINDS as readonly string[]).includes(ask.kind ?? "") ? (ask.kind as PageChartKind) : dated ? "line" : "bars";
   let groups = table.rows
     .filter((row) => typeof row[value] === "number" && row[named] !== null)
-    .map((row) => ({ name: String(row[named]), value: row[value] as number, ...(before >= 0 && typeof row[before] === "number" ? { before: row[before] as number } : {}) }));
+    .map((row) => ({ name: nameOf(row), value: row[value] as number, ...(before >= 0 && typeof row[before] === "number" ? { before: row[before] as number } : {}) }));
+  if (heldIn !== undefined) {
+    const added = new Map<string, (typeof groups)[number]>();
+    for (const group of groups) {
+      const held = added.get(group.name);
+      if (held) added.set(group.name, { ...held, value: held.value + group.value, ...(group.before !== undefined ? { before: (held.before ?? 0) + group.before } : {}) });
+      else added.set(group.name, group);
+    }
+    groups = [...added.values()];
+  }
   // Days stay in order, whatever they're drawn as, unless only the biggest few were asked for.
   const inDayOrder = kind === "line" || (dated && !ask.top);
   if (!inDayOrder) groups = [...groups].sort((left, right) => right.value - left.value);

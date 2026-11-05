@@ -12,7 +12,9 @@ import { assistantOf } from "./utils/aiAssistants";
 import { CLICK_EVENTS, READ_EVENTS } from "./utils/analyticsPageStory";
 import { HOLD_ROWS, OTHER_ROWS, PAGE_TOP_ROWS, keepPerPage, trimDue } from "./utils/analyticsSharedLists";
 import { EVENT_DETAIL } from "./utils/analyticsEvents";
-import { buildFlow, type Onward, type Route } from "./utils/landingFlow";
+import { NOT_SET, buildFlow, groupNode, type Onward, type Route } from "./utils/landingFlow";
+import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds } from "./utils/pageKinds";
+import { SHOP_PAGES_KIND, isShopPage } from "./utils/shopPages";
 import type { AnalyticsPeriod, AnalyticsWhich, PageFactList } from "./googleAnalyticsSchema";
 import type { ReportRow } from "./googleAnalyticsApi";
 
@@ -130,7 +132,7 @@ function add(into: ListRow, row: ListRow) {
 export function topPerPage(
   rows: readonly ListRow[],
   measure: (row: ListRow) => number,
-  groupOf: (rest: string) => string = () => OTHER_ROWS,
+  groupOf: (rest: string, page: string) => string = () => OTHER_ROWS,
   keep: (rest: string) => boolean = () => false,
   /** The rows each page keeps: a number, or one worked out from how many pages the list has (`keepPerPage`). */
   topOf: number | ((pages: number) => number) = PAGE_TOP_ROWS,
@@ -151,14 +153,14 @@ export function topPerPage(
     let at = 0;
     for (const row of sorted) {
       const rest = splitChannelKey(row.key).source;
-      const other = groupOf(rest) === rest;
+      const other = groupOf(rest, page) === rest;
       const place = other ? top : at;
       if (!other) at += 1;
       if (place < top || keep(rest)) {
         out.push(row);
         continue;
       }
-      const key = channelKey(page, groupOf(rest));
+      const key = channelKey(page, groupOf(rest, page));
       const into = others.get(key) ?? { ...emptyRow(key), ...(row.times !== undefined ? { times: 0 } : {}) };
       add(into, row);
       others.set(key, into);
@@ -173,7 +175,7 @@ export function topPerPage(
  * list's own rule — `TRIM_KEEP` of them, or fewer on a website with so many
  * pages that the list would pass `hold` rows (`keepPerPage`).
  */
-export function trimTo(measure: (row: ListRow) => number, groupOf?: (rest: string) => string, keep?: (rest: string) => boolean, hold: number = HOLD_ROWS): (rows: ListRow[]) => ListRow[] {
+export function trimTo(measure: (row: ListRow) => number, groupOf?: (rest: string, page: string) => string, keep?: (rest: string) => boolean, hold: number = HOLD_ROWS): (rows: ListRow[]) => ListRow[] {
   return (rows) => topPerPage(rows, measure, groupOf, keep, (pages) => keepPerPage(pages, hold));
 }
 
@@ -210,6 +212,30 @@ export function heldRows(
     rows: () => [...held.values()],
     /** Rows held now: cut back whenever past `TRIM_ABOVE`. */
     size: () => held.size,
+  };
+}
+
+/**
+ * `heldRows` for a list of one figure a key: a number each, not a whole row, as the most a flow holds is the visits that went on
+ * from each page (2026-11-05). `keyOf` says null for a row that isn't kept.
+ */
+export function heldVisits(keyOf: (answer: ReportRow) => string | null, hold: number = HOLD_ROWS) {
+  let held = new Map<string, number>();
+  const due = trimDue(hold);
+  return {
+    sink: (rows: ReportRow[]) => {
+      for (const answer of rows) {
+        const key = keyOf(answer);
+        if (key !== null) held.set(key, (held.get(key) ?? 0) + (answer.values[0] ?? 0));
+      }
+      if (due.now(held.size)) {
+        const cut = trimTo((row) => row.visits, undefined, undefined, hold);
+        const kept = cut([...held].map(([key, visits]) => ({ ...emptyRow(key), visits })));
+        held = new Map(kept.filter((row) => splitChannelKey(row.key).source !== OTHER_ROWS).map((row) => [row.key, row.visits]));
+        due.after(held.size);
+      }
+    },
+    entries: () => held.entries(),
   };
 }
 
@@ -615,52 +641,104 @@ export async function collectFlowLists(
   const country = job.country ?? "";
   const asking = country ? { ...target, country: countryIdOf(country) } : target;
   const base = { startDate: range.from, endDate: range.to, hostNames: target.addresses, countries: [asking.country], ...(device ? { device } : {}) };
-  const keys = (["landingFlow", "landingOnward"] as const).map((list) => slotKey(list, job.period, "NOW", job.device, country));
+  const keys = (["landingFlow", "landingOnward", "landingRoutes"] as const).map((list) => slotKey(list, job.period, "NOW", job.device, country));
   const slots: Record<string, { slot: number; hash: string; from: string; to: string }> =
     await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys });
   const pageGroups = await groups();
   if (pageGroups !== null && !Array.isArray(pageGroups)) return { result: failed(session, pageGroups), ended: false };
-  // The routes, each landing page's busiest kept as Google's answers arrive (RR2): its arrivals always, the rest of its
-  // smallest routes let go — they only ever reach the chart's "more" boxes. A landing page's routes are all in one group.
-  const arrival = (rest: string) => !beforeKey(factParts(rest)[0] ?? "", target.addresses).startsWith("page:");
+  // The routes, each landing page's busiest kept as Google's answers arrive (RR2): its arrivals added up, the rest of its
+  // smallest routes added up by the groups of the pages they join, so they still reach the chart's group boxes. A landing
+  // page's routes are all in one group of asks.
+  const setup = await ctx.runQuery(internal.pageKinds.pageKindSetupOf, { holdId: target.companyWebsiteId });
+  const kindOf = pageKindOf(setup ? pageKindsFrom(setup) : null, target.addresses[0] ?? "");
+  const foldRoute = (rest: string, landing: string) => flowRowGroup(rest, landing, target.addresses, kindOf);
+  // Half a list's usual room while read: the flow's rows are the most a collection holds at once, and a year of More Handles
+  // ran out of an action's 512 MB on the fuller room (2026-11-05). A page still keeps the 21 rows every list keeps.
+  const flowHold = hold / 2;
   const steps = new FlowSteps();
   const routeFlags = { folded: false, thresholded: false, cut: false };
   let onwardFlags = { folded: false, thresholded: false, cut: false };
-  for (const pages of pageGroups ?? [undefined]) {
-    const routes = await askList(session, asking, "landingFlow", [], range, { ...(device ? { device } : {}), ...(pages ? { landingPage: pages } : {}) }, { trim: trimTo((row) => row.visits, () => DROPPED_ROUTES, arrival, hold), hold });
-    if (!routes.ok) return { result: failed(session, routes), ended: false };
+  const askGroup = async (pages: string[] | undefined): Promise<GoogleFailure | null> => {
+    // Each landing page's visits that went on from each of the website's pages, added up as they arrive: another
+    // website's address, or none, is never read.
+    const onwardHeld = heldVisits((one) => {
+      const before = beforeKey(one.keys[1] ?? "", target.addresses);
+      return before.startsWith("page:") ? channelKey(one.keys[0] ?? "", before) : null;
+    }, hold);
+    // A group's two asks side by side, and one group at a time. A year of a big website is 68 of Google's answers: one after
+    // another they took about all of an action's ten and a half minutes, and three groups at once ran out of its 512 MB (More
+    // Handles, 2026-11-05: 435 seconds like this). Same tokens, and Google allows ten at once.
+    const [routes, onward] = await Promise.all([
+      askList(session, asking, "landingFlow", [], range, { ...(device ? { device } : {}), ...(pages ? { landingPage: pages } : {}) }, { trim: trimTo((row) => row.visits, foldRoute, undefined, flowHold), hold: flowHold, visitsOnly: true }),
+      ask(session, target.property!, { ...base, ...(pages ? { only: { dimension: "landingPage", values: pages } } : {}), dimensions: ["landingPage", "pageReferrer"], metrics: ["sessions"] }, onwardHeld.sink),
+    ]);
+    if (!routes.ok) return routes;
+    if (!onward.ok) return onward;
     routeFlags.folded ||= routes.flags.folded;
     routeFlags.thresholded ||= routes.flags.thresholded;
     routeFlags.cut ||= routes.flags.cut;
-    // Each landing page's visits that went on from each of the website's pages, added up as they arrive: another
-    // website's address, or none, is never read.
-    const onwardHeld = heldRows(
-      (row, one) => { row.visits += one.values[0] ?? 0; },
-      trimTo((row) => row.visits, undefined, undefined, hold),
-      (one) => [one.keys[0] ?? "", beforeKey(one.keys[1] ?? "", target.addresses)],
-      hold,
-    );
-    const onward = await ask(session, target.property!, { ...base, ...(pages ? { only: { dimension: "landingPage", values: pages } } : {}), dimensions: ["landingPage", "pageReferrer"], metrics: ["sessions"] }, onwardHeld.sink);
-    if (!onward.ok) return { result: failed(session, onward), ended: false };
     onwardFlags = { folded: onwardFlags.folded || onward.folded, thresholded: onwardFlags.thresholded || onward.thresholded, cut: onwardFlags.cut || onward.cut };
     for (const row of [...routes.groups.values()].flat()) {
       if (splitChannelKey(row.key).source !== DROPPED_ROUTES) steps.addRoute(row, target.addresses);
     }
-    for (const row of onwardHeld.rows()) {
-      const { channel, source } = splitChannelKey(row.key);
-      if (source.startsWith("page:")) steps.addOnward(channel, source, row.visits);
+    for (const [key, visits] of onwardHeld.entries()) {
+      const { channel, source } = splitChannelKey(key);
+      steps.addOnward(channel, source, visits);
     }
+    return null;
+  };
+  for (const pages of pageGroups ?? [undefined]) {
+    const refused = await askGroup(pages);
+    if (refused) return { result: failed(session, refused), ended: false };
   }
-  const flow = await flowOf(ctx, target, steps);
-  const rows = flow.flow.length + flow.onward.length;
+  const flow = await flowOf(ctx, target, steps, kindOf);
+  const rows = flow.flow.length + flow.onward.length + flow.routes.length;
   const done = (ended: boolean) => ({ result: { ok: true as const, rows, requests: session.requests }, ended });
   if (!(await writeList(ctx, connectionId, target, "landingFlow", keys[0], flow.flow, range, routeFlags, slots[keys[0]], target.events))) return done(true);
   if (!(await writeList(ctx, connectionId, target, "landingOnward", keys[1], flow.onward, range, onwardFlags, slots[keys[1]], []))) return done(true);
+  if (!(await writeList(ctx, connectionId, target, "landingRoutes", keys[2], flow.routes, range, routeFlags, slots[keys[2]], target.events))) return done(true);
   return done(false);
 }
 
-/** A landing page's smallest routes, let go while its routes are read (RR2). */
+/** A landing page's smallest routes from elsewhere, let go while its routes are read (RR2). */
 const DROPPED_ROUTES = "(dropped)";
+/** The start of a row of a landing page's smallest routes, added up by the group they left and the group they reached. */
+const FOLDED_ROUTE = "(folded)";
+
+/**
+ * What a route's row joins when a flow's list is cut. A visit arriving from another website only counts as arriving on its
+ * landing page, or anywhere for the visits with no landing page, added up: so every such row is one row, or each other website's
+ * address would be held on its own. Arrivals elsewhere say nothing and are let go. A step between two of the website's pages joins
+ * the groups of the pages it joins, so it still reaches the chart's group boxes.
+ */
+export function flowRowGroup(rest: string, landing: string, addresses: readonly string[], kindOf: (path: string) => string): string {
+  const parts = factParts(rest);
+  if (parts[0] === FOLDED_ROUTE || rest === DROPPED_ROUTES) return rest;
+  const before = beforeKey(parts[0] ?? "", addresses);
+  const samePage = (one: string, other: string) => one.replace(/\/+$/, "") === other.replace(/\/+$/, "");
+  if (!before.startsWith("page:")) {
+    const page = parts[1] ?? "";
+    return landing === NOT_SET || samePage(page, landing) ? ["", page].join(PAGE_FACT_JOIN) : DROPPED_ROUTES;
+  }
+  const from = before.slice(5);
+  return [FOLDED_ROUTE, samePage(from, landing) ? "" : kindOf(from), kindOf(parts[1] ?? "")].join(PAGE_FACT_JOIN);
+}
+
+/**
+ * The group a page is in: the shop's own search, basket and account pages together, else its Classification. A website with
+ * no classifications has one group, which holds every other page. Worked out once a page, as big websites repeat them.
+ */
+function pageKindOf(kinds: PageKinds | null, host: string): (path: string) => string {
+  const held = new Map<string, string>();
+  return (path) => {
+    let kind = held.get(path);
+    if (kind === undefined) {
+      kind = isShopPage(path) ? SHOP_PAGES_KIND : kinds ? kinds.kindOf(`https://${host}${path}`) : NOT_SORTED_KIND;
+      held.set(path, kind);
+    }
+    return kind;
+  };
+}
 
 /** No conversions on a route: one map shared by every such route. */
 const NO_COUNTS: ReadonlyMap<string, number> = new Map();
@@ -673,6 +751,7 @@ const NO_COUNTS: ReadonlyMap<string, number> = new Map();
 class FlowSteps {
   private readonly texts = new Map<string, string>();
   readonly routes: Array<{ landing: string; before: string; page: string; visits: number; counts: ReadonlyMap<string, number> }> = [];
+  readonly folded: Array<{ landing: string; before: string; page: string; visits: number; counts: ReadonlyMap<string, number> }> = [];
   readonly onward: Array<{ landing: string; before: string; visits: number }> = [];
 
   private once(text: string): string {
@@ -684,12 +763,23 @@ class FlowSteps {
 
   addRoute(row: ListRow, addresses: readonly string[]): void {
     const { channel: landing, source } = splitChannelKey(row.key);
-    const [referrer = "", page = ""] = factParts(source);
+    const [referrer = "", page = "", more = ""] = factParts(source);
+    if (referrer === FOLDED_ROUTE) {
+      this.folded.push({ landing: this.once(landing), before: this.once(page), page: this.once(more), visits: row.visits, counts: row.counts.size > 0 ? row.counts : NO_COUNTS });
+      return;
+    }
     this.routes.push({ landing: this.once(landing), before: this.once(beforeKey(referrer, addresses)), page: this.once(page), visits: row.visits, counts: row.counts.size > 0 ? row.counts : NO_COUNTS });
   }
 
   addOnward(landing: string, before: string, visits: number): void {
     this.onward.push({ landing: this.once(landing), before: this.once(before), visits });
+  }
+
+  clear(): void {
+    this.texts.clear();
+    this.routes.length = 0;
+    this.folded.length = 0;
+    this.onward.length = 0;
   }
 }
 
@@ -701,7 +791,7 @@ class FlowSteps {
  * The onward rows keep the landing page's own number, as Landing pages' list
  * does, so the table finds them.
  */
-async function flowOf(ctx: ActionCtx, target: CollectTarget, steps: FlowSteps) {
+async function flowOf(ctx: ActionCtx, target: CollectTarget, steps: FlowSteps, kindOf: (path: string) => string) {
   const parts = steps.routes;
   const asked = steps.onward;
   const ownPath = (key: string) => (key.startsWith("page:") ? key.slice(5) : null);
@@ -709,21 +799,32 @@ async function flowOf(ctx: ActionCtx, target: CollectTarget, steps: FlowSteps) {
     ...parts.flatMap((one) => [one.page, ...(ownPath(one.before) !== null ? [ownPath(one.before)!] : [])]),
     ...asked.flatMap((one) => (ownPath(one.before) !== null ? [ownPath(one.before)!] : [])),
   ]);
-  const landingPaths = [...new Set([...parts.map((one) => one.landing), ...asked.map((one) => one.landing)])];
-  const asPage = (path: string) => (pagePaths.has(path) ? path : pagePaths.has(`${path}/`) ? `${path}/` : path);
+  const landingPaths = [...new Set([...parts.map((one) => one.landing), ...steps.folded.map((one) => one.landing), ...asked.map((one) => one.landing)])];
+  // One page however Google spells it: its slashed name wherever that's seen at all. A single row without the slash, more likely
+  // the longer the dates, put a page's routes under one number and its visits under another, and the basket read 99.9% left on
+  // Last 3 months against 61% on a month (2026-11-05).
+  const asPage = (path: string) => (pagePaths.has(`${path}/`) ? `${path}/` : path);
   const pageRefs = await refsOf(ctx, target, [...new Set([...pagePaths, ...landingPaths.map(asPage)])], false);
   const landingRefs = await refsOf(ctx, target, landingPaths, true);
-  const pageRef = (path: string) => pageRefs.get(path) ?? path;
-  const flowLanding = (path: string) => pageRef(asPage(path));
+  const pageRef = (path: string) => pageRefs.get(asPage(path)) ?? path;
+  const flowLanding = (path: string) => pageRef(path);
   const before = (key: string) => (ownPath(key) !== null ? pageRef(ownPath(key)!) : "");
-  const routes: Route[] = parts.map((one) => ({ landing: flowLanding(one.landing), before: before(one.before), page: pageRef(one.page), visits: one.visits, counts: one.counts }));
+  const routes: Route[] = [
+    ...parts.map((one) => ({ landing: flowLanding(one.landing), before: before(one.before), page: pageRef(one.page), visits: one.visits, counts: one.counts })),
+    // Added up by group: from the landing page itself where nothing is named as the group they left.
+    ...steps.folded.map((one) => ({ landing: flowLanding(one.landing), before: one.before ? groupNode(one.before) : flowLanding(one.landing), page: groupNode(one.page), visits: one.visits, counts: one.counts })),
+  ];
   const onward: Onward[] = asked.filter((one) => before(one.before) !== "").map((one) => ({ landing: flowLanding(one.landing), before: before(one.before), visits: one.visits }));
-  const built = buildFlow(routes, onward);
+  // What's copied is let go before the flow is worked out: the most a collection holds at once.
+  steps.clear();
+  const pathOfRef = new Map([...pageRefs.entries()].map(([path, ref]) => [ref, path]));
+  const built = buildFlow(routes, onward, (ref) => kindOf(pathOfRef.get(ref) ?? ref));
   const flowRows = built.flow.map((row) => ({ ...emptyRow(channelKey(row.parts[0] ?? "", row.parts.slice(1).join(PAGE_FACT_JOIN))), visits: row.visits, times: row.times, counts: row.counts }));
   // Each landing page's onward row under its Landing pages number.
   const ownNumber = new Map(landingPaths.map((path) => [flowLanding(path), landingRefs.get(path) ?? path]));
   const onwardRowsKept = summedRows(built.onward.map((row) => ({ ...emptyRow(channelKey(ownNumber.get(row.landing) ?? row.landing, row.next)), visits: row.visits, times: row.times })));
-  return { flow: flowRows, onward: onwardRowsKept };
+  const routeRows = summedRows(built.routes.map((row) => ({ ...emptyRow(channelKey(ownNumber.get(row.landing) ?? row.landing, row.to)), visits: row.visits, counts: row.counts })));
+  return { flow: flowRows, onward: onwardRowsKept, routes: routeRows };
 }
 
 /** Rows that share a key once numbered — a page Analytics names with and without its slash — added into one. */

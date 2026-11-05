@@ -2,8 +2,9 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MOST_REPORT_PAGES, REPORT_PAGE_ROWS, runReport, type ReportRow } from "./googleAnalyticsApi";
 import { ask, type Session } from "./googleAnalyticsCollect";
-import { heldRows, topPerPage, trimTo } from "./googleAnalyticsPageLists";
-import { channelKey, listJoiner, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { flowRowGroup, heldRows, heldVisits, topPerPage, trimTo } from "./googleAnalyticsPageLists";
+import { PAGE_FACT_JOIN, channelKey, listJoiner, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { NOT_SET } from "./utils/landingFlow";
 import { HOLD_ROWS, OTHER_ROWS, PAGE_TOP_ROWS, TRIM_ABOVE, TRIM_KEEP, keepPerPage, trimDue } from "./utils/analyticsSharedLists";
 import { useFixedDay, whileMovingClock } from "@/src/test/realTime";
 
@@ -219,5 +220,52 @@ describe("the steps that hold Google's answers (BR4)", () => {
       expect(source, file).not.toMatch(/export const (collectSiteStep|fillHistory|fillPageHistory) = internalAction/);
       expect(source, file).not.toMatch(/internal\.(googleAnalyticsAgentRun\.collectSiteStep|googleAnalyticsHistory\.fillHistory|googleAnalyticsPageSeries\.fillPageHistory)\b/);
     }
+  });
+
+  // A year of More Handles ran out of an action's 512 MB holding other websites' addresses one by one (2026-11-05).
+  describe("what a flow's row joins when its list is cut", () => {
+    const site = ["www.acme-shop.test"];
+    const kindOf = (path: string) => (path.startsWith("/blog/") ? "blog" : "shop");
+    const join = (referrer: string, page: string, landing = "/") => flowRowGroup(`${referrer}${PAGE_FACT_JOIN}${page}`, landing, site, kindOf);
+
+    test("arrivals on the landing page are one row, whichever website they came from", () => {
+      expect(join("https://www.google.com/", "/")).toBe(join("https://www.bing.com/search", "/"));
+      expect(join("", "/about/", "/about")).toBe(`${PAGE_FACT_JOIN}/about/`);
+    });
+
+    test("that one row stays one row, so a later cut adds to it", () => {
+      const row = `${PAGE_FACT_JOIN}/`;
+      expect(flowRowGroup(row, "/", site, kindOf)).toBe(row);
+    });
+
+    test("visits with no landing page keep the page they arrived on", () => {
+      expect(join("https://www.google.com/", "/blog/a/", NOT_SET)).toBe(`${PAGE_FACT_JOIN}/blog/a/`);
+    });
+
+    test("an arrival anywhere else is let go, as the flow never reads it", () => {
+      expect(join("https://pay.example.com/", "/thanks/")).toBe("(dropped)");
+    });
+
+    test("a step between two pages joins their groups, from the landing page itself where it left from there", () => {
+      expect(join("https://www.acme-shop.test/blog/a/", "/blog/b/")).toBe(["(folded)", "blog", "blog"].join(PAGE_FACT_JOIN));
+      expect(join("https://www.acme-shop.test/", "/blog/b/")).toBe(["(folded)", "", "blog"].join(PAGE_FACT_JOIN));
+    });
+  });
+
+  test("a list of one figure a key adds up as Google answers, and lets go of what it's told to", () => {
+    const held = heldVisits((one) => (one.keys[1] === "keep" ? channelKey(one.keys[0] ?? "", "page:/x") : null));
+    held.sink([{ keys: ["/a", "keep"], values: [2] }, { keys: ["/a", "skip"], values: [9] }]);
+    held.sink([{ keys: ["/a", "keep"], values: [3] }]);
+    expect([...held.entries()]).toEqual([[channelKey("/a", "page:/x"), 5]]);
+  });
+
+  test("a list of one figure a key is cut as a list of rows is, keeping each page's biggest", () => {
+    const held = heldVisits((one) => channelKey(one.keys[0] ?? "", one.keys[1] ?? ""), 60);
+    const rows = Array.from({ length: 80 }, (_, at) => ({ keys: ["/a", `page:/${at}`], values: [at + 1] }));
+    held.sink(rows);
+    const kept = [...held.entries()];
+    expect(kept.length).toBeLessThan(80);
+    expect(kept.every(([key]) => !key.endsWith("(other)"))).toBe(true);
+    expect(kept.some(([key, visits]) => key === channelKey("/a", "page:/79") && visits === 80)).toBe(true);
   });
 });

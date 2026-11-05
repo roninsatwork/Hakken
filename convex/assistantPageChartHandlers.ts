@@ -27,7 +27,8 @@ export const ASSISTANT_PAGE_CHART_HANDLERS: Record<string, (input: ToolHandlerEx
     const kind = text("kind");
     const measure = text("measure");
     const against = text("against");
-    const drawn = pageChartFrom(table, { link: page.path, ...(kind ? { kind } : {}), ...(measure ? { measure } : {}), ...(against ? { against } : {}), ...(top ? { top } : {}) });
+    const only = text("only");
+    const drawn = pageChartFrom(table, { link: page.path, ...(only ? { only } : {}), ...(kind ? { kind } : {}), ...(measure ? { measure } : {}), ...(against ? { against } : {}), ...(top ? { top } : {}) });
     if (!drawn.ok) return drawn;
     // The figures for its words, as the chart draws them.
     return {

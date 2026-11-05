@@ -9,9 +9,11 @@ import { useTranslations } from "next-intl";
 import { SearchX } from "lucide-react";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { api } from "@/convex/_generated/api";
+import { NOT_SET } from "@/convex/utils/landingFlow";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { Checkbox } from "@/src/ui/components/screens/Checkbox";
+import { pageName } from "@/convex/utils/pageNames";
+import { TickActions, TickCount, tickColumn, type TableTicks } from "@/src/ui/components/screens/TableTicks";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import { Notice } from "@/src/ui/components/screens/Notice";
@@ -57,7 +59,7 @@ const COLUMNS: Record<ListKind, readonly Column[]> = {
   channel: ["name", "visits", "time", "conversions", "started", "change", "landsMost"],
   source: ["name", "visits", "engaged", "conversions", "change"],
   // Each landing page's own funnel (landing-pages-flow-plan.md LF4): what its visits did next, no advice.
-  landing: ["name", "visits", "left", "onward", "next", "conversions"],
+  landing: ["tick", "name", "visits", "left", "onward", "next", "conversions"],
   groups: ["name", "visits", "left", "onward", "next", "conversions"],
   page: ["tick", "name", "visits", "views", "viewsChange", "time", "conversions", "conversionsChange"],
   // Campaigns (§18.2 board 17): each campaign with where its link was, and the words tagged links carry.
@@ -105,20 +107,21 @@ const FIRSTS = {
   left: "asc", onward: "desc", next: "desc",
 } as const;
 
+const rowKeyOf = (row: ShownRow) => row.key;
+const NO_TICKS: TableTicks = { keys: [], set: () => undefined, most: 0, limit: "" };
+/** All pages: a page with views can be drawn; a page nobody viewed in these dates has nothing to draw. */
+const canTickFor = (list: ListKind) => (list === "page" ? (row: ShownRow) => row.key.startsWith("~") && row.views > 0 : undefined);
+
 /** The pages drawn on All pages' chart, in the address (`plot`). None until someone ticks one: the chart opens on the whole website. */
 const PLOT_KEY = "plot";
 
 /** The ticked pages, by their page numbers, and the tick that changes them; the table stays on its page. */
-function usePlotted(on: boolean): { keys: string[]; tick: (key: string, next: boolean) => void } | null {
+function usePlotted(on: boolean): { keys: string[]; set: (keys: string[]) => void } | null {
   const params = useSearchParams();
   const set = useSetSiteParams();
   if (!on) return null;
   const keys = (params.get(PLOT_KEY) ?? "").split(",").filter((key) => key.startsWith("~")).slice(0, MOST_PLOTTED);
-  const tick = (key: string, next: boolean) => {
-    const now = next ? [...keys.filter((one) => one !== key), key] : keys.filter((one) => one !== key);
-    set({ [PLOT_KEY]: now.length > 0 ? now.join(",") : null, [TABLE_PAGE_KEY]: params.get(TABLE_PAGE_KEY) });
-  };
-  return { keys, tick };
+  return { keys, set: (now) => set({ [PLOT_KEY]: now.length > 0 ? now.join(",") : null, [TABLE_PAGE_KEY]: params.get(TABLE_PAGE_KEY) }) };
 }
 
 /**
@@ -151,6 +154,8 @@ export function AnalyticsListScreen({ header, ...table }: Parameters<typeof Anal
   );
 }
 
+/** Tick boxes on a table: the pages ticked, the most at once, and what a full table says on hover. */
+
 export type ChannelTable = {
   /** The channel's visits in these dates, for each classification's share. */
   visits: number;
@@ -158,7 +163,7 @@ export type ChannelTable = {
   kindName: (kind: string) => string;
 };
 
-export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut = false, move, plot = false, noun, searchPlaceholder, rowHref, filters, opening = "visits", emptyLabel, head, nameOf, ofChannel, seesPart }: {
+export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut = false, move, plot = false, ticks, noun, searchPlaceholder, rowHref, filters, opening = "visits", emptyLabel, head, nameOf, ofChannel, seesPart }: {
   /** The eye's name for this table's rows, where its page's own answer does not hold them (Channels; `useSeesPart`). */
   seesPart?: string;
   /**
@@ -181,6 +186,8 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
   move?: PageMove | "all";
   /** All pages: a tick box on each page to draw it on the chart above (AP3). */
   plot?: boolean;
+  /** Tick boxes the page keeps itself: Funnel's, which choose the pages its route chart shows. */
+  ticks?: TableTicks;
   /** All pages: without the shop's own search, basket and account pages (`isShopPage`). */
   leaveOut?: boolean;
   list: ListKind;
@@ -227,7 +234,8 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
   // The rows still carry money for Ask Hakken and Insights: never for the eye (Anthony, 2026-11-03: "Take money off").
   const seesRows = useMemo(() => (shown.result ? withoutMoney(shown.result) : shown.result), [shown.result]);
   useSeesPart(seesPart, seesRows);
-  const plotted = usePlotted(plot && list === "page");
+  const pagePlot = usePlotted(plot && list === "page");
+  const plotted: TableTicks | null = ticks ?? (pagePlot ? { ...pagePlot, most: MOST_PLOTTED, limit: t("tickLimit") } : null);
   // All pages' headings say which dates are set against which: "Views in October compared with September".
   const inWords = useSpanInWords(...spansOfList(paged.result));
   const assistants = list === "source" && channel === AI_ASSISTANTS_CHANNEL;
@@ -263,10 +271,15 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
           <TableBar
             footer={shown.footer}
             noun={noun}
-            actions={<AnalyticsDownload args={base} list={list} csvColumns={ofChannel && list === "landing" ? CHANNEL_LANDING_CSV : undefined} kindName={kindName ?? ofChannel?.kindName} />}
+            actions={
+              <>
+                {plotted ? <TickActions ticks={plotted} rows={shown.pageRows ?? []} rowKey={rowKeyOf} canTick={canTickFor(list)} /> : null}
+                <AnalyticsDownload args={base} list={list} csvColumns={ofChannel && list === "landing" ? CHANNEL_LANDING_CSV : undefined} kindName={kindName ?? ofChannel?.kindName} />
+              </>
+            }
           >
-            {/* All pages' bar is its count and its download, with no sentence beside them. */}
-            {list === "page" && !live ? null : <span className="text-[12px] text-secondary">{bar}</span>}
+            {/* All pages' and Funnel's bar is its count, how many are ticked and its buttons, with no sentence beside them. */}
+            {(list === "page" || (list === "landing" && !ofChannel)) && !live ? (plotted ? <TickCount ticks={plotted} /> : null) : <span className="text-[12px] text-secondary">{bar}</span>}
           </TableBar>
         }
         empty={{ icon: <SearchX className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : emptyLabel }}
@@ -284,7 +297,7 @@ function columnOf(
   rowHref: ((row: ShownRow) => string | null) | undefined,
   t: (key: string, values?: Record<string, string | number>) => string,
   nameOf?: (row: ShownRow) => string,
-  plotted?: { keys: string[]; tick: (key: string, next: boolean) => void } | null,
+  plotted?: TableTicks | null,
   ofChannel?: ChannelTable,
   /** AI assistants' own page: its sources are assistants. */
   assistants = false,
@@ -294,31 +307,12 @@ function columnOf(
 ): DataTableColumn<ShownRow> {
   switch (column) {
     case "tick":
-      return {
-        key: "tick",
-        header: "",
-        hiddenHeader: t("tickColumn"),
-        className: "w-11",
-        cell: (row) => {
-          // A page with views can be drawn; a page nobody viewed in these dates has nothing to draw.
-          if (!plotted || !row.key.startsWith("~") || row.views === 0) return null;
-          const checked = plotted.keys.includes(row.key);
-          const reason = !checked && plotted.keys.length >= MOST_PLOTTED ? t("tickLimit") : undefined;
-          return (
-            // The tick is the row's own control: its click must not open the row.
-            <span className="flex" title={reason} onClick={(event) => event.stopPropagation()}>
-              <Checkbox
-                label={t("tick", { page: pathOf(row.label) })}
-                labelHidden
-                checked={checked}
-                disabled={Boolean(reason)}
-                title={reason}
-                onChange={(next) => plotted.tick(row.key, next)}
-              />
-            </span>
-          );
-        },
-      };
+      return tickColumn<ShownRow>(plotted ?? NO_TICKS, {
+        rowKey: rowKeyOf,
+        canTick: canTickFor(list),
+        label: (row) => t("tick", { page: row.key === NOT_SET ? t("pageNotKnown") : pathOf(row.label) }),
+        heading: t("tickColumn"),
+      });
     case "name":
       return {
         key: "name",
@@ -329,11 +323,14 @@ function columnOf(
         // All pages' Page column keeps its room: where every row has a title it could shrink to one letter (2026-11-04).
         // No wider, or the table runs off the page at 1366 pixels.
         ...(list === "page" ? { className: `${CUT_COLUMN.first} min-w-[160px]` } : {}),
-        cell: (row) => list === "landing" && ofChannel && row.kind === NO_PAGE_KIND
+        cell: (row) => list === "landing" && !ofChannel && row.key === NOT_SET
+          // The visits Google put to no page: said so, never a link.
+          ? <span className="block truncate text-[13px] text-foreground">{t("pageNotKnown")}</span>
+          : list === "landing" && ofChannel && row.kind === NO_PAGE_KIND
           // The visits Google put to no page: said so, never a link (ga-channel-pages-plan.md CH7).
           ? <PageLink address={row.label} href={null} title={ofChannel.kindName(NO_PAGE_KIND)} kind={t("noPageLost")} />
           : list === "landing" || list === "page"
-          ? <PageLink address={row.label} href={rowHref ? rowHref(row) : null} title={row.title} kind={ofChannel && row.kind ? ofChannel.kindName(row.kind) : undefined} />
+          ? <PageLink address={row.label} href={rowHref ? rowHref(row) : null} title={row.title ?? (ofChannel ? undefined : pageName(row.label))} kind={ofChannel && row.kind ? ofChannel.kindName(row.kind) : undefined} />
           : list === "groups"
             ? (
               <span className="flex flex-col leading-tight">
@@ -389,12 +386,13 @@ function columnOf(
         key: "conversions",
         // A page's own conversions, or those of the visits that started on it, never both called "Conversions" (analytics-page-screen-plan.md PS1).
         header: list === "page" ? <span title={t("columns.conversionsHereTitle")}>{t("columns.conversions")}</span>
-          : list === "landing" || list === "groups" ? <span title={t("columns.conversionsStartedTitle")}>{t("columns.conversionsStarted")}</span>
+          // Funnel's table says Conversions, as the page has no other kind; a channel's own page keeps its approved heading.
+          : list === "landing" || list === "groups" ? <span title={t("columns.conversionsStartedTitle")}>{t(ofChannel ? "columns.conversionsStarted" : "columns.conversionsOfVisit")}</span>
             : t("columns.conversions"),
         align: "right",
         sortable: true,
-        cell: (row) => list === "page"
-          // All pages: the count, and its rate under it as "per 100 visits", as it counts times, not visits.
+        cell: (row) => list === "page" || (list === "landing" && !ofChannel)
+          // All pages and Funnel: the count, and its rate under it as "per 100 visits", as it counts times, not visits.
           ? <ConversionsHereCell conversions={row.conversions} rate={row.conversionRate} fewVisits={row.fewVisits} />
           : <ConversionsCell conversions={row.conversions} rate={row.conversionRate} fewVisits={row.fewVisits} oneLine={ONE_LINE.has(list)} />,
       };

@@ -148,6 +148,8 @@ describe("channels over time", () => {
     // August has a day more than September: its 31st falls on 1 October, past the period, where the chart draws no day.
     expect(month.points.map((point) => point.day)).toEqual(Array.from({ length: 31 }, (_, at) => shiftDay("2026-09-01", at)));
     expect(month.points.every((point) => point.visits === 16 && point.conversions === 1)).toBe(true);
+    // Funnel's daily chart reads who stayed in the dates before, so its September line can say who left.
+    expect(month.points.every((point) => typeof point.engaged === "number")).toBe(true);
     // Each kind's own count, for the tick boxes: only the call clicked then.
     expect(month.points.every((point) => point.events[0] === 0 && point.events[1] === 1 && point.events[2] === 0)).toBe(true);
     // This month so far, 1 to 8 October, against the same days of September: still before the lead came.

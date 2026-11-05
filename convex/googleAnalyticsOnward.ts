@@ -44,7 +44,10 @@ export function onwardByGroup(rows: readonly ListRow[], onward: ReadonlyMap<stri
 /** A landing page's or group's visits that went on, and the page most opened next, as the collection kept them (LF4). */
 export function withOnward(row: ShownRow, own: Onward | undefined, kept: boolean): ShownRow {
   if (!kept) return row;
-  row.onward = own ? Math.min(row.visits, own.on) : 0;
+  // Google counts a visit as engaged if it saw a second page, so a visit that wasn't engaged left without seeing another.
+  // A reload looks like going on in the routes, so this keeps Left from reading lower than what really left straight away.
+  const engaged = row.engagementRate === null || row.engagementRate === undefined ? row.visits : Math.round(row.visits * row.engagementRate);
+  row.onward = own ? Math.min(row.visits, own.on, engaged) : 0;
   row.next = own && own.next && own.on > 0 ? { key: own.next, page: own.next, share: Math.min(1, own.nextVisits / own.on) } : null;
   return row;
 }

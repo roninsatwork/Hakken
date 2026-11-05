@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { pageName } from "@/convex/utils/pageNames";
 import { useTranslations } from "next-intl";
 import { Change } from "@/src/ui/components/screens/Change";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
@@ -64,14 +65,14 @@ export function ShareCell({ count, visits, fewVisits, left = false }: { count: n
   const t = useTranslations("googleAnalytics.table");
   if (count == null) return <NoFigure />;
   return (
-    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+    <span className="inline-flex flex-col items-end whitespace-nowrap leading-tight">
       {left && count > 0
         // The visits that left, as every fall here is drawn: the kit's arrow, down.
         ? <Change by={-count} arrow="down" format={formatNumber} />
         : <span className="font-mono text-[12px] text-foreground">{formatNumber(count)}</span>}
       {visits > 0 ? (
         <span className={`font-mono text-[12px] ${fewVisits ? "text-muted" : "text-secondary"}`} title={fewVisits ? t("fewVisits") : undefined}>
-          · {formatPercent(count / visits)}
+          {formatPercent(count / visits)}
         </span>
       ) : null}
     </span>
@@ -83,7 +84,7 @@ export function NextPageCell({ next }: { next: { page: string; share: number } |
   if (!next) return <NoFigure />;
   return (
     <span className="flex min-w-0 items-baseline gap-1.5 text-[12px]" title={next.page}>
-      <span className="truncate text-secondary">{pathOf(next.page)}</span>
+      <span className="truncate text-secondary">{pageName(next.page)}</span>
       <span className="shrink-0 font-mono text-secondary">· {Math.round(next.share * 100)}%</span>
     </span>
   );

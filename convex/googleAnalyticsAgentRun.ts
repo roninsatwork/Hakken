@@ -632,6 +632,9 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
         return null;
       }
       const job = jobs[jobAt];
+      // A long date's routes take minutes on a big website (a year of More Handles, 435 seconds). They start with a step to
+      // themselves, or a late start would run past an action's ten minutes.
+      if (done > 0 && "pages" in job && job.part === "flow" && LONG_FLOW_PERIODS.has(job.period)) break;
       if ("days" in job) {
         // Another home country's days, and each of its pages once they are held (SF7).
         const result = await collectDays(ctx, open, args.connectionId, target, { from: job.from, to: job.to }, undefined, job.country);
@@ -677,6 +680,8 @@ export async function collectSiteStepHandler(ctx: ActionCtx, args: CollectSiteSt
   }
   return null;
 }
+
+const LONG_FLOW_PERIODS: ReadonlySet<string> = new Set(["last6Months", "last12Months"]);
 
 /** Another home country's days, a step's worth (ga-stored-figures-plan.md SF7). */
 type CountryDaysJob = { days: true; country: string; from: string; to: string };

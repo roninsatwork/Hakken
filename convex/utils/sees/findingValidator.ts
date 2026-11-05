@@ -9,7 +9,7 @@ export const findingValidator = v.object({
     // A page's own (`pageOwnFindings.ts`).
     v.literal("movedUp"), v.literal("movedDown"),
     // Every section's (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 7).
-    v.literal("placeUp"), v.literal("placeDown"), v.literal("rivalUp"), v.literal("rivalDown"), v.literal("newLost"), v.literal("shareMoved"), v.literal("countedDifferently"), v.literal("halfOfViews"), v.literal("busyFewer")),
+    v.literal("placeUp"), v.literal("placeDown"), v.literal("rivalUp"), v.literal("rivalDown"), v.literal("newLost"), v.literal("shareMoved"), v.literal("countedDifferently"), v.literal("halfOfViews"), v.literal("busyFewer"), v.literal("busyLeaving"), v.literal("routeOn"), v.literal("noPageKnown")),
   score: v.number(),
   params: v.record(v.string(), v.union(v.string(), v.number())),
   facts: v.array(v.object({ key: v.string(), value: v.number(), unit: v.union(v.literal("count"), v.literal("percent"), v.literal("ratio"), v.literal("score")), label: v.string() })),

@@ -156,6 +156,10 @@ const ICONS: Record<Finding["kind"], { icon: typeof Clock; tone: string }> = {
   // All pages: how few pages make half the views, and how many busy pages had fewer.
   halfOfViews: { icon: PieChart, tone: "text-secondary" },
   busyFewer: { icon: TrendingDown, tone: "text-secondary" },
+  // Funnel: the busy pages people leave, the biggest route on, and the visits with no page known.
+  busyLeaving: { icon: TrendingDown, tone: "text-secondary" },
+  routeOn: { icon: ArrowDownUp, tone: "text-secondary" },
+  noPageKnown: { icon: AlertTriangle, tone: "text-warning" },
 };
 /** A figure where less is better, by the page's own measures: its rise is the bad news. */
 const LESS_IS_BETTER = new Set(Object.entries(MEASURES).filter(([, measure]) => measure.lessIsBetter).map(([field]) => field));
@@ -254,6 +258,12 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
         return t.rich("halfOfViews", { ...rich, pages: whole(p.pages), before: whole(p.pagesBefore) });
       case "busyFewer":
         return t.rich(p.name !== undefined ? "busyFewerNamed" : "busyFewer", { ...rich, fewer: whole(p.fewer), busy: whole(p.busy), visits: whole(p.visits), name: String(p.name ?? "") });
+      case "busyLeaving":
+        return t.rich(p.name !== undefined ? "busyLeavingNamed" : "busyLeaving", { ...rich, losing: whole(p.losing), busy: whole(p.busy), visits: whole(p.visits), name: String(p.name ?? "") });
+      case "routeOn":
+        return t.rich("routeOn", { ...rich, reached: whole(p.reached), on: whole(p.on), name: String(p.name), next: String(p.next) });
+      case "noPageKnown":
+        return t.rich("noPageKnown", { ...rich, visits: whole(p.visits), share: percent(p.share) });
       case "shareMoved":
         return t.rich("shareMoved", { ...rich, name: String(p.name), measure: measure(p.measure), share: percent(p.share), before: percent(p.shareBefore) });
     }

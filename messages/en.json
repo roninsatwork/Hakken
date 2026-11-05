@@ -10608,6 +10608,11 @@
       "agents": "{count, plural, =1 {# agent} other {# agents}}",
       "recordings": "{count, plural, =1 {# recording} other {# recordings}}"
     },
+    "tableTicks": {
+      "clearAll": "Clear all",
+      "selectTop": "Select top {most}",
+      "onChart": "{count} of {most} on the chart"
+    },
     "chart": {
       "download": "Download",
       "png": "Picture (PNG)",
@@ -10711,7 +10716,11 @@
         "countedDifferently": "Pages a visit went from <n>{before}</n> to <n>{now}</n>. That usually means page views were counted differently on these dates, so ups and downs in views may not be real.",
         "halfOfViews": "Half your views came from <n>{pages}</n> pages, against <n>{before}</n> before.",
         "busyFewer": "<n>{fewer}</n> of your <n>{busy}</n> busy pages had fewer views. A busy page has <n>{visits}</n> visits or more.",
-        "busyFewerNamed": "<n>{fewer}</n> of your <n>{busy}</n> busy pages had fewer views, most of all <b>{name}</b>. A busy page has <n>{visits}</n> visits or more."
+        "busyFewerNamed": "<n>{fewer}</n> of your <n>{busy}</n> busy pages had fewer views, most of all <b>{name}</b>. A busy page has <n>{visits}</n> visits or more.",
+        "busyLeaving": "<n>{losing}</n> of your <n>{busy}</n> busy pages lose more people than your website does. A busy page has <n>{visits}</n> visits or more.",
+        "busyLeavingNamed": "<n>{losing}</n> of your <n>{busy}</n> busy pages lose more people than your website does, most of all <b>{name}</b>. A busy page has <n>{visits}</n> visits or more.",
+        "routeOn": "<n>{reached}</n> visits went to <b>{name}</b> next. <n>{on}</n> of them then went to <b>{next}</b>.",
+        "noPageKnown": "<n>{visits}</n> visits have no page known. That's <n>{share}</n> of all visits."
       },
       "askBelow": "Ask about this page below.",
       "noCredits": "Your company has used all its credits, so {platformName} can't write new advice for this page. Add credits in <billing>Billing</billing>.",
@@ -10797,7 +10806,7 @@
         "viewsGained": "views gained",
         "peopleInHalfHour": "people in the last 30 minutes",
         "conversionsPerHundred": "conversions for every 100 visits",
-        "leftAtOncePercent": "share of visits that left at once",
+        "leftAtOncePercent": "share of visits that left straight away",
         "leftWithoutAnotherPercent": "left without seeing another page",
         "enquiries": "enquiries",
         "visitors": "visitors",
@@ -16660,7 +16669,7 @@
         "viewsChangeTitle": "Views in {now} compared with {before}. A change of 1 or {most} views shows as The same.",
         "conversionsChangeTitle": "Conversions in {now} compared with {before}.",
         "conversionsStarted": "Conversions from visits",
-        "conversionsStartedTitle": "Conversions in visits that started on the page, made anywhere on the website",
+        "conversionsStartedTitle": "Conversions in visits that started on this page. They can happen on any page.",
         "change": "Change",
         "changeTitle": "Visits against the span before",
         "purchases": "Purchases",
@@ -16681,15 +16690,16 @@
         "startedTitle": "Conversions by people this channel brought first, on any visit",
         "landsMost": "Lands most on",
         "landsMostTitle": "The page classification most of the channel's visits started on, and its share",
-        "left": "Left here",
-        "leftTitle": "Visits that left the website from this page without opening another, and their share of its visits",
-        "onward": "Went on",
-        "onwardTitle": "Visits that opened another page after this one, counted once a visit, and their share of its visits",
+        "left": "Left",
+        "leftTitle": "People who left your website from this page without seeing another. Left straight away, in the box above, is different. It counts people who stayed under 10 seconds and did nothing.",
+        "onward": "Stayed",
+        "onwardTitle": "People who went on to see another page.",
         "next": "Most went to",
-        "nextTitle": "The page most of those visits opened next, and its share of them",
+        "nextTitle": "The page most of them went to next, and their share.",
         "upOrDown": "Up or down",
         "timeOnPage": "Time on page",
-        "conversionsHereTitle": "Conversions made on this page"
+        "conversionsHereTitle": "Conversions made on this page",
+        "conversionsOfVisit": "Conversions"
       },
       "notSorted": "Unclassified",
       "pagesCount": "{count, plural, =1 {1 page} other {# pages}}",
@@ -16734,7 +16744,8 @@
         "none": "No visits {count}"
       },
       "noPageLost": "Google Analytics lost the page",
-      "per100Visits": "<figure>{rate}</figure> per 100 visits"
+      "per100Visits": "<figure>{rate}</figure> per 100 visits",
+      "pageNotKnown": "Page not known"
     },
     "chart": {
       "title": "Visits and conversions over time",
@@ -16846,28 +16857,44 @@
         "week": "Before the last 12 months, each point is a month's weekly average."
       },
       "flow": {
-        "title": "How visits moved through your website",
-        "hint": "{period}: where visits landed, the page they opened next, and the one after. Click a page to follow its routes in and out; click it again to see them all.",
-        "landing": "Landing pages",
-        "next": "Next page",
-        "after": "Page after",
-        "summary": "{visits} visits · ▼ {left} left",
-        "summaryConverted": "{visits} visits · ▼ {left} left · ● {conversions}",
-        "more": "({count, plural, one {# more page} other {# more pages}})",
-        "nodeHover": "{page}: {visits} visits, {on} went on, {left} left. Click to follow its routes.",
-        "nodeHoverConverted": "{page}: {visits} visits, {on} went on, {left} left, {conversions, plural, one {# conversion} other {# conversions}}. Click to follow its routes.",
-        "bandHover": "{from} → {to}: {visits} visits",
-        "bandHoverConverted": "{from} → {to}: {visits} visits, {conversions, plural, one {# conversion} other {# conversions}}",
-        "figuresConverted": "{visits} · ● {conversions}",
-        "legendConversions": "Conversions, on a page or the route that led to it — bigger for more",
-        "legendLeft": "Visits that left there",
-        "loading": "Reading the flow…",
-        "collecting": "Still being collected: the next collection keeps how visits moved for these dates.",
+        "title": "Where people went next",
+        "hint": "The first page people saw in {month}, then the pages after it. Tick pages in the table to choose which ones show here.",
+        "first": "First page",
+        "second": "Second page",
+        "column3": "Third page",
+        "column4": "Fourth page",
+        "column5": "Fifth page",
+        "visitsCount": "{visits} visits",
+        "leftCount": "{left} left here",
+        "under": "Any page you haven't ticked is in its group. A visit that opens two pages counts in both.",
+        "shop": "Search and basket",
+        "notSorted": "Not sorted yet",
+        "otherPages": "Other pages",
+        "otherGroups": "{count, plural, one {# other group} other {# other groups}}",
+        "otherPagesOf": "Other pages in this group",
+        "pagesNotTicked": "Pages you haven't ticked",
+        "pagesNotTickedLower": "pages you haven't ticked",
+        "visits": "Visits",
+        "visitsInBefore": "Visits in {before}",
+        "wentOn": "Went on to another page",
+        "leftHere": "Left here",
+        "mostWent": "Most went here next",
+        "conversions": "Conversions",
+        "ofVisitsOn": "Of the visits on {name}",
+        "conversionsAfter": "Conversions after this",
+        "route": "{from} to {to}",
+        "legendConversions": "Orange dots show the top routes for conversions",
+        "legendLeft": "Red shows people who left here",
+        "legendGroup": "A grey edge means a group of pages",
+        "loading": "Reading where people went…",
+        "collecting": "Still being collected. The next collection keeps where people went on these dates.",
         "empty": "No visits in these dates.",
         "csvFrom": "From",
         "csvTo": "To",
         "csvVisits": "Visits",
-        "csvConversions": "Conversions"
+        "csvConversions": "Conversions",
+        "pageNotKnown": "Page not known",
+        "nothingTicked": "Nothing is ticked. Tick a page in the table to see where people went next."
       },
       "viewsOnlyLine": "Views"
     },
@@ -17298,18 +17325,49 @@
     },
     "landing": {
       "title": "Funnel",
-      "description": "Where each visit started, and what those visits did next: left, went on to another page, or converted.",
-      "groupFilter": "Page group",
-      "notSorted": "Unclassified",
-      "everyGroup": "Every page group",
-      "viewLabel": "Show",
-      "views": {
-        "pages": "Pages",
-        "groups": "Page groups"
-      },
-      "findGroup": "Find a page group…",
+      "description": "Where people arrive on your website, and what they do next.",
       "findPage": "Find a page…",
-      "empty": "No landing pages in these dates."
+      "empty": "No pages in these dates.",
+      "tickLimit": "You can show {most} pages at most. Untick one first.",
+      "boxes": {
+        "visits": "Visits",
+        "leftAtOnce": "Left straight away",
+        "pagesAVisit": "Pages a visit",
+        "conversions": "Conversions",
+        "was": "It was {figure} in {before}.",
+        "pagesBefore": "{figure} in {before}"
+      },
+      "daily": {
+        "showLabel": "Show",
+        "compareWith": "Compare with",
+        "nothing": "No comparison",
+        "hint": "{now}.",
+        "hintAgainst": "{now} against the same days in {before}.",
+        "empty": "No visits in these dates.",
+        "csvDay": "Day",
+        "show": {
+          "left": "Left straight away",
+          "stayed": "Stayed and looked around",
+          "conversions": "Conversions"
+        },
+        "title": {
+          "left": {
+            "day": "People who left straight away, each day",
+            "week": "People who left straight away, each week",
+            "month": "People who left straight away, each month"
+          },
+          "stayed": {
+            "day": "People who stayed and looked around, each day",
+            "week": "People who stayed and looked around, each week",
+            "month": "People who stayed and looked around, each month"
+          },
+          "conversions": {
+            "day": "Conversions each day",
+            "week": "Conversions each week",
+            "month": "Conversions each month"
+          }
+        }
+      }
     },
     "allPages": {
       "title": "All pages",

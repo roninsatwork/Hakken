@@ -1,0 +1,20 @@
+# Google Analytics → Funnel — the approved look (board "Way1" of docs/plans/assets/funnel-way-1/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Funnel
+figures
+  figure: Visits
+  figure: Left straight away
+  figure: Pages a visit
+  figure: Conversions
+chart-card: People who left straight away, each day
+filter: Show
+filter: Compare with
+chart-card: Where people went next
+page-flow
+search: Find a page…
+filter: Classification
+table: On the chart | Page | Visits | Left | Stayed | Most went to | Conversions
+  table-bar
+    download: Download CSV
+  table-footer

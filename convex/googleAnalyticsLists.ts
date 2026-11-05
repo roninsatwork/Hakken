@@ -129,6 +129,8 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   landingFlow: ["landingPage", "pageReferrer", "pagePath"],
   // A landing page's visits by each page before a view in them: those that went on from it (§3b).
   landingOnward: ["landingPage", "pageReferrer"],
+  // A landing page's routes to the second page, against the chart's own boxes (funnel-way-1-plan-2026-11-05.md): kept, never asked.
+  landingRoutes: ["landingPage", "pagePath"],
   // A landing page's visits by the visitors' browser, operating system and interests (ga-conversions-visitors-plan.md CV8).
   landingBrowser: ["landingPage", "browser"],
   landingSystem: ["landingPage", "operatingSystem"],
@@ -181,6 +183,7 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   eventDetail: true,
   landingFlow: true,
   landingOnward: true,
+  landingRoutes: true,
   landingBrowser: true,
   landingSystem: true,
   landingInterest: true,

@@ -38,6 +38,8 @@ import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { DetailHeader, PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { PageFlowChart } from "@/src/ui/components/screens/PageFlowChart";
+import { StepFlowChart } from "@/src/ui/components/screens/StepFlowChart";
+import { TickActions, TickCount } from "@/src/ui/components/screens/TableTicks";
 import { Select } from "@/src/ui/components/screens/Select";
 import { FieldHint, FieldLabel, SegmentedChoice, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -470,6 +472,48 @@ const PARTS: Part[] = [
         conversionsWord={(count) => `${count} conv.`}
         legend={{ visits: "69 · visits that started on that kind of page", conversions: "3 conv. · conversions those visits made", shades: "a smaller to a bigger share of the channel", empty: "no visits" }}
       />
+    ),
+  },
+  {
+    id: "step-flow",
+    name: "StepFlowChart — the steps to a sale",
+    source: "src/ui/components/screens/StepFlowChart.tsx",
+    use: "Any steps a visit can stop at: each step a box as tall as its visits, a band to the next, a red tail for those that stopped. Its tallest box is 120 pixels.",
+    render: () => (
+      <StepFlowChart
+        steps={[
+          { id: "start", name: "Started", visits: 35739 },
+          { id: "product", name: "Saw a product", visits: 22130 },
+          { id: "basket", name: "Added to basket", visits: 4916 },
+          { id: "checkout", name: "Started checkout", visits: 1802 },
+          { id: "bought", name: "Bought", visits: 954 },
+        ]}
+        words={{
+          everyVisit: "Every visit",
+          ofAll: (percent) => `${percent}% of all visits`,
+          stopped: (visits) => `${visits} stopped here`,
+          visits: (visits) => `${visits} visits`,
+          visitsLabel: "Visits",
+          ofAllLabel: "Of all visits",
+          stoppedLabel: "Stopped here",
+          ofStepLabel: (name) => `Of visits on ${name}`,
+          route: (from, to) => `${from} to ${to}`,
+          stoppedKey: "Red shows people who stopped here",
+        }}
+        format={(value) => value.toLocaleString("en-GB")}
+      />
+    ),
+  },
+  {
+    id: "table-ticks",
+    name: "TickCount and TickActions — how many are ticked, Clear all and Select top, beside a table's download",
+    source: "src/ui/components/screens/TableTicks.tsx",
+    use: "A table whose ticks choose what else the page shows. tickColumn draws the boxes, TickActions these two, in TableBar's actions.",
+    render: () => (
+      <div className="flex items-center gap-1">
+        <TickCount ticks={{ keys: ["a"], most: 10 }} />
+        <TickActions ticks={{ keys: ["a"], set: () => undefined, most: 10, limit: "" }} rows={[{ key: "a" }, { key: "b" }]} rowKey={(row) => row.key} />
+      </div>
     ),
   },
   {

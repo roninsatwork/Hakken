@@ -9,7 +9,7 @@ import { CHART, CONVERSIONS, CONVERSIONS_LINES, CONVERSIONS_MAP, CONVERSIONS_PAG
 import { allPagesSees, landingSees } from "@/convex/utils/sees/analytics";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
-import AnalyticsLandingPagesPage from "./[siteId]/funnel/page";
+import AnalyticsFunnelPage from "./[siteId]/funnel/page";
 import AnalyticsAllPagesPage from "./[siteId]/all-pages/page";
 import AnalyticsConversionsPage from "./[siteId]/conversions/page";
 import AnalyticsEventScreen from "./[siteId]/events/event/page";
@@ -103,31 +103,51 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, "ga-overview", "Overview", "Google Analytics → Overview");
   });
 
-  it("5 · Funnel (was Landing pages): how visits moved, then each landing page's own funnel (landing-pages-flow-plan.md, approved 2026-10-14)", async () => {
+  it("5 · Funnel: four boxes, people who left straight away each day, the route chart, then the table with its tick boxes (funnel-way-1-plan-2026-11-05.md)", async () => {
     at("/app/analytics/site_1/funnel");
-    const flowRow = { ...ROW, onward: 46, next: { key: "~1", page: "https://www.acme-shop.test/about-us/", share: 0.93 } };
+    const flowRow = { ...ROW, onward: 46, next: { key: "~1", page: "https://www.acme-shop.test/checkout/cart/", share: 0.93 } };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsReads:analyticsListPage": list([flowRow], { seen: landingSees([{ ...ROW, label: "/ai-agency/" }], { groups: false, device: "", everyDevice: null }) }),
+      "googleAnalyticsReads:analyticsListPage": list([flowRow], {
+        seen: landingSees([{ ...ROW, label: "/ai-agency/" }], { groups: false, device: "", everyDevice: null }),
+        from: "2026-10-01", to: "2026-10-31", spanBefore: { from: "2026-09-01", to: "2026-09-30" },
+      }),
+      "googleAnalyticsReads:analyticsOverview": { now: { visits: 35_739, views: 152_926, conversions: 27_273, engaged: 22_327 }, before: { visits: 37_507, views: 167_878, conversions: 28_623, engaged: 24_762 } },
+      "googleAnalyticsPageKindViews:analyticsPageKindViews": { waiting: false, sorted: true, views: 152_926, unplaced: 0, kinds: [{ kind: "SHOP_PAGES", name: null, views: 31_144, viewsBefore: 37_294, pages: 406 }, { kind: "k1", name: "Blog", views: 2_610, viewsBefore: 1_002, pages: 40 }] },
+      "googleAnalyticsChartReads:analyticsChart": CHART,
+      "googleAnalyticsChartReads:analyticsPeriodBeforeChart": DAYS_BEFORE,
       "googleAnalyticsFlowReads:analyticsLandingFlow": {
-        held: true, from: "2026-09-09", to: "2026-10-08", counting: true,
-        columns: [{ visits: 155, left: 109, conversions: 1 }, { visits: 43, left: 23, conversions: 0 }, { visits: 6, left: 6, conversions: 1 }],
+        held: true, from: "2026-10-01", to: "2026-10-31", counting: true, onward: 46, left: 109, starts: [ROW.key],
         nodes: [
-          { id: "0:~0", column: 0, page: "~0", path: "/ai-agency/", more: 0, visits: 155, left: 109, conversions: 1 },
-          { id: "1:~1", column: 1, page: "~1", path: "/about-us/", more: 0, visits: 43, left: 23, conversions: 0 },
-          { id: "2:~2", column: 2, page: "~2", path: "/ai-consultancy/", more: 0, visits: 6, left: 6, conversions: 1 },
+          { id: "0:g:k1", column: 0, kind: "k1", name: "Blog", more: 0, address: null, visits: 300, left: 200, conversions: 2 },
+          { id: "1:~1", column: 1, kind: null, name: null, more: 0, address: "/checkout/cart/", visits: 43, left: 23, conversions: 0 },
+          { id: "2:~2", column: 2, kind: null, name: null, more: 0, address: "/checkout/", visits: 6, left: 6, conversions: 1 },
+          { id: "3:~3", column: 3, kind: null, name: null, more: 0, address: "/checkout/onepage/success/", visits: 3, left: 3, conversions: 1 },
+          { id: "4:~4", column: 4, kind: null, name: null, more: 0, address: "/", visits: 1, left: 1, conversions: 0 },
         ],
         bands: [
-          { from: "0:~0", to: "1:~1", visits: 43, conversions: 0, landings: ["~0"] },
-          { from: "1:~1", to: "2:~2", visits: 6, conversions: 1, landings: ["~0"] },
+          { from: "0:g:k1", to: "1:~1", visits: 43, conversions: 1 },
+          { from: "1:~1", to: "2:~2", visits: 6, conversions: 1 },
+          { from: "2:~2", to: "3:~3", visits: 3, conversions: 1 },
+          { from: "3:~3", to: "4:~4", visits: 1, conversions: 0 },
         ],
+        ticked: [{ key: ROW.key, id: `0:${ROW.key}`, address: ROW.label, group: "0:g:k1", visits: 155, visitsBefore: 100, left: 109, conversions: 1, routes: [{ to: "1:~1", visits: 20, conversions: 0 }] }],
       },
-      "pageKinds:pageKindChoices": [{ id: "group_1", name: "AI services", type: "SERVICE" }],
     });
-    const { container } = render(<AnalyticsLandingPagesPage />);
-    await screen.findAllByText("/ai-agency/");
-    await screen.findByText("155 visits · ▼ 109 left · ● 1");
-    await expectApprovedLook(container, "landing-pages-flow", "LandingPages", "Google Analytics → Funnel");
+    const { container } = render(<AnalyticsFunnelPage />);
+    await screen.findByText("Where people went next");
+    const figures = (await screen.findByText("Pages a visit")).closest("[data-part='figures']") as HTMLElement;
+    expect(within(figures).getByText("37.5%")).toBeInTheDocument();
+    expect(within(figures).getByText("It was 34.0% in September.")).toBeInTheDocument();
+    expect(await screen.findByText("People who left straight away, each day")).toBeInTheDocument();
+    // Plain page names, in five columns, with a group's own grey edge said in the key.
+    expect(screen.getByText("Fifth page")).toBeInTheDocument();
+    expect(screen.getByText("A grey edge means a group of pages")).toBeInTheDocument();
+    expect(screen.getAllByText("Basket").length).toBeGreaterThan(0);
+    // A tick box on the table, ticked as the page opens, and no Show menu: the table is pages only.
+    expect(screen.getByRole("checkbox", { name: /on the chart/ })).toBeChecked();
+    expect(screen.queryByRole("option", { name: "Classifications" })).toBeNull();
+    await expectApprovedLook(container, "funnel-way-1", "Way1", "Google Analytics → Funnel");
   });
 
   it("6 · All pages: four boxes, a map of pages, Views each day, then the table with its menus on one line and no money (all-pages-way-6-plan-2026-11-04.md)", async () => {
