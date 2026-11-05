@@ -614,6 +614,39 @@ export async function collectPageLists(
 }
 
 /**
+ * Groups of landing pages asked at once when a flow is collected. At Google's slow times (8 to 12 seconds an answer, 5 November
+ * 2026), a year of More Handles' seven groups, one after another, took more than an action's ten and a half minutes. Reading fewer
+ * of Google's rows isn't the answer: it lost a quarter of the visits that stayed, as a page's going-on can't pass the routes
+ * seen leaving it. Three at once ran out of an action's 512 MB once. Two groups, each asking two things, is four asks at once
+ * within Google's ten, and the small groups' time is spent alongside the biggest's: 440 seconds on a slow day, every figure the same.
+ */
+const FLOW_GROUPS_AT_ONCE = 2;
+
+/**
+ * The first pieces of a big website's busiest group when a flow is collected, in pages. One ask reads at most Google's 20 answers
+ * (500,000 rows), and what's cut is the smallest rows, one visit each, which is most of an advertised page's routes. A year of More
+ * Handles' busiest 2,000 landing pages is 783,855 rows, so a busy page read 5% stayed on the year against 28% on six months
+ * (2026-11-05). Its busiest 10 are about 300,000 rows and its other 1,990 about 480,000, so these pieces each fit one ask. A website
+ * ten times the size could still pass the limit on its busiest pieces: the list's `cut` says so when it does.
+ */
+const FLOW_FIRST_PIECES = [10, 40, 200, 750];
+
+/** A big website's groups of landing pages with the busiest split into pieces that fit one ask. Every page once, busiest first. */
+export function flowGroups(groups: readonly string[][]): string[][] {
+  const [busiest, ...rest] = groups;
+  if (!busiest) return [];
+  const pieces: string[][] = [];
+  let at = 0;
+  for (const size of FLOW_FIRST_PIECES) {
+    if (at >= busiest.length) break;
+    pieces.push(busiest.slice(at, at + size));
+    at += size;
+  }
+  if (at < busiest.length) pieces.push(busiest.slice(at));
+  return [...pieces, ...rest];
+}
+
+/**
  * The website's flow from its landing pages for one date range and device
  * (landing-pages-flow-plan.md LF5, §3b): the routes inside each landing page's
  * own visits, with the conversions made on the page each led to, kept as the
@@ -665,9 +698,6 @@ export async function collectFlowLists(
       const before = beforeKey(one.keys[1] ?? "", target.addresses);
       return before.startsWith("page:") ? channelKey(one.keys[0] ?? "", before) : null;
     }, hold);
-    // A group's two asks side by side, and one group at a time. A year of a big website is 68 of Google's answers: one after
-    // another they took about all of an action's ten and a half minutes, and three groups at once ran out of its 512 MB (More
-    // Handles, 2026-11-05: 435 seconds like this). Same tokens, and Google allows ten at once.
     const [routes, onward] = await Promise.all([
       askList(session, asking, "landingFlow", [], range, { ...(device ? { device } : {}), ...(pages ? { landingPage: pages } : {}) }, { trim: trimTo((row) => row.visits, foldRoute, undefined, flowHold), hold: flowHold, visitsOnly: true }),
       ask(session, target.property!, { ...base, ...(pages ? { only: { dimension: "landingPage", values: pages } } : {}), dimensions: ["landingPage", "pageReferrer"], metrics: ["sessions"] }, onwardHeld.sink),
@@ -687,10 +717,17 @@ export async function collectFlowLists(
     }
     return null;
   };
-  for (const pages of pageGroups ?? [undefined]) {
-    const refused = await askGroup(pages);
-    if (refused) return { result: failed(session, refused), ended: false };
-  }
+  const groupsToAsk = pageGroups ? flowGroups(pageGroups) : [undefined];
+  let nextGroup = 0;
+  let refused: GoogleFailure | null = null;
+  await Promise.all(Array.from({ length: Math.min(FLOW_GROUPS_AT_ONCE, groupsToAsk.length) }, async () => {
+    while (!refused && nextGroup < groupsToAsk.length) {
+      const pages = groupsToAsk[nextGroup];
+      nextGroup += 1;
+      refused = (await askGroup(pages)) ?? refused;
+    }
+  }));
+  if (refused) return { result: failed(session, refused), ended: false };
   const flow = await flowOf(ctx, target, steps, kindOf);
   const rows = flow.flow.length + flow.onward.length + flow.routes.length;
   const done = (ended: boolean) => ({ result: { ok: true as const, rows, requests: session.requests }, ended });
@@ -721,6 +758,9 @@ export function flowRowGroup(rest: string, landing: string, addresses: readonly 
     return landing === NOT_SET || samePage(page, landing) ? ["", page].join(PAGE_FACT_JOIN) : DROPPED_ROUTES;
   }
   const from = before.slice(5);
+  // The same page again is a reload, not a step. Added up by group it would look like a step to that group: on a year of More
+  // Handles, Home's reloads read as thousands going on to Brand, and hardly anyone left Home (2026-11-05).
+  if (samePage(from, parts[1] ?? "")) return DROPPED_ROUTES;
   return [FOLDED_ROUTE, samePage(from, landing) ? "" : kindOf(from), kindOf(parts[1] ?? "")].join(PAGE_FACT_JOIN);
 }
 
@@ -823,7 +863,7 @@ async function flowOf(ctx: ActionCtx, target: CollectTarget, steps: FlowSteps, k
   // Each landing page's onward row under its Landing pages number.
   const ownNumber = new Map(landingPaths.map((path) => [flowLanding(path), landingRefs.get(path) ?? path]));
   const onwardRowsKept = summedRows(built.onward.map((row) => ({ ...emptyRow(channelKey(ownNumber.get(row.landing) ?? row.landing, row.next)), visits: row.visits, times: row.times })));
-  const routeRows = summedRows(built.routes.map((row) => ({ ...emptyRow(channelKey(ownNumber.get(row.landing) ?? row.landing, row.to)), visits: row.visits, counts: row.counts })));
+  const routeRows = summedRows(built.routes.map((row) => ({ ...emptyRow(channelKey(ownNumber.get(row.landing) ?? row.landing, [row.column, row.from, row.to].join(PAGE_FACT_JOIN))), visits: row.visits, counts: row.counts })));
   return { flow: flowRows, onward: onwardRowsKept, routes: routeRows };
 }
 

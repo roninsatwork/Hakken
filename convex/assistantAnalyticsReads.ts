@@ -142,7 +142,7 @@ const FUNNEL_COLUMNS = ["First page", "Second page", "Third page", "Fourth page"
 /** A box's biggest routes, as a chat can't carry all of them: a page asked about by `key` has all of its own. */
 const WENT_TO_MOST = 2;
 const TWO_MEANINGS_OF_LEFT = "Two figures say leaving, and they aren't the same people. Left straight away means stayed under 10 seconds and did nothing. Left in the table and chart means saw one page and no other, however long they stayed. Always say which one you mean. Use the page's own words: left, stayed, the page people started on. Never exit rate, exits, bounce rate or landing page.";
-const FUNNEL_CHART_RULE = "The first two columns are Google's own figures. Google gives one step at a time, not whole journeys, so they're joined up here. From the third page on, the figures are close rather than exact, and a visit that goes back and forth counts each step. A group is every page in that Classification that isn't named in the column.";
+const FUNNEL_CHART_RULE = "These columns are the whole website; the screen's chart shows only the pages ticked. The first two columns are Google's own figures. Google gives one step at a time, not whole journeys, so they're joined up here. From the third page on, the figures are close rather than exact, and a visit that goes back and forth counts each step. A group is every page in that Classification that isn't named in the column.";
 
 function oneDecimalShare(part: number, whole: number) {
   return whole > 0 ? Math.round((1000 * part) / whole) / 10 : null;
@@ -182,26 +182,27 @@ function funnelRowOf(row: ShownRow) {
   };
 }
 
-/** Funnel's chart, as the screen draws it: each column's boxes with where most went next, and what the eye reads off it. */
+/** Funnel's chart for the whole website, each column's boxes with where most went next, and one page's own if it's asked about. */
 function funnelChartPart(flow: Awaited<ReturnType<typeof readLandingFlow>>, websiteVisits: number | null, trackingHealth: string, askedKey: string | undefined) {
   const figures = funnelFigures(flow, FUNNEL_NAMES);
-  const built = flowBoxes(flow, FUNNEL_NAMES);
-  const wentTo = (box: RouteBox, most: number) => built.routes
-    .filter((route) => route.from === box.id)
-    .map((route) => ({ to: built.byId.get(route.to)?.name ?? "", visits: built.saidRoute(route), ...(route.conversions > 0 ? { conversions: route.conversions } : {}) }))
-    .filter((route) => route.visits > 0)
-    .sort((one, other) => other.visits - one.visits)
-    .slice(0, most);
-  const boxOf = (box: RouteBox, most: number) => ({
+  const built = flowBoxes({ ...flow, ticked: [] }, FUNNEL_NAMES);
+  const boxesOf = (from: ReturnType<typeof flowBoxes>, most: number) => (box: RouteBox) => ({
     name: box.name,
     ...(box.isGroup ? { isAClassification: true } : {}),
-    visits: built.said(box),
-    left: built.saidLeft(box),
+    visits: from.said(box),
+    left: from.saidLeft(box),
     ...(box.conversions > 0 ? { conversions: box.conversions } : {}),
-    wentTo: wentTo(box, most),
+    wentTo: from.routes
+      .filter((route) => route.from === box.id)
+      .map((route) => ({ to: from.byId.get(route.to)?.name ?? "", visits: from.saidRoute(route), ...(route.conversions > 0 ? { conversions: route.conversions } : {}) }))
+      .filter((route) => route.visits > 0)
+      .sort((one, other) => other.visits - one.visits)
+      .slice(0, most),
   });
+  const boxOf = boxesOf(built, WENT_TO_MOST);
   const everyVisit = flow.onward + flow.left;
-  const asked = askedKey ? built.boxes.find((box) => built.tickedIds.has(box.id)) : undefined;
+  const askedPage = askedKey ? flow.ticked.find((page) => page.key === askedKey) : undefined;
+  const own = askedPage ? flowBoxes({ ...flow, ticked: [askedPage] }, FUNNEL_NAMES) : null;
   return {
     twoMeaningsOfLeft: TWO_MEANINGS_OF_LEFT,
     chart: {
@@ -210,10 +211,19 @@ function funnelChartPart(flow: Awaited<ReturnType<typeof readLandingFlow>>, webs
         column: FUNNEL_COLUMNS[column] ?? `Page ${column + 1}`,
         visits: column === 0 ? websiteVisits ?? everyVisit : column === 1 ? flow.onward : Math.round(built.columnVisits[column] ?? 0),
         ...(column === 0 ? { left: flow.left } : {}),
-        boxes: built.boxes.filter((box) => box.column === column).map((box) => boxOf(box, WENT_TO_MOST)),
+        boxes: built.boxes.filter((box) => box.column === column).map(boxOf),
       })),
     },
-    ...(asked ? { thePageAsked: { ...boxOf(asked, Number.MAX_SAFE_INTEGER), address: pathOfAddress(asked.address ?? ""), stayed: Math.max(0, built.said(asked) - built.saidLeft(asked)) } } : {}),
+    ...(own && askedPage ? {
+      // Only that page's visitors, column by column, as the chart shows with it ticked.
+      thePageAsked: {
+        name: own.boxes[0]?.name, address: pathOfAddress(askedPage.address), visits: askedPage.visits, left: askedPage.left, stayed: Math.max(0, askedPage.visits - askedPage.left),
+        columns: Array.from({ length: own.lastColumn + 1 }, (_, column) => ({
+          column: FUNNEL_COLUMNS[column] ?? `Page ${column + 1}`,
+          boxes: own.boxes.filter((box) => box.column === column).map(boxesOf(own, column === 0 ? Number.MAX_SAFE_INTEGER : WENT_TO_MOST)),
+        })),
+      },
+    } : {}),
     busyPages: {
       rule: `A busy page has ${figures.busy.visits} visits or more on these dates. It loses people if more leave it than leave the website as a whole, which is ${figures.leftPercent ?? 0}%. Search, basket and account pages don't count.`,
       busyPages: figures.busy.pages,

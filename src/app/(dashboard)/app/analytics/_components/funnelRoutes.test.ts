@@ -49,41 +49,92 @@ const flow: FlowAnswer = {
   noPageVisits: 0,
   busy: { visitsAtLeast: 50, pages: 0, losing: 0, lost: 0, top: [] },
   ticked: [
-    { key: "~a", id: "0:~a", address: "https://x.test/blog/guide/", group: "0:g:blog", visits: 400, visitsBefore: 300, left: 350, conversions: 4, routes: [{ to: "1:g:blog", visits: 30, conversions: 0 }, { to: "1:~cart", visits: 20, conversions: 1 }] },
+    {
+      key: "~a", id: "0:~a", address: "https://x.test/blog/guide/", visits: 400, visitsBefore: 300, left: 350, conversions: 4,
+      routes: [
+        { from: "0:~a", to: "1:g:blog", visits: 30, conversions: 0 },
+        { from: "0:~a", to: "1:~cart", visits: 20, conversions: 1 },
+        { from: "1:~cart", to: "2:~checkout", visits: 15, conversions: 1 },
+      ],
+    },
   ],
 };
+
+const second = { key: "~b", id: "0:~b", address: "https://x.test/shop/", visits: 100, visitsBefore: null, left: 40, conversions: 2, routes: [{ from: "0:~b", to: "1:~cart", visits: 60, conversions: 2 }, { from: "1:~cart", to: "2:~checkout", visits: 30, conversions: 2 }] };
 
 describe("Funnel's route chart", () => {
   const built = routesFrom(flow, words);
   const box = (id: string) => built.boxes.find((one) => one.id === id)!;
-  const route = (from: string, to: string) => built.routes.find((one) => one.from === from && one.to === to);
 
-  test("a ticked page comes out of its group, so the first column still adds up", () => {
+  const inColumn = (built2: ReturnType<typeof routesFrom>, column: number) => built2.boxes.filter((one) => one.column === column).map((one) => one.id);
+
+  test("one page ticked: the chart is that page and where its own visitors went, and nothing else", () => {
+    expect(inColumn(built, 0)).toEqual(["0:~a"]);
     expect(box("0:~a")).toMatchObject({ name: "Guide", visits: 400, left: 350, before: 300 });
-    expect(box("0:g:blog")).toMatchObject({ visits: 600, left: 450, conversions: 6 });
-    const first = built.boxes.filter((one) => one.column === 0);
-    expect(first.reduce((sum, one) => sum + one.visits, 0)).toBe(1200);
+    // Only the boxes this page's visitors reached, and only their visits.
+    expect(inColumn(built, 1).sort()).toEqual(["1:g:blog", "1:~cart"]);
+    expect(box("1:~cart")).toMatchObject({ visits: 20, conversions: 1 });
+    expect(box("1:g:blog").visits).toBe(30);
+    expect(inColumn(built, 2)).toEqual(["2:~checkout"]);
+    expect(built.boxes.some((one) => one.column === 0 && one.isGroup)).toBe(false);
+    expect(built.boxes.find((one) => one.id === "1:~search")).toBeUndefined();
+    expect(built.routes.every((one) => one.from === "0:~a" || one.from === "1:~cart")).toBe(true);
   });
 
-  test("its routes come out of its group's routes", () => {
-    expect(route("0:g:blog", "1:~cart")).toMatchObject({ visits: 60, conversions: 2 });
-    expect(route("0:~a", "1:~cart")).toMatchObject({ visits: 20, conversions: 1 });
-    expect(route("0:g:blog", "1:g:blog")?.visits).toBe(90);
+  test("two pages ticked: both, with where their visitors went added together", () => {
+    const two = routesFrom({ ...flow, ticked: [...flow.ticked, second] }, words);
+    expect(inColumn(two, 0)).toEqual(["0:~a", "0:~b"]);
+    expect(two.boxes.find((one) => one.id === "1:~cart")?.visits).toBe(80);
+    expect(two.routes.find((one) => one.from === "1:~cart" && one.to === "2:~checkout")?.visits).toBe(45);
   });
 
-  test("a ticked page lists first, then the groups", () => {
-    expect(built.nodes.filter((one) => one.column === 0).map((one) => one.id)).toEqual(["0:~a", "0:g:blog", "0:g:SHOP_PAGES"]);
+  test("no page ticked: the whole website, which only the eye and Ask Hakken read", () => {
+    const whole = routesFrom({ ...flow, ticked: [] }, words);
+    expect(inColumn(whole, 0)).toEqual(["0:g:blog", "0:g:SHOP_PAGES"]);
+    expect(whole.boxes.find((one) => one.id === "1:~cart")?.visits).toBe(150);
   });
+
+  test("a route no more than rounds to nobody isn't drawn, nor the box it reached", () => {
+    const thin = routesFrom({ ...flow, ticked: [{ ...flow.ticked[0], left: 399, routes: [{ from: "0:~a", to: "1:~cart", visits: 1, conversions: 0 }, { from: "0:~a", to: "1:g:blog", visits: 9, conversions: 0 }, { from: "1:~cart", to: "2:~checkout", visits: 1, conversions: 0 }] }] }, words);
+    expect(thin.boxes.find((one) => one.id === "1:~cart")).toBeUndefined();
+    expect(thin.boxes.find((one) => one.id === "2:~checkout")).toBeUndefined();
+    expect(thin.boxes.filter((one) => one.column > 0)).toHaveLength(1);
+  });
+
+  test("whoever doesn't go on from a box left there, and each column holds no more than the one before", () => {
+    const cart = built.nodes.find((one) => one.id === "1:~cart");
+    expect(cart?.visits).toBeCloseTo(20);
+    expect(cart?.left).toBeCloseTo(5);
+    const inColumn = (column: number) => built.nodes.filter((one) => one.column === column).reduce((sum, one) => sum + one.visits, 0);
+    expect(inColumn(1)).toBeLessThanOrEqual(400 - 350);
+    expect(inColumn(2)).toBeLessThanOrEqual(inColumn(1));
+  });
+
+  test("the last column has no routes to say who left, so it takes that box's own share", () => {
+    const deep = routesFrom({ ...flow, nodes: [...flow.nodes, node("3:~x", 3, null, "/x/", 10), node("4:~y", 4, null, "/y/", 100, 40)], ticked: [{ ...flow.ticked[0], left: 300, routes: [{ from: "0:~a", to: "1:~cart", visits: 100, conversions: 0 }, { from: "1:~cart", to: "2:~checkout", visits: 80, conversions: 0 }, { from: "2:~checkout", to: "3:~x", visits: 60, conversions: 0 }, { from: "3:~x", to: "4:~y", visits: 50, conversions: 0 }] }] }, words);
+    const last = deep.nodes.find((one) => one.id === "4:~y");
+    expect(last?.visits).toBeCloseTo(50);
+    expect(last?.left).toBeCloseTo(20);
+  });
+
+  test("a page nobody went on from is one box alone", () => {
+    const alone = routesFrom({ ...flow, ticked: [{ ...flow.ticked[0], left: 400, routes: [] }] }, words);
+    expect(alone.boxes.map((one) => one.id)).toEqual(["0:~a"]);
+    expect(alone.bands).toEqual([]);
+  });
+
+  const whole = routesFrom({ ...flow, ticked: [] }, words);
 
   test("two addresses that mean the same to a person are one box", () => {
-    expect(built.boxes.filter((one) => one.column === 1 && one.name === "Search results")).toHaveLength(1);
-    expect(box("1:~search").visits).toBe(100);
-    expect(route("0:g:SHOP_PAGES", "1:~search")?.visits).toBe(100);
+    expect(whole.boxes.filter((one) => one.column === 1 && one.name === "Search results")).toHaveLength(1);
+    expect(whole.boxes.find((one) => one.id === "1:~search")?.visits).toBe(100);
+    expect(whole.routes.find((one) => one.from === "0:g:SHOP_PAGES" && one.to === "1:~search")?.visits).toBe(100);
   });
 
   test("groups are said in plain words, and a grey edge marks them", () => {
-    expect(box("0:g:SHOP_PAGES").name).toBe("Search and basket");
-    expect(built.nodes.find((one) => one.id === "0:g:blog")?.ending).toBe("uncounted");
+    expect(whole.boxes.find((one) => one.id === "0:g:SHOP_PAGES")?.name).toBe("Search and basket");
+    expect(whole.nodes.find((one) => one.id === "0:g:blog")?.ending).toBe("uncounted");
+    expect(built.nodes.find((one) => one.id === "1:g:blog")?.ending).toBe("uncounted");
     expect(built.nodes.find((one) => one.id === "1:~cart")?.ending).toBeUndefined();
   });
 
@@ -95,7 +146,7 @@ describe("Funnel's route chart", () => {
   });
 
   test("a route between two named pages is Google's own, never more than went on from the first", () => {
-    const named = routesFrom({ ...flow, nodes: [node("0:g:a", 0, "a", null, 500, 100, 0, "A"), node("1:~x", 1, null, "/x", 300)], bands: [], ticked: [{ key: "~p", id: "0:~p", address: "https://x.test/p/", group: "0:g:a", visits: 100, visitsBefore: null, left: 60, conversions: 0, routes: [{ to: "1:~x", visits: 70, conversions: 0 }] }] }, words);
+    const named = routesFrom({ ...flow, nodes: [node("0:g:a", 0, "a", null, 500, 100, 0, "A"), node("1:~x", 1, null, "/x", 300)], bands: [], ticked: [{ key: "~p", id: "0:~p", address: "https://x.test/p/", visits: 100, visitsBefore: null, left: 60, conversions: 0, routes: [{ from: "0:~p", to: "1:~x", visits: 70, conversions: 0 }] }] }, words);
     const band = named.bands.find((one) => one.from === "0:~p");
     expect(band?.readout?.lines[0].value).toBe("40");
     expect(band?.readout?.lines[1].value).toBe("40%");
@@ -107,13 +158,14 @@ describe("Funnel's route chart", () => {
     expect(groupBox.figureOf("1:~x")).toBe("50");
   });
 
-  test("one scale, whatever is ticked", () => {
-    expect(routesFrom({ ...flow, ticked: [] }, words).scale).toBe(built.scale);
+  test("the chart is sized to what's on it", () => {
+    expect(built.scale).toBeCloseTo(0.45);
+    const big = routesFrom({ ...flow, ticked: [{ ...flow.ticked[0], visits: 4000 }] }, words);
+    expect(big.scale).toBeCloseTo(320 / 4000);
   });
 
   test("a hover says what a person needs, and only a page says who it's compared with", () => {
     const lines = built.nodes.find((one) => one.id === "0:~a")?.readout?.lines.map((line) => line.label);
     expect(lines).toEqual(["Visits", "Visits in September", "Went on", "Left here", "Most went here next", "Conversions"]);
-    expect(built.nodes.find((one) => one.id === "0:g:blog")?.readout?.detail).toBe("Pages not ticked");
   });
 });

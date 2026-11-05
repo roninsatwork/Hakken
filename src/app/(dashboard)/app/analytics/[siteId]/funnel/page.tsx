@@ -53,11 +53,10 @@ export default function AnalyticsFunnelPage() {
   );
 }
 
-/** The route chart, told the website's visits and the dates in words. */
+/** The route chart, told the dates in words. */
 function FunnelFlow({ answer, flow, nothingTicked, most, onSelectTop }: { answer: ListPageAnswer | undefined; flow: Parameters<typeof LandingFlowCard>[0]["flow"]; nothingTicked: boolean; most: number; onSelectTop: () => void }) {
-  const website = useWebsiteForEye();
   const inWords = useSpanInWords(...spansOfList(answer));
-  return <LandingFlowCard flow={flow} visits={website?.visits ?? null} month={inWords.now} before={inWords.before} nothingTicked={nothingTicked} most={most} onSelectTop={onSelectTop} />;
+  return <LandingFlowCard flow={flow} month={inWords.now} before={inWords.before} nothingTicked={nothingTicked} most={most} onSelectTop={onSelectTop} />;
 }
 
 /**

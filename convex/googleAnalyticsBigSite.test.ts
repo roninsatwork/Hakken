@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { MOST_REPORT_PAGES, REPORT_PAGE_ROWS, runReport, type ReportRow } from "./googleAnalyticsApi";
 import { ask, type Session } from "./googleAnalyticsCollect";
-import { flowRowGroup, heldRows, heldVisits, topPerPage, trimTo } from "./googleAnalyticsPageLists";
+import { flowGroups, flowRowGroup, heldRows, heldVisits, topPerPage, trimTo } from "./googleAnalyticsPageLists";
 import { PAGE_FACT_JOIN, channelKey, listJoiner, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
 import { NOT_SET } from "./utils/landingFlow";
 import { HOLD_ROWS, OTHER_ROWS, PAGE_TOP_ROWS, TRIM_ABOVE, TRIM_KEEP, keepPerPage, trimDue } from "./utils/analyticsSharedLists";
@@ -222,6 +222,24 @@ describe("the steps that hold Google's answers (BR4)", () => {
     }
   });
 
+  // A year of More Handles' busiest group passed the 500,000 rows one ask reads, and a busy page lost most of its routes (2026-11-05).
+  describe("a big website's busiest pages asked in pieces that fit one ask", () => {
+    const pages = (from: number, count: number) => Array.from({ length: count }, (_, at) => `/p${from + at}`);
+
+    test("the busiest group starts small, and every page is asked once, busiest first", () => {
+      const groups = [pages(0, 2000), pages(2000, 2000), pages(4000, 30)];
+      const asked = flowGroups(groups);
+      expect(asked.map((one) => one.length)).toEqual([10, 40, 200, 750, 1000, 2000, 30]);
+      expect(asked.flat()).toEqual(groups.flat());
+    });
+
+    test("a group smaller than the pieces stays whole", () => {
+      expect(flowGroups([pages(0, 8)])).toEqual([pages(0, 8)]);
+      expect(flowGroups([pages(0, 30)]).map((one) => one.length)).toEqual([10, 20]);
+      expect(flowGroups([])).toEqual([]);
+    });
+  });
+
   // A year of More Handles ran out of an action's 512 MB holding other websites' addresses one by one (2026-11-05).
   describe("what a flow's row joins when its list is cut", () => {
     const site = ["www.acme-shop.test"];
@@ -231,6 +249,13 @@ describe("the steps that hold Google's answers (BR4)", () => {
     test("arrivals on the landing page are one row, whichever website they came from", () => {
       expect(join("https://www.google.com/", "/")).toBe(join("https://www.bing.com/search", "/"));
       expect(join("", "/about/", "/about")).toBe(`${PAGE_FACT_JOIN}/about/`);
+    });
+
+    test("a reload is let go, never added to its group as a step", () => {
+      expect(join("https://www.acme-shop.test/", "/")).toBe("(dropped)");
+      expect(join("https://www.acme-shop.test/?gclid=abc", "/")).toBe("(dropped)");
+      expect(join("https://www.acme-shop.test/blog/a", "/blog/a/")).toBe("(dropped)");
+      expect(join("https://www.acme-shop.test/", "/blog/a/")).not.toBe("(dropped)");
     });
 
     test("that one row stays one row, so a later cut adds to it", () => {

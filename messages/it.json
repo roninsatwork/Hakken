@@ -16866,7 +16866,7 @@
         "column5": "Quinta pagina",
         "visitsCount": "{visits} visite",
         "leftCount": "{left} usciti qui",
-        "under": "Ogni pagina senza spunta è nel suo gruppo. Una visita che apre due pagine conta in entrambe.",
+        "under": "Qui compaiono solo le visite iniziate dalle pagine selezionate. Una visita che apre due pagine conta in entrambe. Dalla terza pagina in poi i dati sono indicativi, non esatti.",
         "shop": "Ricerca e carrello",
         "notSorted": "Non ancora ordinate",
         "otherPages": "Altre pagine",

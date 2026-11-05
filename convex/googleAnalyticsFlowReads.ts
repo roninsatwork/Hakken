@@ -11,15 +11,15 @@ import { decodePages, isPageRef } from "./holdPageRefs";
 import { readPageKinds } from "./pageKinds";
 import { busyVisitsFor } from "./utils/pageMoves";
 import { pathOfAddress } from "./utils/sees/analytics";
-import { FLOW_NODES, NOT_SET, OTHER_GROUPS, flowChart, groupNode, isCurrentFlow, isGroupNode, kindOfNode, type FirstGroup } from "./utils/landingFlow";
+import { FLOW_NODES, NOT_SET, OWN_TENTHS, flowChart, holdToViews, isCurrentFlow, isGroupNode, kindOfNode, type FirstGroup } from "./utils/landingFlow";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { SHOP_PAGES_KIND, isShopPage } from "./utils/shopPages";
 
 /**
  * Funnel's chart, "Where people went next" (docs/plans/active/funnel-way-1-plan-2026-11-05.md, steps 1 and 2): the
  * website's flow as each collection kept it (`landingFlow`), for the dates, device and home country chosen. Nothing is
- * asked of Google. The first column is the table's own figures, grouped: the pages ticked come out of their groups on the
- * screen, with each one's routes (`landingRoutes`). Only the caller's own website (`requireMySite`).
+ * asked of Google. The whole website's chart is for the eye and Ask Hakken; the screen draws only the pages ticked, each with its
+ * own routes all five pages deep (`landingRoutes`). Only the caller's own website (`requireMySite`).
  */
 
 /** The pages the first column can show at once. */
@@ -37,7 +37,7 @@ const flowArgs = {
   group: v.optional(v.string()),
 };
 
-const routeValidator = v.object({ to: v.string(), visits: v.number(), conversions: v.number() });
+const routeValidator = v.object({ from: v.string(), to: v.string(), visits: v.number(), conversions: v.number() });
 
 const flowValidator = v.object({
   /** The flow is kept: false until a collection has built it for these dates, device and country. */
@@ -77,12 +77,11 @@ const flowValidator = v.object({
     lost: v.number(),
     top: v.array(v.object({ key: v.string(), address: v.string(), visits: v.number(), left: v.number() })),
   })),
-  /** Each ticked page: the table's own figures, the group it comes out of, and its routes to the second column. */
+  /** Each ticked page: the table's own figures, and its own routes, five pages deep. */
   ticked: v.array(v.object({
     key: v.string(),
     id: v.string(),
     address: v.string(),
-    group: v.string(),
     visits: v.number(),
     visitsBefore: v.union(v.number(), v.null()),
     left: v.number(),
@@ -160,27 +159,32 @@ export async function readLandingFlow(ctx: SiteReader, args: ObjectType<typeof f
   };
   const starts = rows.filter(inMenu).slice(0, FLOW_NODES).map((row) => row.key);
   const wanted = (args.pages ?? starts).slice(0, MOST_TICKED);
-  const secondIds = new Set(chart.nodes.filter((node) => node.column === 1).map((node) => node.id));
   const byKey = new Map(rows.map((row) => [row.key, row]));
   const ticked = await Promise.all(wanted.flatMap((key) => {
     const row = byKey.get(key);
     if (!row) return [];
     return [(async () => {
       const own = await readPageRows(ctx, holdId, "landingRoutes", args.period, args.device, key, "NOW", country);
-      const routes = new Map<string, { to: string; visits: number; conversions: number }>();
+      const routes = new Map<string, { from: string; to: string; visits: number; conversions: number }>();
       for (const one of own?.rows ?? []) {
-        const box = `1:${chart.secondColumn.get(one.key) ?? one.key}`;
-        const to = secondIds.has(box) ? box : `1:${groupNode(OTHER_GROUPS)}`;
-        const held = routes.get(to) ?? { to, visits: 0, conversions: 0 };
-        held.visits += one.visits;
-        held.conversions += conversionsOf(one, counted).conversions;
-        routes.set(to, held);
+        const [columnText, fromNode = "", toNode = ""] = one.key.split(PAGE_FACT_JOIN);
+        const column = Number(columnText);
+        // A row saved before each page kept all five columns is a route to the second page.
+        const deep = Number.isInteger(column) && column >= 1;
+        const at = deep ? column : 1;
+        const from = at === 1 ? `0:${key}` : `${at - 1}:${chart.boxOf(at - 1, fromNode)}`;
+        const to = `${at}:${chart.boxOf(at, deep ? toNode : one.key)}`;
+        const held = routes.get(`${from}>${to}`) ?? { from, to, visits: 0, conversions: 0 };
+        const saved = at === 1 ? 1 : OWN_TENTHS;
+        held.visits += one.visits / saved;
+        held.conversions += conversionsOf(one, counted).conversions / saved;
+        routes.set(`${from}>${to}`, held);
       }
+      holdToViews([...routes.values()], Math.max(0, row.onward ?? 0), row.views - row.visits);
       return {
         key,
         id: `0:${key}`,
         address: row.label,
-        group: `0:${chart.firstColumn.get(kindOfRow(row)) ?? groupNode(OTHER_GROUPS)}`,
         visits: row.visits,
         visitsBefore: row.visitsBefore ?? null,
         left: Math.max(0, row.visits - (row.onward ?? 0)),

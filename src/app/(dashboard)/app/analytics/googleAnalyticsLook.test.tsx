@@ -103,10 +103,10 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, "ga-overview", "Overview", "Google Analytics → Overview");
   });
 
-  it("5 · Funnel: four boxes, people who left straight away each day, the route chart, then the table with its tick boxes (funnel-way-1-plan-2026-11-05.md)", async () => {
-    at("/app/analytics/site_1/funnel");
+  /** Funnel's reads as the page asks them, for its tests. */
+  function funnelAnswers() {
     const flowRow = { ...ROW, onward: 46, next: { key: "~1", page: "https://www.acme-shop.test/checkout/cart/", share: 0.93 } };
-    answer({
+    return {
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsReads:analyticsListPage": list([flowRow], {
         seen: landingSees([{ ...ROW, label: "/ai-agency/" }], { groups: false, device: "", everyDevice: null }),
@@ -131,9 +131,14 @@ describe("Google Analytics' approved looks", () => {
           { from: "2:~2", to: "3:~3", visits: 3, conversions: 1 },
           { from: "3:~3", to: "4:~4", visits: 1, conversions: 0 },
         ],
-        ticked: [{ key: ROW.key, id: `0:${ROW.key}`, address: ROW.label, group: "0:g:k1", visits: 155, visitsBefore: 100, left: 109, conversions: 1, routes: [{ to: "1:~1", visits: 20, conversions: 0 }] }],
+        ticked: [{ key: ROW.key, id: `0:${ROW.key}`, address: ROW.label, visits: 155, visitsBefore: 100, left: 109, conversions: 1, routes: [{ from: `0:${ROW.key}`, to: "1:~1", visits: 20, conversions: 0 }, { from: "1:~1", to: "2:~2", visits: 6, conversions: 1 }, { from: "2:~2", to: "3:~3", visits: 3, conversions: 1 }, { from: "3:~3", to: "4:~4", visits: 1, conversions: 0 }] }],
       },
-    });
+    };
+  }
+
+  it("5 · Funnel: four boxes, people who left straight away each day, the route chart, then the table with its tick boxes (funnel-way-1-plan-2026-11-05.md)", async () => {
+    at("/app/analytics/site_1/funnel");
+    answer(funnelAnswers());
     const { container } = render(<AnalyticsFunnelPage />);
     await screen.findByText("Where people went next");
     const figures = (await screen.findByText("Pages a visit")).closest("[data-part='figures']") as HTMLElement;
@@ -148,6 +153,32 @@ describe("Google Analytics' approved looks", () => {
     expect(screen.getByRole("checkbox", { name: /on the chart/ })).toBeChecked();
     expect(screen.queryByRole("option", { name: "Classifications" })).toBeNull();
     await expectApprovedLook(container, "funnel-way-1", "Way1", "Google Analytics → Funnel");
+  });
+
+  it("Funnel's chart is only what's ticked: the page, its own figures, and where its visitors went (Anthony, 2026-11-05: \"i have 1 item selected on the table and the funnel is full\")", async () => {
+    at("/app/analytics/site_1/funnel");
+    answer(funnelAnswers());
+    render(<AnalyticsFunnelPage />);
+    await screen.findByText("Fifth page");
+    const chart = document.querySelector("[data-part='page-flow']") as HTMLElement;
+    // No group of pages in the first column, though the whole website has one.
+    expect(within(chart).queryByText(/^Blog/)).toBeNull();
+    // The headings are this page's own: 155 visits, 109 left, 46 stayed.
+    expect(within(chart).getByText(/155 visits.*109 left here/)).toBeInTheDocument();
+    expect(within(chart).getByText("46 visits")).toBeInTheDocument();
+    expect(within(chart).getAllByText("Basket").length).toBeGreaterThan(0);
+    expect(screen.getByText("1 of 10 on the chart")).toBeInTheDocument();
+  });
+
+  it("Funnel with nothing ticked: a message and a button, and no chart", async () => {
+    at("/app/analytics/site_1/funnel", "plot=none");
+    answer(funnelAnswers());
+    render(<AnalyticsFunnelPage />);
+    await screen.findByText("Nothing is ticked. Tick a page in the table to see where people went next.");
+    expect(document.querySelector("[data-part='page-flow']")).toBeNull();
+    expect(screen.getByText("0 of 10 on the chart")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear all" })).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: "Select top 10" })).toHaveLength(2);
   });
 
   it("6 · All pages: four boxes, a map of pages, Views each day, then the table with its menus on one line and no money (all-pages-way-6-plan-2026-11-04.md)", async () => {

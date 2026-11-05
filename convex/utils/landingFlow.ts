@@ -11,7 +11,7 @@
  *   steps, which count a visit that opens two pages twice (§3b: 150 against 46 of 155).
  * - **Five columns, ten pages each by name** (`FLOW_COLUMNS`, `FLOW_NODES`). Every other page is in its group, its
  *   Classification, so nothing falls out of the chart. A landing page's routes are kept against those same boxes
- *   (`landingRoutes`), so any page can be ticked.
+ *   (`landingRoutes`), five pages deep, so the chart can show any page alone.
  */
 
 /** The chart's columns: the page a visit started on, and the four after it. */
@@ -47,10 +47,19 @@ export type Onward = { landing: string; before: string; visits: number };
  * - `["r", column, from, to]` — the route from a box in that column to a box in the next. The first column's routes run from each page's group.
  */
 export type FlowRow = { parts: string[]; visits: number; times: number; counts: Map<string, number> };
+/** A landing page's routes from the third page on are saved in tenths of a visit. */
+export const OWN_TENTHS = 10;
+/** Less than half a visit on a route isn't carried on or kept: the chart says whole visits, and a year's list would hold them all. */
+const LEAST_FLOW = 0.5;
+
 /** A landing page's own onward figures: the visits that went on, the page most opened next and its visits. */
 export type OnwardRow = { landing: string; next: string; visits: number; times: number };
-/** A landing page's visits to a box of the second column. */
-export type LandingRouteRow = { landing: string; to: string; visits: number; counts: Map<string, number> };
+/**
+ * A landing page's own route, against the chart's boxes: into a box of `column`, from a box of the column before ("" from the
+ * landing page itself). All of a page's rows are the chart for that page alone, five pages deep (Anthony, 2026-11-05: "i have 1
+ * item selected on the table and the funnel is full").
+ */
+export type LandingRouteRow = { landing: string; column: number; from: string; to: string; visits: number; counts: Map<string, number> };
 
 function addCounts(into: Map<string, number>, counts: Counts) {
   for (const [event, count] of counts) into.set(event, (into.get(event) ?? 0) + count);
@@ -64,7 +73,7 @@ function busiest(totals: ReadonlyMap<string, number>): Set<string> {
 type Hop = { landing: string; column: number; from: string; to: string; visits: number; counts: Counts };
 
 /** Each landing page's steps, joined up from it outwards. A step is used once, at the first column that can reach it. */
-function hopsOf(routes: readonly Route[], kindOf: (page: string) => string): Hop[] {
+function hopsOf(routes: readonly Route[], kindOf: (page: string) => string): { hops: Hop[]; steps: Map<string, Map<string, Route[]>> } {
   const steps = new Map<string, Map<string, Route[]>>();
   for (const route of routes) {
     if (route.before === "") continue;
@@ -96,7 +105,7 @@ function hopsOf(routes: readonly Route[], kindOf: (page: string) => string): Hop
       frontier = next;
     }
   }
-  return hops;
+  return { hops, steps };
 }
 
 /** Google's routes and onward visits made into the kept flow, each landing page's onward row, and its routes to the second column. */
@@ -108,9 +117,15 @@ export function buildFlow(routes: readonly Route[], onward: readonly Onward[], k
   }
   const went = new Map<string, number>();
   for (const one of onward) went.set(`${one.landing}\u0000${one.before}`, (went.get(`${one.landing}\u0000${one.before}`) ?? 0) + one.visits);
+  const wentByLanding = new Map<string, Onward[]>();
+  for (const one of onward) {
+    const held = wentByLanding.get(one.landing);
+    if (held) held.push(one);
+    else wentByLanding.set(one.landing, [one]);
+  }
   const wentOn = (landing: string, page: string) => went.get(`${landing}\u0000${page}`) ?? 0;
 
-  const hops = hopsOf(routes, kindOf);
+  const { hops, steps } = hopsOf(routes, kindOf);
   const columnTotals = Array.from({ length: FLOW_COLUMNS }, () => new Map<string, number>());
   for (const hop of hops) {
     if (!isGroupNode(hop.to)) columnTotals[hop.column].set(hop.to, (columnTotals[hop.column].get(hop.to) ?? 0) + hop.visits);
@@ -129,9 +144,9 @@ export function buildFlow(routes: readonly Route[], onward: readonly Onward[], k
     rows.set(key, row);
   };
   const ownRoutes = new Map<string, LandingRouteRow>();
-  const ownRoute = (landing: string, to: string, visits: number, counts?: Counts) => {
-    const key = `${landing}\u0000${to}`;
-    const row = ownRoutes.get(key) ?? { landing, to, visits: 0, counts: new Map() };
+  const ownRoute = (landing: string, column: number, fromBox: string, to: string, visits: number, counts?: Counts) => {
+    const key = `${landing}\u0000${column}\u0000${fromBox}\u0000${to}`;
+    const row = ownRoutes.get(key) ?? { landing, column, from: fromBox, to, visits: 0, counts: new Map() };
     row.visits += visits;
     if (counts) addCounts(row.counts, counts);
     ownRoutes.set(key, row);
@@ -141,7 +156,7 @@ export function buildFlow(routes: readonly Route[], onward: readonly Onward[], k
     const from = hop.column === 1 ? groupNode(kindOf(hop.landing)) : node(hop.column - 1, hop.from);
     into(["n", String(hop.column), to], hop.visits, 0, hop.counts);
     into(["r", String(hop.column - 1), from, to], hop.visits, 0, hop.counts);
-    if (hop.column === 1) ownRoute(hop.landing, to, hop.visits, hop.counts);
+    if (hop.column === 1) ownRoute(hop.landing, 1, "", to, hop.visits, hop.counts);
   }
 
   // How many went on from each page, whichever landing page brought them: a share of those that reached it, as Google counts a
@@ -181,17 +196,110 @@ export function buildFlow(routes: readonly Route[], onward: readonly Onward[], k
     const held = busiestNext.get(hop.landing);
     if (!held || hop.visits > held.visits || (hop.visits === held.visits && hop.to < held.to)) busiestNext.set(hop.landing, hop);
   }
+  const wentOnFrom = (landing: string) => Math.min(arrivals.get(landing) ?? 0, wentOn(landing, landing), firstVisits.get(landing) ?? 0);
+
+  // Each landing page's chart past its second page. Google gives one step at a time, and the steps above are used up by the third
+  // page, so a busy page's chart stopped there (Anthony, 2026-11-05). Here its visitors are carried column by column: at each page
+  // some go on, split by this landing page's own steps from there. A page's whole chart is real steps, joined up.
+  for (const [landing, byBefore] of steps) {
+    const first = firstVisits.get(landing) ?? 0;
+    const carried = wentOnFrom(landing);
+    if (first <= 0 || carried <= 0) continue;
+    const byGroup = new Map<string, Route[]>();
+    for (const [before, list] of byBefore) {
+      const group = isGroupNode(before) ? before : groupNode(kindOf(before));
+      const held = byGroup.get(group);
+      if (held) held.push(...list);
+      else byGroup.set(group, [...list]);
+    }
+    // Who goes on from a page: this landing page's own visitors, where a row says so. A long date's rows are cut to each landing
+    // page's busiest, so a page without one takes this landing page's rate over the pages that have.
+    const reachedHere = new Map<string, number>();
+    for (const list of byBefore.values()) {
+      for (const step of list) reachedHere.set(step.page, (reachedHere.get(step.page) ?? 0) + step.visits);
+    }
+    const known = new Map<string, { went: number; reached: number }>();
+    const addKnown = (key: string, went: number, reached: number) => {
+      const held = known.get(key) ?? { went: 0, reached: 0 };
+      held.went += went;
+      held.reached += reached;
+      known.set(key, held);
+    };
+    for (const one of wentByLanding.get(landing) ?? []) {
+      const reached = reachedHere.get(one.before) ?? 0;
+      if (reached <= 0 || one.visits <= 0) continue;
+      addKnown(one.before, one.visits, reached);
+      addKnown(groupNode(kindOf(one.before)), one.visits, reached);
+      addKnown("", one.visits, reached);
+    }
+    const rate = (held: { went: number; reached: number }) => Math.min(1, held.went / held.reached);
+    const goesOn = (page: string) => {
+      const held = known.get(page) ?? known.get("");
+      return held ? rate(held) : shareOn(page);
+    };
+    let onHere = new Map<string, number>();
+    for (const step of byBefore.get(landing) ?? []) onHere.set(step.page, (onHere.get(step.page) ?? 0) + step.visits * (carried / first));
+    for (let column = 2; column < FLOW_COLUMNS; column += 1) {
+      const next = new Map<string, number>();
+      for (const [page, visits] of onHere) {
+        const goingOn = visits * goesOn(page);
+        if (goingOn < LEAST_FLOW) continue;
+        // A page's own steps, or the small ones added up for its group. With neither, whoever reached it left there.
+        const own = isGroupNode(page) ? byGroup.get(page) : byBefore.get(page);
+        const from = own && own.length > 0 ? own : isGroupNode(page) ? [] : byBefore.get(groupNode(kindOf(page))) ?? [];
+        const taken = from.filter((step) => step.page !== page || isGroupNode(page));
+        const total = taken.reduce((sum, step) => sum + step.visits, 0);
+        if (total <= 0) continue;
+        for (const step of taken) {
+          const flow = (goingOn * step.visits) / total;
+          if (flow < LEAST_FLOW) continue;
+          const share = Math.min(1, flow / Math.max(1, step.visits));
+          ownRoute(landing, column, node(column - 1, page), node(column, step.page), flow, new Map([...step.counts].map(([event, count]) => [event, count * share])));
+          next.set(step.page, (next.get(step.page) ?? 0) + flow);
+        }
+      }
+      onHere = next;
+    }
+  }
+
   const onwardRows: OnwardRow[] = [...arrivals.keys()].map((landing) => {
     const top = busiestNext.get(landing);
-    const visits = Math.min(arrivals.get(landing) ?? 0, wentOn(landing, landing), firstVisits.get(landing) ?? 0);
+    const visits = wentOnFrom(landing);
     return { landing, next: visits > 0 && top ? top.to : "", visits, times: visits > 0 && top ? Math.min(visits, top.visits) : 0 };
   });
-  return { flow: [...rows.values()], onward: onwardRows, routes: [...ownRoutes.values()] };
+  // Past the second page they're rarely whole numbers, and saved figures are: kept in tenths (`OWN_TENTHS`).
+  const ownRows = [...ownRoutes.values()].map((row) => (row.column === 1 ? row : {
+    ...row,
+    visits: Math.round(row.visits * OWN_TENTHS),
+    counts: new Map([...row.counts].flatMap(([event, count]): Array<[string, number]> => (count * OWN_TENTHS >= 0.5 ? [[event, Math.round(count * OWN_TENTHS)]] : []))),
+  })).filter((row) => row.visits > 0);
+  return { flow: [...rows.values()], onward: onwardRows, routes: ownRows };
 }
 
 // ---------------------------------------------------------------------------
 // Read back: the chart
 // ---------------------------------------------------------------------------
+
+/**
+ * How many are still there at each page past the second. The routes say where a page's visitors go; Google's own views say how
+ * far: its views past each visit's first are those who stayed, then those of them who went on, and on, so the share going on is
+ * `1 - stayed / further`. A column never holds more than that. Never raised, as the routes may know of fewer (a page of reloads).
+ */
+const MOST_GOING_ON = 0.95;
+export function holdToViews(routes: ReadonlyArray<{ to: string; visits: number; conversions: number }>, stayed: number, further: number) {
+  if (further <= 0 || stayed <= 0) return;
+  const goingOn = Math.min(MOST_GOING_ON, Math.max(0, 1 - stayed / further));
+  const columnOf = (route: { to: string }) => Number(route.to.slice(0, route.to.indexOf(":")));
+  const inColumn = new Map<number, number>();
+  for (const route of routes) inColumn.set(columnOf(route), (inColumn.get(columnOf(route)) ?? 0) + route.visits);
+  for (const route of routes) {
+    const column = columnOf(route);
+    if (column < 2) continue;
+    const scale = Math.min(1, (stayed * goingOn ** (column - 1)) / (inColumn.get(column) ?? 1));
+    route.visits *= scale;
+    route.conversions *= scale;
+  }
+}
 
 /** A kept flow row read back, its conversions already counted as the website counts them. */
 export type KeptFlowRow = { parts: string[]; visits: number; times: number; conversions: number };
@@ -219,10 +327,8 @@ export type FlowBand = { from: string; to: string; visits: number; conversions: 
 export type FlowChart = {
   nodes: FlowNode[];
   bands: FlowBand[];
-  /** Where a first-column or second-column group's box went, once the smaller groups are together: for a ticked page's routes. */
-  secondColumn: ReadonlyMap<string, string>;
-  /** The first column's group box each Classification is in. */
-  firstColumn: ReadonlyMap<string, string>;
+  /** The box a page or group is in, once a column's smaller groups are together: for a ticked page's own routes. */
+  boxOf: (column: number, node: string) => string;
 };
 
 /** The groups to keep by name in a column, the biggest first. */
@@ -283,11 +389,8 @@ export function flowChart(rows: readonly KeptFlowRow[], firstGroups: readonly Fi
       bands.set(key, band);
     }
   }
-  const secondColumn = new Map<string, string>();
-  for (const { kind } of sizes[1]) secondColumn.set(groupNode(kind), boxOf(1, groupNode(kind)));
-  const firstColumn = new Map(firstGroups.map((group) => [group.kind, boxOf(0, groupNode(group.kind))]));
   // Each column: its pages, busiest first, then its groups, biggest first, and the smaller groups last.
   const rank = (node: FlowNode) => (!isGroupNode(node.node) ? 0 : node.node === groupNode(OTHER_GROUPS) ? 2 : 1);
   const ordered = [...nodes.values()].sort((left, right) => left.column - right.column || rank(left) - rank(right) || right.visits - left.visits || left.node.localeCompare(right.node));
-  return { nodes: ordered, bands: [...bands.values()], secondColumn, firstColumn };
+  return { nodes: ordered, bands: [...bands.values()], boxOf };
 }

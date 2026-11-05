@@ -37,7 +37,8 @@ const percent = (part: number, whole: number) => (whole > 0 ? `${Math.round((100
 
 export function routesFrom(flow: FlowAnswer, words: RouteWords) {
   const { boxes: inOrder, routes, byId, tickedIds, drawnVisits, drawnLeft, drawnRoute, lastColumn, columnVisits, said, saidLeft, saidRoute } = flowBoxes(flow, words);
-  const everyone = flow.onward + flow.left;
+  // Sized to what's on it: only the ticked pages' visits, or the whole website's where none is ticked.
+  const everyone = flow.ticked.length > 0 ? flow.ticked.reduce((sum, page) => sum + page.visits, 0) : flow.onward + flow.left;
   const scale = Math.min(MOST_SCALE, CHART_HEIGHT / Math.max(1, everyone));
   const notTicked = (box: RouteBox) => box.column === 0 && box.isGroup;
   const boxReadout = (box: RouteBox): FlowReadout => {

@@ -1038,7 +1038,11 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
     expect(flow.left).toBe(270);
     // It opens with the busiest pages ticked, each with the table's figures and its own routes.
     expect(flow.ticked.map((page) => [page.address.replace("https://www.acme-shop.test", ""), page.visits, page.left])).toEqual([["/", 240, 180], ["/ai-agency/", 90, 90]]);
-    expect(flow.ticked[0].routes).toEqual([{ to: node(1, "/about-us/")!.id, visits: 60, conversions: 0 }]);
+    // All the way down, each from the box before it.
+    expect(flow.ticked[0].routes).toEqual([
+      { from: flow.ticked[0].id, to: node(1, "/about-us/")!.id, visits: 60, conversions: 0 },
+      { from: node(1, "/about-us/")!.id, to: node(2, "/contact/")!.id, visits: 30, conversions: 30 },
+    ]);
     expect(flow.starts).toEqual(flow.ticked.map((page) => page.key));
   });
 
@@ -1093,7 +1097,7 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
       const { siteId, user } = await collectedRoutes();
       const shown = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
       const flow = await user.query(api.googleAnalyticsFlowReads.analyticsLandingFlow, { siteId, period: "lastMonth", device: "", leaveOut: true });
-      const built = flowBoxes(flow, NAMES);
+      const built = flowBoxes({ ...flow, ticked: [] }, NAMES);
       const { chart, pageNotKnown, classifications, busyPages } = await asking({ part: "chart" });
       expect(chart.rule).toMatch(/close rather than exact/);
       expect(chart.columns.map((column: { column: string }) => column.column).slice(0, 2)).toEqual(["First page", "Second page"]);
@@ -1104,13 +1108,16 @@ describe("Landing pages' flow (landing-pages-flow-plan.md LF2, LF4, LF5)", () =>
       }
       expect(pageNotKnown).toMatchObject({ visits: flow.noPageVisits, link: expect.stringContaining("/tracking-health") });
       // Each classification's whole figures, whatever the first column has ticked out of it.
-      expect(classifications.map((one: { visits: number }) => one.visits)).toEqual(flowBoxes({ ...flow, ticked: [] }, NAMES).boxes.filter((box) => box.column === 0 && box.isGroup).map((box) => box.visits));
+      expect(classifications.map((one: { visits: number }) => one.visits)).toEqual(built.boxes.filter((box) => box.column === 0 && box.isGroup).map((box) => box.visits));
       expect(busyPages.rule).toMatch(/visits or more/);
     });
 
     test("a page asked about comes out of its group with every route it has", async () => {
       const { thePageAsked } = await asking({ part: "chart", key: "https://www.acme-shop.test/" });
-      expect(thePageAsked).toMatchObject({ name: "Home page", address: "/", visits: 240, left: 180, stayed: 60, wentTo: [{ to: "About us", visits: 60 }] });
+      expect(thePageAsked).toMatchObject({ name: "Home page", address: "/", visits: 240, left: 180, stayed: 60 });
+      expect(thePageAsked.columns.map((column: { column: string }) => column.column)).toEqual(["First page", "Second page", "Third page"]);
+      expect(thePageAsked.columns[0].boxes[0].wentTo).toEqual([{ to: "About us", visits: 60 }]);
+      expect(thePageAsked.columns[2].boxes[0]).toMatchObject({ name: "Contact", visits: 30 });
       const unknown = await asking({ part: "chart", key: "/never-there/" });
       expect(String(unknown.thePageAsked)).toMatch(/No page/);
     });

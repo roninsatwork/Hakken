@@ -10,13 +10,15 @@ import { routesFrom, type FlowAnswer, type RouteWords } from "./funnelRoutes";
 import { useAnalyticsStatus } from "./useAnalytics";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 
+/** The routes the eye is handed: the chart's download has every one. */
+const ROUTES_THE_EYE_READS = 60;
+
 /**
- * Funnel's "Where people went next" (docs/plans/active/funnel-way-1-plan-2026-11-05.md, board Way 1): the website's flow as
- * the last collection kept it, for the dates, device and home country chosen, five pages deep. The pages ticked in the table
- * stand on their own in the first column, and every other page is in its group. Nothing is asked of Google. A flow not kept
- * yet says it's still being collected.
+ * Funnel's "Where people went next" (docs/plans/active/funnel-way-1-plan-2026-11-05.md, board Way 1): the pages ticked in the
+ * table and where their visitors went, five pages deep, as the last collection kept it for the dates, device and home country
+ * chosen. Nothing else is on it. Nothing is asked of Google. A flow not kept yet says it's still being collected.
  */
-export function LandingFlowCard({ flow, visits, month, before, nothingTicked = false, onSelectTop, most = 10 }: {
+export function LandingFlowCard({ flow, month, before, nothingTicked = false, onSelectTop, most = 10 }: {
   flow: FlowAnswer | undefined;
   /** Every tick cleared: a short message and one button, in place of the whole website's busy chart (Anthony, 2026-11-05). */
   nothingTicked?: boolean;
@@ -24,8 +26,6 @@ export function LandingFlowCard({ flow, visits, month, before, nothingTicked = f
   onSelectTop?: () => void;
   /** How many it ticks. */
   most?: number;
-  /** The website's own visits, as the box above says them. */
-  visits: number | null;
   /** The dates, as the hint says them: "October". */
   month: string;
   /** The dates before, as a hover says them: "September". */
@@ -54,16 +54,24 @@ export function LandingFlowCard({ flow, visits, month, before, nothingTicked = f
     route: (from, to) => t("route", { from, to }),
   }), [t, before]);
   const built = useMemo(() => (flow?.held ? routesFrom(flow, words) : null), [flow, words]);
-  // The eye reads every box and every route, with the figures the chart says: from the third page on, the fitted ones.
-  const seen = useMemo(() => (built ? {
-    picked: true,
-    rows: built.boxes.map((box) => ({ name: box.name, step: box.column + 1, group: box.isGroup, visits: built.said(box), leftThere: built.saidLeft(box), conversions: box.conversions })),
-    routes: built.routes.map((route) => ({ from: built.boxes.find((box) => box.id === route.from)?.name ?? "", to: built.boxes.find((box) => box.id === route.to)?.name ?? "", visits: built.saidRoute(route), conversions: route.conversions })),
-  } : undefined), [built]);
+  // The eye reads every box and the biggest routes, with the figures the chart says. It has the whole website's from `funnel`.
+  const seen = useMemo(() => {
+    if (!built) return undefined;
+    const nameOf = new Map(built.boxes.map((box) => [box.id, box.name]));
+    return {
+      picked: true,
+      rows: built.boxes.map((box) => ({ name: box.name, step: box.column + 1, group: box.isGroup, visits: built.said(box), leftThere: built.saidLeft(box), conversions: box.conversions })),
+      routes: built.routes.map((route) => ({ from: nameOf.get(route.from) ?? "", to: nameOf.get(route.to) ?? "", visits: built.saidRoute(route), conversions: route.conversions })).sort((one, other) => other.visits - one.visits).slice(0, ROUTES_THE_EYE_READS),
+    };
+  }, [built]);
   useSeesPart("flow", seen);
+  // Each heading says what's on the chart: the ticked pages' own visits, who left them and who stayed.
+  const first = built?.boxes.filter((box) => box.column === 0) ?? [];
+  const firstVisits = first.reduce((sum, box) => sum + box.visits, 0);
+  const firstLeft = first.reduce((sum, box) => sum + box.left, 0);
   const columns = [
-    { title: t("first"), summary: <>{t("visitsCount", { visits: formatNumber(visits ?? (flow ? flow.onward + flow.left : 0)) })}<br />{t("leftCount", { left: formatNumber(flow?.left ?? 0) })}</> },
-    { title: t("second"), summary: t("visitsCount", { visits: formatNumber(flow?.onward ?? 0) }) },
+    { title: t("first"), summary: <>{t("visitsCount", { visits: formatNumber(firstVisits) })}<br />{t("leftCount", { left: formatNumber(firstLeft) })}</> },
+    { title: t("second"), summary: t("visitsCount", { visits: formatNumber(Math.max(0, firstVisits - firstLeft)) }) },
     ...[2, 3, 4].map((column) => ({ title: t(`column${column + 1}`), summary: t("visitsCount", { visits: formatNumber(Math.round(built?.columnVisits[column] ?? 0)) }) })),
   ];
   const csv = () => {

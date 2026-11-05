@@ -16866,7 +16866,7 @@
         "column5": "Fifth page",
         "visitsCount": "{visits} visits",
         "leftCount": "{left} left here",
-        "under": "Any page you haven't ticked is in its group. A visit that opens two pages counts in both.",
+        "under": "Only visits that started on the pages you've ticked show here. A visit that opens two pages counts in both. From the third page on, figures are close, not exact.",
         "shop": "Search and basket",
         "notSorted": "Not sorted yet",
         "otherPages": "Other pages",
