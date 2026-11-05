@@ -14,16 +14,17 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { pageName } from "@/convex/utils/pageNames";
 import { TickActions, TickCount, tickColumn, type TableTicks } from "@/src/ui/components/screens/TableTicks";
-import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { ListTable } from "@/src/ui/components/screens/ListTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import { Notice } from "@/src/ui/components/screens/Notice";
-import { TableBar, type TableNoun } from "@/src/ui/components/screens/TableBar";
+import type { TableNoun } from "@/src/ui/components/screens/TableBar";
 import { toCsv } from "../../sites/_components/siteFormat";
 import { useSiteListPage } from "../../sites/_components/useSitePagedTable";
 import { TABLE_PAGE_KEY, useSetSiteParams, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../sites/_components/useSiteSort";
 import { CUT_COLUMN } from "../../sites/_components/SiteCells";
-import { ChangeCell, ConversionsCell, ConversionsChangeCell, ConversionsHereCell, FigureCell, NextPageCell, PageLink, RateCell, ShareCell, TextFigure, ViewsChangeCell } from "./AnalyticsCells";
+import { ChangeCell, ConversionsCell, ConversionsChangeCell, ConversionsHereCell, FigureCell, NextPageCell, PageLink, RateCell, ShareCell, TextFigure, UpOrDownCell, ViewsChangeCell } from "./AnalyticsCells";
 import { formatPercent, formatPerVisit, formatTime, pathOf } from "./analyticsFormat";
 import { MOST_PLOTTED, MOVE_VIEWS, type PageMove } from "@/convex/utils/pageMoves";
 import { NO_PAGE_KIND } from "@/convex/utils/sees/analyticsChannel";
@@ -32,7 +33,7 @@ import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, us
 import { AnalyticsGate } from "./AnalyticsNotices";
 import { readListInParts } from "./readListInParts";
 import { withoutMoney } from "./useEyeFigures";
-import { spansOfList, useSpanInWords } from "./VisitsCharts";
+import { spansOfList, useSpanInWords, useSpanName } from "./VisitsCharts";
 import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 export type ListPageAnswer = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsListPage>;
@@ -40,7 +41,7 @@ export type ShownRow = ListPageAnswer["rows"][number];
 export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword" | VisitorList;
 /** Visitors' lists (§18.2 board 15). */
 export type VisitorList = "visitorType" | "browser" | "system" | "age" | "gender" | "interest";
-type Column = "tick" | "name" | "source" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "change" | "left" | "onward" | "next";
+type Column = "tick" | "name" | "source" | "cameFrom" | "visitsNow" | "visitsBefore" | "visitsChange" | "bought" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "change" | "left" | "onward" | "next";
 
 /** Visitors' columns, each group with the classification it lands on most (ga-conversions-visitors-plan.md CV7). */
 const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged", "conversions", "change", "landsMost"];
@@ -62,9 +63,10 @@ const COLUMNS: Record<ListKind, readonly Column[]> = {
   landing: ["tick", "name", "visits", "left", "onward", "next", "conversions"],
   groups: ["name", "visits", "left", "onward", "next", "conversions"],
   page: ["tick", "name", "visits", "views", "viewsChange", "time", "conversions", "conversionsChange"],
-  // Campaigns (§18.2 board 17): each campaign with where its link was, and the words tagged links carry.
-  campaign: ["name", "source", "visits", "engaged", "conversions", "change"],
-  adKeyword: ["name", "visits", "engaged", "conversions", "change"],
+  // Campaigns (campaigns-new-page-plan-2026-11-05.md, step 6): each campaign with where its link was, its visits against the
+  // dates before, and what they did; and the words tagged links carry.
+  campaign: ["name", "source", "visitsNow", "visitsBefore", "visitsChange", "bought", "conversions"],
+  adKeyword: ["name", "visitsNow", "visitsBefore", "visitsChange", "bought", "conversions"],
   // Visitors (§18.2 board 15): each group's people beside its visits.
   visitorType: VISITOR_COLUMNS,
   browser: VISITOR_COLUMNS,
@@ -89,6 +91,8 @@ const CSV_COLUMNS: Record<ListKind, readonly Column[]> = {
   ...COLUMNS,
   landing: ["name", "visits", "left", "onward", "next", "engaged", "bounce", "pages", "time", "conversions", "change"],
   groups: ["name", "visits", "left", "onward", "next", "engaged", "bounce", "pages", "time", "conversions", "change"],
+  // Campaigns' download says where a link was both ways, and keeps a campaign's name as it was tagged.
+  campaign: ["name", "cameFrom", "source", "visitsNow", "visitsBefore", "visitsChange", "bought", "conversions"],
   // All pages' download keeps people (AP1, AP4).
   page: ["name", "visits", "views", "viewsChange", "people", "time", "conversions", "rate", "conversionsChange"],
 };
@@ -103,6 +107,8 @@ const FIRSTS = {
   started: "desc",
   name: "asc", visits: "desc", engaged: "desc", bounce: "asc", pages: "desc", people: "desc", time: "desc", views: "desc", conversions: "desc", change: "desc",
   viewsChange: "desc", rate: "desc", conversionsChange: "desc",
+  // Campaigns' table.
+  visitsBefore: "desc", visitsChange: "desc", bought: "desc",
   // Landing pages' funnel (LF4): the fewest leaving first, the most going on first, the strongest next step first.
   left: "asc", onward: "desc", next: "desc",
 } as const;
@@ -163,7 +169,15 @@ export type ChannelTable = {
   kindName: (kind: string) => string;
 };
 
-export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut = false, move, plot = false, ticks, noun, searchPlaceholder, rowHref, filters, opening = "visits", emptyLabel, head, nameOf, ofChannel, seesPart }: {
+export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut = false, move, plot = false, ticks, noun, searchPlaceholder, rowHref, filters, opening = "visits", emptyLabel, head, nameOf, ofChannel, seesPart, cameFrom, sourceName, nameHover, leaveOutColumns }: {
+  /** Campaigns: only the links that were in this place (`utils/campaignNames.ts`). */
+  cameFrom?: string;
+  /** Campaigns: where a link was, in the reader's words. */
+  sourceName?: (row: ShownRow) => string;
+  /** A row's name as it's kept, on hover, where `nameOf` says it another way. */
+  nameHover?: (row: ShownRow) => string | undefined;
+  /** Standard columns this screen doesn't show: Bought, on a website with nothing bought. */
+  leaveOutColumns?: readonly string[];
   /** The eye's name for this table's rows, where its page's own answer does not hold them (Channels; `useSeesPart`). */
   seesPart?: string;
   /**
@@ -218,6 +232,7 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
     list,
     ...(channel !== undefined ? { channel } : {}),
     ...(group !== undefined ? { group } : {}),
+    ...(cameFrom !== undefined ? { cameFrom } : {}),
     ...(leaveOut ? { leaveOut: true } : {}),
     ...(filed !== undefined ? { filed } : {}),
     ...(settled ? { q: settled } : {}),
@@ -237,16 +252,18 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
   const pagePlot = usePlotted(plot && list === "page");
   const plotted: TableTicks | null = ticks ?? (pagePlot ? { ...pagePlot, most: MOST_PLOTTED, limit: t("tickLimit") } : null);
   // All pages' headings say which dates are set against which: "Views in October compared with September".
-  const inWords = useSpanInWords(...spansOfList(paged.result));
+  const spans = spansOfList(paged.result);
+  const inWords = useSpanInWords(...spans);
+  const spanName = useSpanName();
   const assistants = list === "source" && channel === AI_ASSISTANTS_CHANNEL;
   const columns = (ofChannel && list === "groups" ? CHANNEL_GROUP_COLUMNS : ofChannel && list === "landing" ? CHANNEL_LANDING_COLUMNS : assistants ? ASSISTANT_COLUMNS : COLUMNS[list])
-    .filter((column) => column !== "tick" || plotted !== null)
-    .map((column) => columnOf(column, list, rowHref, t, nameOf, plotted, ofChannel, assistants, kindName ?? ofChannel?.kindName, inWords));
+    .filter((column) => (column !== "tick" || plotted !== null) && !leaveOutColumns?.includes(column))
+    .map((column) => columnOf(column, list, rowHref, t, nameOf, plotted, ofChannel, assistants, kindName ?? ofChannel?.kindName, inWords, { sourceName, nameHover, spans: { now: spanName(spans[0]), before: spanName(spans[1]) } }));
   // Campaigns say the visits from no tagged link beside the list (§18.2 board 17).
   const untagged = shown.result?.untagged ?? null;
   const bar = [
     tf(`periods.${periodWord(period)}`), tf(`devices.${device}`).toLowerCase(),
-    live ? t("collecting") : untagged !== null ? t("untagged", { count: untagged }) : t("greyed"),
+    live ? t("collecting") : untagged !== null ? t(list === "adKeyword" ? "noAdKeyword" : "untagged", { count: untagged }) : t("greyed"),
   ].join(" · ");
 
   return (
@@ -258,30 +275,24 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
           <span className="block">{t(campaigns ? "collectingBodyCampaigns" : "collectingBody", { device: tf(`devices.${device}`).toLowerCase(), platformName })}</span>
         </Notice>
       ) : null}
-      <DataTable
+      <ListTable
         rows={shown.pageRows}
         rowKey={(row) => row.key}
+        noun={noun}
+        // All pages' and Funnel's bar is its count, how many are ticked and its buttons, with no sentence beside them.
+        summary={(list === "page" || (list === "landing" && !ofChannel)) && !live ? (plotted ? <TickCount ticks={plotted} /> : null) : <span className="text-[12px] text-secondary">{bar}</span>}
+        actions={
+          <>
+            {plotted ? <TickActions ticks={plotted} rows={shown.pageRows ?? []} rowKey={rowKeyOf} canTick={canTickFor(list)} /> : null}
+            <AnalyticsDownload args={base} list={list} csvColumns={ofChannel && list === "landing" ? CHANNEL_LANDING_CSV : undefined} kindName={kindName ?? ofChannel?.kindName} sourceName={sourceName} leaveOutColumns={leaveOutColumns} />
+          </>
+        }
         onRowClick={rowHref ? (row) => {
           const href = rowHref(row);
           if (href) router.push(href);
         } : undefined}
         search={{ value: search, onChange: setSearch, placeholder: searchPlaceholder }}
         filters={typeof filters === "function" ? filters(paged.result) : filters}
-        cardHeader={
-          <TableBar
-            footer={shown.footer}
-            noun={noun}
-            actions={
-              <>
-                {plotted ? <TickActions ticks={plotted} rows={shown.pageRows ?? []} rowKey={rowKeyOf} canTick={canTickFor(list)} /> : null}
-                <AnalyticsDownload args={base} list={list} csvColumns={ofChannel && list === "landing" ? CHANNEL_LANDING_CSV : undefined} kindName={kindName ?? ofChannel?.kindName} />
-              </>
-            }
-          >
-            {/* All pages' and Funnel's bar is its count, how many are ticked and its buttons, with no sentence beside them. */}
-            {(list === "page" || (list === "landing" && !ofChannel)) && !live ? (plotted ? <TickCount ticks={plotted} /> : null) : <span className="text-[12px] text-secondary">{bar}</span>}
-          </TableBar>
-        }
         empty={{ icon: <SearchX className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : emptyLabel }}
         footer={shown.footer}
         sort={order.tableSort}
@@ -304,6 +315,8 @@ function columnOf(
   kindName?: (kind: string) => string,
   /** All pages: the dates in its headings' hovers. */
   inWords?: { now: string; before: string },
+  /** Campaigns: its words for a row, and each span's own name where it's a calendar month. */
+  campaigns?: { sourceName?: (row: ShownRow) => string; nameHover?: (row: ShownRow) => string | undefined; spans: { now: string | null; before: string | null } },
 ): DataTableColumn<ShownRow> {
   switch (column) {
     case "tick":
@@ -338,10 +351,21 @@ function columnOf(
                 <span className="text-[11.5px] text-muted">{t("pagesCount", { count: row.members ?? 0 })}</span>
               </span>
             )
-            : <span className="text-[13px] text-foreground">{nameOf ? nameOf(row) : row.label === "" ? t("noSource") : row.label}</span>,
+            // A campaign's name gives way before Came from does: a long one wraps, so the table never runs off the page and "Google" stays whole.
+            : <span className={`text-[13px] text-foreground ${list === "campaign" || list === "adKeyword" ? "[overflow-wrap:anywhere]" : ""}`} title={campaigns?.nameHover?.(row)}>{nameOf ? nameOf(row) : row.label === "" ? t("noSource") : row.label}</span>,
       };
     case "source":
-      return { key: "source", header: t("columns.source"), cell: (row) => <span className="text-[12px] text-secondary">{row.source ?? ""}</span> };
+      return { key: "source", header: t("columns.cameFrom"), cell: (row) => <span className="block min-w-[52px] text-[12px] text-secondary [overflow-wrap:anywhere]" title={row.source}>{campaigns?.sourceName ? campaigns.sourceName(row) : row.source ?? ""}</span> };
+    case "cameFrom":
+      return { key: "cameFrom", header: t("columns.cameFrom"), cell: (row) => <span className="text-[12px] text-secondary">{campaigns?.sourceName ? campaigns.sourceName(row) : row.source ?? ""}</span> };
+    case "visitsNow":
+      return { key: "visits", header: <span title={t("columns.visitsNowTitle", { when: inWords?.now ?? "" })}>{campaigns?.spans.now ?? t("columns.visits")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.visits} /> };
+    case "visitsBefore":
+      return { key: "visitsBefore", header: <span title={t("columns.visitsBeforeTitle", { before: inWords?.before ?? "" })}>{campaigns?.spans.before ?? t("columns.before")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.visitsBefore ?? null} /> };
+    case "visitsChange":
+      return { key: "visitsChange", header: <span title={t("columns.visitsChangeTitle", { now: inWords?.now ?? "", before: inWords?.before ?? "" })}>{t("columns.upOrDown")}</span>, align: "right", sortable: true, cell: (row) => <UpOrDownCell now={row.visits} before={row.visitsBefore ?? null} /> };
+    case "bought":
+      return { key: "bought", header: <span title={t("columns.boughtTitle")}>{t("columns.bought")}</span>, align: "right", sortable: true, cell: (row) => <ConversionsHereCell conversions={row.purchases} rate={row.visits > 0 ? row.purchases / row.visits : null} fewVisits={row.fewVisits} /> };
     case "elsewhere":
       return { key: "elsewhere", header: <span title={t("columns.elsewhereTitle")}>{t("columns.elsewhere")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.elsewhere ? row.elsewhere : null} quiet /> };
     case "started":
@@ -388,10 +412,11 @@ function columnOf(
         header: list === "page" ? <span title={t("columns.conversionsHereTitle")}>{t("columns.conversions")}</span>
           // Funnel's table says Conversions, as the page has no other kind; a channel's own page keeps its approved heading.
           : list === "landing" || list === "groups" ? <span title={t("columns.conversionsStartedTitle")}>{t(ofChannel ? "columns.conversionsStarted" : "columns.conversionsOfVisit")}</span>
-            : t("columns.conversions"),
+            : list === "campaign" || list === "adKeyword" ? <span title={t("columns.conversionsTimesTitle")}>{t("columns.conversions")}</span>
+              : t("columns.conversions"),
         align: "right",
         sortable: true,
-        cell: (row) => list === "page" || (list === "landing" && !ofChannel)
+        cell: (row) => list === "page" || list === "campaign" || list === "adKeyword" || (list === "landing" && !ofChannel)
           // All pages and Funnel: the count, and its rate under it as "per 100 visits", as it counts times, not visits.
           ? <ConversionsHereCell conversions={row.conversions} rate={row.conversionRate} fewVisits={row.fewVisits} />
           : <ConversionsCell conversions={row.conversions} rate={row.conversionRate} fewVisits={row.fewVisits} oneLine={ONE_LINE.has(list)} />,
@@ -441,7 +466,9 @@ export function useEventFunnel(ask: { siteId: string; period: string; device: st
 }
 
 /** The whole list, in the order on screen, as CSV: read a part at a time when pressed. */
-function AnalyticsDownload({ args, list, csvColumns, kindName }: {
+function AnalyticsDownload({ args, list, csvColumns, kindName, sourceName, leaveOutColumns }: {
+  sourceName?: (row: ShownRow) => string;
+  leaveOutColumns?: readonly string[];
   args: Record<string, unknown>;
   list: ListKind;
   /** A channel's own landing pages: their own columns, not Landing pages' funnel. */
@@ -452,7 +479,7 @@ function AnalyticsDownload({ args, list, csvColumns, kindName }: {
   const t = useTranslations("googleAnalytics.table");
   const convex = useConvex();
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-download" });
-  const columns = csvColumns ?? CSV_COLUMNS[list];
+  const columns = (csvColumns ?? CSV_COLUMNS[list]).filter((column) => !leaveOutColumns?.includes(column));
   return (
     <DownloadButton
       label={t("download")}
@@ -465,7 +492,7 @@ function AnalyticsDownload({ args, list, csvColumns, kindName }: {
         );
         if (!outcome.ok) return;
         const headers = columns.map((column) => t(`csv.${column}`));
-        const rows = outcome.data.map((row) => columns.map((column) => csvValue(row, column, kindName)));
+        const rows = outcome.data.map((row) => columns.map((column) => (column === "cameFrom" && sourceName ? sourceName(row) : csvValue(row, column, kindName))));
         saveTextFile(toCsv(headers, rows), `google-analytics-${list}.csv`);
       }}
     />
@@ -482,6 +509,11 @@ function csvValue(row: ShownRow, column: Column, kindName?: (kind: string) => st
     case "name": return row.label;
     case "visits": return row.visits;
     case "source": return row.source ?? "";
+    case "cameFrom": return row.source ?? "";
+    case "visitsNow": return row.visits;
+    case "visitsBefore": return row.visitsBefore ?? null;
+    case "visitsChange": return row.visitsBefore == null ? null : row.visits - row.visitsBefore;
+    case "bought": return row.purchases;
     case "views": return row.views;
     case "engaged": return row.engagementRate === null ? null : Math.round(row.engagementRate * 1000) / 10;
     case "bounce": return row.bounceRate === null ? null : Math.round(row.bounceRate * 1000) / 10;

@@ -37,6 +37,8 @@ describe('the Italian catalogue is translated, not copied', () => {
    *     to translate.
    */
   const IDENTICAL_ON_PURPOSE: ReadonlyMap<string, string> = new Map([
+  ['googleAnalytics.campaigns.cameFrom.googleAds', 'The name of a company\'s product: Campaigns\' Came from'],
+  ['googleAnalytics.campaigns.cameFrom.microsoftAds', 'The name of a company\'s product: Campaigns\' Came from'],
     ['admin.siteView.schedulesPage.sources.names.SEARCH_CONSOLE', 'Product name (Search Console): a row of a website\'s Schedules'],
     ['admin.siteView.schedulesPage.sources.names.GOOGLE_ANALYTICS', 'Product name (Google Analytics): a row of a website\'s Schedules'],
     ['admin.siteView.schedulesPage.sources.names.BING', 'Product name (Bing Webmaster): a row of a website\'s Schedules'],

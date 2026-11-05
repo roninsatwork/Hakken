@@ -19,7 +19,11 @@ import { pathOfAddress } from "./utils/sees/analytics";
 import { MOVE_VIEWS, PAGE_MOVES } from "./utils/pageMoves";
 import { readPageKinds } from "./pageKinds";
 import { SHOP_PAGES_KIND } from "./utils/shopPages";
-import { ALL_PAGES_ORDERS, ANALYTICS_PARTS, ANALYTICS_SCREENS, FUNNEL_ORDERS, LIST_ORDER_NAMES, type AllPagesOrder, type AnalyticsScreen, type FunnelOrder } from "./utils/analyticsScreens";
+import { ALL_PAGES_ORDERS, ANALYTICS_PARTS, ANALYTICS_SCREENS, CAMPAIGN_ORDERS, FUNNEL_ORDERS, LIST_ORDER_NAMES, type AllPagesOrder, type AnalyticsScreen, type CampaignOrder, type FunnelOrder } from "./utils/analyticsScreens";
+import { readCampaignActions } from "./googleAnalyticsCampaignReads";
+import { readCampaignChart } from "./googleAnalyticsChartReads";
+import { actionWords } from "./utils/campaignActions";
+import { cameFromAsked, cameFromWords, campaignNameWords } from "./utils/campaignNames";
 import { readLandingFlow } from "./googleAnalyticsFlowReads";
 import { funnelFigures } from "./utils/landingFlowFigures";
 import { flowBoxes, type BoxNames, type RouteBox } from "./utils/landingFlowRoutes";
@@ -162,6 +166,91 @@ function funnelBoxesPart(now: { visits: number; views: number; engaged: number; 
     twoMeaningsOfLeft: TWO_MEANINGS_OF_LEFT,
     ...viewsWarning(now, before),
   };
+}
+
+/** What Campaigns' figures count, so 168 for every 100 visits is never told as 168% (docs/plans/active/campaigns-new-page-plan-2026-11-05.md, step 9). */
+const CAMPAIGN_CONVERSIONS_RULE = "conversions counts every time something the website counts happened, not visits, and one visit can do several of those things. So conversionsPer100Visits and boughtPer100Visits can pass 100, such as 168. They aren't percentages: never call one a conversion rate of 168%. If someone asks about a high figure, explain this in plain words, with no formula, and say conversions per 100 visits. A conversion rate is only whatPeopleDid's conversionRatePercent: the share of a campaign's visits that did that thing at least once.";
+
+/** A campaign's or an ad keyword's row, as the table's headings say it: no money. */
+function campaignRowOf(row: ShownRow, sells: boolean) {
+  const per100 = (times: number) => (row.visits > 0 ? Math.round((1000 * times) / row.visits) / 10 : null);
+  return {
+    name: row.cameFrom ? campaignNameWords(row.label, row.cameFrom) : row.label,
+    ...(row.cameFrom ? { cameFrom: cameFromWords(row.cameFrom) } : {}),
+    visits: row.visits,
+    visitsBefore: row.visitsBefore ?? null,
+    upOrDown: row.visitsBefore === null || row.visitsBefore === undefined ? null : row.visits - row.visitsBefore,
+    ...(sells ? { bought: row.purchases, boughtBefore: row.purchasesBefore ?? null, boughtPer100Visits: per100(row.purchases) } : {}),
+    conversions: row.conversions,
+    conversionsBefore: row.conversionsBefore,
+    conversionsPer100Visits: per100(row.conversions),
+    leftStraightAway: Math.round(row.visits * (row.bounceRate ?? 0)),
+  };
+}
+
+type CampaignFigures = { visits: number; visitsBefore: number | null; bought: number; boughtBefore: number | null; conversions: number; conversionsBefore: number | null };
+type SiteFigures = { visits: number; purchases: number; conversions: number } | null | undefined;
+
+/** The whole of Campaigns' four boxes, the whole website's own beside them, in the screen's words. No shop, no Bought. */
+function campaignBoxesPart(totals: CampaignFigures, now: SiteFigures, before: SiteFigures) {
+  const sells = (now?.purchases ?? 0) > 0 || (before?.purchases ?? 0) > 0;
+  const share = (part: number | null, whole: number | null | undefined) => (part !== null && whole ? oneDecimalShare(part, whole) : null);
+  return {
+    boxes: {
+      visits: totals.visits,
+      visitsBefore: totals.visitsBefore,
+      shareOfAllVisitsPercent: share(totals.visits, now?.visits),
+      shareOfAllVisitsPercentBefore: share(totals.visitsBefore, before?.visits),
+      ...(sells ? {
+        bought: totals.bought,
+        boughtBefore: totals.boughtBefore,
+        shareOfAllBoughtPercent: share(totals.bought, now?.purchases),
+        shareOfAllBoughtPercentBefore: share(totals.boughtBefore, before?.purchases),
+      } : {
+        conversions: totals.conversions,
+        conversionsBefore: totals.conversionsBefore,
+        shareOfAllConversionsPercent: share(totals.conversions, now?.conversions),
+        shareOfAllConversionsPercentBefore: share(totals.conversionsBefore, before?.conversions),
+      }),
+    },
+  };
+}
+
+/** What people did after they arrived, with each square's three figures. Times can pass the visits; the rate can't pass 100%. */
+function campaignDidPart(did: Awaited<ReturnType<typeof readCampaignActions>>) {
+  return {
+    whatPeopleDid: {
+      things: did.events.map(actionWords),
+      campaigns: did.rows.map((row) => ({
+        name: campaignNameWords(row.label, row.cameFrom),
+        cameFrom: cameFromWords(row.cameFrom),
+        visits: row.visits,
+        did: did.events.map((event, at) => {
+          const visitsThatDidIt = row.visitsDid[at] ?? null;
+          return {
+            thing: actionWords(event),
+            times: row.times[at] ?? 0,
+            timesPer100Visits: row.visits > 0 ? Math.round((1000 * (row.times[at] ?? 0)) / row.visits) / 10 : null,
+            visitsThatDidIt,
+            conversionRatePercent: visitsThatDidIt === null ? null : oneDecimalShare(visitsThatDidIt, row.visits),
+          };
+        }),
+      })),
+    },
+  };
+}
+
+/** Visits from campaigns each day, or each week or month on long dates, with the dates before as totals to set them against. */
+function campaignChartPart(chart: Awaited<ReturnType<typeof readCampaignChart>>, sells: boolean) {
+  const pointOf = (point: (typeof chart.points)[number]) => ({
+    from: point.day,
+    ...(point.lastDay ? { to: point.lastDay } : {}),
+    visits: point.visits,
+    ...(sells ? { bought: point.bought } : {}),
+    conversions: point.conversions,
+    leftStraightAway: Math.max(0, point.visits - point.engaged),
+  });
+  return { chart: { rows: chart.points.map(pointOf), ...(chart.before?.drawn ? { theDatesBefore: chart.before.points.map(pointOf) } : {}) } };
 }
 
 /** A row of Funnel's table, as its headings say it. */
@@ -398,6 +487,8 @@ export const googleAnalyticsInternal = internalQuery({
     classification: v.optional(v.string()),
     /** All pages: only the pages that gained, dropped, stayed static or had no visits. */
     move: v.optional(v.union(...PAGE_MOVES.map((move) => v.literal(move)))),
+    /** Campaigns: only those from one place, in the page's words ("Google Ads") or as the source is written. */
+    cameFrom: v.optional(v.string()),
     /** All pages and Funnel: put the shop's search, basket and account pages back in, which they leave out as they open. */
     everyPage: v.optional(v.boolean()),
   },
@@ -468,7 +559,57 @@ export const googleAnalyticsInternal = internalQuery({
       return { ...base, ...funnelChartPart(flow, overview.now?.visits ?? null, linkTo("tracking-health"), row?.key) };
     }
 
+    // Campaigns has no money at all, so nothing it hands over speaks of any. Its boxes, chart and squares are reads of their own.
+    const place = args.screen === "campaigns" && args.cameFrom ? cameFromAsked(args.cameFrom) : undefined;
+    const noMoney = {
+      ok: true, website: host, screen: args.screen, period, figuresTo: connection.newestDay,
+      rule: "These are the figures the screen shows. Give them with the link, in plain words. Campaigns counts visits, what was bought and conversions, never money. Say each campaign's name and each thing people did just as they're given here, never Google's own words for them, such as (not set), add_to_cart, session or bounce rate. Say dates as a person would, such as October, never lastMonth.",
+    };
+    if (args.screen === "campaigns" && args.part === "boxes") {
+      const listed = await readListPage(site, { ...common, list: "campaign", page: 1, rows: 1, ...(place ? { cameFrom: place } : {}) });
+      const overview = await readOverview(site, common);
+      return { ...noMoney, ...(listed.campaignTotals ? campaignBoxesPart(listed.campaignTotals, overview.now, overview.before) : {}) };
+    }
+    if (args.screen === "campaigns" && args.part === "chart") {
+      const chart = await readCampaignChart(site, { ...common, ...(place ? { cameFrom: place } : {}) });
+      const overview = await readOverview(site, common);
+      const sells = (overview.now?.purchases ?? 0) > 0 || (overview.before?.purchases ?? 0) > 0;
+      return { ...noMoney, ...(chart.live ? {} : campaignChartPart(chart, sells)) };
+    }
+    if (args.screen === "campaigns" && args.part === "did") {
+      const did = await readCampaignActions(site, { ...common, ...(place ? { cameFrom: place } : {}), ...(args.search ? { q: args.search } : {}) });
+      return { ...noMoney, ...(did.live ? {} : campaignDidPart(did)) };
+    }
+
     const list = LISTS[args.screen];
+    if (list && (args.screen === "campaigns" || args.screen === "adKeywords")) {
+      const keywords = args.screen === "adKeywords";
+      const order = args.order && args.order in CAMPAIGN_ORDERS ? CAMPAIGN_ORDERS[args.order as CampaignOrder] : null;
+      const answer = await readListPage(site, { ...common, list: list.list, page: 1, rows: ROWS, ...(args.search ? { q: args.search } : {}), ...(order ?? {}), ...(place ? { cameFrom: place } : {}) });
+      const link = linkTo(list.segment, { ...(keywords ? { view: "adKeyword" } : {}), ...(order ? { sort: order.sort, dir: order.direction } : {}), ...(place ? { cameFrom: place } : {}) });
+      if (answer.live) return { ...noMoney, ...asked, link };
+      const overview = await readOverview(site, common);
+      const sells = (overview.now?.purchases ?? 0) > 0 || (overview.before?.purchases ?? 0) > 0;
+      const places = (answer.cameFromChoices ?? []).map((one) => ({ cameFrom: cameFromWords(one.cameFrom), visits: one.visits }));
+      const noun = keywords ? "ad keywords" : "campaigns";
+      return {
+        ...noMoney,
+        listed: answer.total,
+        rows: answer.rows.map((row) => campaignRowOf(row, sells)),
+        rows_are: `The first ${Math.min(ROWS, answer.total)} of ${answer.total} ${noun}, ${args.order ?? "mostVisits"}.`,
+        conversionsRule: CAMPAIGN_CONVERSIONS_RULE,
+        ...(keywords ? {} : { placesCampaignsCameFrom: places }),
+        ...(place ? { onlyFrom: cameFromWords(place) } : {}),
+        ...(answer.total === 0 && !args.search ? {
+          message: place
+            ? `No campaign on ${host} came from ${cameFromWords(place)} in these dates. Say so, and say where they did come from.`
+            : `${host} had no visits from ${keywords ? "an ad keyword" : "a campaign link"} in these dates. Say so, then read last12Months and say whether it had any before.`,
+        } : {}),
+        ...(answer.untagged !== null ? { [keywords ? "visitsWithNoAdKeyword" : "visitsFromNoCampaignLink"]: answer.untagged } : {}),
+        ...(answer.thresholded ? { note: "Google held back some small groups to protect people's privacy." } : {}),
+        link,
+      };
+    }
     if (list) {
       const allPages = args.screen === "allPages";
       const funnelScreen = args.screen === "landingPages";

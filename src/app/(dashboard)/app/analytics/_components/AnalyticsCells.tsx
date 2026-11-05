@@ -109,10 +109,25 @@ export function ConversionsHereCell({ conversions, rate, fewVisits }: { conversi
     <span className="flex flex-col items-end leading-tight">
       <span className={`font-mono text-[12px] ${conversions > 0 ? "text-foreground" : "text-muted"}`}>{formatNumber(conversions)}</span>
       {conversions > 0 && rate !== null ? (
-        <span className={`whitespace-nowrap text-[11.5px] ${fewVisits ? "text-muted" : "text-secondary"}`} title={fewVisits ? t("fewVisits") : undefined}>
+        <span className={`text-right text-[11.5px] ${fewVisits ? "text-muted" : "text-secondary"}`} title={fewVisits ? t("fewVisits") : undefined}>
           {t.rich("per100Visits", { rate: formatPer100(rate), figure: (chunks) => <span className="font-mono">{chunks}</span> })}
         </span>
       ) : null}
+    </span>
+  );
+}
+
+/**
+ * How many more or fewer than the dates before, with the percentage under it (docs/plans/active/campaigns-new-page-plan-2026-11-05.md):
+ * a table that shows both figures doesn't need telling the move twice on two lines of its own. New, where there was nothing before.
+ */
+export function UpOrDownCell({ now, before }: { now: number; before: number | null }) {
+  if (before === null) return <NoFigure />;
+  if (before === 0) return <Change by={now} isNew={now > 0} />;
+  return (
+    <span className="flex flex-col items-end leading-tight">
+      <Change by={now - before} format={formatNumber} />
+      {now !== before ? <span className="font-mono text-[11.5px] text-secondary">{formatPercent(Math.abs(now - before) / before)}</span> : null}
     </span>
   );
 }

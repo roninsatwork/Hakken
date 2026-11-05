@@ -11,7 +11,7 @@ export const ANALYTICS_SCREENS = [
 export type AnalyticsScreen = (typeof ANALYTICS_SCREENS)[number];
 
 /** Every further read a screen may have, each asked on its own after the screen's first. */
-export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website", "chart"] as const;
+export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website", "chart", "did"] as const;
 
 /**
  * The orders Ask Hakken can read All pages in, each as the screen's own headings sort it (Anthony, 2026-11-04): read only
@@ -37,8 +37,18 @@ export const FUNNEL_ORDERS = {
 } as const;
 export type FunnelOrder = keyof typeof FUNNEL_ORDERS;
 export const FUNNEL_ORDER_NAMES = Object.keys(FUNNEL_ORDERS) as FunnelOrder[];
-/** Every order Ask Hakken can name, on either list. */
-export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder>([...ALL_PAGES_ORDER_NAMES, ...FUNNEL_ORDER_NAMES])];
+/** Campaigns' orders (campaigns-new-page-plan-2026-11-05.md, step 9). */
+export const CAMPAIGN_ORDERS = {
+  mostVisits: { sort: "visits", direction: "desc" },
+  gainedMostVisits: { sort: "visitsChange", direction: "desc" },
+  lostMostVisits: { sort: "visitsChange", direction: "asc" },
+  mostBought: { sort: "bought", direction: "desc" },
+  mostConversions: { sort: "conversions", direction: "desc" },
+} as const;
+export type CampaignOrder = keyof typeof CAMPAIGN_ORDERS;
+export const CAMPAIGN_ORDER_NAMES = Object.keys(CAMPAIGN_ORDERS) as CampaignOrder[];
+/** Every order Ask Hakken can name, on any list. */
+export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder | CampaignOrder>([...ALL_PAGES_ORDER_NAMES, ...FUNNEL_ORDER_NAMES, ...CAMPAIGN_ORDER_NAMES])];
 
 /**
  * The further reads a screen's figures come in, each with Convex's second to itself: overview's page panels
@@ -46,5 +56,5 @@ export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder>([...ALL
  * as its screen reads them, and All pages' whole website. Read whole, a page ran past the second.
  */
 export function analyticsPartsOf(screen: string): ReadonlyArray<(typeof ANALYTICS_PARTS)[number]> {
-  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : screen === "landingPages" ? ["boxes", "chart"] : [];
+  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : screen === "landingPages" ? ["boxes", "chart"] : screen === "campaigns" ? ["boxes", "chart", "did"] : [];
 }

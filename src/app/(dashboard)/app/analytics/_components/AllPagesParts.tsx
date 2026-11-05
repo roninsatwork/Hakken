@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -9,23 +9,20 @@ import { MOST_PLOTTED } from "@/convex/utils/pageMoves";
 import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import { SHOP_PAGES_KIND } from "@/convex/utils/shopPages";
 import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
-import type { ReadoutCell } from "@/src/ui/components/charts/ChartReadoutTable";
-import { ChartExplorer, ExplorerToolbar, type ExplorerControl } from "@/src/ui/components/screens/ChartExplorer";
+import type { ExplorerControl } from "@/src/ui/components/screens/ChartExplorer";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
 import { PageMap, arrowMove, type PageMapBox } from "@/src/ui/components/screens/PageMap";
 import { Select } from "@/src/ui/components/screens/Select";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { usePageKinds } from "../../_components/usePageKinds";
-import { datedRow } from "../../sites/_components/datedRows";
-import type { SiteSeries } from "../../sites/_components/SiteCharts";
-import { formatMonth, formatNumber, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
+import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
-import { SearchConsoleChartCard } from "../../search-console/_components/SearchConsoleChartCard";
 import type { ListPageAnswer } from "./AnalyticsListScreen";
 import { BeforeLine } from "./AnalyticsFigures";
 import { formatPerVisit, pathOf } from "./analyticsFormat";
-import { coarserThanStep, perStep, stepKey } from "./stepScale";
-import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, useStep, type Step } from "./useAnalytics";
+import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, useStep } from "./useAnalytics";
 import { useWebsiteForEye } from "./useEyeFigures";
 import { spansOfList, useSpanInWords, useSpanWords } from "./VisitsCharts";
 
@@ -239,7 +236,7 @@ export function PagesMapCard({ choice, answer }: { choice: ClassificationChoice;
     { kind: "select", key: "colour", label: t("colourShows"), value: colour, options: MEASURES.map((one) => ({ value: one, label: t(`measure.${one}`) })), onChange: (next) => setColour(next === count ? FOLLOWS_COUNT : next as Measure) },
   ];
   return (
-    <SearchConsoleChartCard
+    <MapCard
       title={t("title")}
       hint={`${t(`hint.${count}`, { count: MAP_PAGES })} ${t(`colourHint.${colour}`, { before: inWords.before })}`}
       exportName="google-analytics-page-map"
@@ -248,21 +245,13 @@ export function PagesMapCard({ choice, answer }: { choice: ClassificationChoice;
         rows.map((row) => [pageName(row.label, row.title), row.label, row.views, row.viewsBefore, row.visits, row.visitsBefore ?? null, row.conversions, row.conversionsBefore]),
       )}
       host={status?.host ?? ""}
-      from={null}
-      to={null}
+      controls={controls}
+      loading={list === undefined}
+      message={boxes.length === 0 ? tc("empty") : null}
+      under={under ? <p className="text-[12px] text-muted">{under}</p> : null}
     >
-      {list === undefined ? null : (
-        <div className="flex flex-col gap-5">
-          <ExplorerToolbar controls={controls} />
-          {boxes.length === 0 ? <p className="py-10 text-center text-[12px] text-muted">{tc("empty")}</p> : (
-            <div className="flex flex-col gap-3">
-              <PageMap boxes={boxes} onOpen={(id) => router.push(pageHref(id))} />
-              {under ? <p className="text-[12px] text-muted">{under}</p> : null}
-            </div>
-          )}
-        </div>
-      )}
-    </SearchConsoleChartCard>
+      <PageMap boxes={boxes} onOpen={(id) => router.push(pageHref(id))} />
+    </MapCard>
   );
 }
 
@@ -272,30 +261,6 @@ const LINES_HEIGHT = 200;
 const WHOLE_SWITCH = ["off", "on"] as const;
 
 type Point = { day: string; lastDay?: string; views: number; visits: number; conversions: number };
-
-/** Lines of a figure a day added up into the step chosen, one value a line, dated by each bucket's first day. A week or month held whole is drawn as its average for the step. */
-export function linesByStep(step: Step, measure: Measure, series: readonly SiteSeries[], lines: ReadonlyArray<readonly Point[]>): Array<Record<string, unknown>> {
-  const buckets = new Map<string, { first: string; last: string; figures: number[] }>();
-  lines.forEach((points, line) => {
-    for (const point of points) {
-      const key = stepKey(step, point.day, point.lastDay);
-      const bucket = buckets.get(key) ?? { first: point.day, last: point.day, figures: series.map(() => 0) };
-      if (point.day < bucket.first) bucket.first = point.day;
-      const last = point.lastDay ?? point.day;
-      if (last > bucket.last) bucket.last = last;
-      bucket.figures[line] += point[measure];
-      buckets.set(key, bucket);
-    }
-  });
-  return [...buckets.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, bucket]) => datedRow(
-    { day: step === "month" ? `${key}-01` : bucket.first, lastDay: bucket.last },
-    {
-      ...Object.fromEntries(series.map((entry, index) => [entry.key, Math.round(perStep(bucket.figures[index] ?? 0, bucket.first, bucket.last, step) * 10) / 10])),
-      ...(coarserThanStep(bucket.first, bucket.last, step) ? { coarse: true } : {}),
-    },
-    step === "month" ? formatMonth(key) : formatShortDay(bucket.first),
-  ));
-}
 
 /**
  * Views each day: it opens on the whole website's line with no page ticked (Anthony, 2026-11-04: "make this the default
@@ -321,12 +286,11 @@ export function PagesLinesCard({ pages, answer }: { pages: readonly string[]; an
     return page?.points ? [{ ...page, points: page.points, colour: PLOTTED_COLOURS[index] ?? CHART_SERIES_SLATE }] : [];
   });
   const websiteOn = whole === "on" && Boolean(website);
-  const series: SiteSeries[] = [
-    ...drawn.map((page, index) => ({ key: `page${index}`, name: pageName(page.address, page.title), colour: page.colour })),
-    ...(websiteOn ? [{ key: "website", name: t("website"), colour: CHART_SERIES_SLATE, dashed: true }] : []),
+  const pointsOf = (points: readonly Point[]) => points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: point[show] }));
+  const lines: DaysLine[] = [
+    ...drawn.map((page, index) => ({ key: `page${index}`, name: pageName(page.address, page.title), colour: page.colour, points: pointsOf(page.points) })),
+    ...(websiteOn ? [{ key: "website", name: t("website"), colour: CHART_SERIES_SLATE, dashed: true, points: pointsOf(website?.points ?? []) }] : []),
   ];
-  const lines: Point[][] = [...drawn.map((page) => page.points), ...(websiteOn ? [website?.points ?? []] : [])];
-  const data = linesByStep(step, show, series, lines);
   // The eye reads every line drawn, each point by its day. By the pages' numbers, not the array they come in, which is new each time the table draws.
   const ticked = pages.join(",");
   const seen = useMemo(() => (website || daily ? {
@@ -338,25 +302,13 @@ export function PagesLinesCard({ pages, answer }: { pages: readonly string[]; an
     }),
   } : undefined), [website, daily, ticked, show, pageName]);
   useSeesPart("viewsADay", seen);
-  const coarse = data.some((row) => row.coarse === true);
-  const readout = ({ row, heading }: { row: Record<string, unknown>; heading: ReactNode }) => ({
-    heading,
-    columns: [{ key: "figure", label: tm(`measure.${show}`) }],
-    rows: series.map((entry) => {
-      const value = (row[entry.key] as number | null | undefined) ?? 0;
-      const cell: ReadoutCell = { text: formatNumber(value), quiet: value === 0 };
-      return { key: entry.key, name: entry.name, colour: entry.colour, cells: { figure: cell } };
-    }),
-  });
   return (
-    <ChartExplorer
+    <DaysChart
       title={t(`title.${show}.${step}`)}
-      hint={`${t("hint", { count: pages.length, when: inWords.now })}${coarse ? ` ${tc(`coarse.${step}`)}` : ""}`}
+      hint={(coarse) => `${t("hint", { count: pages.length, when: inWords.now })}${coarse ? ` ${tc(`coarse.${step}`)}` : ""}`}
       exportName="google-analytics-pages-daily"
-      csv={() => toCsv([t("csvDay"), ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number)]))}
+      csvDay={t("csvDay")}
       host={status?.host ?? ""}
-      from={null}
-      to={null}
       step={step}
       waiting={null}
       controls={[
@@ -364,10 +316,9 @@ export function PagesLinesCard({ pages, answer }: { pages: readonly string[]; an
         { kind: "select", key: "whole", label: t("website"), value: whole, options: WHOLE_SWITCH.map((one) => ({ value: one, label: t(`switch.${one}`) })), onChange: (next) => setWhole(next as "off" | "on") },
       ]}
       nothingTicked={pages.length === 0 && whole === "off" ? t("nothingTicked", { most: MOST_PLOTTED }) : null}
-      data={data}
-      series={series}
-      readout={readout}
-      anything={data.length > 0}
+      lines={lines}
+      figure={tm(`measure.${show}`)}
+      plain
       empty={tc("empty")}
       height={LINES_HEIGHT}
     />

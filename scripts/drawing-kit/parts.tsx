@@ -306,6 +306,40 @@ const PARTS: Part[] = [
     ),
   },
   {
+    id: "days-chart",
+    name: "A chart of days, and its menus",
+    source: "src/ui/components/screens/DaysChart.tsx (the card and line from ChartExplorer), its menus from ExplorerToolbar",
+    use: "Figures over time on real dates, by the day, week or month the page's Step says, with the dates before as a dashed grey line and Up or down under it. Visits, All pages, Funnel and Campaigns each draw theirs on it. A line needs a real chart: render DaysChart in a board, as drawing-boards-real-charts says. Never draw one by hand.",
+    render: () => (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value="visits" onChange={noop} chip={{ label: "Show", choice: "Visits", changed: false }}><option value="visits">Visits</option></Select>
+        <Select value="before" onChange={noop} chip={{ label: "Compare with", choice: "September", changed: false }}><option value="before">September</option></Select>
+      </div>
+    ),
+  },
+  {
+    id: "bars-card",
+    name: "Named things as bars, and their menus",
+    source: "src/ui/components/screens/BarsCard.tsx (the card and bars from ChartExplorer), its menus from ExplorerToolbar",
+    use: "Named things as bars along, each saying its figure, with a hover naming every series even if it's empty. Visits' who, a page's who looks and its visitors, and both of Products' charts draw theirs on it. Render BarsCard in a board. Never draw one by hand.",
+    render: () => (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value="device" onChange={noop} chip={{ label: "Show", choice: "Device", changed: false }}><option value="device">Device</option></Select>
+      </div>
+    ),
+  },
+  {
+    id: "map-card",
+    name: "A map in its card",
+    source: "src/ui/components/screens/MapCard.tsx, holding PageMap or SiteTreemap",
+    use: "A map's card: its title and hint, its menus, the boxes, and a line under them saying what's left out. All pages' map, Visits' map of page groups and Campaigns' map all take it. Words stand in place of the boxes when there's nothing to show. The menus and boxes are the parts above.",
+    render: () => (
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value="visits" onChange={noop} chip={{ label: "Count", choice: "Visits", changed: false }}><option value="visits">Visits</option></Select>
+      </div>
+    ),
+  },
+  {
     id: "dot-groups",
     name: "Dots in four named groups, and their menu",
     source: "src/ui/components/screens/DotGroups.tsx (dots from SiteScatterChart, scale=\"tight\"), its menu from ExplorerToolbar",
@@ -546,7 +580,7 @@ const PARTS: Part[] = [
   {
     id: "table",
     name: "Table — Websites' kind",
-    source: "src/ui/components/screens/DataTable.tsx, TableBar.tsx, Table.tsx, app/sites/_components/SiteCells.tsx",
+    source: "src/ui/components/screens/DataTable.tsx, TableBar.tsx, Table.tsx, app/sites/_components/SiteCells.tsx; ListTable.tsx puts the bar and the table together, so a screen takes that whole",
     use: "Search and filters above; the bar with its count and download; headings that sort; keywords white (RecordLinkCell), pages blue (PageLinkCell); numbered pages, 25/50/75/100 rows. Fits the page: never a minimum width.",
     render: () => (
       <DataTable

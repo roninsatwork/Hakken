@@ -347,6 +347,20 @@ describe("HakkenSees and its eye", () => {
       expect(screen.queryByText(/Organic Search/)).toBeNull();
     });
 
+    it("dates with nothing for the team to write about keep the rule's words, at once and for nothing", async () => {
+      const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
+      vi.mocked(useMutation).mockReturnValue(askSees as never);
+      render(
+        <>
+          <HakkenSeesEye />
+          <HakkenSees says={says} steps={[]} advice="box" page={{ ...page, writes: false }} />
+        </>,
+      );
+      fireEvent.click(eye());
+      expect(sentences()).toEqual(says);
+      expect(askSees).not.toHaveBeenCalled();
+    });
+
     it("a page whose words are the team's weekly ones writes nothing when pressed", async () => {
       const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
       vi.mocked(useMutation).mockReturnValue(askSees as never);

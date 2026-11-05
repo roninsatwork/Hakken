@@ -314,9 +314,9 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
  * Conversions' landing pages.
  */
 export function ListTopBars({ list, sort, bars, nameOf }: {
-  list: "channel" | "landing" | "page" | "campaign" | VisitorList;
+  list: "channel" | "landing" | "page" | VisitorList;
   sort: "visits" | "views" | "conversions";
-  bars: "channels" | "channelsList" | "landing" | "conversions" | "campaigns" | `visitors.${VisitorList}`;
+  bars: "channels" | "channelsList" | "landing" | "conversions" | `visitors.${VisitorList}`;
   /** A bar's name in the reader's words, where Google's is a code (Visitors'). */
   nameOf?: (label: string) => string;
 }) {
@@ -357,32 +357,6 @@ export function ChannelsDailyChart() {
       exportName="google-analytics-channels-daily"
       marked
       updateKey={false}
-    />
-  );
-}
-
-/**
- * Campaigns' chart (GA28; §18.2 board 17): the visits from tagged links a
- * day, read for itself from the campaigns kept a day (ga-stored-figures-plan.md SF12).
- */
-export function CampaignsDailyChart() {
-  const t = useTranslations("googleAnalytics.chart");
-  const tf = useTranslations("googleAnalytics.filters");
-  const args = useAnalyticsArgs();
-  const status = useAnalyticsStatus();
-  const chart = useQuery(api.googleAnalyticsChartReads.analyticsCampaignChart, status?.connection?.newestDay ? args : "skip");
-  // Read for itself, so the page's eye is handed it here (sees-every-page-plan-2026-10-31.md).
-  useSeesPart("taggedVisitsByDay", chart);
-  return (
-    <ChannelsChart
-      channels={[t("visits")]}
-      rest={false}
-      points={(chart?.points ?? []).map((point) => ({ day: point.day, lastDay: point.lastDay, visits: [point.visits] }))}
-      host={status?.host ?? ""}
-      from={null}
-      to={null}
-      exportName="google-analytics-campaigns-daily"
-      title={{ ...t.raw("campaignsTitle") as { day: string; week: string; month: string }, hint: t("campaignsHint", { period: tf(`periods.${periodWord(args.period)}`) }) }}
     />
   );
 }

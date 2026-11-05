@@ -6,10 +6,9 @@ import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { PRODUCT_CHART_VIEWS } from "@/convex/utils/sees/analyticsProducts";
-import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
-import { formatNumber, toCsv } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
 import { useSiteParam } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
 import { useEventName } from "@/src/app/(dashboard)/app/analytics/_components/useEventName";
 import { periodWord, useAnalyticsArgs, usePeriod } from "@/src/app/(dashboard)/app/analytics/_components/useAnalytics";
@@ -55,14 +54,12 @@ export function BoughtOrLeftChart({ answer, choice, onPick, host }: {
   // The shop's own events, most visits first, and any it picked that recorded nothing in these dates.
   const listed = [...new Set([...answer.events.map((event) => event.eventName), ...choice.steps, ...(choice.sale ? [choice.sale] : [])])];
   return (
-    <ChartExplorer
+    <BarsCard
       title={t("title")}
       hint={t("hint")}
       exportName="google-analytics-shop-steps"
-      csv={() => toCsv([t("stepsLabel"), series[0].name, series[1].name], data.map((row) => [row.label, row.bought, row.left]))}
+      csvHeading={t("stepsLabel")}
       host={host}
-      from={null}
-      to={null}
       waiting={null}
       controls={[
         {
@@ -78,17 +75,13 @@ export function BoughtOrLeftChart({ answer, choice, onPick, host }: {
         },
       ]}
       nothingTicked={choice.sale === null ? t("noSale") : choice.steps.length === 0 ? t("noSteps") : null}
-      data={data}
+      rows={data}
       series={series}
-      readout={({ row, heading }) => ({
-        heading,
-        columns: [{ key: "visits", label: t("visits"), tone: "band" }],
-        rows: series.map((entry) => ({ key: entry.key, name: entry.name, colour: entry.colour, cells: { visits: { text: formatNumber(Number(row[entry.key] ?? 0)) } } })),
-        total: { visits: { text: formatNumber(Number(row.bought ?? 0) + Number(row.left ?? 0)) } },
-      })}
+      figure={t("visits")}
+      totalOf={(row) => Number(row.bought ?? 0) + Number(row.left ?? 0)}
+      stacked
       anything={data.some((row) => row.bought + row.left > 0)}
       empty={t("empty")}
-      bars={{ labels: (value) => formatNumber(value), stacked: true }}
     />
   );
 }
@@ -137,14 +130,12 @@ export function ProductsChart({ categories, host }: { categories: readonly strin
   const rows = answer?.[view] ?? [];
   const data = rows.map((row) => ({ label: row.name, bought: row.itemsBought, left: row.itemsLeft, before: row.itemsBoughtBefore ?? 0 }));
   return (
-    <ChartExplorer
+    <BarsCard
       title={t(`titles.${view}`, { before })}
       hint={t(`hints.${view}`, { before, period: periodName.toLowerCase() })}
       exportName="google-analytics-products-chart"
-      csv={() => toCsv([t("items"), ...series.map((entry) => entry.name)], data.map((row) => [row.label, ...series.map((entry) => row[entry.key as "bought" | "left" | "before"])]))}
+      csvHeading={t("items")}
       host={host}
-      from={null}
-      to={null}
       waiting={answer === undefined ? undefined : null}
       controls={[
         { kind: "select", key: "show", label: t("showLabel"), value: view, options: VIEWS.map((value) => ({ value, label: t(`views.${value}`) })), onChange: (value) => setView(value as View) },
@@ -154,18 +145,12 @@ export function ProductsChart({ categories, host }: { categories: readonly strin
           onChange: setCategory,
         },
       ]}
-      nothingTicked={null}
-      data={data}
+      rows={data}
       series={series}
-      readout={({ row, heading }) => ({
-        heading,
-        columns: [{ key: "items", label: t("items"), tone: "band" }],
-        rows: series.map((entry) => ({ key: entry.key, name: entry.name, colour: entry.colour, cells: { items: { text: formatNumber(Number(row[entry.key] ?? 0)) } } })),
-        total: null,
-      })}
+      figure={t("items")}
+      stacked={view === "left"}
       anything={data.length > 0 && (!compares || answer?.compared === true)}
       empty={compares && answer?.compared === false ? t("notCompared", { before }) : t("empty")}
-      bars={{ labels: (value) => formatNumber(value), stacked: view === "left" }}
     />
   );
 }

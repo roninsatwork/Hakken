@@ -80,14 +80,21 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
   },
   "googleAnalytics.channel": { about: "one channel's own screen: its visits, pages and conversions", never: NO_MONEY },
   "googleAnalytics.campaigns": {
-    about: "Campaigns: visits from links tagged for a campaign (an email, an ad, a social post), each campaign against the span before and every campaign visit together",
+    about: "Campaigns: people who came from a link tagged for a campaign (an ad, an email, a social post), each campaign against the span before, and all of them against the whole website. A campaign's name is what its link was tagged with. A website with nothing bought shows conversions in place of what was bought",
     parts: [
-      "visits from tagged links a day",
-      "visits by campaign, the busiest as bars",
-      "the table: each campaign with where its link was, its visits, engaged visits, conversions and change; or the words tagged links carry",
-      "the visits from no tagged link",
+      "the four boxes: visits from campaigns, their share of all visits, what was bought from campaigns, and its share of everything bought, each against the span before",
+      "visits from campaigns each day, against the same days of the span before, with up or down under it in whole weeks",
+      "a map of the campaigns, each box sized by its visits, orange if it went up and grey if it went down",
+      "what people did after they arrived: the busiest campaigns and each counted thing, as the times it happened, those for every 100 visits, or the conversion rate, which is the share of a campaign's visits that did it at least once. Only that rate is a percentage",
+      "the table: each campaign with where its link came from, its visits, the span before, up or down, what was bought and its conversions, each for every 100 visits; or the words tagged links carry",
+      "the visits from no campaign, beside the table",
     ],
-    never: [...NO_MONEY, "what a campaign cost or earned: no ad spend is held", CONVERSIONS_AS_TIMES],
+    never: [
+      ...NO_MONEY,
+      "what a campaign cost or earned: no ad spend is held",
+      CONVERSIONS_AS_TIMES,
+      "a step asking the reader to look at one campaign on another screen: Funnel, All pages, Products and Conversions show the whole website and can't be split by campaign. For one campaign, a step says what to check in the ad account, or what to change about its link, and names the screen only for what that screen really shows",
+    ],
   },
   // Funnel (was Landing pages: its eye key kept).
   "googleAnalytics.landing": {

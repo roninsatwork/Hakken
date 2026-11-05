@@ -515,6 +515,167 @@ describe("Campaigns (GA28)", () => {
     const desktop = await user.query(api.googleAnalyticsReads.analyticsListPage, phones);
     expect(desktop).toMatchObject({ live: false, rows: [] });
   });
+
+  /**
+   * The new page (docs/plans/active/campaigns-new-page-plan-2026-11-05.md): three campaigns over September and August, whose figures
+   * are easy to check by hand. Google Ads' Zombies falls from 4 visits a day to 2. Brand doubles, and sells. A Facebook ad with no name
+   * of its own arrives only in September and sells nothing.
+   */
+  const CAMPAIGN_NOW = 30;
+  function campaignVisits(): Visit[] {
+    const visit = (date: string, campaign: string, source: string, medium: string, sessions: number, extra: Partial<Visit> = {}): Visit => ({
+      date, device: "desktop", channel: "Paid Search", source, landing: "/shop/", page: "/shop/", campaign, medium, sessions, engaged: sessions - 1, seconds: 20, views: sessions, ...extra,
+    });
+    const visits: Visit[] = [];
+    for (let at = 0; at < 60; at += 1) {
+      const date = shiftDay(TOP, -at);
+      const now = at < CAMPAIGN_NOW;
+      visits.push(...dayOf(date, 1));
+      visits.push(visit(date, "Zombies", "google", "cpc", now ? 2 : 4, { events: { generate_lead: [1, 0] } }));
+      visits.push(visit(date, "Brand", "google", "cpc", now ? 4 : 2, { purchases: now ? 2 : 1, revenue: 5_000 }));
+      if (now) visits.push(visit(date, "52536031490414", "fb", "paid", 3));
+    }
+    return visits;
+  }
+  const askCampaigns = async (t: Harness, siteId: Id<"companyWebsites">, extra: Record<string, unknown> = {}) => {
+    const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+    return (await t.query(internal.assistantAnalyticsReads.googleAnalyticsInternal, { companyId, website: "acme-shop.test", screen: "campaigns", period: "lastMonth", ...extra } as never)) as never as Record<string, unknown> & {
+      rows: Array<Record<string, unknown>>; boxes: Record<string, unknown>; chart: { rows: Array<Record<string, number>>; theDatesBefore?: Array<Record<string, number>> };
+      whatPeopleDid: { things: string[]; campaigns: Array<{ name: string; cameFrom: string; visits: number; did: Array<Record<string, unknown>> }> };
+    };
+  };
+
+  test("each campaign's visits and what it sold against the dates before, its place in plain words, in any order, and the whole list's totals", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, campaignVisits());
+    const ask = (extra: Record<string, unknown> = {}) => user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, ...listArgs, list: "campaign", ...extra } as never);
+    const answer = await ask();
+    expect(answer.rows.map((row) => [row.label, row.cameFrom, row.visits, row.visitsBefore, row.purchases, row.purchasesBefore])).toEqual([
+      ["Brand", "googleAds", 120, 60, 60, 30],
+      ["52536031490414", "facebookAd", 90, 0, 0, 0],
+      ["Zombies", "googleAds", 60, 120, 0, 0],
+    ]);
+    expect(answer.cameFromChoices).toEqual([{ cameFrom: "googleAds", visits: 180 }, { cameFrom: "facebookAd", visits: 90 }]);
+    // The whole list's own, whichever page of it's on screen.
+    expect(answer.campaignTotals).toMatchObject({ visits: 270, visitsBefore: 180, bought: 60, boughtBefore: 30 });
+    const onePage = await ask({ rows: 1 });
+    expect(onePage.campaignTotals).toEqual(answer.campaignTotals);
+    // Each order, over the whole list.
+    const firstOf = async (sort: string, direction: string) => (await ask({ sort, direction })).rows[0]!.label;
+    expect(await firstOf("visitsBefore", "desc")).toBe("Zombies");
+    expect(await firstOf("visitsChange", "desc")).toBe("52536031490414");
+    expect(await firstOf("visitsChange", "asc")).toBe("Zombies");
+    expect(await firstOf("bought", "desc")).toBe("Brand");
+    // One place alone: the rows and the totals both.
+    const ads = await ask({ cameFrom: "googleAds" });
+    expect(ads.rows.map((row) => row.label)).toEqual(["Brand", "Zombies"]);
+    expect(ads.total).toBe(2);
+    expect(ads.campaignTotals).toMatchObject({ visits: 180, visitsBefore: 180, bought: 60 });
+    expect(ads.cameFromChoices).toEqual(answer.cameFromChoices);
+  });
+
+  test("the chart's days hold each figure, follow one place, and bring the same days of the dates before", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, campaignVisits());
+    const chart = await user.query(api.googleAnalyticsChartReads.analyticsCampaignChart, { siteId, period: "lastMonth", device: "" });
+    expect(chart.points).toHaveLength(30);
+    expect(chart.points[0]).toMatchObject({ visits: 9, engaged: 6, bought: 2, conversions: 1 });
+    // September against August, which has a day more: each day's drawn on the same date of its month.
+    expect(chart.before).toMatchObject({ drawn: true, shift: 31 });
+    expect(chart.before!.points.at(-1)).toMatchObject({ visits: 6, bought: 1 });
+    const ads = await user.query(api.googleAnalyticsChartReads.analyticsCampaignChart, { siteId, period: "lastMonth", device: "", cameFrom: "facebookAd" });
+    expect(ads.points[0]).toMatchObject({ visits: 3, engaged: 2, bought: 0, conversions: 0 });
+    // A year's before is held in weeks and months, so it isn't drawn against.
+    const year = await user.query(api.googleAnalyticsChartReads.analyticsCampaignChart, { siteId, period: "last12Months", device: "" });
+    expect(year.before?.drawn ?? false).toBe(false);
+  });
+
+  test("what people did: the most counted things, times and visits apart, and one place's alone", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, campaignVisits());
+    const did = await user.query(api.googleAnalyticsCampaignReads.analyticsCampaignActions, { siteId, period: "lastMonth", device: "" });
+    expect(did.live).toBe(false);
+    expect(did.rows.map((row) => row.label)).toEqual(["Brand", "52536031490414", "Zombies"]);
+    const zombies = did.rows.find((row) => row.label === "Zombies")!;
+    expect(did.events).toEqual(["generate_lead"]);
+    expect(zombies.times).toEqual([30]);
+    // The visits that did it, kept apart from the times: what a conversion rate is worked out from, so it can't pass 100%.
+    expect(zombies.visitsDid).toEqual([30]);
+    expect(did.rows.find((row) => row.label === "Brand")!.visitsDid).toEqual([0]);
+    const ads = await user.query(api.googleAnalyticsCampaignReads.analyticsCampaignActions, { siteId, period: "lastMonth", device: "", cameFrom: "facebookAd" });
+    expect(ads.rows.map((row) => row.label)).toEqual(["52536031490414"]);
+  });
+
+  test("Ask Hakken reads what the screen shows, on any date: the same figures, in the page's words, and never money", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, campaignVisits());
+    for (const period of ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"] as const) {
+      const screen = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, period, device: "", page: 1, rows: 25, list: "campaign", sort: "visits", direction: "desc" });
+      const said = await askCampaigns(t, siteId, { period });
+      expect(said.listed).toBe(screen.total);
+      expect(said.rows.map((row) => row.visits)).toEqual(screen.rows.map((row) => row.visits));
+      expect(said.rows.map((row) => row.visitsBefore)).toEqual(screen.rows.map((row) => row.visitsBefore));
+      expect(said.rows.map((row) => row.conversions)).toEqual(screen.rows.map((row) => row.conversions));
+      const boxes = await askCampaigns(t, siteId, { period, part: "boxes" });
+      if (screen.campaignTotals) expect(boxes.boxes.visits).toBe(screen.campaignTotals.visits);
+      const chart = await user.query(api.googleAnalyticsChartReads.analyticsCampaignChart, { siteId, period, device: "" });
+      const drawn = await askCampaigns(t, siteId, { period, part: "chart" });
+      expect((drawn.chart?.rows ?? []).map((row) => row.visits)).toEqual(chart.points.map((point) => point.visits));
+      const did = await user.query(api.googleAnalyticsCampaignReads.analyticsCampaignActions, { siteId, period, device: "" });
+      const told = await askCampaigns(t, siteId, { period, part: "did" });
+      expect(told.whatPeopleDid.campaigns.map((row) => row.visits)).toEqual(did.rows.map((row) => row.visits));
+      expect(told.whatPeopleDid.campaigns.map((row) => row.did.map((cell) => cell.times))).toEqual(did.rows.map((row) => row.times));
+    }
+    const told = await askCampaigns(t, siteId, { part: "did" });
+    expect(told.whatPeopleDid.campaigns.find((row) => row.name === "Zombies")!.did).toEqual([{ thing: "generate lead", times: 30, timesPer100Visits: 50, visitsThatDidIt: 30, conversionRatePercent: 50 }]);
+    const said = await askCampaigns(t, siteId);
+    expect(said.rows[0]).toMatchObject({ name: "Brand", cameFrom: "Google Ads", visits: 120, visitsBefore: 60, upOrDown: 60, bought: 60, boughtBefore: 30, boughtPer100Visits: 50 });
+    // A number's a name only to the ad platform. Nothing here speaks of money.
+    expect(said.rows[1]).toMatchObject({ name: "Facebook ad with no name", cameFrom: "Facebook ad" });
+    for (const part of [{}, { part: "boxes" }, { part: "chart" }, { part: "did" }]) {
+      const answer = await askCampaigns(t, siteId, part);
+      expect(answer).not.toHaveProperty("currency");
+      expect(JSON.stringify(answer)).not.toMatch(/"value"|"revenue"/);
+    }
+    // Its rule says conversions count times, so a figure over 100 is never told as a percentage.
+    expect(said.conversionsRule).toMatch(/not visits/);
+    expect(said.conversionsRule).toMatch(/never call one a conversion rate/);
+  });
+
+  test("Ask Hakken reads in any order, one place in the page's words, the boxes against the whole website, and what to say when there are none", async () => {
+    const t = harness();
+    const { siteId } = await collected(t, campaignVisits());
+    const first = async (order: string) => (await askCampaigns(t, siteId, { order })).rows[0]!.name;
+    expect(await first("mostVisits")).toBe("Brand");
+    expect(await first("gainedMostVisits")).toBe("Facebook ad with no name");
+    expect(await first("lostMostVisits")).toBe("Zombies");
+    expect(await first("mostBought")).toBe("Brand");
+    expect(await first("mostConversions")).toBe("Zombies");
+    const ads = await askCampaigns(t, siteId, { cameFrom: "google ads" });
+    expect(ads).toMatchObject({ onlyFrom: "Google Ads", listed: 2 });
+    expect(String(ads.link)).toContain("cameFrom=googleAds");
+    const adBoxes = await askCampaigns(t, siteId, { cameFrom: "Google Ads", part: "boxes" });
+    expect(adBoxes.boxes).toMatchObject({ visits: 180, visitsBefore: 180, bought: 60, boughtBefore: 30 });
+    const boxes = await askCampaigns(t, siteId, { part: "boxes" });
+    expect(boxes.boxes).toMatchObject({ visits: 270, visitsBefore: 180, bought: 60, boughtBefore: 30, shareOfAllBoughtPercent: 100 });
+    const nowhere = await askCampaigns(t, siteId, { cameFrom: "Pinterest" });
+    expect(nowhere.listed).toBe(0);
+    expect(String(nowhere.message)).toMatch(/No campaign .* came from Pinterest/);
+    expect(nowhere.placesCampaignsCameFrom).toEqual([{ cameFrom: "Google Ads", visits: 180 }, { cameFrom: "Facebook ad", visits: 90 }]);
+  });
+
+  test("a website with no campaigns is told so, with where to look next, and one that sells nothing speaks in conversions", async () => {
+    const t = harness();
+    const { siteId } = await collected(t, growing());
+    const none = await askCampaigns(t, siteId);
+    expect(none.listed).toBe(0);
+    expect(String(none.message)).toMatch(/no visits from a campaign link in these dates.*last12Months/);
+    const boxes = await askCampaigns(t, siteId, { part: "boxes" });
+    expect(boxes.boxes).toMatchObject({ visits: 0, conversions: 0 });
+    expect(boxes.boxes).not.toHaveProperty("bought");
+    const did = await askCampaigns(t, siteId, { part: "did" });
+    expect(did.whatPeopleDid).toEqual({ things: [], campaigns: [] });
+  });
 });
 
 describe("Visits (GA24; visits-redo-plan-2026-11-03.md)", () => {

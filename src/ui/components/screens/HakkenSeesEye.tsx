@@ -73,7 +73,7 @@ export function HakkenSeesEye() {
   // The website: the page's, else the one its figures are of (Insights opens on a website without naming it).
   const siteId = page?.siteId ?? (data !== undefined ? siteIdIn(data) : undefined);
   const derivedAsk = useMemo<SeesAsk | undefined>(() => {
-    if (!page || !siteId || pageData === null || !seesWrites(page.screen)) return undefined;
+    if (!page || !siteId || pageData === null || !seesWrites(page.screen) || page.writes === false) return undefined;
     const links = new Map<string, { label: string; href: string }>();
     for (const step of box?.steps ?? []) if (step.href.startsWith("/app/") && !step.external) links.set(step.href, { label: step.link, href: step.href });
     for (const link of page.links ?? []) links.set(link.href, { label: link.label, href: link.href });

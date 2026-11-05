@@ -12,7 +12,7 @@ import { useAnalyticsArgs, useAnalyticsStatus } from "./useAnalytics";
  * whole website's figures a list's rows are set beside. Read once, the same objects while they stand.
  */
 
-const EYE_NAMES = ["website", "visits", "conversions", "views", "landing", "tagged", "rightNow", "usualHalfHour", "viewsShare", "square", "thisPage", "shopPages", "homePage"] as const;
+const EYE_NAMES = ["website", "visits", "conversions", "views", "landing", "tagged", "bought", "theirVisits", "rightNow", "usualHalfHour", "viewsShare", "square", "thisPage", "shopPages", "homePage"] as const;
 
 /** The names a page's own findings use ("The whole website", "All landing pages"), in the reader's language. */
 export function useEyeNames(): Record<string, string> {

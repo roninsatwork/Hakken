@@ -40,6 +40,11 @@ export type SeesPage = {
   device?: string;
   /** Places a step may link to beyond the rule's own steps: the section's other screens. */
   links?: ReadonlyArray<{ label: string; href: string }>;
+  /**
+   * False when these dates give the team nothing to write about, as with no campaign at all: the rule's words stand, at once and for
+   * nothing, rather than a press that takes minutes to say the same (campaigns-new-page-plan-2026-11-05.md, step 8).
+   */
+  writes?: boolean;
 };
 
 /**

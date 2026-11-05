@@ -288,12 +288,16 @@ export const shownRowValidator = v.object({
   /** Conversions and value against the span before, for "What changed most". */
   conversionsBefore: v.union(v.number(), v.null()),
   valueBefore: v.union(v.number(), v.null()),
+  /** What was bought in the span before: Campaigns' map, boxes and table (campaigns-new-page-plan-2026-11-05.md). */
+  purchasesBefore: v.optional(v.union(v.number(), v.null())),
   /** A page group's pages: how many it holds. */
   members: v.optional(v.number()),
   /** A page's title, from the website's page list (GA27): only on the rows a screen shows. */
   title: v.optional(v.string()),
   /** A campaign's source and medium, where its tagged link was: "linkedin.com / social" (§18.6.6). */
   source: v.optional(v.string()),
+  /** A campaign's place in a person's words: a code, or its source as it was written (`utils/campaignNames.ts`). */
+  cameFrom: v.optional(v.string()),
   /** Channels' table (ga-channel-pages-plan.md CH9): the conversions a channel started, by the people it first brought. */
   started: v.optional(v.union(v.number(), v.null())),
   /** Channels' table: the page group most of a channel's visits land on, and its share. */
@@ -339,5 +343,6 @@ export function shown(row: ListRow, before: ListRow | null | undefined, counted:
     visitsBefore: hadBefore ? (before?.visits ?? 0) : null,
     conversionsBefore: hadBefore ? (was?.conversions ?? 0) : null,
     valueBefore: hadBefore ? (was?.value ?? 0) : null,
+    purchasesBefore: hadBefore ? (before?.purchases ?? 0) : null,
   };
 }

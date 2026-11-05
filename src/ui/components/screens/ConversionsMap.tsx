@@ -49,10 +49,14 @@ export type ConversionsMapWords = {
   hover: (row: ConversionsMapRow, column: ConversionsMapColumn, value: string, cell: ConversionsMapCell) => string;
   /** Added to the hover with Compare on: the span before's value and the change, "the month before 102 (▲ 8.8%)". */
   hoverBefore: (before: string, change: string | null) => string;
-  /** The key: what the shades mean, and an empty square. */
+  /** The key: what a square's figures are, what the shades mean, and an empty square. */
+  figures?: string;
   shades: string;
   empty: string;
 };
+
+/** A square as a page writes it: its figure, the line under it, and how bright it is from 0 to 1. Campaigns' squares. */
+export type ConversionsMapSquare = { text: string; note?: string; share: number };
 
 const fmt = (value: number) => value.toLocaleString("en-GB");
 const pct = (share: number) => `${(100 * share).toFixed(1)}%`;
@@ -75,7 +79,7 @@ export function changeWords(now: number, before: number | null, newWord: string)
   return `${by > 0 ? "▲" : "▼"} ${(100 * Math.abs(by)).toFixed(1)}%`;
 }
 
-export function ConversionsMap({ title, hint, controls, columns, rows, count, compare, words, newWord, hrefFor, exportName, csv, caption, emptyText, pickWord, narrow: narrowGiven }: {
+export function ConversionsMap({ title, hint, controls, columns, rows, count, compare, words, newWord, hrefFor, exportName, csv, caption, emptyText, pickWord, narrow: narrowGiven, squareOf }: {
   /** The line under the title: what a square is, in plain words (the Conversions canvas, 2026-10-30). */
   hint?: ReactNode;
   title: string;
@@ -98,6 +102,11 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
   pickWord?: string;
   /** The narrow form, forced: the drawing kit's example and tests; left out, the part measures itself. */
   narrow?: boolean;
+  /**
+   * A square's figures and brightness, where the page's rows aren't conversions: Campaigns' are campaigns, its columns the things
+   * people did, and a square is brighter against the other campaigns, column by column (campaigns-new-page-plan-2026-11-05.md, step 5).
+   */
+  squareOf?: (row: ConversionsMapRow, column: ConversionsMapColumn, cell: ConversionsMapCell, columnAt: number) => ConversionsMapSquare;
 }) {
   const [box, width] = useElementWidth();
   const narrow = narrowGiven ?? (width > 0 && width / (columns.length + 1) < NARROW_SQUARE);
@@ -117,8 +126,9 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
       cells: row.cells.map((cell, at) => {
         const column = columns[at];
         const value = values[at];
-        const text = count === "rate" ? pct(value.now) : fmt(value.now);
-        const note = compare ? changeWords(value.now, value.before, newWord) : null;
+        const own = squareOf?.(row, column, cell, at);
+        const text = own?.text ?? (count === "rate" ? pct(value.now) : fmt(value.now));
+        const note = own?.note ?? (compare ? changeWords(value.now, value.before, newWord) : null);
         const beforeText = compare && value.before !== null ? words.hoverBefore(count === "rate" ? pct(value.before) : fmt(value.before), note) : "";
         return {
           // Empty where nothing happened, whatever the unit: the rate of nothing is nothing.
@@ -128,7 +138,7 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
           text,
           ...(note ? { note } : {}),
           // A rate shades against the row's highest; a count against the row's total.
-          share: count === "rate" ? (top > 0 ? value.now / top : 0) : sum > 0 ? value.now / sum : 0,
+          share: own?.share ?? (count === "rate" ? (top > 0 ? value.now / top : 0) : sum > 0 ? value.now / sum : 0),
           href: hrefFor?.(row, column),
         };
       }),
@@ -148,9 +158,10 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
         <ul className="flex flex-col gap-2">
           {columns.map((column, at) => {
             const value = values[at];
-            const text = count === "rate" ? pct(value.now) : fmt(value.now);
-            const note = compare ? changeWords(value.now, value.before, newWord) : null;
-            const share = count === "rate" ? (top > 0 ? value.now / top : 0) : sum > 0 ? value.now / sum : 0;
+            const own = squareOf?.(pickedRow, column, pickedRow.cells[at], at);
+            const text = own?.text ?? (count === "rate" ? pct(value.now) : fmt(value.now));
+            const note = own?.note ?? (compare ? changeWords(value.now, value.before, newWord) : null);
+            const share = own?.share ?? (count === "rate" ? (top > 0 ? value.now / top : 0) : sum > 0 ? value.now / sum : 0);
             const href = hrefFor?.(pickedRow, column);
             const beforeText = compare && value.before !== null ? words.hoverBefore(count === "rate" ? pct(value.before) : fmt(value.before), note) : "";
             const figure = <span className="shrink-0 font-mono text-[13px] font-semibold tabular-nums text-foreground">{value.now > 0 ? text : "–"}{note ? <span className="ml-2 text-[11px] font-normal text-secondary">{note}</span> : null}</span>;
@@ -178,7 +189,7 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
           rows={mapRows}
           rowVisits={() => 1}
           conversionsWord={() => ""}
-          legend={{ shades: words.shades, empty: words.empty }}
+          legend={{ ...(words.figures ? { visits: words.figures } : {}), shades: words.shades, empty: words.empty }}
           headingTooltips
           cellTooltips
         />}

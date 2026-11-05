@@ -10901,7 +10901,12 @@
         "searchesPercent": "of the searches ranked for",
         "fellPercent": "of its searches fell at the newest check",
         "newPercent": "of its searches were new at the newest check",
-        "pagesAVisit": "pages a visit"
+        "pagesAVisit": "pages a visit",
+        "boughtPerHundred": "bought for every 100 visits",
+        "timesPerHundred": "times for every 100 visits",
+        "shareOfBought": "share of everything bought",
+        "shareOfConversions": "share of all conversions",
+        "visitsDidPercent": "of visits did this"
       }
     },
     "sidePanel": {
@@ -16699,7 +16704,15 @@
         "upOrDown": "Up or down",
         "timeOnPage": "Time on page",
         "conversionsHereTitle": "Conversions made on this page",
-        "conversionsOfVisit": "Conversions"
+        "conversionsOfVisit": "Conversions",
+        "cameFrom": "Came from",
+        "before": "Before",
+        "visitsNowTitle": "Visits in {when}.",
+        "visitsBeforeTitle": "Visits in {before}.",
+        "visitsChangeTitle": "Visits in {now} compared with {before}.",
+        "bought": "Bought",
+        "boughtTitle": "How many times people bought from this campaign, and how many that is for every 100 visits.",
+        "conversionsTimesTitle": "This counts every time, so one visit can count more than once."
       },
       "notSorted": "Unclassified",
       "pagesCount": "{count, plural, =1 {1 page} other {# pages}}",
@@ -16725,10 +16738,15 @@
         "landsMost": "Lands most on",
         "left": "Left here",
         "onward": "Went on",
-        "next": "Most went to"
+        "next": "Most went to",
+        "cameFrom": "Came from",
+        "visitsNow": "Visits",
+        "visitsBefore": "Visits before",
+        "visitsChange": "Up or down",
+        "bought": "Bought"
       },
       "downloadFailed": "Couldn't prepare the download. Try again.",
-      "untagged": "{count, plural, =1 {one visit had} other {# visits had}} no campaign tag",
+      "untagged": "{count, plural, =1 {one visit} other {# visits}} came from no campaign",
       "collectingBodyCampaigns": "{platformName} keeps every campaign list for each device, and this one comes with the next collection. The campaigns are listed for every device meanwhile.",
       "viewsUp": "Up {rate} on the dates before, from {before} views",
       "viewsDown": "Down {rate} on the dates before, from {before} views",
@@ -16745,7 +16763,8 @@
       },
       "noPageLost": "Google Analytics lost the page",
       "per100Visits": "<figure>{rate}</figure> per 100 visits",
-      "pageNotKnown": "Page not known"
+      "pageNotKnown": "Page not known",
+      "noAdKeyword": "{count, plural, =1 {one visit had} other {# visits had}} no ad keyword"
     },
     "chart": {
       "title": "Visits and conversions over time",
@@ -16795,11 +16814,6 @@
           "hint": "{period}: visits by channel.",
           "measure": "Visits"
         },
-        "campaigns": {
-          "title": "Visits by campaign",
-          "hint": "{period}.",
-          "measure": "Visits"
-        },
         "visitors": {
           "visitorType": {
             "title": "Visits by new or returning",
@@ -16841,12 +16855,6 @@
         "month": "Views each month"
       },
       "viewsOnlyHint": "How many times this page was seen {step, select, day {each day} week {each week} other {each month}} {period}.",
-      "campaignsTitle": {
-        "day": "Visits from tagged links a day",
-        "week": "Visits from tagged links a week",
-        "month": "Visits from tagged links a month"
-      },
-      "campaignsHint": "{period}.",
       "converted": {
         "day": "A day with a conversion: bigger for more",
         "week": "A week with a conversion: bigger for more",
@@ -17312,7 +17320,7 @@
     },
     "campaigns": {
       "title": "Campaigns",
-      "description": "Visits from links you tagged for a campaign — an email, an ad, a social post — and what they went on to do. Change is the visits against {before}.",
+      "description": "People who came from a link you tagged, like an ad or an email. See how they are doing and what they did next.",
       "findCampaign": "Find a campaign…",
       "findKeyword": "Find a keyword…",
       "showing": "Showing",
@@ -17320,8 +17328,150 @@
         "campaign": "Campaigns",
         "adKeyword": "Ad keywords"
       },
-      "empty": "No visits came from a tagged link in these dates.",
-      "emptyKeywords": "No tagged link carried words in these dates."
+      "empty": "No visits came from a campaign in {when}.",
+      "emptyKeywords": "No visits had an ad keyword in {when}.",
+      "noName": "{place} with no name",
+      "cameFromLabel": "Came from",
+      "everywhere": "Everywhere",
+      "cameFrom": {
+        "googleAds": "Google Ads",
+        "googleFreeListing": "Google free listing",
+        "facebookAd": "Facebook ad",
+        "instagramAd": "Instagram ad",
+        "microsoftAds": "Microsoft Ads",
+        "googleBusinessProfile": "Google Business Profile",
+        "email": "Email",
+        "trustpilot": "Trustpilot",
+        "pinterest": "Pinterest",
+        "notKnown": "Not known"
+      },
+      "boxes": {
+        "visits": "Visits from campaigns",
+        "share": "Share of all your visits",
+        "bought": "Bought from campaigns",
+        "boughtShare": "Share of everything bought",
+        "conversions": "Conversions from campaigns",
+        "conversionsShare": "Share of all your conversions",
+        "was": "It was {figure} in {before}.",
+        "noneEither": "None in {before} either."
+      },
+      "daily": {
+        "showLabel": "Show",
+        "compareWith": "Compare with",
+        "nothing": "No comparison",
+        "hint": "{now}.",
+        "hintAgainst": "{now} against the same days in {before}.",
+        "empty": "No visits came from a campaign in these dates.",
+        "csvDay": "Day",
+        "collecting": "Still being collected.",
+        "show": {
+          "visits": "Visits",
+          "bought": "Bought",
+          "conversions": "Conversions",
+          "left": "Left straight away"
+        },
+        "score": {
+          "visits": "Visits from campaigns",
+          "bought": "Bought from campaigns",
+          "conversions": "Conversions from campaigns"
+        },
+        "title": {
+          "visits": {
+            "day": "Visits from campaigns each day",
+            "week": "Visits from campaigns each week",
+            "month": "Visits from campaigns each month"
+          },
+          "bought": {
+            "day": "Bought from campaigns each day",
+            "week": "Bought from campaigns each week",
+            "month": "Bought from campaigns each month"
+          },
+          "conversions": {
+            "day": "Conversions from campaigns each day",
+            "week": "Conversions from campaigns each week",
+            "month": "Conversions from campaigns each month"
+          },
+          "left": {
+            "day": "People who left straight away, each day",
+            "week": "People who left straight away, each week",
+            "month": "People who left straight away, each month"
+          }
+        }
+      },
+      "map": {
+        "title": "All your campaigns",
+        "hint": {
+          "visits": "Bigger boxes had more visits.",
+          "bought": "Bigger boxes sold more.",
+          "conversions": "Bigger boxes had more conversions."
+        },
+        "colourHint": "Orange went up since {before} and grey went down.",
+        "count": "Count",
+        "measure": {
+          "visits": "Visits",
+          "bought": "Bought",
+          "conversions": "Conversions"
+        },
+        "figure": {
+          "visits": "{count, plural, =1 {# visit} other {# visits}}",
+          "bought": "{count} bought",
+          "conversions": "{count, plural, =1 {# conversion} other {# conversions}}"
+        },
+        "in": {
+          "visits": "Visits in {when}",
+          "bought": "Bought in {when}",
+          "conversions": "Conversions in {when}"
+        },
+        "upOrDown": "Up or down",
+        "same": "The same",
+        "left": "Left straight away",
+        "leftOutVisits": "This leaves out {count, plural, =1 {one campaign} other {# campaigns}} with {most, plural, =1 {one visit} other {# visits}} or fewer. They are in the table.",
+        "leftOut": "This leaves out {count, plural, =1 {one smaller campaign} other {# smaller campaigns}}. They are in the table.",
+        "empty": "Nothing to show in these dates.",
+        "csv": {
+          "campaign": "Campaign",
+          "cameFrom": "Came from",
+          "visits": "Visits",
+          "visitsBefore": "Visits before",
+          "bought": "Bought",
+          "boughtBefore": "Bought before",
+          "conversions": "Conversions",
+          "conversionsBefore": "Conversions before"
+        }
+      },
+      "squares": {
+        "title": "What people did after they arrived",
+        "hint": "Your {count, plural, =1 {busiest campaign} other {# busiest campaigns}}.",
+        "count": "Count",
+        "counts": {
+          "times": "Number of times",
+          "per100": "For every 100 visits",
+          "rate": "Conversion rate %"
+        },
+        "did": {
+          "add_to_cart": "Added to basket",
+          "begin_checkout": "Started checkout",
+          "purchase": "Bought",
+          "newsletter_sign_ups": "Signed up for emails"
+        },
+        "rowTotal": "{visits} visits",
+        "per100": "{rate} per 100",
+        "timesNote": "{times} times",
+        "key": "Each square shows how many times, and how many for every 100 visits.",
+        "shades": "Brighter means more for every 100 visits than the other campaigns",
+        "nobody": "Nobody did",
+        "hover": "{campaign}. {thing}: {times} times, {rate} for every 100 visits.",
+        "none": "Nobody did anything counted from these campaigns in these dates.",
+        "pick": "Campaign",
+        "csvCampaign": "Campaign",
+        "csvVisits": "Visits",
+        "visitsNote": "{visits} visits",
+        "keyRate": "Each square shows the share of visits that did this, and how many visits that is.",
+        "shadesRate": "Brighter means a higher rate than the other campaigns",
+        "hoverVisits": "{did} of its {visits} visits did it, which is {rate}.",
+        "csvTimes": "{thing}: times",
+        "csvVisitsDid": "{thing}: visits that did it"
+      }
     },
     "landing": {
       "title": "Funnel",
@@ -18066,7 +18216,9 @@
       "square": "Every page in this square",
       "thisPage": "This page",
       "shopPages": "Search, basket and account pages",
-      "homePage": "The home page"
+      "homePage": "The home page",
+      "bought": "Bought",
+      "theirVisits": "their share of all visits"
     },
     "landingPage": {
       "back": "Landing pages",

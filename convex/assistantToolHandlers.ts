@@ -1,7 +1,7 @@
 import type { FunctionArgs } from "convex/server";
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
-import { ANALYTICS_SCREENS, LIST_ORDER_NAMES, analyticsPartsOf, type AllPagesOrder, type FunnelOrder } from "./utils/analyticsScreens";
+import { ANALYTICS_SCREENS, LIST_ORDER_NAMES, analyticsPartsOf, type AllPagesOrder, type CampaignOrder, type FunnelOrder } from "./utils/analyticsScreens";
 import { PAGE_MOVES, type PageMove } from "./utils/pageMoves";
 import { BING_SCREENS } from "./utils/bingScreens";
 import { SEARCH_CONSOLE_SCREENS } from "./utils/searchConsoleAskScreens";
@@ -149,6 +149,7 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
     const order = optionalStringArg(input.args, "order");
     const classification = optionalStringArg(input.args, "classification");
     const move = optionalStringArg(input.args, "move");
+    const cameFrom = optionalStringArg(input.args, "cameFrom");
     const asked: FunctionArgs<typeof internal.assistantAnalyticsReads.googleAnalyticsInternal> = {
       companyId: input.companyId,
       website: stringArg(input.args, "website"),
@@ -158,10 +159,11 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       ...(country ? { country: country.toLowerCase() } : {}),
       ...(key ? { key } : {}),
       ...(search ? { search } : {}),
-      ...((LIST_ORDER_NAMES as readonly string[]).includes(order ?? "") ? { order: order as AllPagesOrder | FunnelOrder } : {}),
+      ...((LIST_ORDER_NAMES as readonly string[]).includes(order ?? "") ? { order: order as AllPagesOrder | FunnelOrder | CampaignOrder } : {}),
       ...(classification ? { classification } : {}),
       ...((PAGE_MOVES as readonly string[]).includes(move ?? "") ? { move: move as PageMove } : {}),
       ...(input.args.everyPage === true ? { everyPage: true } : {}),
+      ...(cameFrom ? { cameFrom } : {}),
       ...(list === "visitorType" || list === "browser" || list === "system" || list === "age" || list === "gender" || list === "interest" ? { list } : {}),
     };
     const answer = await input.ctx.runQuery(internal.assistantAnalyticsReads.googleAnalyticsInternal, asked);

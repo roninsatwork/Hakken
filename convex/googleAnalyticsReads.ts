@@ -1,4 +1,4 @@
-import { v, type Infer, type ObjectType } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { beforeValidator, flowValidator, readBeforeConverting, readConversionFlow, readVisitorMap, visitorGroupOf, type BeforeConverting, type ConversionFlow } from "./googleAnalyticsConversionReads";
@@ -10,11 +10,13 @@ import { decodePages, isPageRef } from "./holdPageRefs";
 import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { SHOP_PAGES_KIND, isShopPage } from "./utils/shopPages";
-import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { listOrder, listPageArgs, pageOfList, sortDirectionArg } from "./siteListPages";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { AI_ASSISTANTS_CHANNEL, GOOGLE_AI_CHANNEL, assistantOf, channelOf } from "./utils/aiAssistants";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
-import { UNTAGGED, VISITOR_LISTS, splitChannelKey, type ListRow, type VisitorList } from "./googleAnalyticsLists";
+import { UNTAGGED, splitChannelKey, type ListRow, type VisitorList } from "./googleAnalyticsLists";
+import { LIST_SORTS, isVisitorList, listKindValidator, openingSort, sortValidator, type ListKind } from "./googleAnalyticsListKinds";
+import { cameFromOf } from "./utils/campaignNames";
 import { campaignsSees } from "./utils/sees/analyticsCampaigns";
 import { slotKey } from "./googleAnalyticsCollect";
 import { onwardByGroup, onwardOf, withOnward, type Onward } from "./googleAnalyticsOnward";
@@ -93,69 +95,6 @@ export {
   type ShownRow,
 } from "./googleAnalyticsRows";
 
-const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange" | "started" | "elsewhere" | "share" | "left" | "onward" | "next" | "leftVisits" | "onwardVisits"> = {
-  name: { value: (row) => row.label, first: "asc" },
-  visits: { value: (row) => row.visits, first: "desc" },
-  engaged: { value: (row) => row.engagementRate, first: "desc" },
-  // The fewest bouncing first: the best first, as every Sites table sorts (sortOrder.ts).
-  bounce: { value: (row) => row.bounceRate, first: "asc" },
-  pages: { value: (row) => row.pagesPerVisit, first: "desc" },
-  people: { value: (row) => row.people, first: "desc" },
-  length: { value: (row) => row.lengthPerVisit, first: "desc" },
-  time: { value: (row) => row.timePerVisit, first: "desc" },
-  views: { value: (row) => row.views, first: "desc" },
-  conversions: { value: (row) => row.conversions, first: "desc" },
-  rate: { value: (row) => row.conversionRate, first: "desc" },
-  value: { value: (row) => row.value, first: "desc" },
-  change: { value: (row) => row.change, first: "desc" },
-  // All pages' two changes, as counts (all-pages-rethink-plan.md AP4): the most gained first.
-  viewsChange: { value: (row) => (row.viewsBefore === null ? null : row.views - row.viewsBefore), first: "desc" },
-  conversionsChange: { value: (row) => (row.conversionsBefore === null ? null : row.conversions - row.conversionsBefore), first: "desc" },
-  // Channels' conversions started (ga-channel-pages-plan.md CH9).
-  started: { value: (row) => row.started ?? null, first: "desc" },
-  // AI assistants' visits Google filed elsewhere (CH8).
-  elsewhere: { value: (row) => row.elsewhere ?? null, first: "desc" },
-  // A channel's classifications by their share of its visits (CH7): the same order as their visits.
-  share: { value: (row) => row.visits, first: "desc" },
-  // Landing pages' funnel (LF4), by share, so a page's size does not decide: the fewest leaving first, the most going on first,
-  // the strongest single next step first. Ask Hakken's orders (leftVisits, onwardVisits) by how many people, so it does.
-  left: { value: (row) => (row.onward == null || row.visits === 0 ? null : (row.visits - row.onward) / row.visits), first: "asc" },
-  onward: { value: (row) => (row.onward == null || row.visits === 0 ? null : row.onward / row.visits), first: "desc" },
-  next: { value: (row) => row.next?.share ?? null, first: "desc" },
-  leftVisits: { value: (row) => (row.onward == null ? null : row.visits - row.onward), first: "desc" }, onwardVisits: { value: (row) => row.onward ?? null, first: "desc" },
-};
-/** The order a list opens in (GA26): All pages by views, Landing pages and page groups by visits, the channels by value. */
-export function openingSort(list: ListKind): keyof typeof SORTS {
-  return list === "page" ? "views" : list === "landing" || list === "groups" || list === "campaign" || list === "adKeyword" || isVisitorList(list) ? "visits" : "value";
-}
-
-export const sortValidator = v.union(...(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((key) => v.literal(key)));
-
-// ---------------------------------------------------------------------------
-// The lists
-// ---------------------------------------------------------------------------
-
-export const listKindValidator = v.union(
-  /** Each channel, the assistants folded into AI assistants (§4.4). */
-  v.literal("channel"),
-  /** One channel's sources; AI assistants' by assistant (GA22). */
-  v.literal("source"),
-  v.literal("landing"),
-  /** The landing pages added up into the website's page groups (GA15). */
-  v.literal("groups"),
-  v.literal("page"),
-  /** Visits from tagged links, by campaign and where the link was; and by the words a link carries (§18.6.6). */
-  v.literal("campaign"),
-  v.literal("adKeyword"),
-  /** Visitors (§18.6.6): new or returning, browsers, operating systems, age, gender, interests. */
-  ...VISITOR_LISTS.map((list) => v.literal(list)),
-);
-export type ListKind = Infer<typeof listKindValidator>;
-
-function isVisitorList(list: ListKind): list is VisitorList {
-  return (VISITOR_LISTS as readonly string[]).includes(list);
-}
-
 /** All pages' filters, and every page (AP5). */
 const pageMoveValidator = v.union(v.literal("all"), ...PAGE_MOVES.map((move) => v.literal(move)));
 
@@ -174,6 +113,8 @@ const listArgs = {
   group: v.optional(v.string()),
   /** Only the rows that made this conversion. */
   eventName: v.optional(v.string()),
+  /** Campaigns: only the links that were in this place, a code or a source as written (`utils/campaignNames.ts`). */
+  cameFrom: v.optional(v.string()),
   q: v.optional(v.string()),
   sort: v.optional(sortValidator),
   direction: sortDirectionArg,
@@ -193,8 +134,9 @@ type ListArgs = {
   filed?: string;
   group?: string;
   eventName?: string;
+  cameFrom?: string;
   q?: string;
-  sort?: keyof typeof SORTS;
+  sort?: keyof typeof LIST_SORTS;
   direction?: "asc" | "desc";
   move?: PageMove | "all";
   /** All pages and Funnel: without the shop's search, basket and account pages (`isShopPage`). */
@@ -245,6 +187,8 @@ export type ListAnswer = {
   counting: boolean;
   /** Campaigns: the visits from no tagged link, left out of the list (§18.6.6); null on any other list. */
   untagged: number | null;
+  /** Campaigns: every place a link was, with its visits, the most first, whichever one is chosen; null on any other list. */
+  cameFromChoices: Array<{ cameFrom: string; visits: number }> | null;
   /** All pages read whole: how many pages each filter holds, and the pages nobody viewed Google sends most clicks. */
   moves: PageMoves | null;
   /** All pages read whole: its busy and quiet pages, and how few pages make half its views. */
@@ -262,7 +206,7 @@ type Figures = ReturnType<typeof figuresOf>;
 
 const EMPTY: Omit<ListAnswer, "live" | "preparing"> = {
   rows: [], from: null, to: null, folded: false, thresholded: false, cut: false, groups: null,
-  every: [], everyDevice: null, totals: null, site: null, counting: false, untagged: null, moves: null, bands: null, concentration: null, shop: null, spanBefore: null,
+  every: [], everyDevice: null, totals: null, site: null, counting: false, untagged: null, cameFromChoices: null, moves: null, bands: null, concentration: null, shop: null, spanBefore: null,
 };
 
 /** The display channel of a kept channel row. */
@@ -319,6 +263,18 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   if (tagged) {
     rows = rows.filter((row) => row.key !== UNTAGGED);
     earlier = earlier ? earlier.filter((row) => row.key !== UNTAGGED) : null;
+  }
+  // Campaigns' Came from: every place, whichever is chosen, and the list held to the one chosen, so its totals follow.
+  let cameFromChoices: ListAnswer["cameFromChoices"] = null;
+  if (args.list === "campaign") {
+    const placeOf = (row: ListRow) => cameFromOf(splitChannelKey(row.key).source);
+    const places = new Map<string, number>();
+    for (const row of rows) places.set(placeOf(row), (places.get(placeOf(row)) ?? 0) + row.visits);
+    cameFromChoices = [...places.entries()].map(([cameFrom, visits]) => ({ cameFrom, visits })).sort((left, right) => right.visits - left.visits || left.cameFrom.localeCompare(right.cameFrom));
+    if (args.cameFrom) {
+      rows = rows.filter((row) => placeOf(row) === args.cameFrom);
+      earlier = earlier ? earlier.filter((row) => placeOf(row) === args.cameFrom) : null;
+    }
   }
   if (args.list === "channel") {
     rows = grouped(rows, (row) => displayChannel(row.key));
@@ -409,6 +365,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
       const { channel: campaign, source } = splitChannelKey(row.key);
       row.label = campaign;
       row.source = source;
+      row.cameFrom = cameFromOf(source);
     }
   }
   if (args.list === "source" && args.channel === AI_ASSISTANTS_CHANNEL) for (const row of out) row.elsewhere = elsewhere.get(row.key) ?? 0;
@@ -446,7 +403,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   const matches = wordStartMatcher(args.q);
   if (matches) out = out.filter((row) => matches(row.label));
   // Page views before money (GA26): All pages opens by views, Landing pages by visits; the channels by value.
-  out.sort(listOrder(SORTS, args.sort ?? openingSort(args.list), args.direction, (row) => row.label));
+  out.sort(listOrder(LIST_SORTS, args.sort ?? openingSort(args.list), args.direction, (row) => row.label));
   return {
     rows: out,
     live: false,
@@ -463,6 +420,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     site: { visits: site.visits, engaged: site.engaged },
     counting,
     untagged,
+    cameFromChoices,
     moves,
     bands,
     concentration,
@@ -602,6 +560,14 @@ export const analyticsListPage = tenantQuery({
     figures: v.union(v.null(), channelFiguresValidator),
     /** Campaigns: the visits from no tagged link (§18.6.6). */
     untagged: v.union(v.number(), v.null()),
+    /** Campaigns: every place a link was, and the whole list's figures, so the boxes hold on any page of the table. */
+    cameFromChoices: v.union(v.null(), v.array(v.object({ cameFrom: v.string(), visits: v.number() }))),
+    campaignTotals: v.union(v.null(), v.object({
+      visits: v.number(), visitsBefore: v.union(v.number(), v.null()),
+      engaged: v.number(), engagedBefore: v.union(v.number(), v.null()),
+      bought: v.number(), boughtBefore: v.union(v.number(), v.null()),
+      conversions: v.number(), conversionsBefore: v.union(v.number(), v.null()),
+    })),
     /** All pages: how many pages each filter holds (all-pages-rethink-plan.md AP5); null on any other list. */
     moves: v.union(v.null(), moveCountsValidator),
     /** All pages: its busy and quiet pages, and how few pages make half its views. */
@@ -651,6 +617,13 @@ export async function readListPage(ctx: SiteReader, args: ObjectType<typeof anal
     seen: await listSeen(ctx, { holdId: site.hold._id, siteId: args.siteId }, args, list),
     figures: args.list === "source" && !list.live && !list.preparing ? channelFigures(list) : null,
     untagged: list.untagged,
+    cameFromChoices: list.cameFromChoices,
+    campaignTotals: args.list === "campaign" && list.totals ? {
+      visits: list.totals.now.visits, visitsBefore: list.totals.before?.visits ?? null,
+      engaged: list.totals.now.engaged, engagedBefore: list.totals.before?.engaged ?? null,
+      bought: list.totals.now.purchases, boughtBefore: list.totals.before?.purchases ?? null,
+      conversions: list.totals.now.conversions, conversionsBefore: list.totals.before?.conversions ?? null,
+    } : null,
     moves: list.moves?.counts ?? null,
     bands: list.bands,
     concentration: list.concentration,

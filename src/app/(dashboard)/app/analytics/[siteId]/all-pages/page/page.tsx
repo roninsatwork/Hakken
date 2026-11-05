@@ -10,9 +10,8 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { pageSees, pageStoryFacts } from "@/convex/utils/sees/analytics";
 import type { Seen } from "@/convex/utils/hakkenSees";
-import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { ListTable } from "@/src/ui/components/screens/ListTable";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { CUT_COLUMN } from "../../../../sites/_components/SiteCells";
 import { ListDownload } from "../../../../sites/_components/SiteDownloads";
@@ -195,33 +194,30 @@ function PageSourcesTable({ story, host }: { story: PageStory | undefined; host:
   const pager = useSitePager(sorted, { isLoading: rows === undefined, table: "sources" });
   const header = (words: string, title: string) => <span title={title}>{words}</span>;
   return (
-    <DataTable<SourceRow>
+    <ListTable<SourceRow>
       rows={pager.pageRows}
       rowKey={(row) => row.key}
       search={{ value: search, onChange: setSearch, placeholder: t("findSource") }}
-      cardHeader={<TableBar
-        footer={pager.footer}
-        noun="results"
-        title={t("sourcesTable")}
-        description={t("sourcesTableDescription")}
-        actions={rows ? (
-          <ListDownload
-            label={t("download")}
-            fileName={`${host}-google-analytics-page-sources`}
-            rows={sorted ?? []}
-            columns={[
-              { header: t("source"), value: (row) => row.label },
-              { header: t("kind"), value: (row) => row.channel },
-              { header: t("visits"), value: (row) => row.visits },
-              { header: t("pages"), value: (row) => formatPerVisit(row.pages) },
-              { header: t("time"), value: (row) => formatTime(row.time) },
-              { header: t("readEnd"), value: (row) => formatPercent(row.read) },
-              { header: t("back"), value: (row) => formatPercent(row.back) },
-              { header: t("conversions"), value: (row) => row.conversions },
-            ]}
-          />
-        ) : undefined}
-      />}
+      noun="results"
+      title={t("sourcesTable")}
+      description={t("sourcesTableDescription")}
+      actions={rows ? (
+        <ListDownload
+          label={t("download")}
+          fileName={`${host}-google-analytics-page-sources`}
+          rows={sorted ?? []}
+          columns={[
+            { header: t("source"), value: (row) => row.label },
+            { header: t("kind"), value: (row) => row.channel },
+            { header: t("visits"), value: (row) => row.visits },
+            { header: t("pages"), value: (row) => formatPerVisit(row.pages) },
+            { header: t("time"), value: (row) => formatTime(row.time) },
+            { header: t("readEnd"), value: (row) => formatPercent(row.read) },
+            { header: t("back"), value: (row) => formatPercent(row.back) },
+            { header: t("conversions"), value: (row) => row.conversions },
+          ]}
+        />
+      ) : undefined}
       sort={tableSort}
       empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: story?.live ? t("collecting") : term ? t("noMatch") : t("noSources") }}
       footer={pager.footer}

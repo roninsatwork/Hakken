@@ -2,6 +2,7 @@ import { appendFileSync } from "fs";
 import { readFixture } from "@/src/test/readFixture";
 import { describe, expect, test } from "vitest";
 import en from "@/messages/en.json";
+import { cameFromWords, campaignForEye, campaignNameWords } from "../campaignNames";
 import { funnelFigures } from "../landingFlowFigures";
 import { findingWords, type Finding } from "./findings";
 import { pageDataFor } from "./pageData";
@@ -106,10 +107,20 @@ function channelPage(period: Period) {
   return { figures: { figures: one.figures, kinds: one.kinds, movers: one.movers }, names: { ...NAMES, channel: "Organic Search" } };
 }
 
-// Campaigns: the table's page, and every campaign for the eye (`campaignsAll`).
+// Campaigns: every campaign in the page's names, the list's totals, the whole website, and what people did, as `CampaignsSees` and the squares hand them.
+const DID: Record<string, string> = en.googleAnalytics.campaigns.squares.did;
 function campaignsPage(period: Period) {
-  const one = (campaigns as Record<string, { rows: Rows; total: number; untagged: number | null }>)[period];
-  return { rows: one.rows.slice(0, 25), total: one.total, untagged: one.untagged, campaignsAll: { rows: one.rows }, names: NAMES };
+  const one = (campaigns as Record<string, { rows: Rows; total: number; untagged: number | null; totals: unknown; website: unknown; events: string[]; actions: Array<{ label: string; cameFrom: string; visits: number; times: number[]; visitsDid: Array<number | null> }> }>)[period];
+  const thing = (event: string) => DID[event] ?? event;
+  return {
+    rows: one.rows.map((row) => campaignForEye(row as never, campaignNameWords(String(row.label), String(row.cameFrom)), cameFromWords(String(row.cameFrom)))),
+    total: one.total, untagged: one.untagged, totals: one.totals, website: one.website, sells: true, names: NAMES,
+    whatPeopleDid: {
+      things: one.events.map(thing),
+      unit: "visits",
+      campaigns: one.actions.map((row) => ({ name: campaignNameWords(row.label, row.cameFrom), visits: row.visits, ...Object.fromEntries(one.events.map((event, at) => [thing(event), row.visitsDid[at] ?? 0])) })),
+    },
+  };
 }
 
 // Funnel: the table's page of landing pages, the whole website (`website`), every landing page's leaving (`landingAll`), and
@@ -191,11 +202,38 @@ function productsPage(period: Period) {
 
 const startsWith = (prefix: string) => (words: readonly string[]) => words.some((line) => line.startsWith(prefix));
 
+describe("Campaigns says what a person would miss (More Handles' October; campaigns-new-page-plan-2026-11-05.md, step 8)", () => {
+  const { words } = said("googleAnalytics.campaigns", campaignsPage("lastMonth"));
+
+  test("campaigns sell more than their share of visits", () => {
+    expect(words).toContain("All campaign visits: share of everything bought 54.3%, against 44% for their share of all visits.");
+  });
+
+  test("a busy campaign that sold nothing, however easy it is to miss in a table of 34", () => {
+    expect(words).toContain("Facebook ad with no name: bought for every 100 visits 0, against 4.2 for All campaign visits.");
+  });
+
+  test("two campaigns account for the whole fall", () => {
+    expect(words).toContain("Performance Max > Top Performing Products, Performance Max > Listing Only - High Target ROAS: visits lost 1193, against 1118 for All campaign visits.");
+  });
+
+  test("the headline counts all 34 campaigns' dates before, not only those with visits now", () => {
+    expect(words).toContain("All campaign visits: visits down 6.6%, to 15732 from 16850 the span before; Bought: down 6.7%.");
+  });
+
+  test("what people did is weighed in visits, so a rate is a true share", () => {
+    const page = campaignsPage("lastMonth");
+    expect(page.whatPeopleDid.unit).toBe("visits");
+    const zombies = page.whatPeopleDid.campaigns.find((one) => one.name === "Performance Max > Zombies") as Record<string, unknown>;
+    expect(zombies["Added to basket"]).toBe(715);
+  });
+});
+
 describe("Google Analytics' pages find the biggest things on every period the date menu offers (More Handles, 3–4 November 2026)", () => {
   describe("Overview: the whole website's visits first", () => everyPeriod("googleAnalytics.overview", overviewPage, startsWith(`${NAMES.website}: visits`)));
   describe("Channels: the whole website's visits, with its conversions beside them", () => everyPeriod("googleAnalytics.channelsPage", channelsPage, startsWith(`${NAMES.website}: visits`)));
   describe("A channel's own screen: the channel's visits beside the whole website's", () => everyPeriod("googleAnalytics.channelPage", channelPage, startsWith("Organic Search: visits")));
-  // Two days in, no campaign has the hundred visits a campaign's own figures need to be trusted: its headline alone.
+  // Early in a week, few campaigns have the hundred visits a campaign's own figures need to be trusted.
   describe("Campaigns: every campaign visit together", () => everyPeriod("googleAnalytics.campaigns", campaignsPage, startsWith(`${NAMES.tagged}: visits`), {}, 1));
   describe("Funnel: the whole website's visits, and never the shop's own pages as a page that moved", () => everyPeriod("googleAnalytics.landing", funnelPage, (words) => startsWith(`${NAMES.website}: visits`)(words) && !words.some((line) => /\/checkout|\/catalogsearch/.test(line) || /^(Basket|Checkout|Search results|Log in|Your account)[^:]*:/.test(line))));
   describe("All pages: the whole website's views", () => everyPeriod("googleAnalytics.allPages", allPagesPage, startsWith(`${NAMES.website}: views`)));

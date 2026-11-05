@@ -10901,7 +10901,12 @@
         "searchesPercent": "delle ricerche per cui si posiziona",
         "fellPercent": "delle sue ricerche è sceso all'ultimo controllo",
         "newPercent": "delle sue ricerche era nuovo all'ultimo controllo",
-        "pagesAVisit": "pagine per visita"
+        "pagesAVisit": "pagine per visita",
+        "boughtPerHundred": "comprati ogni 100 visite",
+        "timesPerHundred": "volte ogni 100 visite",
+        "shareOfBought": "quota di tutto ciò che è stato comprato",
+        "shareOfConversions": "quota di tutte le conversioni",
+        "visitsDidPercent": "delle visite l'hanno fatto"
       }
     },
     "sidePanel": {
@@ -16699,7 +16704,15 @@
         "upOrDown": "Su o giù",
         "timeOnPage": "Tempo sulla pagina",
         "conversionsHereTitle": "Conversioni fatte su questa pagina",
-        "conversionsOfVisit": "Conversioni"
+        "conversionsOfVisit": "Conversioni",
+        "cameFrom": "Arrivati da",
+        "before": "Prima",
+        "visitsNowTitle": "Visite: {when}.",
+        "visitsBeforeTitle": "Visite: {before}.",
+        "visitsChangeTitle": "Visite di {now} rispetto a {before}.",
+        "bought": "Comprati",
+        "boughtTitle": "Quante volte le persone hanno comprato da questa campagna, e quante sono ogni 100 visite.",
+        "conversionsTimesTitle": "Conta ogni volta, quindi una visita può contare più di una volta."
       },
       "notSorted": "Non classificate",
       "pagesCount": "{count, plural, =1 {1 pagina} other {# pagine}}",
@@ -16725,10 +16738,15 @@
         "landsMost": "Arriva più spesso su",
         "left": "Uscite qui",
         "onward": "Proseguite",
-        "next": "Andate soprattutto a"
+        "next": "Andate soprattutto a",
+        "cameFrom": "Arrivati da",
+        "visitsNow": "Visite",
+        "visitsBefore": "Visite prima",
+        "visitsChange": "Su o giù",
+        "bought": "Comprati"
       },
       "downloadFailed": "Impossibile preparare il download. Riprova.",
-      "untagged": "{count, plural, =1 {una visita non aveva} other {# visite non avevano}} un contrassegno di campagna",
+      "untagged": "{count, plural, =1 {una visita non è arrivata} other {# visite non sono arrivate}} da una campagna",
       "collectingBodyCampaigns": "{platformName} conserva ogni elenco di campagne per ciascun dispositivo, e questo arriva con la prossima raccolta. Intanto le campagne sono elencate per tutti i dispositivi.",
       "viewsUp": "In crescita del {rate} sulle date precedenti, da {before} visualizzazioni",
       "viewsDown": "In calo del {rate} sulle date precedenti, da {before} visualizzazioni",
@@ -16745,7 +16763,8 @@
       },
       "noPageLost": "Google Analytics ha perso la pagina",
       "per100Visits": "<figure>{rate}</figure> ogni 100 visite",
-      "pageNotKnown": "Pagina non nota"
+      "pageNotKnown": "Pagina non nota",
+      "noAdKeyword": "{count, plural, =1 {una visita non aveva} other {# visite non avevano}} una parola chiave"
     },
     "chart": {
       "title": "Visite e conversioni nel tempo",
@@ -16795,11 +16814,6 @@
           "hint": "{period}: visite per canale.",
           "measure": "Visite"
         },
-        "campaigns": {
-          "title": "Visite per campagna",
-          "hint": "{period}.",
-          "measure": "Visite"
-        },
         "visitors": {
           "visitorType": {
             "title": "Visite di nuovi o di ritorno",
@@ -16841,12 +16855,6 @@
         "month": "Visualizzazioni ogni mese"
       },
       "viewsOnlyHint": "Quante volte questa pagina è stata vista {step, select, day {ogni giorno} week {ogni settimana} other {ogni mese}}, {period}.",
-      "campaignsTitle": {
-        "day": "Visite da link contrassegnati al giorno",
-        "week": "Visite da link contrassegnati a settimana",
-        "month": "Visite da link contrassegnati al mese"
-      },
-      "campaignsHint": "{period}.",
       "converted": {
         "day": "Un giorno con una conversione: più grande per più",
         "week": "Una settimana con una conversione: più grande per più",
@@ -17312,7 +17320,7 @@
     },
     "campaigns": {
       "title": "Campagne",
-      "description": "Le visite dai link che hai contrassegnato per una campagna — un'email, un annuncio, un post — e cosa hanno fatto dopo. La variazione è sulle visite rispetto a {before}.",
+      "description": "Persone arrivate da un link che hai contrassegnato, come un annuncio o un'email. Guarda come vanno e cosa hanno fatto dopo.",
       "findCampaign": "Trova una campagna…",
       "findKeyword": "Trova una parola chiave…",
       "showing": "Mostra",
@@ -17320,8 +17328,150 @@
         "campaign": "Campagne",
         "adKeyword": "Parole chiave degli annunci"
       },
-      "empty": "Nessuna visita da un link contrassegnato in queste date.",
-      "emptyKeywords": "Nessun link contrassegnato aveva parole in queste date."
+      "empty": "Nessuna visita da una campagna a {when}.",
+      "emptyKeywords": "Nessuna visita con una parola chiave a {when}.",
+      "noName": "{place} senza nome",
+      "cameFromLabel": "Arrivati da",
+      "everywhere": "Ovunque",
+      "cameFrom": {
+        "googleAds": "Google Ads",
+        "googleFreeListing": "Scheda gratuita Google",
+        "facebookAd": "Annuncio Facebook",
+        "instagramAd": "Annuncio Instagram",
+        "microsoftAds": "Microsoft Ads",
+        "googleBusinessProfile": "Profilo dell'attività su Google",
+        "email": "Email",
+        "trustpilot": "Trustpilot",
+        "pinterest": "Pinterest",
+        "notKnown": "Non noto"
+      },
+      "boxes": {
+        "visits": "Visite dalle campagne",
+        "share": "Quota di tutte le visite",
+        "bought": "Comprati dalle campagne",
+        "boughtShare": "Quota di tutto ciò che è stato comprato",
+        "conversions": "Conversioni dalle campagne",
+        "conversionsShare": "Quota di tutte le conversioni",
+        "was": "Era {figure} a {before}.",
+        "noneEither": "Nessuna neanche in {before}."
+      },
+      "daily": {
+        "showLabel": "Mostra",
+        "compareWith": "Confronta con",
+        "nothing": "Nessun confronto",
+        "hint": "{now}.",
+        "hintAgainst": "{now} rispetto agli stessi giorni di {before}.",
+        "empty": "Nessuna visita da una campagna in queste date.",
+        "csvDay": "Giorno",
+        "collecting": "Ancora in raccolta.",
+        "show": {
+          "visits": "Visite",
+          "bought": "Comprati",
+          "conversions": "Conversioni",
+          "left": "Usciti subito"
+        },
+        "score": {
+          "visits": "Visite dalle campagne",
+          "bought": "Comprati dalle campagne",
+          "conversions": "Conversioni dalle campagne"
+        },
+        "title": {
+          "visits": {
+            "day": "Visite dalle campagne ogni giorno",
+            "week": "Visite dalle campagne ogni settimana",
+            "month": "Visite dalle campagne ogni mese"
+          },
+          "bought": {
+            "day": "Comprati dalle campagne ogni giorno",
+            "week": "Comprati dalle campagne ogni settimana",
+            "month": "Comprati dalle campagne ogni mese"
+          },
+          "conversions": {
+            "day": "Conversioni dalle campagne ogni giorno",
+            "week": "Conversioni dalle campagne ogni settimana",
+            "month": "Conversioni dalle campagne ogni mese"
+          },
+          "left": {
+            "day": "Persone uscite subito, ogni giorno",
+            "week": "Persone uscite subito, ogni settimana",
+            "month": "Persone uscite subito, ogni mese"
+          }
+        }
+      },
+      "map": {
+        "title": "Tutte le tue campagne",
+        "hint": {
+          "visits": "I riquadri più grandi hanno avuto più visite.",
+          "bought": "I riquadri più grandi hanno venduto di più.",
+          "conversions": "I riquadri più grandi hanno avuto più conversioni."
+        },
+        "colourHint": "Arancione è salito rispetto a {before} e grigio è sceso.",
+        "count": "Conteggio",
+        "measure": {
+          "visits": "Visite",
+          "bought": "Comprati",
+          "conversions": "Conversioni"
+        },
+        "figure": {
+          "visits": "{count, plural, =1 {# visita} other {# visite}}",
+          "bought": "{count} comprati",
+          "conversions": "{count, plural, =1 {# conversione} other {# conversioni}}"
+        },
+        "in": {
+          "visits": "Visite: {when}",
+          "bought": "Comprati: {when}",
+          "conversions": "Conversioni: {when}"
+        },
+        "upOrDown": "Su o giù",
+        "same": "Uguale",
+        "left": "Usciti subito",
+        "leftOutVisits": "Restano fuori {count, plural, =1 {una campagna} other {# campagne}} con {most, plural, =1 {una visita} other {# visite}} o meno. Sono nella tabella.",
+        "leftOut": "{count, plural, =1 {Resta fuori una campagna più piccola} other {Restano fuori # campagne più piccole}}. Sono nella tabella.",
+        "empty": "Niente da mostrare in queste date.",
+        "csv": {
+          "campaign": "Campagna",
+          "cameFrom": "Arrivati da",
+          "visits": "Visite",
+          "visitsBefore": "Visite prima",
+          "bought": "Comprati",
+          "boughtBefore": "Comprati prima",
+          "conversions": "Conversioni",
+          "conversionsBefore": "Conversioni prima"
+        }
+      },
+      "squares": {
+        "title": "Cosa hanno fatto le persone dopo essere arrivate",
+        "hint": "{count, plural, =1 {La tua campagna più attiva} other {Le tue # campagne più attive}}.",
+        "count": "Conteggio",
+        "counts": {
+          "times": "Numero di volte",
+          "per100": "Ogni 100 visite",
+          "rate": "Tasso di conversione %"
+        },
+        "did": {
+          "add_to_cart": "Aggiunto al carrello",
+          "begin_checkout": "Pagamento iniziato",
+          "purchase": "Comprati",
+          "newsletter_sign_ups": "Iscritti alle email"
+        },
+        "rowTotal": "{visits} visite",
+        "per100": "{rate} ogni 100",
+        "timesNote": "{times} volte",
+        "key": "Ogni quadrato mostra quante volte, e quante ogni 100 visite.",
+        "shades": "Più chiaro significa di più ogni 100 visite rispetto alle altre campagne",
+        "nobody": "Nessuno",
+        "hover": "{campaign}. {thing}: {times} volte, {rate} ogni 100 visite.",
+        "none": "Nessuno ha fatto qualcosa di conteggiato da queste campagne in queste date.",
+        "pick": "Campagna",
+        "csvCampaign": "Campagna",
+        "csvVisits": "Visite",
+        "visitsNote": "{visits} visite",
+        "keyRate": "Ogni quadrato mostra la quota di visite che l'ha fatto, e quante visite sono.",
+        "shadesRate": "Più chiaro significa un tasso più alto rispetto alle altre campagne",
+        "hoverVisits": "{did} delle sue {visits} visite l'hanno fatto, cioè {rate}.",
+        "csvTimes": "{thing}: volte",
+        "csvVisitsDid": "{thing}: visite che l'hanno fatto"
+      }
     },
     "landing": {
       "title": "Funnel",
@@ -18066,7 +18216,9 @@
       "square": "Tutte le pagine di questo riquadro",
       "thisPage": "Questa pagina",
       "shopPages": "Le pagine di ricerca, carrello e account",
-      "homePage": "La pagina iniziale"
+      "homePage": "La pagina iniziale",
+      "bought": "Comprati",
+      "theirVisits": "la loro quota di tutte le visite"
     },
     "landingPage": {
       "back": "Pagine di destinazione",

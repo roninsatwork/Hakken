@@ -1,0 +1,26 @@
+# Google Analytics → Campaigns — the approved look (board "New" of docs/plans/assets/campaigns-new-page/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Campaigns
+figures
+  figure: Visits from campaigns
+  figure: Share of all your visits
+  figure: Conversions from campaigns
+  figure: Share of all your conversions
+chart-card: Visits from campaigns each day
+filter: Show
+compact-list: Up or down | Last week | Than the week before | Last # weeks | Than the # before
+chart-card: All your campaigns
+filter: Count
+page-map
+chart-card: What people did after they arrived
+  filter: Count
+conversions-map
+  channel-map
+search: Find a campaign…
+filter: Came from
+choice: Showing: Campaigns | Ad keywords
+table: Campaign | Came from | Visits | Before | Up or down | Conversions
+  table-bar
+    download: Download CSV
+  table-footer

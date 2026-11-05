@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { PageStory } from "@/convex/googleAnalyticsPageStory";
-import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
 import type { ChartReadoutTableProps, ReadoutCell, ReadoutColumn } from "@/src/ui/components/charts/ChartReadoutTable";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_BLUE, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import type { SiteSeries } from "../../sites/_components/SiteCharts";
@@ -200,14 +200,12 @@ export function PageVisitorsCard({ story, before }: { story: PageStory; before: 
   const tickWords = { source: "sources", returning: "kinds", before: "places", next: "places" } as const;
 
   return (
-    <ChartExplorer
+    <BarsCard
       title={title}
       hint={t(ofVisits ? "hintVisits" : "hintViews", { period: tf(`periods.${periodWord(period)}`).toLowerCase() })}
       exportName="google-analytics-page-visitors"
       csv={csv}
       host={status?.host ?? ""}
-      from={null}
-      to={null}
       waiting={story.live ? ts("collecting") : null}
       controls={[
         { kind: "select", key: "by", label: t("byLabel"), value: by, options: BY.map((one) => ({ value: one, label: t(`by.${one}`) })), onChange: (next) => setBy(next as By) },
@@ -217,12 +215,13 @@ export function PageVisitorsCard({ story, before }: { story: PageStory; before: 
         ...(againstShown ? [{ kind: "select" as const, key: "against", label: t("against"), value: against, options: (["none", "website"] as const).map((one) => ({ value: one, label: t(`againsts.${one}`) })), onChange: (next: string) => setAgainst(next as Against) }] : []),
       ]}
       nothingTicked={items.length > 0 && pickedKeys.length === 0 ? t("nothingTicked", { what: tickWords[by] }) : null}
-      data={data}
+      rows={data}
       series={series}
       readout={readout}
       anything={picked.some((item) => (value(item) ?? 0) > 0)}
       empty={ts("empty")}
-      bars={{ labels, stacked: splitting }}
+      labels={labels}
+      stacked={splitting}
     />
   );
 }

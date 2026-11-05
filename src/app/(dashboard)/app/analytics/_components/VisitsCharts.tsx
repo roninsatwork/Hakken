@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { FunctionReturnType } from "convex/server";
 import { useQuery } from "convex/react";
@@ -8,16 +8,14 @@ import { api } from "@/convex/_generated/api";
 import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import { isUnknownValue } from "@/convex/utils/analyticsUnknown";
 import type { VisitorList } from "@/convex/googleAnalyticsLists";
-import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
-import type { ChartReadoutTableProps } from "@/src/ui/components/charts/ChartReadoutTable";
 import type { SiteSeries } from "../../sites/_components/SiteCharts";
 import { SiteTreemap } from "../../sites/_components/SiteTreemap";
-import { datedRow } from "../../sites/_components/datedRows";
-import { formatMonth, formatNumber, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
-import { SearchConsoleChartCard } from "../../search-console/_components/SearchConsoleChartCard";
-import { perStep, stepKey } from "./stepScale";
+import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { useVisitorName } from "./useVisitorName";
 import { periodWord, useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
 
@@ -75,28 +73,6 @@ export function useSpanInWords(span: Span, spanBefore: Span): { now: string; bef
   return { now: nameOf(span) ?? tf("theseDates"), before: nameOf(spanBefore) ?? tf(`before.${periodWord(period)}`) };
 }
 
-/** A span's points added up by the chart's step, in order: each step's first and last day held and its visits. */
-function stepped(points: readonly Point[], step: "day" | "week" | "month") {
-  const buckets = new Map<string, { first: string; last: string; new: number; returning: number }>();
-  for (const point of [...points].sort((left, right) => left.day.localeCompare(right.day))) {
-    const key = stepKey(step, point.day, point.lastDay);
-    const bucket = buckets.get(key) ?? { first: point.day, last: point.day, new: 0, returning: 0 };
-    const last = point.lastDay ?? point.day;
-    if (last > bucket.last) bucket.last = last;
-    bucket.new += point.new;
-    bucket.returning += point.returning;
-    buckets.set(key, bucket);
-  }
-  // A week or month held whole is drawn as its average for the step (SF2b), as Channels' chart draws it.
-  return [...buckets.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([key, bucket]) => ({
-    key,
-    first: bucket.first,
-    last: bucket.last,
-    new: Math.round(perStep(bucket.new, bucket.first, bucket.last, step) * 10) / 10,
-    returning: Math.round(perStep(bucket.returning, bucket.first, bucket.last, step) * 10) / 10,
-  }));
-}
-
 /**
  * New and returning visits by day (Anthony, 2026-11-03: "by day"), the kit's chart with menus as lines, with one menu:
  * Compare with the span before or Nothing ("i think we need a compare option on this chart"). The span before is laid
@@ -112,9 +88,7 @@ export function VisitsLineCard({ spans: words, host }: { spans: SpanWords; host:
   const answer = useQuery(api.googleAnalyticsVisitorReads.analyticsVisitorDays, status?.connection?.newestDay ? args : "skip");
   const points = answer?.points;
   const pointsBefore = answer?.pointsBefore;
-  const now = useMemo(() => stepped(points ?? [], step), [points, step]);
-  const was = useMemo(() => (pointsBefore ? stepped(pointsBefore, step) : null), [pointsBefore, step]);
-  const comparing = against === "before" && was !== null && was.length > 0;
+  const comparing = against === "before" && Boolean(pointsBefore && pointsBefore.length > 0);
   // The eye reads each day's visits by its date, never a day's place in a list (visits-redo-plan-2026-11-03.md, step 2),
   // with the names it says weekends against weekdays in (pageOwnFindings.ts).
   const seen = useMemo(() => (answer ? {
@@ -124,37 +98,22 @@ export function VisitsLineCard({ spans: words, host }: { spans: SpanWords; host:
     newName: t("line.new"), returningName: t("line.returning"), weekendName: t("line.eyeWeekend"), weekdayName: t("line.eyeWeekday"),
   } : null), [answer, t]);
   useSeesPart("days", seen);
-  const data = now.map((bucket, at) => datedRow(
-    { day: step === "month" ? `${bucket.key}-01` : bucket.first, lastDay: bucket.last },
-    { new: bucket.new, returning: bucket.returning, ...(comparing ? { newBefore: was[at]?.new ?? null, returningBefore: was[at]?.returning ?? null } : {}) },
-    step === "month" ? formatMonth(bucket.key) : formatShortDay(bucket.first),
-  ));
-  const series: SiteSeries[] = [
-    { key: "new", name: t("line.new"), colour: CHART_SERIES_ORANGE },
-    { key: "returning", name: t("line.returning"), colour: CHART_SERIES_BLUE },
+  const line = (key: "new" | "returning", list: readonly Point[] | null | undefined) => (list ?? []).map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: point[key] }));
+  const lines: DaysLine[] = [
+    { key: "new", name: t("line.new"), colour: CHART_SERIES_ORANGE, points: line("new", points) },
+    { key: "returning", name: t("line.returning"), colour: CHART_SERIES_BLUE, points: line("returning", points) },
     ...(comparing ? [
-      { key: "newBefore", name: t("line.newBefore", { before: words.before }), colour: CHART_COMPARATOR_GREY, dashed: true },
-      { key: "returningBefore", name: t("line.returningBefore", { before: words.before }), colour: CHART_COMPARATOR_GREY, dashed: true },
+      { key: "newBefore", name: t("line.newBefore", { before: words.before }), colour: CHART_COMPARATOR_GREY, dashed: true, under: true, points: line("new", pointsBefore) },
+      { key: "returningBefore", name: t("line.returningBefore", { before: words.before }), colour: CHART_COMPARATOR_GREY, dashed: true, under: true, points: line("returning", pointsBefore) },
     ] : []),
   ];
-  const readout = ({ row, heading }: { row: Record<string, unknown>; heading: ReactNode }): ChartReadoutTableProps => ({
-    heading,
-    columns: [{ key: "visits", label: t("line.visits"), tone: "band", drawn: true }],
-    rows: series.map((entry) => {
-      const value = row[entry.key];
-      return { key: entry.key, name: entry.name, colour: entry.colour, cells: { visits: typeof value === "number" ? { text: formatNumber(value) } : { text: "–", quiet: true } } };
-    }),
-  });
-  const csv = () => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number | null ?? null)]));
   return (
-    <ChartExplorer
+    <DaysChart
       title={t(`line.title.${step}`)}
       hint={comparing ? t(`line.compareHint.${step}`, { span: words.now, before: words.before }) : t("line.hint", { span: words.now })}
       exportName="google-analytics-new-and-returning"
-      csv={csv}
+      csvDay="day"
       host={host}
-      from={null}
-      to={null}
       step={step}
       waiting={answer === undefined ? undefined : null}
       controls={[{
@@ -162,11 +121,9 @@ export function VisitsLineCard({ spans: words, host }: { spans: SpanWords; host:
         options: [{ value: "before", label: words.beforeNamed ?? words.before }, { value: "none", label: t("nothing") }],
         onChange: (next) => setAgainst(next as "before" | "none"),
       }]}
-      nothingTicked={null}
-      data={data}
-      series={series}
-      readout={readout}
-      anything={data.some((row) => Number(row.new) > 0 || Number(row.returning) > 0)}
+      lines={lines}
+      figure={t("line.visits")}
+      anything={(rows) => rows.some((row) => Number(row.new) > 0 || Number(row.returning) > 0)}
       empty={t("who.empty")}
     />
   );
@@ -223,36 +180,24 @@ export function WhoVisitsCard({ view, onView, views, spans, host }: {
         : t(`who.hint.${view}`),
     comparing ? t("who.greyBars", { before: beforeName }) : null,
   ].filter(Boolean).join(" ");
-  const readout = ({ row, heading }: { row: Record<string, unknown>; heading: ReactNode }): ChartReadoutTableProps => ({
-    heading,
-    columns: [{ key: "visits", label: t("who.visits"), tone: "band", drawn: true }],
-    rows: series.map((entry) => {
-      const value = row[entry.key];
-      return { key: entry.key, name: entry.name, colour: entry.colour, cells: { visits: typeof value === "number" ? { text: formatNumber(value) } : { text: "–", quiet: true } } };
-    }),
-  });
-  const csv = () => toCsv([t(`who.by.${view}`), ...series.map((entry) => entry.name)], data.map((row) => [row.label, row.value, ...(comparing ? [row.before ?? null] : [])]));
   return (
-    <ChartExplorer
+    <BarsCard
       title={view === "visitorType" ? t("who.titleTypes") : t("who.title", { by: view })}
       hint={hint}
       exportName={`google-analytics-visits-${view}`}
-      csv={csv}
+      csvHeading={t(`who.by.${view}`)}
       host={host}
-      from={null}
-      to={null}
       waiting={answer === undefined ? undefined : answer?.waiting ? t("who.waiting") : null}
       controls={[
         { kind: "select", key: "by", label: t("who.byLabel"), value: view, options: views.map((one) => ({ value: one, label: t(`who.by.${one}`) })), onChange: (next) => onView(next as VisitorList) },
         { kind: "select", key: "against", label: t("compareWith"), value: against, options: [{ value: "before", label: beforeName }, { value: "none", label: t("nothing") }], onChange: (next) => setAgainst(next as "before" | "none") },
       ]}
-      nothingTicked={null}
-      data={data}
+      rows={data}
       series={series}
-      readout={readout}
+      figure={t("who.visits")}
+      drawnColumn
       anything={data.some((row) => row.value > 0)}
       empty={t("who.empty")}
-      bars={{ labels: (value: number) => (Number.isFinite(value) ? formatNumber(value) : null) }}
     />
   );
 }
@@ -278,38 +223,31 @@ export function PageKindsCard({ host }: { host: string }) {
   // Not sorted marked as such, so the eye can say how much of the treemap tells the reader nothing (pageOwnFindings.ts).
   const seen = useMemo(() => (answer && answer.kinds.length > 0 ? { kinds: kinds.map((kind) => ({ name: kind.label, views: kind.views, pages: kind.pages, sorted: kind.kind !== NOT_SORTED_KIND })) } : null), [answer, kinds]);
   useSeesPart("whatPeopleLookedAt", seen);
-  const body = answer === undefined ? null
-    : answer === null || answer.waiting ? <p className="py-10 text-center text-[12px] text-muted">{answer?.waiting ? t("waiting") : t("empty")}</p>
-      : !answer.sorted ? <p className="py-10 text-center text-[12px] text-muted">{t("unsorted")}</p>
-        : kinds.length === 0 ? <p className="py-10 text-center text-[12px] text-muted">{t("empty")}</p>
-          : (
-            <div className="flex flex-col gap-3">
-              <SiteTreemap
-                items={kinds.map((kind) => ({
-                  id: kind.kind,
-                  name: kind.label,
-                  value: kind.views,
-                  shade: kind.views / most,
-                  caption: t("caption", { views: formatNumber(kind.views), share: share(kind.views) }),
-                  readout: [{ value: formatNumber(kind.views), label: t("views") }, { value: share(kind.views), label: t("ofViews") }, { value: formatNumber(kind.pages), label: t("pages") }],
-                }))}
-              />
-              {small.length > 0 ? (
-                <p className="text-[12px] text-secondary">{t("also", { list: small.map((kind) => t("alsoOne", { name: kind.label, views: formatNumber(kind.views) })).join(" · ") })}</p>
-              ) : null}
-            </div>
-          );
+  const message = answer === null || answer?.waiting ? (answer?.waiting ? t("waiting") : t("empty"))
+    : answer && !answer.sorted ? t("unsorted")
+      : answer && kinds.length === 0 ? t("empty")
+        : null;
   return (
-    <SearchConsoleChartCard
+    <MapCard
       title={t("title")}
       hint={t("hint")}
       exportName="google-analytics-views-by-kind"
       csv={() => toCsv(["kind", "views", "pages"], kinds.map((kind) => [kind.label, kind.views, kind.pages]))}
       host={host}
-      from={null}
-      to={null}
+      loading={answer === undefined}
+      message={message}
+      under={small.length > 0 ? <p className="text-[12px] text-secondary">{t("also", { list: small.map((kind) => t("alsoOne", { name: kind.label, views: formatNumber(kind.views) })).join(" · ") })}</p> : null}
     >
-      {body}
-    </SearchConsoleChartCard>
+      <SiteTreemap
+        items={kinds.map((kind) => ({
+          id: kind.kind,
+          name: kind.label,
+          value: kind.views,
+          shade: kind.views / most,
+          caption: t("caption", { views: formatNumber(kind.views), share: share(kind.views) }),
+          readout: [{ value: formatNumber(kind.views), label: t("views") }, { value: share(kind.views), label: t("ofViews") }, { value: formatNumber(kind.pages), label: t("pages") }],
+        }))}
+      />
+    </MapCard>
   );
 }

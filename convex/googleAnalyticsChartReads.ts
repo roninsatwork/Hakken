@@ -4,12 +4,14 @@ import { requireMySite, type SiteReader } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
 import { periodRange, slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
-import { UNTAGGED, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
-import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
+import { UNTAGGED, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
+import type { Id } from "./_generated/dataModel";
 import { blank, connectionOf, conversionsOf, countedOf, displayChannel, readSlot } from "./googleAnalyticsReads";
 import { merged, readChannelPoints, readDayPoints } from "./googleAnalyticsHistory";
 import { coverageOf } from "./googleAnalyticsCoverage";
 import { dayDevice } from "./utils/analyticsHistory";
+import { cameFromOf } from "./utils/campaignNames";
 
 /**
  * What the Google Analytics charts read (docs/plans/active/google-analytics-plan.md
@@ -242,35 +244,64 @@ export const analyticsChannelChart = tenantQuery({
   },
 });
 
+const campaignPointValidator = v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number(), engaged: v.number(), conversions: v.number(), bought: v.number() });
+
 /**
- * Campaigns' chart (GA28; §18.2 board 17): the visits from tagged links a
- * day, every campaign added up — from each campaign kept a day, then a week,
- * then a month (ga-stored-figures-plan.md SF12) — `live` while the dates
- * reach past what is held, the minutes before a new website's two years are
- * filled. Every point of the period is drawn, one with none as none.
+ * Campaigns' chart (GA28; §18.2 board 17; campaigns-new-page-plan-2026-11-05.md, step 1): the campaigns' figures a day, every
+ * campaign added up, or those in one place. From each campaign kept a day, then a week, then a month (ga-stored-figures-plan.md
+ * SF12): `live` while the dates reach past what is held, the minutes before a new website's two years are filled. Every point
+ * of the period is drawn, one with none as none. Nothing is asked of Google.
+ *
+ * `before` is the same over the span the dates are set against, on its own dates, for the page's Up or down. `drawn` says whether
+ * it can also be drawn as a line under the dates: only on the weeks and months, whose span before is all days. `shift` moves its
+ * days over the period's. A month's or a year's span before reaching past what's held is null.
  */
 export const analyticsCampaignChart = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
-  returns: v.object({ live: v.boolean(), points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number() })) }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    // Each campaign stored a day, then a week, then a month (ga-stored-figures-plan.md SF12), its untagged visits apart.
-    const connection = await connectionOf(ctx, holdId);
-    const total = connection ? await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country)) : null;
-    const held = connection && total ? await readDayPoints(ctx, connection, "campaign", args.device, total.from, total.to, country) : null;
-    if (!held) return { live: Boolean(total), points: [] };
-    return {
-      live: false,
-      points: held.map((point) => ({
-        day: point.start,
-        ...(point.end !== point.start ? { lastDay: point.end } : {}),
-        visits: point.rows.filter((row) => row.key !== UNTAGGED).reduce((sum, row) => sum + row.visits, 0),
-      })),
-    };
-  },
+  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()), cameFrom: v.optional(v.string()) },
+  returns: v.object({
+    live: v.boolean(),
+    points: v.array(campaignPointValidator),
+    before: v.union(v.null(), v.object({ drawn: v.boolean(), shift: v.number(), points: v.array(campaignPointValidator) })),
+  }),
+  handler: async (ctx, args) => await readCampaignChart(ctx, args),
 });
+
+/** Its read, for the screen and Ask Hakken alike: the caller's own website only. Never money. */
+export async function readCampaignChart(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: AnalyticsPeriod; device: string; country?: string; cameFrom?: string }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  // Each campaign stored a day, then a week, then a month (ga-stored-figures-plan.md SF12), its untagged visits apart.
+  const connection = await connectionOf(ctx, holdId);
+  const total = connection ? await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country)) : null;
+  const held = connection && total ? await readDayPoints(ctx, connection, "campaign", args.device, total.from, total.to, country) : null;
+  if (!connection || !total || !held) return { live: Boolean(total), points: [], before: null };
+  const counted = countedOf(connection);
+  const point = (one: (typeof held)[number]) => {
+    const figures = { visits: 0, engaged: 0, conversions: 0, bought: 0 };
+    for (const row of one.rows) {
+      if (row.key === UNTAGGED) continue;
+      if (args.cameFrom && cameFromOf(splitChannelKey(row.key).source) !== args.cameFrom) continue;
+      figures.visits += row.visits;
+      figures.engaged += row.engaged;
+      figures.conversions += conversionsOf(row, counted).conversions;
+      figures.bought += row.purchases;
+    }
+    return { day: one.start, ...(one.end !== one.start ? { lastDay: one.end } : {}), ...figures };
+  };
+  const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", "", country));
+  const range = connection.newestDay ? totalBefore ?? periodRange(args.period, "BEFORE", connection.newestDay) : null;
+  const heldBefore = range ? await readDayPoints(ctx, connection, "campaign", args.device, range.from, range.to, country) : null;
+  return {
+    live: false,
+    points: held.map(point),
+    before: range && heldBefore ? {
+      drawn: PERIODS_DRAWN_BEFORE.has(args.period) && heldBefore.every((one) => one.grain === "day"),
+      shift: daysBetween(range.from, total.from),
+      points: heldBefore.map(point),
+    } : null,
+  };
+}
 
 /** Whole days from one day to another. */
 function daysBetween(from: string, to: string): number {

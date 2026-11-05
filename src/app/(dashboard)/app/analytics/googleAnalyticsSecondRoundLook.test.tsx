@@ -5,7 +5,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
+import { ROW, STATUS, list, statusWith } from "@/src/test/googleAnalyticsFixtures";
 import { eventSees } from "@/convex/utils/sees/analyticsEvents";
 import { campaignsSees } from "@/convex/utils/sees/analyticsCampaigns";
 import { visitorsSees } from "@/convex/utils/sees/analyticsVisitors";
@@ -108,15 +108,19 @@ describe("Google Analytics' second-round looks", () => {
     const campaign = { ...ROW, key: "ai-agents-launch\u001flinkedin.com / social", label: "ai-agents-launch", source: "linkedin.com / social", visits: 7, conversions: 0, value: 0, people: 6, newPeople: 5, bounceRate: 0.4, pagesPerVisit: 2, lengthPerVisit: 90 };
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsReads:analyticsListPage": { ...list([campaign], { seen: campaignsSees([campaign], 792) }), untagged: 792 },
-      "googleAnalyticsReads:analyticsTopList": top([campaign]),
-      "googleAnalyticsChartReads:analyticsCampaignChart": { live: false, points: DAYS.map((day) => ({ day, visits: 1 })) },
+      "googleAnalyticsReads:analyticsListPage": {
+        ...list([campaign], { seen: campaignsSees([campaign], 792) }), untagged: 792, cameFromChoices: [{ cameFrom: "linkedin.com", visits: 7 }],
+        campaignTotals: { visits: 7, visitsBefore: 5, engaged: 4, engagedBefore: 3, bought: 0, boughtBefore: 0, conversions: 0, conversionsBefore: 0 },
+      },
+      "googleAnalyticsChartReads:analyticsCampaignChart": { live: false, points: DAYS.map((day) => ({ day, visits: 1, engaged: 1, conversions: 0, bought: 0 })), before: null },
+      "googleAnalyticsCampaignReads:analyticsCampaignActions": { live: false, events: ["form_submit"], rows: [{ key: campaign.key, label: campaign.label, cameFrom: "linkedin.com", visits: 7, times: [1], visitsDid: [1] }] },
+      "googleAnalyticsReads:analyticsOverview": { now: { visits: 799, purchases: 0, conversions: 12, views: 900, engaged: 400, people: 700, value: 0 }, before: { visits: 700, purchases: 0, conversions: 10, views: 800, engaged: 380, people: 600, value: 0 }, changedMost: [] },
     });
     const { container } = render(<AnalyticsCampaignsPage />);
     await screen.findAllByText("ai-agents-launch");
     await openHakkenSees();
     await findSaid(/Only 7 of the 799 visits came from a link you tagged/);
-    await expectApprovedLook(container, PLAN, "Campaigns", "Google Analytics → Campaigns");
+    await expectApprovedLook(container, "campaigns-new-page", "New", "Google Analytics → Campaigns");
   });
 
   /** A page's own screen's figures, as `analyticsPage`, `analyticsPageChannelExplorer` and `analyticsPageBoxes` answer. */

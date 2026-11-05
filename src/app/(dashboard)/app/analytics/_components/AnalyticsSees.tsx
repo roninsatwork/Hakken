@@ -28,13 +28,15 @@ import { withoutMoney } from "./useEyeFigures";
  * page of this website's section, with the dates and device chosen
  * (`segment`, `filters`), or to an address of its own (`url`).
  */
-export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask, data, links }: {
+export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask, data, links, writes }: {
   screen: string;
   /**
    * The page's own figures — the answer of the query that draws it — for the eye's findings, its writer and its chat
    * (sees-every-page-plan-2026-10-31.md). With them the eye shows even when the rule has nothing to say.
    */
   data?: unknown;
+  /** False when these dates give the team nothing to write about: the rule's words stand (`SeesPage.writes`). */
+  writes?: boolean;
   /** Screens the team's "Do first" steps may link to, beside the rule's own (page-screen-redo-plan-2026-11-03.md, step 2). */
   links?: ReadonlyArray<{ label: string; href: string }>;
   /** The page's figures and links for the Insights team, asked when the eye is pressed (sees-conversion-specialist-plan-2026-10-30.md). */
@@ -66,7 +68,7 @@ export function AnalyticsSees({ screen, seen, currency, keep = true, names, ask,
   useNoteAdvice(keep ? siteId : null, `googleAnalytics.seen.${screen}`, box, currency);
   // Never money, whatever a read still carries for others (Anthony, 2026-11-03: "Take money off").
   const figures = useMemo(() => (data !== undefined && data !== null ? withoutMoney(data) : null), [data]);
-  const page = figures !== null ? { screen: `googleAnalytics.${screen}`, siteId, data: figures, ...(links ? { links } : {}) } : undefined;
+  const page = figures !== null ? { screen: `googleAnalytics.${screen}`, siteId, data: figures, ...(links ? { links } : {}), ...(writes === false ? { writes } : {}) } : undefined;
   if (!page && (!box || box.says.length === 0)) return null;
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const events = (text: string) => eventList(text, nameOf, locale);

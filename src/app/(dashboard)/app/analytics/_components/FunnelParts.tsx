@@ -1,24 +1,21 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
-import type { ChartReadoutTableProps } from "@/src/ui/components/charts/ChartReadoutTable";
-import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
-import type { SiteSeries } from "../../sites/_components/SiteCharts";
-import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { formatNumber } from "../../sites/_components/siteFormat";
 import { TABLE_PAGE_KEY, useSetSiteParams } from "../../sites/_components/useSiteParam";
 import type { TableTicks } from "@/src/ui/components/screens/TableTicks";
 import type { ListPageAnswer } from "./AnalyticsListScreen";
 import { BeforeLine } from "./AnalyticsFigures";
 import { formatPerVisit } from "./analyticsFormat";
-import { linesByStep, type ClassificationChoice } from "./AllPagesParts";
-import { stepKey } from "./stepScale";
+import type { ClassificationChoice } from "./AllPagesParts";
 import type { FlowAnswer } from "./funnelRoutes";
 import { useAnalyticsArgs, useAnalyticsStatus, useStep } from "./useAnalytics";
 import { useWebsiteForEye } from "./useEyeFigures";
@@ -121,38 +118,25 @@ export function LeftEachDayCard({ answer }: { answer: ListPageAnswer | undefined
   const spans = useSpanWords(...dates);
   const inWords = useSpanInWords(...dates);
   const comparing = against === "before" && Boolean(before?.held) && (before?.points.length ?? 0) > 0;
-  const series: SiteSeries[] = [
-    { key: "now", name: inWords.now, colour: CHART_SERIES_ORANGE },
-    ...(comparing ? [{ key: "before", name: inWords.before, colour: CHART_COMPARATOR_GREY, dashed: true }] : []),
-  ];
-  const toPoints = (points: readonly DayPoint[]) => points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), views: 0, visits: figureOf(point, show), conversions: 0 }));
-  const lines = [toPoints(now?.points ?? []), ...(comparing ? [toPoints(before?.points ?? [])] : [])];
+  const toPoints = (points: readonly DayPoint[]) => points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: figureOf(point, show) }));
   // A day September didn't have, like 31 October's, has no figure rather than none.
-  const beforeSteps = new Set((before?.points ?? []).map((point) => stepKey(step, point.day)));
-  const data = linesByStep(step, "visits", series, lines).map((row) => (comparing && !beforeSteps.has(stepKey(step, String(row.day))) ? { ...row, before: null } : row));
+  const lines: DaysLine[] = [
+    { key: "now", name: inWords.now, colour: CHART_SERIES_ORANGE, points: toPoints(now?.points ?? []) },
+    ...(comparing ? [{ key: "before", name: inWords.before, colour: CHART_COMPARATOR_GREY, dashed: true, gaps: true, points: toPoints(before?.points ?? []) }] : []),
+  ];
   const seen = useMemo(() => (now ? {
     show,
     days: (now.points as readonly DayPoint[]).map((point) => ({ day: point.day, leftStraightAway: figureOf(point, "left"), stayed: figureOf(point, "stayed"), conversions: point.conversions })),
     ...(before?.held ? { daysBefore: (before.points as readonly DayPoint[]).map((point) => ({ day: point.day, leftStraightAway: figureOf(point, "left"), stayed: figureOf(point, "stayed"), conversions: point.conversions })) } : {}),
   } : undefined), [now, before, show]);
   useSeesPart("leftEachDay", seen);
-  const readout = ({ row, heading }: { row: Record<string, unknown>; heading: ReactNode }): ChartReadoutTableProps => ({
-    heading,
-    columns: [{ key: "figure", label: t(`show.${show}`), tone: "band", drawn: true }],
-    rows: series.map((entry) => {
-      const value = row[entry.key];
-      return { key: entry.key, name: entry.name, colour: entry.colour, cells: { figure: typeof value === "number" ? { text: formatNumber(value) } : { text: "–", quiet: true } } };
-    }),
-  });
   return (
-    <ChartExplorer
+    <DaysChart
       title={t(`title.${show}.${step}`)}
       hint={comparing ? t("hintAgainst", { now: inWords.now, before: inWords.before }) : t("hint", { now: inWords.now })}
       exportName="google-analytics-left-straight-away"
-      csv={() => toCsv([t("csvDay"), ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number | null ?? null)]))}
+      csvDay={t("csvDay")}
       host={status?.host ?? ""}
-      from={null}
-      to={null}
       step={step}
       waiting={now === undefined ? undefined : null}
       controls={[
@@ -163,11 +147,8 @@ export function LeftEachDayCard({ answer }: { answer: ListPageAnswer | undefined
           onChange: (next: string) => setAgainst(next as "before" | "none"),
         }] : []),
       ]}
-      nothingTicked={null}
-      data={data}
-      series={series}
-      readout={readout}
-      anything={data.length > 0}
+      lines={lines}
+      figure={t(`show.${show}`)}
       empty={t("empty")}
       height={200}
     />

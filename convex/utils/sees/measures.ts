@@ -213,6 +213,13 @@ const SCORES: Record<string, Measure> = {
   // Google Analytics' (own/googleAnalytics.ts, 2026-11-04): its lists count conversions as times, so a rate can pass 100%:
   // said as conversions for every 100 visits, never a percentage (ask-hakken-every-chart-page-plan-2026-11-03.md, section 5).
   conversionsPerHundred: { words: "conversions for every 100 visits", kind: "score" },
+  // Campaigns' own (campaigns-new-page-plan-2026-11-05.md, step 8): what was bought, and each thing people did, for every 100 visits.
+  boughtPerHundred: { words: "bought for every 100 visits", kind: "score" },
+  timesPerHundred: { words: "times for every 100 visits", kind: "score" },
+  visitsDidPercent: { words: "of visits did this", kind: "percent" },
+  // Campaigns' share of the whole website's sales and conversions, set against their share of its visits.
+  shareOfBought: { words: "share of everything bought", kind: "percent" },
+  shareOfConversions: { words: "share of all conversions", kind: "percent" },
 };
 
 /** Percentages, each weighed by its row's main count. */

@@ -81,7 +81,14 @@ export function ChartExplorer({ title, hint, exportName, csv, host, from, to, st
   anything: boolean;
   empty: string;
   /** Lines only: better or worse for each line. */
-  scores?: { rows: readonly ExplorerScore[]; figure: (value: number | null) => string; fewerIsBetter: boolean; withYear: boolean };
+  scores?: {
+    rows: readonly ExplorerScore[];
+    figure: (value: number | null) => string;
+    fewerIsBetter: boolean;
+    withYear: boolean;
+    /** The step its windows are in, where it isn't the chart's: a daily chart's Up or down in weeks. */
+    step?: ExplorerStep;
+  };
   /** Draw bars along rather than lines over time: each bar's own words, stacked for a split. */
   bars?: { labels: (value: number, key: string, row: Record<string, unknown>) => string | null; stacked?: boolean };
   /** The lines' height, where the chart sits over a long table and should stay short: All pages' Views each day. */
@@ -96,6 +103,7 @@ export function ChartExplorer({ title, hint, exportName, csv, host, from, to, st
   };
   const cell = (value: number | null) => <span className="font-mono text-[12px] text-foreground">{scores ? scores.figure(value) : "–"}</span>;
   const table = (point: { row: Record<string, unknown>; heading: ReactNode }) => <ChartReadoutTable {...readout(point)} />;
+  const scoreStep = scores?.step ?? step ?? "day";
 
   return (
     <SearchConsoleChartCard title={title} hint={hint} exportName={exportName} csv={csv} host={host} from={from} to={to} step={step}>
@@ -113,9 +121,9 @@ export function ChartExplorer({ title, hint, exportName, csv, host, from, to, st
                 empty={empty}
                 columns={[
                   { key: "line", header: t("scoreLine"), cell: (score) => <span className="text-[13px] text-foreground">{score.name}</span> },
-                  { key: "latest", header: t("latest", { step: step ?? "day" }), align: "right", cell: (score) => cell(score.latest) },
-                  { key: "previous", header: t("previous", { step: step ?? "day" }), align: "right", cell: (score) => verdict(score.latest, score.previous) },
-                  { key: "last3", header: t("last3", { step: step ?? "day" }), align: "right", cell: (score) => cell(score.last3) },
+                  { key: "latest", header: t("latest", { step: scoreStep }), align: "right", cell: (score) => cell(score.latest) },
+                  { key: "previous", header: t("previous", { step: scoreStep }), align: "right", cell: (score) => verdict(score.latest, score.previous) },
+                  { key: "last3", header: t("last3", { step: scoreStep }), align: "right", cell: (score) => cell(score.last3) },
                   { key: "previous3", header: t("previous3"), align: "right", cell: (score) => verdict(score.last3, score.previous3) },
                   ...(scores.withYear ? [{ key: "yearAgo", header: t("yearAgo"), align: "right" as const, cell: (score: ExplorerScore) => verdict(score.last3, score.yearAgo) }] : []),
                 ]}

@@ -3,7 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type { PageStory } from "@/convex/googleAnalyticsPageStory";
-import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
 import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import type { ChartReadoutTableProps } from "@/src/ui/components/charts/ChartReadoutTable";
 import { SiteBarChart, type SiteSeries } from "../../sites/_components/SiteCharts";
@@ -133,26 +133,23 @@ function WhoLooksCard({ story, host }: { story: PageStory; host: string }) {
   const csv = () => toCsv([tw(`by.${by}`), tw("thisPage"), ...(comparing ? [tw("wholeWebsite")] : [])], bars.map((bar) => [bar.label, Math.round(bar.value), ...(comparing ? [bar.website === null ? null : Math.round(bar.website)] : [])]));
 
   return (
-    <ChartExplorer
+    <BarsCard
       title={tw("title", { by })}
       hint={hint}
       exportName={`google-analytics-page-who-${by}`}
       csv={csv}
       host={host}
-      from={null}
-      to={null}
       waiting={story.live ? t("collecting") : null}
       controls={[
         { kind: "select", key: "by", label: tw("byLabel"), value: by, options: WHO_BY.map((one) => ({ value: one, label: tw(`by.${one}`) })), onChange: (next) => setBy(next as WhoBy) },
         ...(by === "country" ? [] : [{ kind: "select" as const, key: "against", label: tw("compareWith"), value: against, options: (["website", "none"] as const).map((one) => ({ value: one, label: tw(`against.${one}`) })), onChange: (next: string) => setAgainst(next as "website" | "none") }]),
       ]}
-      nothingTicked={null}
-      data={data}
+      rows={data}
       series={series}
       readout={readout}
       anything={bars.some((bar) => bar.value > 0)}
       empty={t("empty")}
-      bars={{ labels: (value: number) => (Number.isFinite(value) ? figure(value) : null) }}
+      labels={(value: number) => (Number.isFinite(value) ? figure(value) : null)}
     />
   );
 }

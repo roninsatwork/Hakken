@@ -10,14 +10,13 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
-import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { Meter } from "@/src/ui/components/screens/Meter";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { ListTable } from "@/src/ui/components/screens/ListTable";
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
@@ -245,9 +244,12 @@ function ProductsTable({ categories, host }: { categories: readonly string[]; ho
     router.push(found ? pageHref(found.key) : hrefFor("all-pages", { q: row.name }));
   };
   return (
-    <DataTable
+    <ListTable
       rows={paged.pageRows}
       rowKey={(row) => row.key}
+      noun={byCategory ? "categories" : "products"}
+      summary={<span className="text-[12px] text-secondary">{paged.result?.live ? t("collecting") : bar}</span>}
+      actions={<ProductsDownload args={listArgs} host={host} />}
       views={<SiteViewSwitch label={t("viewLabel")} options={TABLE_VIEWS.map((value) => ({ value, label: t(`views.${value}`) }))} value={view} onChange={setView} />}
       search={{ value: search, onChange: setSearch, placeholder: byCategory ? t("findCategory") : t("findProduct") }}
       filters={(
@@ -263,11 +265,6 @@ function ProductsTable({ categories, host }: { categories: readonly string[]; ho
           ) : null}
         </div>
       )}
-      cardHeader={
-        <TableBar footer={paged.footer} noun={byCategory ? "categories" : "products"} actions={<ProductsDownload args={listArgs} host={host} />}>
-          <span className="text-[12px] text-secondary">{paged.result?.live ? t("collecting") : bar}</span>
-        </TableBar>
-      }
       sort={order.tableSort}
       onRowClick={byCategory ? undefined : (row) => void openProduct(row)}
       empty={{ icon: <ShoppingBag className="h-8 w-8 text-muted/30" />, label: settled || category || show !== "all" ? t("noMatch") : t("empty") }}
