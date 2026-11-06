@@ -104,7 +104,7 @@ export function daysScores(step: ExplorerStep, lines: readonly DaysScoreLine[]):
 export function DaysChart({ title, hint, exportName, csvDay, host, step, waiting, controls, nothingTicked = null, lines, figure, plain = false, anything, empty, height, scored }: {
   title: string;
   /** What the chart shows. Given as a function, told whether a step stands for more than the step drawn, for the words that say so. */
-  hint: string | ((coarse: boolean) => string);
+  hint: ReactNode | ((coarse: boolean) => ReactNode);
   exportName: string;
   /** The download's first heading. */
   csvDay: string;

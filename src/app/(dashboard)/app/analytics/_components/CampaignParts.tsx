@@ -21,6 +21,7 @@ import { BeforeLine } from "./AnalyticsFigures";
 import type { ListPageAnswer } from "./AnalyticsListScreen";
 import { formatPercent } from "./analyticsFormat";
 import { shiftDays } from "./stepScale";
+import { useIsShop } from "./useIsShop";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
 import { useEventName } from "./useEventName";
 import { spansOfList, useSpanInWords, useSpanWords } from "./VisitsCharts";
@@ -98,12 +99,17 @@ export function useCampaigns(choice: CameFromChoice) {
   const everyDevice = useQuery(api.googleAnalyticsReads.analyticsListPage, read?.live ? { ...ask, device: "" } : "skip");
   const every = read?.live ? everyDevice : read;
   const overview = useQuery(api.googleAnalyticsReads.analyticsOverview, ready ? args : "skip");
-  // A website that has sold anything in these dates or those before. Without it the page speaks in conversions.
-  const sells = overview ? (overview.now?.purchases ?? 0) > 0 || (overview.before?.purchases ?? 0) > 0 : true;
+  // A website that sells, by the one rule. Any other website's page speaks of events.
+  const sells = useIsShop();
   return { every, overview, sells };
 }
 
 type Campaigns = ReturnType<typeof useCampaigns>;
+
+/** The key of a word: a website that doesn't sell says Events where a shop says Conversions. */
+function said(key: string, sells: boolean): string {
+  return key === "conversions" && !sells ? "events" : key;
+}
 
 /** Four boxes, each set against the dates before: what campaigns brought, and their share of the whole website. */
 export function CampaignBoxes({ campaigns }: { campaigns: Campaigns }) {
@@ -127,8 +133,8 @@ export function CampaignBoxes({ campaigns }: { campaigns: Campaigns }) {
     <FigureRow columns={4}>
       <Figure label={t("visits")} value={formatNumber(totals.visits)} detail={against(totals.visits, totals.visitsBefore)} />
       <Figure label={t("share")} value={share(totals.visits, now.visits)} detail={was(totals.visitsBefore, before?.visits)} />
-      <Figure label={t(sells ? "bought" : "conversions")} value={formatNumber(done)} detail={against(done, doneBefore)} />
-      <Figure label={t(sells ? "boughtShare" : "conversionsShare")} value={share(done, siteDone)} detail={was(doneBefore, siteDoneBefore)} />
+      <Figure label={t(sells ? "bought" : "events")} value={formatNumber(done)} detail={against(done, doneBefore)} />
+      <Figure label={t(sells ? "boughtShare" : "eventsShare")} value={share(done, siteDone)} detail={was(doneBefore, siteDoneBefore)} />
     </FigureRow>
   );
 }
@@ -179,11 +185,11 @@ export function CampaignDaysCard({ choice, campaigns }: { choice: CameFromChoice
   const withYear = yearComparable(period);
   const scoreLine = (which: "visits" | "bought" | "conversions") => {
     const earlier = before ? valued(before.points, which) : [];
-    return { key: which, name: t(`score.${which}`), now: valued(chart?.points ?? [], which), before: earlier, ...(withYear ? { year: earlier } : {}) };
+    return { key: which, name: t(`score.${said(which, sells)}`), now: valued(chart?.points ?? [], which), before: earlier, ...(withYear ? { year: earlier } : {}) };
   };
   return (
     <DaysChart
-      title={t(`title.${show}.${step}`)}
+      title={t(`title.${said(show, sells)}.${step}`)}
       hint={comparing ? t("hintAgainst", { now: inWords.now, before: inWords.before }) : t("hint", { now: inWords.now })}
       exportName="google-analytics-campaigns-each-day"
       csvDay={t("csvDay")}
@@ -191,7 +197,7 @@ export function CampaignDaysCard({ choice, campaigns }: { choice: CameFromChoice
       step={step}
       waiting={chart === undefined ? undefined : chart.live ? t("collecting") : null}
       controls={[
-        { kind: "select", key: "show", label: t("showLabel"), value: show, options: SHOWS.filter((one) => one !== "bought" || sells).map((one) => ({ value: one, label: t(`show.${one}`) })), onChange: (next) => setShow(next as Show) },
+        { kind: "select", key: "show", label: t("showLabel"), value: show, options: SHOWS.filter((one) => one !== "bought" || sells).map((one) => ({ value: one, label: t(`show.${said(one, sells)}`) })), onChange: (next) => setShow(next as Show) },
         ...(drawn ? [{
           kind: "select" as const, key: "against", label: t("compareWith"), value: against,
           options: [{ value: "before", label: spans.beforeNamed ?? spans.before }, { value: "none", label: t("nothing") }],
@@ -199,7 +205,7 @@ export function CampaignDaysCard({ choice, campaigns }: { choice: CameFromChoice
         }] : []),
       ]}
       lines={lines}
-      figure={t(`show.${show}`)}
+      figure={t(`show.${said(show, sells)}`)}
       anything={(rows) => rows.some((row) => Number(row.now) > 0)}
       empty={t("empty")}
       height={240}
@@ -254,14 +260,14 @@ export function CampaignMapCard({ choice, campaigns }: { choice: CameFromChoice;
       size: shown.now,
       now: shown.now,
       before: shown.before,
-      figure: t(`figure.${count}`, { count: shown.now }),
+      figure: t(`figure.${said(count, sells)}`, { count: shown.now }),
       readout: [
-        { value: formatNumber(shown.now), label: t(`in.${count}`, { when: inWords.now }) },
+        { value: formatNumber(shown.now), label: t(`in.${said(count, sells)}`, { when: inWords.now }) },
         ...(shown.before !== null ? [
-          { value: formatNumber(shown.before), label: t(`in.${count}`, { when: inWords.before }) },
+          { value: formatNumber(shown.before), label: t(`in.${said(count, sells)}`, { when: inWords.before }) },
           { value: arrowMove(shown.now, shown.before) ?? t("same"), label: t("upOrDown") },
         ] : []),
-        ...others.map((one) => ({ value: formatNumber(campaignFigures(row, one).now), label: t(`measure.${one}`) })),
+        ...others.map((one) => ({ value: formatNumber(campaignFigures(row, one).now), label: t(`measure.${said(one, sells)}`) })),
         { value: row.bounceRate === null ? "–" : formatPercent(row.bounceRate), label: t("left") },
       ],
     };
@@ -275,14 +281,14 @@ export function CampaignMapCard({ choice, campaigns }: { choice: CameFromChoice;
   return (
     <MapCard
       title={t("title")}
-      hint={`${t(`hint.${count}`)} ${t("colourHint", { before: inWords.before })}`}
+      hint={`${t(`hint.${said(count, sells)}`)} ${t("colourHint", { before: inWords.before })}`}
       exportName="google-analytics-campaign-map"
       csv={() => toCsv(
-        [t("csv.campaign"), t("csv.cameFrom"), t("csv.visits"), t("csv.visitsBefore"), ...(sells ? [t("csv.bought"), t("csv.boughtBefore")] : []), t("csv.conversions"), t("csv.conversionsBefore")],
+        [t("csv.campaign"), t("csv.cameFrom"), t("csv.visits"), t("csv.visitsBefore"), ...(sells ? [t("csv.bought"), t("csv.boughtBefore")] : []), t(`csv.${said("conversions", sells)}`), t(`csv.${said("conversions", sells)}Before`)],
         rows.map((row) => [name(row), place(row.cameFrom ?? "notKnown"), row.visits, row.visitsBefore ?? null, ...(sells ? [row.purchases, row.purchasesBefore ?? null] : []), row.conversions, row.conversionsBefore]),
       )}
       host={status?.host ?? ""}
-      controls={[{ kind: "select", key: "count", label: t("count"), value: count, options: COUNTS.filter((one) => one !== "bought" || sells).map((one) => ({ value: one, label: t(`measure.${one}`) })), onChange: (next) => setCount(next as Count) }]}
+      controls={[{ kind: "select", key: "count", label: t("count"), value: count, options: COUNTS.filter((one) => one !== "bought" || sells).map((one) => ({ value: one, label: t(`measure.${said(one, sells)}`) })), onChange: (next) => setCount(next as Count) }]}
       loading={list === undefined}
       message={boxes.length === 0 ? t("empty") : null}
       under={under ? <p className="text-[12px] text-muted">{under}</p> : null}
@@ -306,6 +312,7 @@ const rateWords = (rate: number) => (rate >= 10 ? formatNumber(Math.round(rate))
  */
 export function CampaignSquaresCard({ choice }: { choice: CameFromChoice }) {
   const t = useTranslations("googleAnalytics.campaigns.squares");
+  const shop = useIsShop();
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const eventName = useEventName();
@@ -354,7 +361,7 @@ export function CampaignSquaresCard({ choice }: { choice: CameFromChoice }) {
     <ConversionsMap
       title={t("title")}
       hint={t("hint", { count: rows.length })}
-      controls={<ExplorerToolbar controls={[{ kind: "select", key: "squares", label: t("count"), value: count, options: SQUARE_COUNTS.filter((one) => one !== "rate" || hasRates).map((one) => ({ value: one, label: t(`counts.${one}`) })), onChange: (next) => setCount(next as SquareCount) }]} />}
+      controls={<ExplorerToolbar controls={[{ kind: "select", key: "squares", label: t("count"), value: count, options: SQUARE_COUNTS.filter((one) => one !== "rate" || hasRates).map((one) => ({ value: one, label: t(`counts.${one === "rate" && !shop ? "rateEvents" : one}`) })), onChange: (next) => setCount(next as SquareCount) }]} />}
       columns={columns}
       rows={rows}
       count="events"

@@ -43,6 +43,8 @@ export const analyticsChart = tenantQuery({
       visits: v.number(), engaged: v.number(),
       /** Page views (GA26): Overview's chart leads with them. */
       views: v.number(),
+      /** How long the visits lasted, in seconds all told, so a visit's length adds up. */
+      length: v.number(),
       conversions: v.number(),
       /** Each counted event's visits and times that day (conversion-charts-plan.md): Google's own count stands in on a day kept before both units were. */
       eventVisits: v.optional(v.array(v.number())),
@@ -70,7 +72,7 @@ export async function readChart(ctx: SiteReader, args: ObjectType<typeof analyti
   const point = (day: string, row: ListRow, lastDay?: string) => {
     const { conversions } = conversionsOf(row, counted);
     return {
-      day, ...(lastDay && lastDay !== day ? { lastDay } : {}), visits: row.visits, engaged: row.engaged, views: row.views, conversions,
+      day, ...(lastDay && lastDay !== day ? { lastDay } : {}), visits: row.visits, engaged: row.engaged, views: row.views, length: row.length, conversions,
       events: events.map((event) => row.counts.get(event) ?? 0),
       eventVisits: events.map((event) => row.eventVisits?.get(event) ?? row.counts.get(event) ?? 0),
       eventTimes: events.map((event) => row.eventTimes?.get(event) ?? row.counts.get(event) ?? 0),
@@ -120,7 +122,7 @@ export const analyticsPeriodBeforeChart = tenantQuery({
     /** The days each point is moved forward by: the period's length. */
     shift: v.number(),
     points: v.array(v.object({ day: v.string(), visits: v.number(),
-      engaged: v.number(), conversions: v.number(), events: v.array(v.number()), eventVisits: v.optional(v.array(v.number())), eventTimes: v.optional(v.array(v.number())) })),
+      engaged: v.number(), views: v.number(), length: v.number(), conversions: v.number(), events: v.array(v.number()), eventVisits: v.optional(v.array(v.number())), eventTimes: v.optional(v.array(v.number())) })),
     /** The counted events, in the order of each point's `events`: the chart's own order. */
     events: v.array(v.string()),
   }),
@@ -159,6 +161,8 @@ export async function readPeriodBeforeChart(ctx: SiteReader, args: ObjectType<ty
           day: shiftDay(total.from, daysBetween(before.from, point.start)),
           visits: row.visits,
           engaged: row.engaged,
+          views: row.views,
+          length: row.length,
           conversions: conversionsOf(row, counted).conversions,
           events: events.map((event) => row.counts.get(event) ?? 0),
           eventVisits: events.map((event) => row.eventVisits?.get(event) ?? row.counts.get(event) ?? 0),

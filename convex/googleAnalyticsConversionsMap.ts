@@ -108,7 +108,7 @@ function addRow(into: Sums, row: ListRow, events: readonly string[]) {
 }
 
 /** Each page's kind, from the page keys a list carries: its classification, Unclassified, or no page recorded. */
-async function kindsOf(ctx: SiteReader, holdId: Id<"companyWebsites">, keys: readonly string[]) {
+export async function kindsOf(ctx: SiteReader, holdId: Id<"companyWebsites">, keys: readonly string[]) {
   const kinds = await readPageKinds(ctx, holdId);
   const unique = [...new Set(keys)];
   const addresses = await decodePages(ctx, holdId, unique);

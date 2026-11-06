@@ -1,0 +1,29 @@
+# Google Analytics → Overview, a shop — the approved look (board "Overview" of docs/plans/assets/overview-new-page/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Overview
+figures
+  figure: Visits →
+  figure: Bought →
+  figure: Biggest change →
+  figure: Sells best →
+chart-card: Visits each day
+filter: Show
+filter: Compare with
+chart-card: Out of every # visits
+filter: Came from
+filter: Started on
+filter: Device
+filter: Out of every #
+filter: Compare with
+hundred-grid
+chart-card: Who visits, and who buys
+filter: Split by
+filter: Compare with
+hundred-strips
+search: Find a page
+filter: Classification
+table: Page | Visits | Up or down | Left straight away | Bought
+  table-bar: Top pages
+    download: Download CSV
+  table-footer

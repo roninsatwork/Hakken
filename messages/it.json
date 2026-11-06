@@ -16698,7 +16698,8 @@
         "visitsChangeTitle": "Visite di {now} rispetto a {before}.",
         "bought": "Comprati",
         "boughtTitle": "Quante volte le persone hanno comprato da questa campagna, e quante sono ogni 100 visite.",
-        "conversionsTimesTitle": "Conta ogni volta, quindi una visita può contare più di una volta."
+        "conversionsTimesTitle": "Conta ogni volta, quindi una visita può contare più di una volta.",
+        "events": "Eventi"
       },
       "notSorted": "Non classificate",
       "pagesCount": "{count, plural, =1 {1 pagina} other {# pagine}}",
@@ -16918,97 +16919,189 @@
     },
     "overview": {
       "title": "Panoramica",
-      "description": "Cosa ha contato Google Analytics su questo sito: le visite, da dove sono arrivate e le conversioni che hanno fatto.",
-      "preparing": "I dati per queste date sono in preparazione e compaiono tra un momento.",
-      "columns": {
-        "channel": "Canale",
-        "classification": "Classificazione della pagina",
-        "page": "Pagina di destinazione",
+      "descriptionShop": "I dati del tuo sito ogni giorno, cosa succede alle visite e chi porta le persone che comprano.",
+      "descriptionService": "I dati del tuo sito ogni giorno, cosa succede alle visite e chi porta le persone che ti contattano.",
+      "preparing": "I dati per queste date stanno arrivando.",
+      "names": {
+        "notSorted": "Non ancora ordinate",
+        "otherGroups": "Altri gruppi"
+      },
+      "boxes": {
         "visits": "Visite",
-        "change": "Variazione",
-        "left": "Uscite da qui",
-        "conversions": "Conversioni"
-      },
-      "unclassified": "Non classificata",
-      "moreThan": "{rate} in più rispetto a {before}",
-      "fewerThan": "{rate} in meno rispetto a {before}",
-      "sameAs": "come {before}",
-      "noBefore": "ancora niente da confrontare",
-      "channels": {
-        "title": "Da dove sono arrivate le visite",
-        "note": "{visits} visite da {count, plural, =1 {un canale} other {# canali}}, {change}.",
-        "tagged": "{tagged} sono arrivate da link tracciati e {keywords} da parole chiave degli annunci.",
-        "noneTagged": "Nessuna visita è arrivata da un link tracciato o da una parola chiave degli annunci.",
-        "seeAll": "Vedi {count, plural, =1 {i canali} other {tutti i # canali}}",
-        "empty": "Nessuna visita in queste date."
-      },
-      "kinds": {
-        "title": "Pagine per classificazione",
-        "note": "Dove sono arrivate le visite: {count, plural, =1 {una classificazione} other {# classificazioni}}.",
-        "none": "Le pagine di questo sito non hanno ancora classificazioni, quindi le visite non si possono raggruppare per pagina di arrivo.",
-        "seeAll": "Vedi {count, plural, =1 {le classificazioni delle pagine} other {tutte le # classificazioni delle pagine}}",
-        "empty": "Nessuna visita in queste date."
-      },
-      "landing": {
-        "title": "Dove sono arrivate le visite",
-        "note": "{views} visualizzazioni di pagina, {change}: {pages} pagine e {time} a visita.",
-        "left": "Il {left} delle visite è uscito dalla pagina di arrivo.",
-        "seeAll": "Vedi il funnel",
-        "empty": "Nessuna pagina di destinazione in queste date."
-      },
-      "conversions": {
-        "title": "Conversioni",
-        "note": "{conversions, plural, =1 {Una conversione} other {# conversioni}}, {change}: il {rate} delle visite ha convertito.",
-        "nothingCounted": "Ancora niente conta come conversione: scegli cosa conta nella pagina Connessione.",
-        "keyEvent": "Evento chiave",
-        "times": "Volte",
-        "counted": "Conteggiato",
-        "status": {
-          "counted": "Conteggiato come conversione",
-          "uncounted": "Non conteggiato",
-          "never": "Mai avvenuto"
+        "bought": "Acquisti",
+        "events": "Eventi",
+        "biggest": "Cambiamento maggiore",
+        "sellsBest": "Vende di più",
+        "bestForEvents": "Migliore per gli eventi",
+        "rate": "{rate} ogni 100 visite.",
+        "rateSame": "Uguale a {before}",
+        "rateWas": "Era {was} in {before}",
+        "fewer": {
+          "sales": ", con {count} vendite in meno",
+          "events": ", con {count} eventi in meno"
         },
-        "seeAll": "Vedi tutte le conversioni",
-        "empty": "Nessun evento chiave in queste date."
+        "more": {
+          "sales": ", con {count} vendite in più",
+          "events": ", con {count} eventi in più"
+        },
+        "fewerVisits": "{count} visite in meno rispetto a {before}.",
+        "moreVisits": "{count} visite in più rispetto a {before}.",
+        "nothingMoved": "Nessun canale si è mosso in queste date.",
+        "bestRate": "{rate} acquisti ogni 100 visite. Il tuo sito ne ha {site}.",
+        "bestRateEvents": "{rate} eventi ogni 100 visite. Il tuo sito ne ha {site}.",
+        "tooFewToSay": "Nessun canale ha ancora abbastanza visite per dirlo."
       },
-      "who": {
-        "title": "Chi ha visitato",
-        "note": "{people} persone, {change}: il {newShare} nuove per il sito. Ogni riga è il gruppo più grande del suo tipo che Google ha potuto nominare.",
-        "kind": "Tipo",
-        "most": "La maggior parte",
-        "share": "Quota",
-        "points": "{points} pt",
-        "kinds": {
-          "visitorType": "Nuovi o di ritorno",
+      "days": {
+        "title": "{name} {step, select, day {ogni giorno} week {ogni settimana} other {ogni mese}}",
+        "show": {
+          "visits": "Visite",
+          "views": "Visualizzazioni di pagina",
+          "pages": "Pagine a visita",
+          "length": "Secondi a visita",
+          "stayed": "Rimaste",
+          "left": "Uscite subito, su 100 visite",
+          "added": "Aggiunte al carrello",
+          "checkout": "Checkout iniziati",
+          "bought": "Acquisti",
+          "boughtRate": "Acquisti ogni 100 visite",
+          "conversions": "Conversioni",
+          "events": "Eventi",
+          "eventsRate": "Eventi ogni 100 visite"
+        },
+        "hint": "{now}.",
+        "hintAgainst": "{now} e {before}, allineati per data.",
+        "hintNotHeld": "{now}. Per date così lunghe le date precedenti non sono tenute giorno per giorno.",
+        "showLabel": "Mostra",
+        "compareWith": "Confronta con",
+        "nothing": "Nessun confronto",
+        "csvDay": "Giorno",
+        "empty": "Niente da mostrare per queste date.",
+        "listsDiffer": "Google conta ogni lista per conto suo, quindi i giorni possono sommare un po' di più o di meno del riquadro Visite."
+      },
+      "squares": {
+        "title": "Su ogni {cells, plural, =1000 {1.000} other {100}} {start, select, 1 {visite rimaste} 2 {visite che hanno aggiunto al carrello} 3 {visite che hanno iniziato il checkout} other {visite}}",
+        "titleKinds": "Come ti contattano",
+        "hint": "{who} in {when}. Sono {count} visite. Ogni quadrato è 1 su {cells, plural, =1000 {1.000} other {100}}.",
+        "hintKinds": "Su ogni 100 eventi in {when}. Ogni quadrato è 1 su 100.",
+        "all": "Tutte le tue visite",
+        "rough": "Sono poche, quindi è solo un'indicazione.",
+        "everyDevice": "Questa lista non è tenuta per dispositivo per queste date, quindi mostra ogni dispositivo.",
+        "empty": "Nessuna visita da mostrare per queste date.",
+        "came": "Arrivate da",
+        "started": "Iniziate su",
+        "device": "Dispositivo",
+        "outOf": "Su ogni 100",
+        "show": "Mostra",
+        "compareWith": "Confronta con",
+        "everywhere": "Ovunque",
+        "everyClassification": "Ogni classificazione",
+        "everyDevice_": "Ogni dispositivo",
+        "yourWebsite": "Tutto il tuo sito",
+        "nothing": "Nessun confronto",
+        "showVisits": "Come sono finite le visite",
+        "showKinds": "Come ti contattano",
+        "startWord": {
+          "0": "Visite",
+          "1": "Visite rimaste",
+          "2": "Visite che hanno aggiunto al carrello",
+          "3": "Visite che hanno iniziato il checkout"
+        },
+        "stages": {
+          "left": "Uscite subito",
+          "looked": "Hanno guardato, poi sono uscite",
+          "added": "Aggiunto al carrello, poi uscite",
+          "checkout": "Checkout iniziato, poi uscite",
+          "bought": "Acquisto",
+          "clicked": "Clic per contattarti",
+          "form": "Modulo inviato"
+        },
+        "readout": {
+          "visits": "Visite in {when}",
+          "times": "Volte in {when}",
+          "inEvery": "{share} su 100"
+        },
+        "moreFunnel": "Guarda fin dove arrivano le persone in Funnel",
+        "moreConversions": "Guarda ogni evento in Conversioni",
+        "csvRow": "Riga",
+        "csvCount": "Quadrati",
+        "csvAgainst": "Confrontato con",
+        "otherEvents": "Altri eventi"
+      },
+      "bands": {
+        "titleBought": "Chi visita e chi compra",
+        "titleAdded": "Chi visita e chi aggiunge al carrello",
+        "titleCheckout": "Chi visita e chi inizia il checkout",
+        "titleConversions": "Chi visita e chi converte",
+        "titleEvents": "Chi visita e chi ti contatta",
+        "titleViews": "Chi visita e chi guarda di più",
+        "titleBefore": "Chi visita ora e chi ha visitato in {when}",
+        "against": {
+          "bought": "Acquisti",
+          "added": "Aggiunte al carrello",
+          "checkout": "Checkout iniziati",
+          "conversions": "Conversioni",
+          "events": "Eventi",
+          "views": "Visualizzazioni di pagina",
+          "before": "Visite in {when}"
+        },
+        "noun": {
+          "bought": "100 vendite",
+          "added": "100 visite che hanno aggiunto al carrello",
+          "checkout": "100 visite che hanno iniziato il checkout",
+          "conversions": "100 conversioni",
+          "events": "100 eventi",
+          "views": "100 visualizzazioni di pagina",
+          "before": "100 visite in {when}",
+          "event": "100 di {name}"
+        },
+        "topRow": {
+          "channel": "La riga in alto è da dove arrivano 100 visite. Quella in basso è lo stesso per {noun}.",
+          "kind": "La riga in alto è dove iniziano 100 visite. Quella in basso è lo stesso per {noun}.",
+          "device": "La riga in alto è su cosa sono fatte 100 visite. Quella in basso è lo stesso per {noun}.",
+          "visitorType": "La riga in alto è chi ha fatto 100 visite. Quella in basso è lo stesso per {noun}."
+        },
+        "rough": "Sono solo {count}, quindi è solo un'indicazione.",
+        "press": "Premine uno per tenerlo acceso.",
+        "everyDevice": "Questa lista non è tenuta per dispositivo per queste date, quindi mostra ogni dispositivo.",
+        "empty": "Nessuna visita da mostrare per queste date.",
+        "splitLabel": "Dividi per",
+        "compareWith": "Confronta con",
+        "split": {
+          "channel": "Da dove",
+          "kind": "Classificazione",
           "device": "Dispositivo",
-          "age": "Età",
-          "gender": "Genere",
-          "interest": "Interessi",
-          "browser": "Browser",
-          "system": "Sistema operativo"
+          "visitorType": "Nuove o di ritorno"
         },
-        "seeAll": "Vedi tutti i visitatori",
-        "empty": "Google non ha nominato nessun gruppo di visitatori in queste date."
+        "topLabel": "Su ogni 100 visite",
+        "bottomLabel": "Su ogni {noun}",
+        "readout": {
+          "visits": "Visite",
+          "ofVisits": "Di tutte le visite",
+          "ofThose": "Di tutte queste",
+          "inEvery": "{share} su 100",
+          "tooFew": "Troppo poche visite",
+          "boughtRate": "Acquisti ogni 100 visite",
+          "eventsRate": "Eventi ogni 100 visite"
+        },
+        "more": {
+          "channel": "Guarda ogni canale in Canali",
+          "kind": "Guarda ogni classificazione in Tutte le pagine",
+          "device": "Guarda i dispositivi in Visite",
+          "visitorType": "Guarda nuove e di ritorno in Visite"
+        },
+        "csvName": "Nome",
+        "listsDiffer": "Google conta ogni lista per conto suo, quindi una lista può sommare un po' di più o di meno del riquadro Visite."
       },
-      "shop": {
-        "title": "Negozio",
-        "note": "{bought, plural, =1 {Uno acquistato} other {# acquistati}}; {basket, plural, =1 {uno aggiunto al carrello} other {# aggiunti al carrello}}.",
-        "product": "Prodotto",
-        "viewed": "Visti",
-        "basket": "Aggiunti al carrello",
-        "bought": "Acquistati",
-        "seeAll": "Vedi tutti i prodotti",
-        "empty": "Niente venduto in queste date."
-      },
-      "health": {
-        "title": "Salute del tracciamento",
-        "failing": "{failing} controlli su {total} da guardare; {passing, plural, =0 {nessuno è superato} =1 {l'altro è superato} other {gli altri # sono superati}}.",
-        "passing": "Tutti i {total} controlli sono superati.",
-        "notChecked": "Non ancora controllato: i controlli partono quando Google Analytics si collega, e ogni settimana.",
-        "check": "Controllo",
-        "found": "Cosa ha trovato {platformName}",
-        "seeAll": "Vedi la salute del tracciamento",
-        "empty": "Tutti i controlli sono superati."
+      "pages": {
+        "title": "Pagine principali",
+        "description": "Le pagine da cui le persone iniziano. Esclude ricerca, carrello e account. Premi un'intestazione per ordinare.",
+        "search": "Trova una pagina",
+        "empty": "Nessuna pagina corrisponde.",
+        "left": "Uscite subito",
+        "visitsTitle": "Visite iniziate su questa pagina. Google conta ogni lista per conto suo, quindi una lista può sommare un po' di più o di meno del riquadro Visite.",
+        "visits": "Visite",
+        "leftTitle": "Visite uscite in meno di 10 secondi senza fare altro.",
+        "descriptionService": "Le pagine da cui le persone iniziano. Esclude ricerca e account. Premi un'intestazione per ordinare."
       }
     },
     "live": {
@@ -17391,7 +17484,9 @@
         "conversions": "Conversioni dalle campagne",
         "conversionsShare": "Quota di tutte le conversioni",
         "was": "Era {figure} a {before}.",
-        "noneEither": "Nessuna neanche in {before}."
+        "noneEither": "Nessuna neanche in {before}.",
+        "events": "Eventi dalle campagne",
+        "eventsShare": "Quota di tutti i tuoi eventi"
       },
       "daily": {
         "showLabel": "Mostra",
@@ -17406,12 +17501,14 @@
           "visits": "Visite",
           "bought": "Comprati",
           "conversions": "Conversioni",
-          "left": "Usciti subito"
+          "left": "Usciti subito",
+          "events": "Eventi"
         },
         "score": {
           "visits": "Visite dalle campagne",
           "bought": "Comprati dalle campagne",
-          "conversions": "Conversioni dalle campagne"
+          "conversions": "Conversioni dalle campagne",
+          "events": "Eventi dalle campagne"
         },
         "title": {
           "visits": {
@@ -17433,6 +17530,11 @@
             "day": "Persone uscite subito, ogni giorno",
             "week": "Persone uscite subito, ogni settimana",
             "month": "Persone uscite subito, ogni mese"
+          },
+          "events": {
+            "day": "Eventi dalle campagne ogni giorno",
+            "week": "Eventi dalle campagne ogni settimana",
+            "month": "Eventi dalle campagne ogni mese"
           }
         }
       },
@@ -17441,24 +17543,28 @@
         "hint": {
           "visits": "I riquadri più grandi hanno avuto più visite.",
           "bought": "I riquadri più grandi hanno venduto di più.",
-          "conversions": "I riquadri più grandi hanno avuto più conversioni."
+          "conversions": "I riquadri più grandi hanno avuto più conversioni.",
+          "events": "I riquadri più grandi hanno avuto più eventi."
         },
         "colourHint": "Arancione è salito rispetto a {before} e grigio è sceso.",
         "count": "Conteggio",
         "measure": {
           "visits": "Visite",
           "bought": "Comprati",
-          "conversions": "Conversioni"
+          "conversions": "Conversioni",
+          "events": "Eventi"
         },
         "figure": {
           "visits": "{count, plural, =1 {# visita} other {# visite}}",
           "bought": "{count} comprati",
-          "conversions": "{count, plural, =1 {# conversione} other {# conversioni}}"
+          "conversions": "{count, plural, =1 {# conversione} other {# conversioni}}",
+          "events": "{count, plural, =1 {# evento} other {# eventi}}"
         },
         "in": {
           "visits": "Visite: {when}",
           "bought": "Comprati: {when}",
-          "conversions": "Conversioni: {when}"
+          "conversions": "Conversioni: {when}",
+          "events": "Eventi in {when}"
         },
         "upOrDown": "Su o giù",
         "same": "Uguale",
@@ -17474,7 +17580,9 @@
           "bought": "Comprati",
           "boughtBefore": "Comprati prima",
           "conversions": "Conversioni",
-          "conversionsBefore": "Conversioni prima"
+          "conversionsBefore": "Conversioni prima",
+          "events": "Eventi",
+          "eventsBefore": "Eventi prima"
         }
       },
       "squares": {
@@ -17484,7 +17592,8 @@
         "counts": {
           "times": "Numero di volte",
           "per100": "Ogni 100 visite",
-          "rate": "Tasso di conversione %"
+          "rate": "Tasso di conversione %",
+          "rateEvents": "Quota di visite %"
         },
         "did": {
           "add_to_cart": "Aggiunto al carrello",
@@ -17523,7 +17632,8 @@
         "pagesAVisit": "Pagine per visita",
         "conversions": "Conversioni",
         "was": "Era {figure} a {before}.",
-        "pagesBefore": "{figure} a {before}"
+        "pagesBefore": "{figure} a {before}",
+        "events": "Eventi"
       },
       "daily": {
         "showLabel": "Mostra",
@@ -17536,7 +17646,8 @@
         "show": {
           "left": "Usciti subito",
           "stayed": "Rimasti a guardare",
-          "conversions": "Conversioni"
+          "conversions": "Conversioni",
+          "events": "Eventi"
         },
         "title": {
           "left": {
@@ -17553,6 +17664,11 @@
             "day": "Conversioni ogni giorno",
             "week": "Conversioni ogni settimana",
             "month": "Conversioni ogni mese"
+          },
+          "events": {
+            "day": "Eventi ogni giorno",
+            "week": "Eventi ogni settimana",
+            "month": "Eventi ogni mese"
           }
         }
       }
@@ -17584,7 +17700,9 @@
         "leftOut": "Tutte tranne ricerca e carrello",
         "every": "Ogni classificazione",
         "shop": "Ricerca, carrello e account",
-        "notSorted": "Non ancora ordinate"
+        "notSorted": "Non ancora ordinate",
+        "shopService": "Pagine di ricerca e account",
+        "leftOutService": "Tutte tranne ricerca e account"
       },
       "map": {
         "title": "Una mappa delle tue pagine",

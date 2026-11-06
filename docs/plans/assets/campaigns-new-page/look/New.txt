@@ -5,8 +5,8 @@ page-header: Campaigns
 figures
   figure: Visits from campaigns
   figure: Share of all your visits
-  figure: Conversions from campaigns
-  figure: Share of all your conversions
+  figure: Events from campaigns
+  figure: Share of all your events
 chart-card: Visits from campaigns each day
 filter: Show
 compact-list: Up or down | Last week | Than the week before | Last # weeks | Than the # before
@@ -20,7 +20,7 @@ conversions-map
 search: Find a campaign…
 filter: Came from
 choice: Showing: Campaigns | Ad keywords
-table: Campaign | Came from | Visits | Before | Up or down | Conversions
+table: Campaign | Came from | Visits | Before | Up or down | Events
   table-bar
     download: Download CSV
   table-footer

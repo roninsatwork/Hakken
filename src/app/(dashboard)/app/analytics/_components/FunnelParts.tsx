@@ -17,6 +17,7 @@ import { BeforeLine } from "./AnalyticsFigures";
 import { formatPerVisit } from "./analyticsFormat";
 import type { ClassificationChoice } from "./AllPagesParts";
 import type { FlowAnswer } from "./funnelRoutes";
+import { useIsShop } from "./useIsShop";
 import { useAnalyticsArgs, useAnalyticsStatus, useStep } from "./useAnalytics";
 import { useWebsiteForEye } from "./useEyeFigures";
 import { spansOfList, useSpanInWords, useSpanWords } from "./VisitsCharts";
@@ -68,6 +69,7 @@ export function useFunnelFlow(choice: ClassificationChoice): { flow: FlowAnswer 
 /** Four boxes, each set against the dates before: the whole website's. */
 export function FunnelBoxes({ answer }: { answer: ListPageAnswer | undefined }) {
   const t = useTranslations("googleAnalytics.landing.boxes");
+  const shop = useIsShop();
   const website = useWebsiteForEye();
   const dates = spansOfList(answer);
   const spans = useSpanWords(...dates);
@@ -84,7 +86,7 @@ export function FunnelBoxes({ answer }: { answer: ListPageAnswer | undefined }) 
       <Figure label={t("visits")} value={formatNumber(website.visits)} detail={<BeforeLine now={website.visits} before={website.visitsBefore} named={spans.before} />} />
       <Figure label={t("leftAtOnce")} value={leftNow} detail={leftBefore ? quiet(t("was", { figure: leftBefore, before: inWords.before })) : undefined} />
       <Figure label={t("pagesAVisit")} value={formatPerVisit(pagesNow)} detail={pagesBefore !== null ? quiet(t("pagesBefore", { figure: formatPerVisit(pagesBefore), before: inWords.before })) : undefined} />
-      <Figure label={t("conversions")} value={formatNumber(website.conversions)} detail={<BeforeLine now={website.conversions} before={website.conversionsBefore} named={spans.before} />} />
+      <Figure label={t(shop ? "conversions" : "events")} value={formatNumber(website.conversions)} detail={<BeforeLine now={website.conversions} before={website.conversionsBefore} named={spans.before} />} />
     </FigureRow>
   );
 }
@@ -106,6 +108,8 @@ function figureOf(point: DayPoint, show: Show): number {
  */
 export function LeftEachDayCard({ answer }: { answer: ListPageAnswer | undefined }) {
   const t = useTranslations("googleAnalytics.landing.daily");
+  const shop = useIsShop();
+  const said = (one: Show) => (one === "conversions" && !shop ? "events" : one);
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const [step] = useStep();
@@ -132,7 +136,7 @@ export function LeftEachDayCard({ answer }: { answer: ListPageAnswer | undefined
   useSeesPart("leftEachDay", seen);
   return (
     <DaysChart
-      title={t(`title.${show}.${step}`)}
+      title={t(`title.${said(show)}.${step}`)}
       hint={comparing ? t("hintAgainst", { now: inWords.now, before: inWords.before }) : t("hint", { now: inWords.now })}
       exportName="google-analytics-left-straight-away"
       csvDay={t("csvDay")}
@@ -140,7 +144,7 @@ export function LeftEachDayCard({ answer }: { answer: ListPageAnswer | undefined
       step={step}
       waiting={now === undefined ? undefined : null}
       controls={[
-        { kind: "select", key: "show", label: t("showLabel"), value: show, options: SHOWS.map((one) => ({ value: one, label: t(`show.${one}`) })), onChange: (next) => setShow(next as Show) },
+        { kind: "select", key: "show", label: t("showLabel"), value: show, options: SHOWS.map((one) => ({ value: one, label: t(`show.${said(one)}`) })), onChange: (next) => setShow(next as Show) },
         ...(before?.held ? [{
           kind: "select" as const, key: "against", label: t("compareWith"), value: against,
           options: [{ value: "before", label: spans.beforeNamed ?? spans.before }, { value: "none", label: t("nothing") }],
@@ -148,7 +152,7 @@ export function LeftEachDayCard({ answer }: { answer: ListPageAnswer | undefined
         }] : []),
       ]}
       lines={lines}
-      figure={t(`show.${show}`)}
+      figure={t(`show.${said(show)}`)}
       empty={t("empty")}
       height={200}
     />

@@ -239,6 +239,12 @@ button * {
 }
 
 /* The side panel slides in from the right (SidePanel, 2026-10-31); still for anyone who asks for less motion. */
+/* HundredGrid's squares fill in once. */
+@keyframes hk-square-fill {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
 @keyframes side-panel-in {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }

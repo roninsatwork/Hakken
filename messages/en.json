@@ -16698,7 +16698,8 @@
         "visitsChangeTitle": "Visits in {now} compared with {before}.",
         "bought": "Bought",
         "boughtTitle": "How many times people bought from this campaign, and how many that is for every 100 visits.",
-        "conversionsTimesTitle": "This counts every time, so one visit can count more than once."
+        "conversionsTimesTitle": "This counts every time, so one visit can count more than once.",
+        "events": "Events"
       },
       "notSorted": "Unclassified",
       "pagesCount": "{count, plural, =1 {1 page} other {# pages}}",
@@ -16918,97 +16919,189 @@
     },
     "overview": {
       "title": "Overview",
-      "description": "What Google Analytics counted on this website: the visits, where they came from, and the conversions they made.",
-      "preparing": "The figures for these dates are being prepared, and appear in a moment.",
-      "columns": {
-        "channel": "Channel",
-        "classification": "Page classification",
-        "page": "Landing page",
+      "descriptionShop": "Your website's figures each day, what happens to your visits, and who brings the people who buy.",
+      "descriptionService": "Your website's figures each day, what happens to your visits, and who brings the people who get in touch.",
+      "preparing": "Your figures for these dates are on their way.",
+      "names": {
+        "notSorted": "Not sorted yet",
+        "otherGroups": "Other groups"
+      },
+      "boxes": {
         "visits": "Visits",
-        "change": "Change",
-        "left": "Left from it",
-        "conversions": "Conversions"
-      },
-      "unclassified": "Unclassified",
-      "moreThan": "{rate} more than {before}",
-      "fewerThan": "{rate} fewer than {before}",
-      "sameAs": "the same as {before}",
-      "noBefore": "nothing to compare with yet",
-      "channels": {
-        "title": "Where visits came from",
-        "note": "{visits} visits from {count, plural, =1 {one channel} other {# channels}}, {change}.",
-        "tagged": "{tagged} came from tagged links and {keywords} from ad keywords.",
-        "noneTagged": "No visit came from a tagged link or an ad keyword.",
-        "seeAll": "See all {count, plural, =1 {channels} other {# channels}}",
-        "empty": "No visits in these dates."
-      },
-      "kinds": {
-        "title": "Pages by classification",
-        "note": "Where visits landed: {count, plural, =1 {one classification} other {# classifications}}.",
-        "none": "This website's pages have no classifications yet, so its visits can't be grouped by where they landed.",
-        "seeAll": "See all {count, plural, =1 {page classifications} other {# page classifications}}",
-        "empty": "No visits in these dates."
-      },
-      "landing": {
-        "title": "Where visits landed",
-        "note": "{views} page views, {change}: {pages} pages and {time} a visit.",
-        "left": "{left} of visits left from the page they landed on.",
-        "seeAll": "See the funnel",
-        "empty": "No landing pages in these dates."
-      },
-      "conversions": {
-        "title": "Conversions",
-        "note": "{conversions, plural, =1 {One conversion} other {# conversions}}, {change}: {rate} of visits converted.",
-        "nothingCounted": "Nothing counts as a conversion yet: choose what does on the Connection page.",
-        "keyEvent": "Key event",
-        "times": "Times",
-        "counted": "Counted",
-        "status": {
-          "counted": "Counted as a conversion",
-          "uncounted": "Not counted",
-          "never": "Never happened"
-        },
-        "seeAll": "See all conversions",
-        "empty": "No key events in these dates."
-      },
-      "who": {
-        "title": "Who visited",
-        "note": "{people} people, {change}: {newShare} new to the website. Each row is the biggest group of its kind Google could name.",
-        "kind": "Kind",
-        "most": "Most of them",
-        "share": "Share",
-        "points": "{points} pts",
-        "kinds": {
-          "visitorType": "New or returning",
-          "device": "Device",
-          "age": "Age",
-          "gender": "Gender",
-          "interest": "Interests",
-          "browser": "Browser",
-          "system": "Operating system"
-        },
-        "seeAll": "See all visitors",
-        "empty": "Google hasn't named any group of visitors in these dates."
-      },
-      "shop": {
-        "title": "Shop",
-        "note": "{bought, plural, =1 {One bought} other {# bought}}; {basket, plural, =1 {one added to a basket} other {# added to a basket}}.",
-        "product": "Product",
-        "viewed": "Viewed",
-        "basket": "Added to basket",
         "bought": "Bought",
-        "seeAll": "See all products",
-        "empty": "Nothing sold in these dates."
+        "events": "Events",
+        "biggest": "Biggest change",
+        "sellsBest": "Sells best",
+        "bestForEvents": "Best for events",
+        "rate": "{rate} for every 100 visits.",
+        "rateSame": "The same as {before}",
+        "rateWas": "It was {was} in {before}",
+        "fewer": {
+          "sales": ", with {count} fewer sales",
+          "events": ", with {count} fewer events"
+        },
+        "more": {
+          "sales": ", with {count} more sales",
+          "events": ", with {count} more events"
+        },
+        "fewerVisits": "{count} fewer visits than {before}.",
+        "moreVisits": "{count} more visits than {before}.",
+        "nothingMoved": "No channel moved in these dates.",
+        "bestRate": "{rate} bought for every 100 visits. Your website gets {site}.",
+        "bestRateEvents": "{rate} events for every 100 visits. Your website gets {site}.",
+        "tooFewToSay": "No channel has enough visits to say yet."
       },
-      "health": {
-        "title": "Tracking health",
-        "failing": "{failing} of {total} checks need a look; {passing, plural, =0 {none passes} =1 {the other one passes} other {the other # pass}}.",
-        "passing": "All {total} checks pass.",
-        "notChecked": "Not checked yet: the checks run when Google Analytics connects, and every week.",
-        "check": "Check",
-        "found": "What {platformName} found",
-        "seeAll": "See tracking health",
-        "empty": "Every check passes."
+      "days": {
+        "title": "{name} each {step, select, day {day} week {week} other {month}}",
+        "show": {
+          "visits": "Visits",
+          "views": "Page views",
+          "pages": "Pages a visit",
+          "length": "Seconds a visit",
+          "stayed": "Stayed",
+          "left": "Left straight away, out of 100 visits",
+          "added": "Times added to basket",
+          "checkout": "Times started checkout",
+          "bought": "Bought",
+          "boughtRate": "Bought for every 100 visits",
+          "conversions": "Conversions",
+          "events": "Events",
+          "eventsRate": "Events for every 100 visits"
+        },
+        "hint": "{now}.",
+        "hintAgainst": "{now} and {before}, lined up by date.",
+        "hintNotHeld": "{now}. The dates before aren't kept day by day for dates this long.",
+        "showLabel": "Show",
+        "compareWith": "Compare with",
+        "nothing": "No comparison",
+        "csvDay": "Day",
+        "empty": "Nothing to show for these dates.",
+        "listsDiffer": "Google counts each list on its own, so the days can add up to a little more or less than the Visits box."
+      },
+      "squares": {
+        "title": "Out of every {cells, plural, =1000 {1,000} other {100}} {start, select, 1 {visits that stayed} 2 {visits that added to a basket} 3 {visits that started checkout} other {visits}}",
+        "titleKinds": "How people got in touch",
+        "hint": "{who} in {when}. That's {count} visits. Each square is 1 in every {cells, plural, =1000 {1,000} other {100}}.",
+        "hintKinds": "Out of every 100 events in {when}. Each square is 1 in every 100.",
+        "all": "All your visits",
+        "rough": "That's only a few, so it's a rough guide.",
+        "everyDevice": "This list isn't kept by device for these dates, so it's showing every device.",
+        "empty": "No visits to show for these dates.",
+        "came": "Came from",
+        "started": "Started on",
+        "device": "Device",
+        "outOf": "Out of every 100",
+        "show": "Show",
+        "compareWith": "Compare with",
+        "everywhere": "Everywhere",
+        "everyClassification": "Every Classification",
+        "everyDevice_": "Every device",
+        "yourWebsite": "Your whole website",
+        "nothing": "No comparison",
+        "showVisits": "How visits ended",
+        "showKinds": "How people got in touch",
+        "startWord": {
+          "0": "Visits",
+          "1": "Visits that stayed",
+          "2": "Visits that added to a basket",
+          "3": "Visits that started checkout"
+        },
+        "stages": {
+          "left": "Left straight away",
+          "looked": "Looked around, then left",
+          "added": "Added to basket, then left",
+          "checkout": "Started checkout, then left",
+          "bought": "Bought",
+          "clicked": "Clicked to get in touch",
+          "form": "Sent a form"
+        },
+        "readout": {
+          "visits": "Visits in {when}",
+          "times": "Times in {when}",
+          "inEvery": "{share} in 100"
+        },
+        "moreFunnel": "See how far people got on Funnel",
+        "moreConversions": "See every event on Conversions",
+        "csvRow": "Row",
+        "csvCount": "Squares",
+        "csvAgainst": "Compared with",
+        "otherEvents": "Other events"
+      },
+      "bands": {
+        "titleBought": "Who visits, and who buys",
+        "titleAdded": "Who visits, and who adds to a basket",
+        "titleCheckout": "Who visits, and who starts checkout",
+        "titleConversions": "Who visits, and who converts",
+        "titleEvents": "Who visits, and who gets in touch",
+        "titleViews": "Who visits, and who looks around most",
+        "titleBefore": "Who visits now, and who visited in {when}",
+        "against": {
+          "bought": "Bought",
+          "added": "Added to basket",
+          "checkout": "Started checkout",
+          "conversions": "Conversions",
+          "events": "Events",
+          "views": "Page views",
+          "before": "Visits in {when}"
+        },
+        "noun": {
+          "bought": "100 sales",
+          "added": "100 visits that added to a basket",
+          "checkout": "100 visits that started checkout",
+          "conversions": "100 conversions",
+          "events": "100 events",
+          "views": "100 page views",
+          "before": "100 visits in {when}",
+          "event": "100 of {name}"
+        },
+        "topRow": {
+          "channel": "The top row is where 100 visits came from. The bottom row is the same for {noun}.",
+          "kind": "The top row is where 100 visits started. The bottom row is the same for {noun}.",
+          "device": "The top row is what 100 visits were on. The bottom row is the same for {noun}.",
+          "visitorType": "The top row is who made 100 visits. The bottom row is the same for {noun}."
+        },
+        "rough": "That's only {count}, so it's a rough guide.",
+        "press": "Press one to keep it lit.",
+        "everyDevice": "This list isn't kept by device for these dates, so it's showing every device.",
+        "empty": "No visits to show for these dates.",
+        "splitLabel": "Split by",
+        "compareWith": "Compare with",
+        "split": {
+          "channel": "Where from",
+          "kind": "Classification",
+          "device": "Device",
+          "visitorType": "New or returning"
+        },
+        "topLabel": "Out of every 100 visits",
+        "bottomLabel": "Out of every {noun}",
+        "readout": {
+          "visits": "Visits",
+          "ofVisits": "Of all visits",
+          "ofThose": "Of all of those",
+          "inEvery": "{share} in 100",
+          "tooFew": "Too few visits",
+          "boughtRate": "Bought for every 100 visits",
+          "eventsRate": "Events for every 100 visits"
+        },
+        "more": {
+          "channel": "See every channel on Channels",
+          "kind": "See every Classification on All pages",
+          "device": "See devices on Visits",
+          "visitorType": "See new and returning on Visits"
+        },
+        "csvName": "Name",
+        "listsDiffer": "Google counts each list on its own, so a list can add up to a little more or less than the Visits box."
+      },
+      "pages": {
+        "title": "Top pages",
+        "description": "The pages people started on. It leaves out search, basket and account pages. Press a heading to sort.",
+        "search": "Find a page",
+        "empty": "No page matches this.",
+        "left": "Left straight away",
+        "visitsTitle": "Visits that started on this page. Google counts each list on its own, so a list can add up to a little more or less than the Visits box.",
+        "visits": "Visits",
+        "leftTitle": "Visits that left in under 10 seconds and did nothing else.",
+        "descriptionService": "The pages people started on. It leaves out search and account pages. Press a heading to sort."
       }
     },
     "live": {
@@ -17391,7 +17484,9 @@
         "conversions": "Conversions from campaigns",
         "conversionsShare": "Share of all your conversions",
         "was": "It was {figure} in {before}.",
-        "noneEither": "None in {before} either."
+        "noneEither": "None in {before} either.",
+        "events": "Events from campaigns",
+        "eventsShare": "Share of all your events"
       },
       "daily": {
         "showLabel": "Show",
@@ -17406,12 +17501,14 @@
           "visits": "Visits",
           "bought": "Bought",
           "conversions": "Conversions",
-          "left": "Left straight away"
+          "left": "Left straight away",
+          "events": "Events"
         },
         "score": {
           "visits": "Visits from campaigns",
           "bought": "Bought from campaigns",
-          "conversions": "Conversions from campaigns"
+          "conversions": "Conversions from campaigns",
+          "events": "Events from campaigns"
         },
         "title": {
           "visits": {
@@ -17433,6 +17530,11 @@
             "day": "People who left straight away, each day",
             "week": "People who left straight away, each week",
             "month": "People who left straight away, each month"
+          },
+          "events": {
+            "day": "Events from campaigns each day",
+            "week": "Events from campaigns each week",
+            "month": "Events from campaigns each month"
           }
         }
       },
@@ -17441,24 +17543,28 @@
         "hint": {
           "visits": "Bigger boxes had more visits.",
           "bought": "Bigger boxes sold more.",
-          "conversions": "Bigger boxes had more conversions."
+          "conversions": "Bigger boxes had more conversions.",
+          "events": "Bigger boxes had more events."
         },
         "colourHint": "Orange went up since {before} and grey went down.",
         "count": "Count",
         "measure": {
           "visits": "Visits",
           "bought": "Bought",
-          "conversions": "Conversions"
+          "conversions": "Conversions",
+          "events": "Events"
         },
         "figure": {
           "visits": "{count, plural, =1 {# visit} other {# visits}}",
           "bought": "{count} bought",
-          "conversions": "{count, plural, =1 {# conversion} other {# conversions}}"
+          "conversions": "{count, plural, =1 {# conversion} other {# conversions}}",
+          "events": "{count, plural, =1 {# event} other {# events}}"
         },
         "in": {
           "visits": "Visits in {when}",
           "bought": "Bought in {when}",
-          "conversions": "Conversions in {when}"
+          "conversions": "Conversions in {when}",
+          "events": "Events in {when}"
         },
         "upOrDown": "Up or down",
         "same": "The same",
@@ -17474,7 +17580,9 @@
           "bought": "Bought",
           "boughtBefore": "Bought before",
           "conversions": "Conversions",
-          "conversionsBefore": "Conversions before"
+          "conversionsBefore": "Conversions before",
+          "events": "Events",
+          "eventsBefore": "Events before"
         }
       },
       "squares": {
@@ -17484,7 +17592,8 @@
         "counts": {
           "times": "Number of times",
           "per100": "For every 100 visits",
-          "rate": "Conversion rate %"
+          "rate": "Conversion rate %",
+          "rateEvents": "Share of visits %"
         },
         "did": {
           "add_to_cart": "Added to basket",
@@ -17523,7 +17632,8 @@
         "pagesAVisit": "Pages a visit",
         "conversions": "Conversions",
         "was": "It was {figure} in {before}.",
-        "pagesBefore": "{figure} in {before}"
+        "pagesBefore": "{figure} in {before}",
+        "events": "Events"
       },
       "daily": {
         "showLabel": "Show",
@@ -17536,7 +17646,8 @@
         "show": {
           "left": "Left straight away",
           "stayed": "Stayed and looked around",
-          "conversions": "Conversions"
+          "conversions": "Conversions",
+          "events": "Events"
         },
         "title": {
           "left": {
@@ -17553,6 +17664,11 @@
             "day": "Conversions each day",
             "week": "Conversions each week",
             "month": "Conversions each month"
+          },
+          "events": {
+            "day": "Events each day",
+            "week": "Events each week",
+            "month": "Events each month"
           }
         }
       }
@@ -17584,7 +17700,9 @@
         "leftOut": "All but search and basket",
         "every": "Every classification",
         "shop": "Search, basket and account",
-        "notSorted": "Not sorted yet"
+        "notSorted": "Not sorted yet",
+        "shopService": "Search and account pages",
+        "leftOutService": "All but search and account pages"
       },
       "map": {
         "title": "A map of your pages",

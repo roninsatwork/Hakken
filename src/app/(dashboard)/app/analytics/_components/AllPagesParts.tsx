@@ -22,6 +22,7 @@ import { useSiteParam } from "../../sites/_components/useSiteParam";
 import type { ListPageAnswer } from "./AnalyticsListScreen";
 import { BeforeLine } from "./AnalyticsFigures";
 import { formatPerVisit, pathOf } from "./analyticsFormat";
+import { useIsShop } from "./useIsShop";
 import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, useStep } from "./useAnalytics";
 import { useWebsiteForEye } from "./useEyeFigures";
 import { spansOfList, useSpanInWords, useSpanWords } from "./VisitsCharts";
@@ -56,25 +57,28 @@ export function useClassificationChoice(): ClassificationChoice {
   const t = useTranslations("googleAnalytics.allPages.classification");
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
+  // A website that doesn't sell has no basket to speak of: it says search and account pages.
+  const shopWord = useIsShop() ? "shop" : "shopService";
+  const leftOutWord = shopWord === "shop" ? "leftOut" : "leftOutService";
   const pageKinds = usePageKinds(useAnalyticsSiteId());
   const answer = useQuery(api.googleAnalyticsPageKindViews.analyticsPageKindViews, status?.connection?.newestDay ? { ...args, against: true } : "skip");
   const [raw, set] = useSiteParam<string>("classification", LEFT_OUT);
   const nameOf = useMemo(() => (kind: { kind: string; name: string | null }) => (
-    kind.kind === SHOP_PAGES_KIND ? t("shop") : kind.kind === NOT_SORTED_KIND ? t("notSorted") : kind.name ?? kind.kind
-  ), [t]);
+    kind.kind === SHOP_PAGES_KIND ? t(shopWord) : kind.kind === NOT_SORTED_KIND ? t("notSorted") : kind.name ?? kind.kind
+  ), [t, shopWord]);
   const found = answer?.kinds;
   const hasShop = found?.some((kind) => kind.kind === SHOP_PAGES_KIND) ?? true;
   const special = raw === LEFT_OUT || raw === EVERY;
   const named = (found ?? []).map((kind) => ({ value: kind.kind, label: nameOf(kind) }));
   // A classification with no views in these dates, or one from a saved link, still says what it is.
-  const missing = !special && !named.some((option) => option.value === raw) ? [{ value: raw, label: raw === SHOP_PAGES_KIND ? t("shop") : raw === NOT_SORTED_KIND ? t("notSorted") : pageKinds.label(raw) }] : [];
+  const missing = !special && !named.some((option) => option.value === raw) ? [{ value: raw, label: raw === SHOP_PAGES_KIND ? t(shopWord) : raw === NOT_SORTED_KIND ? t("notSorted") : pageKinds.label(raw) }] : [];
   const kinds = useMemo(() => found?.map((kind) => ({
     name: nameOf(kind), views: kind.views, viewsBefore: kind.viewsBefore ?? 0, pages: kind.pages, shop: kind.kind === SHOP_PAGES_KIND, sorted: kind.kind !== NOT_SORTED_KIND,
   })), [found, nameOf]);
   return {
     value: raw === LEFT_OUT && !hasShop ? EVERY : raw,
     set: (next) => set(next === EVERY && !hasShop ? LEFT_OUT : next),
-    options: [...(hasShop ? [{ value: LEFT_OUT, label: t("leftOut") }] : []), { value: EVERY, label: t("every") }, ...named, ...missing],
+    options: [...(hasShop ? [{ value: LEFT_OUT, label: t(leftOutWord) }] : []), { value: EVERY, label: t("every") }, ...named, ...missing],
     group: special ? undefined : raw,
     leaveOut: raw === LEFT_OUT,
     kinds,

@@ -128,11 +128,11 @@ describe("the four boxes", () => {
     expect(figure("Share of everything bought")).toContain("66.0%");
   });
 
-  it("speak in conversions for a website that has never sold anything, and the table has no Bought", () => {
+  it("speak in events for a website that has never sold anything, and the table has no Bought", () => {
     open("", { overview: { ...OVERVIEW, now: { ...OVERVIEW.now, purchases: 0 }, before: { ...OVERVIEW.before, purchases: 0 } } });
     expect(screen.queryByText("Bought from campaigns")).toBeNull();
-    expect(figure("Conversions from campaigns")).toContain("5,505");
-    expect(figure("Share of all your conversions")).toContain("50.0%");
+    expect(figure("Events from campaigns")).toContain("5,505");
+    expect(figure("Share of all your events")).toContain("50.0%");
     expect(within(screen.getByRole("table")).queryByText("Bought")).toBeNull();
   });
 });

@@ -85,22 +85,41 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, PLAN, "Main", "Google Analytics → your websites");
   });
 
-  it("2 · Overview", async () => {
-    at("/app/analytics/site_1");
-    answer({
-      "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsReads:analyticsOverview": OVERVIEW,
-      "googleAnalyticsChartReads:analyticsChart": CHART,
-      "googleAnalyticsOverviewReads:analyticsOverviewPanels": OVERVIEW_PANELS,
-      "googleAnalyticsOverviewReads:analyticsOverviewPagePanels": OVERVIEW_PANELS,
+  /** Overview's reads as the page asks them (overview-new-page-plan-2026-11-06.md). */
+  function overviewAnswers(shop: boolean) {
+    const row = (key: string, visits: number, name: string | null = null) => ({
+      key, name, visits, stayed: visits / 2, views: visits * 2, length: visits * 90, bought: shop ? visits / 50 : 0, conversions: visits / 50, did: [visits / 10, visits / 20, visits / 50], times: [visits / 10, visits / 20, visits / 50],
+      visitsBefore: visits - 50, stayedBefore: visits / 2, viewsBefore: visits * 2, boughtBefore: shop ? visits / 50 : 0, conversionsBefore: visits / 50, didBefore: [visits / 10, visits / 20, visits / 50], timesBefore: [visits / 10, visits / 20, visits / 50],
     });
+    const events = (shop ? ["add_to_cart", "begin_checkout", "purchase"] : ["click_tel", "generate_lead", "click_email"]).map((name) => ({ name, counted: true }));
+    return {
+      "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ shop }),
+      "googleAnalyticsReads:analyticsOverview": shop ? { ...OVERVIEW, now: { ...OVERVIEW.now, purchases: 40 }, before: { ...OVERVIEW.before, purchases: 38 } } : OVERVIEW,
+      "googleAnalyticsChartReads:analyticsChart": CHART,
+      "googleAnalyticsChartReads:analyticsPeriodBeforeChart": DAYS_BEFORE,
+      "googleAnalyticsOverviewSplits:analyticsOverviewSplit": { collecting: false, everyDevice: false, hasBefore: true, events, rows: [row("Organic Search", 1000), row("Direct", 620)] },
+      "googleAnalyticsReads:analyticsListPage": list([{ ...ROW, visitsBefore: 200, bounceRate: 0.4 }], { from: "2026-10-01", to: "2026-10-31", spanBefore: { from: "2026-09-01", to: "2026-09-30" } }),
+      "googleAnalyticsPageKindViews:analyticsPageKindViews": { waiting: false, sorted: true, views: 6120, unplaced: 0, kinds: [] },
+    };
+  }
+
+  it("2 · Overview, a shop", async () => {
+    at("/app/analytics/site_1");
+    answer(overviewAnswers(true));
     const { container } = render(<AnalyticsOverviewPage />);
     await screen.findByText("2,412");
-    await openHakkenSees();
-    await findSaid(/Visits rose 8\.4%, and conversions with them, from 19 to 23\./);
-    await screen.findByText("AI agency");
-    // Option 4 of the Overview canvas, "Every figure" (ga-overview-plan.md, built 2026-10-15).
-    await expectApprovedLook(container, "ga-overview", "Overview", "Google Analytics → Overview");
+    await screen.findByText("Who visits, and who buys");
+    await screen.findByText("Top pages");
+    await expectApprovedLook(container, "overview-new-page", "Overview", "Google Analytics → Overview, a shop");
+  });
+
+  it("2 · Overview, a service business", async () => {
+    at("/app/analytics/site_1");
+    answer(overviewAnswers(false));
+    const { container } = render(<AnalyticsOverviewPage />);
+    await screen.findByText("Who visits, and who gets in touch");
+    await screen.findByText("Top pages");
+    await expectApprovedLook(container, "overview-new-page", "OverviewService", "Google Analytics → Overview, a service business");
   });
 
   /** Funnel's reads as the page asks them, for its tests. */
@@ -225,8 +244,8 @@ describe("Google Analytics' approved looks", () => {
     expect(screen.getByRole("checkbox", { name: /Draw .* on the chart/ })).not.toBeChecked();
     // One choice in two menus, opening with the shop's own pages left out; the moves are a menu too.
     expect(screen.getAllByRole("combobox", { name: "Classification" })).toHaveLength(2);
-    expect(screen.getAllByText("All but search and basket").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("option", { name: "Search, basket and account" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("All but search and account pages").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("option", { name: "Search and account pages" }).length).toBeGreaterThan(0);
     expect(screen.getByRole("option", { name: "Gains 33" })).toBeInTheDocument();
     // The table: its own headings, and no sentence in its bar.
     expect(screen.getAllByText("Up or down").length).toBeGreaterThanOrEqual(2);

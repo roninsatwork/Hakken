@@ -41,7 +41,7 @@ export type ShownRow = ListPageAnswer["rows"][number];
 export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword" | VisitorList;
 /** Visitors' lists (§18.2 board 15). */
 export type VisitorList = "visitorType" | "browser" | "system" | "age" | "gender" | "interest";
-type Column = "tick" | "name" | "source" | "cameFrom" | "visitsNow" | "visitsBefore" | "visitsChange" | "bought" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "change" | "left" | "onward" | "next";
+export type Column = "tick" | "name" | "source" | "cameFrom" | "visitsNow" | "visitsBefore" | "visitsChange" | "bought" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "change" | "left" | "onward" | "next";
 
 /** Visitors' columns, each group with the classification it lands on most (ga-conversions-visitors-plan.md CV7). */
 const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged", "conversions", "change", "landsMost"];
@@ -169,7 +169,7 @@ export type ChannelTable = {
   kindName: (kind: string) => string;
 };
 
-export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut = false, move, plot = false, ticks, noun, searchPlaceholder, rowHref, filters, opening = "visits", emptyLabel, head, nameOf, ofChannel, seesPart, cameFrom, sourceName, nameHover, leaveOutColumns }: {
+export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut = false, move, plot = false, ticks, noun, searchPlaceholder, rowHref, filters, columnsShown, barTitle, barDescription, headings, opening = "visits", emptyLabel, head, nameOf, ofChannel, seesPart, cameFrom, sourceName, nameHover, leaveOutColumns }: {
   /** Campaigns: only the links that were in this place (`utils/campaignNames.ts`). */
   cameFrom?: string;
   /** Campaigns: where a link was, in the reader's words. */
@@ -178,6 +178,13 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
   nameHover?: (row: ShownRow) => string | undefined;
   /** Standard columns this screen doesn't show: Bought, on a website with nothing bought. */
   leaveOutColumns?: readonly string[];
+  /** The columns this screen shows, where it isn't the list's usual set: Overview's Top pages. */
+  columnsShown?: readonly Column[];
+  /** A title and a line in the table's bar, for a table that sits among others on its page. */
+  barTitle?: string;
+  barDescription?: string;
+  /** A column's heading, where the page calls it something else: Overview's Events, on a website that doesn't sell. */
+  headings?: Partial<Record<Column, ReactNode>>;
   /** The eye's name for this table's rows, where its page's own answer does not hold them (Channels; `useSeesPart`). */
   seesPart?: string;
   /**
@@ -256,9 +263,10 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
   const inWords = useSpanInWords(...spans);
   const spanName = useSpanName();
   const assistants = list === "source" && channel === AI_ASSISTANTS_CHANNEL;
-  const columns = (ofChannel && list === "groups" ? CHANNEL_GROUP_COLUMNS : ofChannel && list === "landing" ? CHANNEL_LANDING_COLUMNS : assistants ? ASSISTANT_COLUMNS : COLUMNS[list])
+  const columns = (columnsShown ? columnsShown : ofChannel && list === "groups" ? CHANNEL_GROUP_COLUMNS : ofChannel && list === "landing" ? CHANNEL_LANDING_COLUMNS : assistants ? ASSISTANT_COLUMNS : COLUMNS[list])
     .filter((column) => (column !== "tick" || plotted !== null) && !leaveOutColumns?.includes(column))
-    .map((column) => columnOf(column, list, rowHref, t, nameOf, plotted, ofChannel, assistants, kindName ?? ofChannel?.kindName, inWords, { sourceName, nameHover, spans: { now: spanName(spans[0]), before: spanName(spans[1]) } }));
+    .map((column) => columnOf(column, list, rowHref, t, nameOf, plotted, ofChannel, assistants, kindName ?? ofChannel?.kindName, inWords, { sourceName, nameHover, spans: { now: spanName(spans[0]), before: spanName(spans[1]) } }))
+    .map((column) => (headings?.[column.key as Column] ? { ...column, header: headings[column.key as Column] } : column));
   // Campaigns say the visits from no tagged link beside the list (§18.2 board 17).
   const untagged = shown.result?.untagged ?? null;
   const bar = [
@@ -279,6 +287,7 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
         rows={shown.pageRows}
         rowKey={(row) => row.key}
         noun={noun}
+        {...(barTitle ? { title: barTitle, description: barDescription } : {})}
         // All pages' and Funnel's bar is its count, how many are ticked and its buttons, with no sentence beside them.
         summary={(list === "page" || (list === "landing" && !ofChannel)) && !live ? (plotted ? <TickCount ticks={plotted} /> : null) : <span className="text-[12px] text-secondary">{bar}</span>}
         actions={

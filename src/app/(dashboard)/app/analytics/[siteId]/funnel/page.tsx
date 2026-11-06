@@ -13,6 +13,7 @@ import { ClassificationSelect, useClassificationChoice } from "../../_components
 import { FunnelBoxes, LeftEachDayCard, useFunnelFlow } from "../../_components/FunnelParts";
 import { LandingFlowCard } from "../../_components/LandingFlow";
 import type { FlowAnswer } from "../../_components/funnelRoutes";
+import { useIsShop } from "../../_components/useIsShop";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsStatus, usePageHref } from "../../_components/useAnalytics";
 import { useEyeNames, useWebsiteForEye } from "../../_components/useEyeFigures";
 import { spansOfList, useSpanInWords } from "../../_components/VisitsCharts";
@@ -28,6 +29,8 @@ export default function AnalyticsFunnelPage() {
   const currency = useAnalyticsStatus()?.connection?.currency ?? null;
   const choice = useClassificationChoice();
   const { flow, ticks } = useFunnelFlow(choice);
+  const shop = useIsShop();
+  const tt = useTranslations("googleAnalytics.table.columns");
   return (
     <AnalyticsListScreen
       header={{ icon: <LogIn className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
@@ -40,6 +43,7 @@ export default function AnalyticsFunnelPage() {
         </>
       )}
       list="landing"
+      headings={shop ? undefined : { conversions: tt("events") }}
       group={choice.group}
       leaveOut={choice.leaveOut}
       ticks={ticks}

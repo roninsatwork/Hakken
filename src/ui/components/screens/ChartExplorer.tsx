@@ -60,7 +60,7 @@ export function ExplorerToolbar({ controls }: { controls: readonly ExplorerContr
 export function ChartExplorer({ title, hint, exportName, csv, host, from, to, step, waiting, controls, nothingTicked, data, series, readout, anything, empty, scores, bars, height }: {
   /** What the chart shows and what each line is, as the dropdowns set them: "Conversions, by channel". */
   title: string;
-  hint: string;
+  hint: ReactNode;
   exportName: string;
   csv: () => string;
   host: string;

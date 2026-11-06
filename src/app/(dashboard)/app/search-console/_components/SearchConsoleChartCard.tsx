@@ -16,7 +16,7 @@ import { formatDay } from "../../sites/_components/siteFormat";
  */
 export function SearchConsoleChartCard({ title, hint, controls, exportName, csv, host, from, to, step, children }: {
   title: string;
-  hint: string;
+  hint: ReactNode;
   controls?: ReactNode;
   exportName: string;
   csv: () => string;

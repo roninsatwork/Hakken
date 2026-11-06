@@ -25,6 +25,7 @@ type View = (typeof VIEWS)[number];
  */
 export default function AnalyticsCampaignsPage() {
   const t = useTranslations("googleAnalytics.campaigns");
+  const tt = useTranslations("googleAnalytics.table.columns");
   const [view, setView] = useSiteParam<View>("view", "campaign", VIEWS);
   const choice = useCameFromChoice();
   const campaigns = useCampaigns(choice);
@@ -55,6 +56,7 @@ export default function AnalyticsCampaignsPage() {
       nameHover={view === "campaign" ? (row) => (hasNoName(row.label) ? row.label : undefined) : undefined}
       sourceName={(row) => place(row.cameFrom ?? "notKnown")}
       leaveOutColumns={campaigns.sells ? undefined : ["bought"]}
+      headings={campaigns.sells ? undefined : { conversions: tt("events") }}
       filters={(
         <>
           {view === "campaign" ? <CameFromSelect choice={choice} choices={campaigns.every?.cameFromChoices} /> : null}

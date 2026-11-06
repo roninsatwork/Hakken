@@ -11,7 +11,7 @@ import { ExplorerToolbar, type ExplorerControl } from "./ChartExplorer";
  */
 export function MapCard({ title, hint, exportName, csv, host, controls = [], loading = false, message = null, under, children }: {
   title: string;
-  hint: string;
+  hint: ReactNode;
   exportName: string;
   csv: () => string;
   host: string;

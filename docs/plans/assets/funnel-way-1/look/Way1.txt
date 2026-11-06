@@ -6,7 +6,7 @@ figures
   figure: Visits
   figure: Left straight away
   figure: Pages a visit
-  figure: Conversions
+  figure: Events
 chart-card: People who left straight away, each day
 filter: Show
 filter: Compare with
@@ -14,7 +14,7 @@ chart-card: Where people went next
 page-flow
 search: Find a page…
 filter: Classification
-table: On the chart | Page | Visits | Left | Stayed | Most went to | Conversions
+table: On the chart | Page | Visits | Left | Stayed | Most went to | Events
   table-bar
     download: Download CSV
   table-footer
