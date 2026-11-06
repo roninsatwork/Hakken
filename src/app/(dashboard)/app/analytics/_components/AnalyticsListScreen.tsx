@@ -41,7 +41,7 @@ export type ShownRow = ListPageAnswer["rows"][number];
 export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword" | VisitorList;
 /** Visitors' lists (§18.2 board 15). */
 export type VisitorList = "visitorType" | "browser" | "system" | "age" | "gender" | "interest";
-export type Column = "tick" | "name" | "source" | "cameFrom" | "visitsNow" | "visitsBefore" | "visitsChange" | "bought" | "share" | "elsewhere" | "started" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "change" | "left" | "onward" | "next";
+export type Column = "tick" | "name" | "source" | "cameFrom" | "visitsNow" | "visitsBefore" | "visitsChange" | "bought" | "basket" | "checkout" | "share" | "elsewhere" | "landsMost" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "viewsChange" | "conversions" | "rate" | "conversionsChange" | "change" | "left" | "onward" | "next";
 
 /** Visitors' columns, each group with the classification it lands on most (ga-conversions-visitors-plan.md CV7). */
 const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged", "conversions", "change", "landsMost"];
@@ -56,8 +56,9 @@ const VISITOR_COLUMNS: readonly Column[] = ["name", "people", "visits", "engaged
  * against the span before.
  */
 const COLUMNS: Record<ListKind, readonly Column[]> = {
-  // Channels (ga-channel-pages-plan.md CH9): dwell time, the conversions each started, and the page group most of its visits land on.
-  channel: ["name", "visits", "time", "conversions", "started", "change", "landsMost"],
+  // Channels (channels-new-page-plan-2026-11-06.md, step 7): how far each channel's visits got. Conversions, as Events, in place of the
+  // shop's steps on a website with nothing bought (`leaveOutColumns`).
+  channel: ["name", "visits", "bounce", "basket", "checkout", "bought", "conversions"],
   source: ["name", "visits", "engaged", "conversions", "change"],
   // Each landing page's own funnel (landing-pages-flow-plan.md LF4): what its visits did next, no advice.
   landing: ["tick", "name", "visits", "left", "onward", "next", "conversions"],
@@ -104,7 +105,8 @@ const ONE_LINE: ReadonlySet<ListKind> = new Set(["landing", "groups"]);
 const FIRSTS = {
   share: "desc",
   elsewhere: "desc",
-  started: "desc",
+  basket: "desc",
+  checkout: "desc",
   name: "asc", visits: "desc", engaged: "desc", bounce: "asc", pages: "desc", people: "desc", time: "desc", views: "desc", conversions: "desc", change: "desc",
   viewsChange: "desc", rate: "desc", conversionsChange: "desc",
   // Campaigns' table.
@@ -289,7 +291,7 @@ export function AnalyticsTable({ list, channel, filed, kindName, group, leaveOut
         noun={noun}
         {...(barTitle ? { title: barTitle, description: barDescription } : {})}
         // All pages' and Funnel's bar is its count, how many are ticked and its buttons, with no sentence beside them.
-        summary={(list === "page" || (list === "landing" && !ofChannel)) && !live ? (plotted ? <TickCount ticks={plotted} /> : null) : <span className="text-[12px] text-secondary">{bar}</span>}
+        summary={(list === "page" || (list === "landing" && !ofChannel)) && !live ? (plotted ? <TickCount ticks={plotted} /> : null) : list === "channel" && !live ? <span className="text-[12px] text-secondary">{t(leaveOutColumns?.includes("basket") ? "channelsBarEvents" : "channelsBar")}</span> : <span className="text-[12px] text-secondary">{bar}</span>}
         actions={
           <>
             {plotted ? <TickActions ticks={plotted} rows={shown.pageRows ?? []} rowKey={rowKeyOf} canTick={canTickFor(list)} /> : null}
@@ -338,7 +340,7 @@ function columnOf(
     case "name":
       return {
         key: "name",
-        header: t(`columns.${list === "groups" ? (ofChannel ? "classification" : "group") : list === "landing" ? "page" : assistants ? "assistant" : list}`),
+        header: t(`columns.${list === "groups" ? (ofChannel ? "classification" : "group") : list === "landing" ? "page" : assistants ? "assistant" : list === "channel" ? "cameFrom" : list}`),
         sortable: true,
         // A page's title and address cut to a line each in their share of the table, as Sites' words are (CUT_COLUMN).
         ...(list === "landing" ? { className: CUT_COLUMN.first } : {}),
@@ -374,11 +376,13 @@ function columnOf(
     case "visitsChange":
       return { key: "visitsChange", header: <span title={t("columns.visitsChangeTitle", { now: inWords?.now ?? "", before: inWords?.before ?? "" })}>{t("columns.upOrDown")}</span>, align: "right", sortable: true, cell: (row) => <UpOrDownCell now={row.visits} before={row.visitsBefore ?? null} /> };
     case "bought":
-      return { key: "bought", header: <span title={t("columns.boughtTitle")}>{t("columns.bought")}</span>, align: "right", sortable: true, cell: (row) => <ConversionsHereCell conversions={row.purchases} rate={row.visits > 0 ? row.purchases / row.visits : null} fewVisits={row.fewVisits} /> };
+      return { key: "bought", header: <span title={t(list === "channel" ? "columns.boughtChannelTitle" : "columns.boughtTitle")}>{t("columns.bought")}</span>, align: "right", sortable: true, cell: (row) => <ConversionsHereCell conversions={row.purchases} rate={row.visits > 0 ? row.purchases / row.visits : null} fewVisits={row.fewVisits} /> };
+    case "basket":
+      return { key: "basket", header: <span title={t("columns.basketTitle")}>{t("columns.basket")}</span>, align: "right", sortable: true, cell: (row) => <ConversionsHereCell conversions={row.basketVisits ?? 0} rate={row.visits > 0 ? (row.basketVisits ?? 0) / row.visits : null} fewVisits={row.fewVisits} /> };
+    case "checkout":
+      return { key: "checkout", header: <span title={t("columns.checkoutTitle")}>{t("columns.checkout")}</span>, align: "right", sortable: true, cell: (row) => <ConversionsHereCell conversions={row.checkoutVisits ?? 0} rate={row.visits > 0 ? (row.checkoutVisits ?? 0) / row.visits : null} fewVisits={row.fewVisits} /> };
     case "elsewhere":
       return { key: "elsewhere", header: <span title={t("columns.elsewhereTitle")}>{t("columns.elsewhere")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.elsewhere ? row.elsewhere : null} quiet /> };
-    case "started":
-      return { key: "started", header: <span title={t("columns.startedTitle")}>{t("columns.started")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.started ?? null} /> };
     case "landsMost":
       return {
         key: "landsMost",
@@ -394,7 +398,8 @@ function columnOf(
       // Each row's visits over the channel's: it sorts as the visits do.
       return { key: "share", header: t("columns.share"), align: "right", sortable: true, cell: (row) => <TextFigure text={formatPercent(ofChannel && ofChannel.visits > 0 ? row.visits / ofChannel.visits : null)} /> };
     case "visits":
-      return { key: "visits", header: t("columns.visits"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.visits} /> };
+      // Channels: Google counts each list on its own, so this one can add up to a little more or less than the whole website's.
+      return { key: "visits", header: list === "channel" ? <span title={t("columns.visitsListTitle")}>{t("columns.visits")}</span> : t("columns.visits"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.visits} /> };
     case "views":
       return { key: "views", header: t("columns.views"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.views} /> };
     case "viewsChange":
@@ -406,7 +411,7 @@ function columnOf(
     case "engaged":
       return { key: "engaged", header: <span title={t("columns.engagedTitle")}>{t("columns.engaged")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatPercent(row.engagementRate)} /> };
     case "bounce":
-      return { key: "bounce", header: <span title={t("columns.bounceTitle")}>{t("columns.bounce")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatPercent(row.bounceRate)} /> };
+      return { key: "bounce", header: <span title={t(list === "channel" ? "columns.leftStraightAwayTitle" : "columns.bounceTitle")}>{t(list === "channel" ? "columns.leftStraightAway" : "columns.bounce")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatPercent(row.bounceRate)} /> };
     case "pages":
       return { key: "pages", header: <span title={t("columns.pagesTitle")}>{t("columns.pages")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatPerVisit(row.pagesPerVisit)} /> };
     case "people":
@@ -422,10 +427,12 @@ function columnOf(
           // Funnel's table says Conversions, as the page has no other kind; a channel's own page keeps its approved heading.
           : list === "landing" || list === "groups" ? <span title={t("columns.conversionsStartedTitle")}>{t(ofChannel ? "columns.conversionsStarted" : "columns.conversionsOfVisit")}</span>
             : list === "campaign" || list === "adKeyword" ? <span title={t("columns.conversionsTimesTitle")}>{t("columns.conversions")}</span>
+              // Channels shows conversions only on a website with nothing bought, which says Events.
+              : list === "channel" ? <span title={t("columns.conversionsTimesTitle")}>{t("columns.events")}</span>
               : t("columns.conversions"),
         align: "right",
         sortable: true,
-        cell: (row) => list === "page" || list === "campaign" || list === "adKeyword" || (list === "landing" && !ofChannel)
+        cell: (row) => list === "page" || list === "campaign" || list === "adKeyword" || list === "channel" || (list === "landing" && !ofChannel)
           // All pages and Funnel: the count, and its rate under it as "per 100 visits", as it counts times, not visits.
           ? <ConversionsHereCell conversions={row.conversions} rate={row.conversionRate} fewVisits={row.fewVisits} />
           : <ConversionsCell conversions={row.conversions} rate={row.conversionRate} fewVisits={row.fewVisits} oneLine={ONE_LINE.has(list)} />,
@@ -500,7 +507,8 @@ function AnalyticsDownload({ args, list, csvColumns, kindName, sourceName, leave
           { fallbackMessage: t("downloadFailed") },
         );
         if (!outcome.ok) return;
-        const headers = columns.map((column) => t(`csv.${column}`));
+        // Channels' download says what its table says.
+        const headers = columns.map((column) => t(list === "channel" && column === "bounce" ? "csv.leftStraightAway" : list === "channel" && column === "conversions" ? "csv.events" : list === "channel" && column === "name" ? "csv.cameFrom" : `csv.${column}`));
         const rows = outcome.data.map((row) => columns.map((column) => (column === "cameFrom" && sourceName ? sourceName(row) : csvValue(row, column, kindName))));
         saveTextFile(toCsv(headers, rows), `google-analytics-${list}.csv`);
       }}
@@ -523,6 +531,8 @@ function csvValue(row: ShownRow, column: Column, kindName?: (kind: string) => st
     case "visitsBefore": return row.visitsBefore ?? null;
     case "visitsChange": return row.visitsBefore == null ? null : row.visits - row.visitsBefore;
     case "bought": return row.purchases;
+    case "basket": return row.basketVisits ?? 0;
+    case "checkout": return row.checkoutVisits ?? 0;
     case "views": return row.views;
     case "engaged": return row.engagementRate === null ? null : Math.round(row.engagementRate * 1000) / 10;
     case "bounce": return row.bounceRate === null ? null : Math.round(row.bounceRate * 1000) / 10;
@@ -536,7 +546,6 @@ function csvValue(row: ShownRow, column: Column, kindName?: (kind: string) => st
     case "conversionsChange": return row.conversionsBefore === null ? null : row.conversions - row.conversionsBefore;
     case "share": return null;
     case "elsewhere": return row.elsewhere ?? null;
-    case "started": return row.started ?? null;
     case "landsMost": return row.landsMost ? landsMostName(row.landsMost, kindName) : null;
     case "tick": return null;
     case "left": return row.onward == null ? null : Math.max(0, row.visits - row.onward);

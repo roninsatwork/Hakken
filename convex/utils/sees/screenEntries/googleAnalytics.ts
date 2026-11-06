@@ -59,16 +59,24 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
       "an event's people: Google gives an event its times live, never its people",
     ],
   },
+  // Channels, redone (channels-new-page-plan-2026-11-06.md, step 8).
   "googleAnalytics.channelsPage": {
-    about: "Channels: the channels visits came by, each with its visits and conversions against the span before and the whole website",
+    about: "Channels: where the website's visits came from, and where they started on the website. Each channel goes by Google's own name, with AI assistants as their own. A shop counts what was bought. Any other website counts its events. A whole-website figure is Google's own total, and Google counts each list on its own, so a list of channels can add up to a little more or less",
     parts: [
-      "the four boxes: visits, conversions, the channel converting best over 12 months, the key events not counted, and time a visit",
-      "visits a day by channel, with a dot on each day with a conversion",
-      "each channel by the page groups its visits land on",
-      "how often a visit converts, by channel, over 12 months",
-      "the table: each channel with its visits, time a visit, conversions, conversions it started, change and the page group it lands on most",
+      "the four boxes, each naming a channel: the most visits with its share of all visits; the most bought with its share of everything bought; the best for its visits from 100 visits up, against the whole website; and the biggest change in visits against the span before",
+      "visits each day, by channel: a line for each channel ticked and one for the rest. Ticking events makes each line count those instead, as times",
+      "where each channel's visits started: a square for each channel and Classification, or each channel and device, as visits, bought, bought for every 100 visits or conversions, against the span before if chosen",
+      "how far people got, on a website that sells: arrived, stayed, in basket, at checkout and bought, in visits, for everywhere or one channel",
+      "the table: each channel with its visits, the share that left straight away, and the visits that added to basket or started checkout, and what was bought, each for every 100 visits",
     ],
-    never: [...NO_MONEY, CONVERSIONS_AS_TIMES],
+    never: [
+      ...NO_MONEY,
+      "what a channel cost or earned, or whether it paid for itself: no ad spend is held",
+      CONVERSIONS_AS_TIMES,
+      "conversions on a website with nothing bought: they are called events on this page",
+      "one list's visits set against another's, or a list's sum against the whole website's total, as a difference to explain: Google counts each list on its own",
+      "pages not sorted into a Classification yet: they are sorted for the reader",
+    ],
   },
   "googleAnalytics.channels": { about: "the channels visits came by, each with its conversions", never: NO_MONEY },
   "googleAnalytics.channelPage": {

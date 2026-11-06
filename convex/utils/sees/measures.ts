@@ -166,6 +166,11 @@ const COUNTS: Record<string, Measure> = {
   // Google Analytics' own (own/googleAnalytics.ts, 2026-11-04): the visits or views a few pages lost or gained, as a share
   // of all a channel or the website lost, and Live's people in the last 30 minutes. Worked out by its rules, never a field.
   visitsLost: { words: "visits lost", kind: "count", lessIsBetter: true },
+  // Channels' own (own/googleAnalyticsChannels.ts): what one channel lost or all the others gained, and a website with nothing bought's events.
+  visitsGained: { words: "visits gained", kind: "count" },
+  boughtLost: { words: "purchases lost", kind: "count", lessIsBetter: true },
+  eventsLost: { words: "events lost", kind: "count", lessIsBetter: true },
+  events: { words: "events", kind: "count" },
   viewsLost: { words: "views lost", kind: "count", lessIsBetter: true },
   viewsGained: { words: "views gained", kind: "count" },
   peopleInHalfHour: { words: "people in the last 30 minutes", kind: "count" },
@@ -221,6 +226,12 @@ const SCORES: Record<string, Measure> = {
   // Campaigns' share of the whole website's sales and conversions, set against their share of its visits.
   shareOfBought: { words: "share of everything bought", kind: "percent" },
   shareOfConversions: { words: "share of all conversions", kind: "percent" },
+  // Channels' own (channels-new-page-plan-2026-11-06.md, step 8): a website with nothing bought counts events; what one square holds of its channel; a step's visits that went on.
+  eventsPerHundred: { words: "events for every 100 visits", kind: "score" },
+  shareOfEvents: { words: "share of all events", kind: "percent" },
+  shareOfChannelBought: { words: "of this channel's purchases", kind: "percent" },
+  shareOfChannelEvents: { words: "of this channel's events", kind: "percent" },
+  wentOnPercent: { words: "went on to the next step", kind: "percent" },
 };
 
 /** Percentages, each weighed by its row's main count. */

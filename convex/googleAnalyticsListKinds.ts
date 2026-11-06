@@ -6,7 +6,7 @@ import { VISITOR_LISTS, type VisitorList } from "./googleAnalyticsLists";
 /** Which lists Google Analytics' screens read, and the orders each can be read in (moved out of `googleAnalyticsReads.ts`, 2026-11-05). */
 
 /** Every order a list can be read in, on the server, over the whole list. */
-export const LIST_SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange" | "visitsBefore" | "visitsChange" | "bought" | "started" | "elsewhere" | "share" | "left" | "onward" | "next" | "leftVisits" | "onwardVisits"> = {
+export const LIST_SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change" | "viewsChange" | "conversionsChange" | "visitsBefore" | "visitsChange" | "bought" | "boughtRate" | "basket" | "checkout" | "elsewhere" | "share" | "left" | "onward" | "next" | "leftVisits" | "onwardVisits"> = {
   name: { value: (row) => row.label, first: "asc" },
   visits: { value: (row) => row.visits, first: "desc" },
   engaged: { value: (row) => row.engagementRate, first: "desc" },
@@ -28,8 +28,10 @@ export const LIST_SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bo
   visitsBefore: { value: (row) => row.visitsBefore ?? null, first: "desc" },
   visitsChange: { value: (row) => (row.visitsBefore == null ? null : row.visits - row.visitsBefore), first: "desc" },
   bought: { value: (row) => row.purchases, first: "desc" },
-  // Channels' conversions started (ga-channel-pages-plan.md CH9).
-  started: { value: (row) => row.started ?? null, first: "desc" },
+  // Channels' table (channels-new-page-plan-2026-11-06.md, step 7): the visits at each of a shop's steps; and what sells best for its visits, Ask Hakken's order.
+  boughtRate: { value: (row) => (row.visits > 0 ? row.purchases / row.visits : null), first: "desc" },
+  basket: { value: (row) => row.basketVisits ?? null, first: "desc" },
+  checkout: { value: (row) => row.checkoutVisits ?? null, first: "desc" },
   // AI assistants' visits Google filed elsewhere (CH8).
   elsewhere: { value: (row) => row.elsewhere ?? null, first: "desc" },
   // A channel's classifications by their share of its visits (CH7): the same order as their visits.

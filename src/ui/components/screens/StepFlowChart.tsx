@@ -6,7 +6,7 @@ import { PageFlowChart, type PageFlowBand, type PageFlowNode } from "./PageFlowC
  * The steps to a sale, or any steps a visit can stop at (Anthony, 2026-11-05, on Funnel's Way 2: "this is good as a standard
  * shared component but its way too deep and take up too much space"; funnel-way-1-plan-2026-11-05.md, step 4): each step a box
  * as tall as its visits, a band to the next, and a red tail for those that stopped there, in `PageFlowChart`'s look, with its
- * rollover and hover. Short on purpose: its tallest box is 120 pixels. No page uses it yet.
+ * rollover and hover. Short on purpose: its tallest box is 120 pixels. Channels' How far people got is its first page, inside `MapCard`.
  */
 export type FlowStep = { id: string; name: string; visits: number; visitsBefore?: number | null };
 

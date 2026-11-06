@@ -88,7 +88,7 @@ describe("channels over time", () => {
     expect(year.before.every((point) => point.lastDay !== undefined)).toBe(true);
     expect(year.before.length).toBeGreaterThanOrEqual(10);
     expect(year.before[0]).toMatchObject({ day: "2024-10-01", lastDay: "2024-10-31" });
-    const chart = await user.query(api.googleAnalyticsChartReads.analyticsChannelChart, { siteId, period: "last12Months", device: "" });
+    const chart = await user.query(api.googleAnalyticsChannelPageReads.analyticsChannelsEachDay, { siteId, period: "last12Months", device: "" });
     expect(chart.live).toBe(false);
     expect(google.calls.length).toBe(asked);
   });

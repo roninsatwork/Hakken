@@ -23,7 +23,7 @@ import { formatPercent } from "./analyticsFormat";
 import { shiftDays } from "./stepScale";
 import { useIsShop } from "./useIsShop";
 import { useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
-import { useEventName } from "./useEventName";
+import { useThingDone } from "./useEventName";
 import { spansOfList, useSpanInWords, useSpanWords } from "./VisitsCharts";
 
 /**
@@ -315,13 +315,11 @@ export function CampaignSquaresCard({ choice }: { choice: CameFromChoice }) {
   const shop = useIsShop();
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
-  const eventName = useEventName();
+  const thing = useThingDone();
   const { name, short } = useCampaignNames();
   const [chosen, setCount] = useSiteParam<SquareCount>("squares", "times", SQUARE_COUNTS);
   const answer = useQuery(api.googleAnalyticsCampaignReads.analyticsCampaignActions, status?.connection?.newestDay ? { ...args, ...(choice.cameFrom ? { cameFrom: choice.cameFrom } : {}) } : "skip");
   const events = useMemo(() => answer?.events ?? [], [answer?.events]);
-  const did = useTranslations("googleAnalytics.campaigns.squares.did");
-  const thing = (event: string) => (did.has(event) ? did(event) : eventName(event));
   // Saved lists from before both units were kept hold only the times, so there's no rate to offer.
   const hasRates = (answer?.rows ?? []).some((row) => row.visitsDid.some((did) => did !== null));
   const count: SquareCount = chosen === "rate" && !hasRates ? "times" : chosen;

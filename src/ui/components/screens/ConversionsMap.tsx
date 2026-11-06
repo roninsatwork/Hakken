@@ -38,7 +38,14 @@ function shadeOf(share: number): string {
 }
 
 export type ConversionsCount = "visits" | "rate" | "events";
-export type ConversionsMapColumn = { key: string; name: string; visits: number; visitsBefore: number | null };
+export type ConversionsMapColumn = {
+  key: string;
+  name: string;
+  visits: number;
+  visitsBefore: number | null;
+  /** A heading's hover where it says more than its name: Channels' Other groups names what's in it. */
+  hover?: string;
+};
 export type ConversionsMapCell = { visits: number; times: number; visitsBefore: number | null; timesBefore: number | null };
 export type ConversionsMapRow = { eventName: string; name: string; counted: boolean; cells: readonly ConversionsMapCell[] };
 
@@ -79,7 +86,7 @@ export function changeWords(now: number, before: number | null, newWord: string)
   return `${by > 0 ? "▲" : "▼"} ${(100 * Math.abs(by)).toFixed(1)}%`;
 }
 
-export function ConversionsMap({ title, hint, controls, columns, rows, count, compare, words, newWord, hrefFor, exportName, csv, caption, emptyText, pickWord, narrow: narrowGiven, squareOf }: {
+export function ConversionsMap({ title, hint, controls, columns, rows, count, compare, words, newWord, hrefFor, rowHref, exportName, csv, caption, emptyText, pickWord, narrow: narrowGiven, squareOf }: {
   /** The line under the title: what a square is, in plain words (the Conversions canvas, 2026-10-30). */
   hint?: ReactNode;
   title: string;
@@ -93,6 +100,8 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
   newWord: string;
   /** Where a square's click goes: the pages behind it. */
   hrefFor?: (row: ConversionsMapRow, column: ConversionsMapColumn) => string | undefined;
+  /** Where a row's name goes: on Channels, that channel's own page. */
+  rowHref?: (row: ConversionsMapRow) => string | undefined;
   exportName: string;
   csv: () => string;
   caption?: string;
@@ -123,6 +132,7 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
       key: row.eventName,
       label: row.name,
       total: words.rowTotal(row, { visits, times, rate: allVisits > 0 ? visits / allVisits : 0 }),
+      href: rowHref?.(row),
       cells: row.cells.map((cell, at) => {
         const column = columns[at];
         const value = values[at];
@@ -192,6 +202,7 @@ export function ConversionsMap({ title, hint, controls, columns, rows, count, co
           legend={{ ...(words.figures ? { visits: words.figures } : {}), shades: words.shades, empty: words.empty }}
           headingTooltips
           cellTooltips
+          columnHovers={columns.map((column) => column.hover)}
         />}
       </div>
     </ChartCard>

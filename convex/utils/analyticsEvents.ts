@@ -122,6 +122,9 @@ export function readsAsEnquiry(eventName: string): boolean {
 
 /** The event that is a shop's sale: its purchases and revenue come from Analytics' own figures (GA7). */
 export const PURCHASE_EVENT = "purchase";
+/** A shop's two steps before a sale, as Channels' steps and table count them (channels-new-page-plan-2026-11-06.md, steps 6 and 7). */
+export const BASKET_EVENT = "add_to_cart";
+export const CHECKOUT_EVENT = "begin_checkout";
 
 /**
  * Google's own events (google-analytics-plan.md GA30, §18.6.5), by who

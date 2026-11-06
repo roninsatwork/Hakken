@@ -9,14 +9,18 @@ export const MOST_ACTIONS = 4;
 /** Within this share of a thing already chosen, it's that thing again. */
 const NEARLY_THE_SAME = 0.05;
 
-export function chosenActions(totals: ReadonlyMap<string, number>, most = MOST_ACTIONS): string[] {
+/**
+ * With `nearlyFrom`, two counts under it are never called the same thing: Channels' Events menu lists every key event, and a small
+ * website's form and phone click can happen four times each by chance (channels-new-page-plan-2026-11-06.md, step 4).
+ */
+export function chosenActions(totals: ReadonlyMap<string, number>, most = MOST_ACTIONS, nearlyFrom = 0): string[] {
   const done = [...totals.entries()].filter(([, count]) => count > 0);
   const ranked = done.sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
   const purchase = ranked.find(([event]) => event === PURCHASE_EVENT);
   const chosen: Array<[string, number]> = purchase ? [purchase] : [];
   for (const entry of ranked) {
     if (chosen.length >= most) break;
-    if (chosen.some(([event, count]) => event === entry[0] || Math.abs(count - entry[1]) <= NEARLY_THE_SAME * Math.max(count, entry[1]))) continue;
+    if (chosen.some(([event, count]) => event === entry[0] || (Math.max(count, entry[1]) >= nearlyFrom && Math.abs(count - entry[1]) <= NEARLY_THE_SAME * Math.max(count, entry[1])))) continue;
     chosen.push(entry);
   }
   return chosen.sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0])).map(([event]) => event);

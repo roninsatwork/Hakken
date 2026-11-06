@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { channelPageSees, channelsPageSees, type ChannelPageFacts, type ChannelsPageFacts } from "./analyticsChannel";
+import { channelPageSees, type ChannelPageFacts } from "./analyticsChannel";
 
 /**
  * What Hakken sees on a channel's page and on Channels
@@ -118,40 +118,5 @@ describe("a channel's own page", () => {
     const box = channelPageSees(facts({ uncounted: [{ eventName: "form_submission", count: 6, enquiry: true }], ai: { visits: 192, elsewhere: 10 } }));
     expect(box.says.length).toBeLessThanOrEqual(3);
     expect(box.steps.length).toBeLessThanOrEqual(3);
-  });
-});
-
-describe("Channels", () => {
-  function overview(overrides: Partial<ChannelsPageFacts> = {}): ChannelsPageFacts {
-    return {
-      rows: [
-        { channel: "Organic Search", visits: 192, visitsBefore: 150, conversions: 0, conversionsBefore: 3 },
-        { channel: "Direct", visits: 40, visitsBefore: 33, conversions: 3, conversionsBefore: 0 },
-        { channel: "AI assistants", visits: 8, visitsBefore: 2, conversions: 0, conversionsBefore: 1 },
-      ],
-      best: { channel: "AI assistants", rate: 0.059, siteRate: 0.015 },
-      uncounted: [{ eventName: "form_submission", count: 7, enquiry: true, channel: "Organic Search" }],
-      noPage: 38,
-      ai: { visits: 8, elsewhere: 0 },
-      ...overrides,
-    };
-  }
-
-  test("the lead, the busiest channel converting nothing while another does, and a key event not counted", () => {
-    const box = channelsPageSees(overview());
-    expect(box.says[0]).toEqual({ code: "lead.up.down", a: 240, b: 185, c: 3, more: "4" });
-    expect(box.says[1]).toEqual({ code: "topNone", text: "Organic Search", a: 0.8, more: "Direct", b: 40, c: 3 });
-    expect(box.says[2]).toEqual({ code: "uncountedEnquiry", text: "form_submission", a: 7, more: "Organic Search" });
-    expect(box.steps.map((step) => step.code)).toEqual(["whyStopped", "countIt", "fixNoPage"]);
-    expect(box.steps[0]).toMatchObject({ text: "Organic Search", to: { segment: "channels/channel", filters: { key: "Organic Search" } } });
-  });
-
-  test("the channel converting best over 12 months, when nothing else fills the box first", () => {
-    const box = channelsPageSees(overview({ uncounted: [] }));
-    expect(box.says).toContainEqual({ code: "best", text: "AI assistants", a: 0.059, b: 0.015 });
-  });
-
-  test("no channels with visits: says so", () => {
-    expect(channelsPageSees(overview({ rows: [] })).says).toEqual([{ code: "none" }]);
   });
 });

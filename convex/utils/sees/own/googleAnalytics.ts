@@ -5,8 +5,9 @@ import { viewsCountedDifferently } from "../../viewsCounted";
 import { couldBeChance } from "../../insightEditor";
 import { pathOfAddress } from "../analytics";
 import { apartFrom, firstOfEachList, isNumber, isRow, moved, named, partOf, round1, rowsOf, type OwnFound, type Row } from "./shared";
-import { GROUP_LEAST, GROUP_MOVE, RATE_APART, LEFT_APART_POINTS, CONVERSIONS_LEAST, SHARE_POINTS, SHARE_APART_POINTS, HOUSEKEEPING, namesOf, nameIn, sumOf, changeOf, perHundred, rowNameOf, beside, rateMoved, shareMovedOf, headline, visitMovers, perHundredApart, perHundredMoved, leftApart, conversionsApartFromVisits, explainsFall, websiteOf } from "./googleAnalyticsShared";
+import { GROUP_LEAST, GROUP_MOVE, RATE_APART, LEFT_APART_POINTS, CONVERSIONS_LEAST, SHARE_POINTS, SHARE_APART_POINTS, HOUSEKEEPING, namesOf, nameIn, changeOf, perHundred, rowNameOf, beside, rateMoved, shareMovedOf, headline, visitMovers, perHundredApart, conversionsApartFromVisits, explainsFall, websiteOf } from "./googleAnalyticsShared";
 import { campaignsFindings } from "./googleAnalyticsCampaigns";
+import { channelsFindings } from "./googleAnalyticsChannels";
 
 /** Google Analytics' pages with rules of their own (ask-hakken-every-chart-page-plan-2026-11-03.md, section 5). */
 
@@ -268,38 +269,6 @@ function overviewFindings(data: Row): OwnFound[] {
   const who = rowsOf(data.who).filter((row) => named(row) && row.kind !== "browser" && isNumber(row.nowPercent) && isNumber(row.beforePercent));
   const whoBest = who.map((row) => ({ row, points: (row.nowPercent as number) - (row.beforePercent as number) })).sort((left, right) => Math.abs(right.points) - Math.abs(left.points))[0];
   if (whoBest && Math.abs(whoBest.points) >= SHARE_POINTS) found.push(shareMovedOf("who", named(whoBest.row)!, "visits", whoBest.row.nowPercent as number, whoBest.row.beforePercent as number, 0.7 + Math.min(0.5, Math.abs(whoBest.points) / 10)));
-  return found;
-}
-
-// Channels ------------------------------------------------------------------
-
-/**
- * Channels: the whole website's visits with its conversions beside them, the channels whose visits moved apart from the
- * website's, those converting furthest from it, the one whose conversions for every 100 visits moved most, the one leaving
- * at once furthest from the website, and one whose conversions moved apart from its visits.
- */
-function channelsFindings(data: Row): OwnFound[] {
-  const names = namesOf(data);
-  const website = nameIn(names, "website", "The whole website");
-  const figures = isRow(data.figures) ? data.figures : {};
-  const rows = rowsOf(isRow(data.channelsTable) ? data.channelsTable : null);
-  const found: OwnFound[] = [];
-  const head = headline("whole", website, "visits", figures.visits, figures.visitsBefore, { name: nameIn(names, "conversions", "Conversions"), now: figures.conversions, before: figures.conversionsBefore });
-  if (head) found.push(head);
-  const visits = isNumber(figures.visits) ? figures.visits : sumOf(rows, "visits");
-  const conversions = isNumber(figures.conversions) ? figures.conversions : sumOf(rows, "conversions");
-  const siteChange = isNumber(figures.visits) && isNumber(figures.visitsBefore) ? changeOf(figures.visits, figures.visitsBefore) : null;
-  const rate = perHundred(conversions, visits);
-  const rateBefore = isNumber(figures.conversionsBefore) && isNumber(figures.visitsBefore) ? perHundred(figures.conversionsBefore, figures.visitsBefore) : null;
-  found.push(...visitMovers("channels", rows, { name: website, change: siteChange }));
-  found.push(...perHundredApart("channels", rows, rate, null));
-  const rateMove = perHundredMoved("channels", rows, { name: website, change: rate !== null && rateBefore ? (rate - rateBefore) / rateBefore : null });
-  if (rateMove) found.push(rateMove);
-  const engaged = rows.reduce((sum, row) => sum + (isNumber(row.visits) && isNumber(row.engagementRatePercent) ? ((row.visits as number) * (row.engagementRatePercent as number)) / 100 : 0), 0);
-  const left = leftApart("channels", rows, sumOf(rows, "visits") > 0 ? 100 * (1 - engaged / sumOf(rows, "visits")) : null, null);
-  if (left) found.push(left);
-  const apart = conversionsApartFromVisits("channels", rows, nameIn(names, "visits", "Visits"));
-  if (apart) found.push(apart);
   return found;
 }
 

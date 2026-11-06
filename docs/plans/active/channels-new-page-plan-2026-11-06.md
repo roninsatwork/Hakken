@@ -319,3 +319,20 @@ None of these holds up the build. If he says go without answering, I use what I 
 ## Progress
 
 - 2026-11-06: today's page and three ways drawn, each a different idea. Anthony chose the parts by comment, drawn as "The new page so far". He said "i think this page is now good" and asked for this plan. Read-only checks of the saved figures on all seven dates on More Handles, and the list of channels on the other four websites. This plan written. Nothing built. Overall: about 25%.
+- 2026-11-06, the build, on Anthony's go, overnight: everything below is built on the branch and tested on saved figures. Nothing here has been looked at in his Chrome, and no read has run on the dev deployment yet. Overall: about 85%. Build: done. Checks on the real deployment: not started.
+  - **Decisions since this plan was written, which won over it.** Step 2 is gone: Google's proper names everywhere, and everything around the name plain. A website with nothing bought says Events and Best for events on this page's figures, and a shop keeps Bought. The whole website's visits are Google's own total, so Everywhere's Arrived reads 35,739 where the board drew 35,917. Biggest change and the best for its visits use `convex/utils/channelPicks.ts`.
+  - **Small choices taken, each the plan's recommendation unless it says otherwise.**
+    - Question 1: Checkout complete is left out of the Events menu by `chosenActions`.
+    - Question 3: Bought in the table counts what was bought, 284 on Organic Search, as Campaigns does. So the table's line says Added to basket and Started checkout count visits, not that everything does. The steps count visits, 283.
+    - Question 4: the title stays Channels. Question 5: a website with nothing bought has Events in the boxes and table, and no steps chart.
+    - `chosenActions` gained `nearlyFrom`, used here at 50 times: under it, two events the same size are two things, as a small website's 4 forms and 4 calls are. Campaigns doesn't pass it, so it's unchanged.
+    - The channel colours are orange, blue, violet, teal, rose, amber and emerald. Slate is left out, as it's Everything else's on the board.
+    - A channel with visits before and none now isn't a table row, as the board has none, but the boxes, the eye and Ask Hakken can still name it (`gone` on the list's read).
+    - The table has its search box and no filter chip: the plan and the board take Lands most on off, and put nothing in its place.
+    - A step the website doesn't send, such as a shop with no `begin_checkout` key event, is left off the steps chart, rather than drawn as nobody getting there.
+    - The hint says "Pick a channel", where the board said "Pick a place".
+    - With no channel at all, the charts are left off, and the boxes and table say so, as Campaigns does.
+    - `analyticsChannelChart` went too, as nothing else read it. Its tests moved to `analyticsChannelsEachDay`.
+  - **One thing to weigh once it's on the real deployment.** With Google's own total, the eye says Cross-network lost 1,917 and the whole website lost 1,768, where the plan worked out 759 from the list. Google's September is 37,507 and the list of channels' is 36,677: an 830 gap, more than the "little" the page's hover says. The rule above decides it, so that's what it says.
+  - **The fixture.** `src/test/fixtures/moreHandlesChannels.json`'s October is More Handles' own, taken from the agreed board. In the other six periods each channel's visits, conversions and share that left are saved figures of 3-4 November, and what was bought, the steps and the squares are worked out from October's rates, as the deployment wasn't to be read. Replace them with real reads.
+  - **Still to do, on the real deployment.** Every read on all seven dates, timed, under a second and 64MB, the squares on a year above all. Three eye presses and the questions in step 9. Looking at it in his Chrome, at 3,200 wide and a laptop's.

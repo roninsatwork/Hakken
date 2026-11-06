@@ -180,8 +180,14 @@ describe("home countries", () => {
     expect(days).toHaveLength(70);
 
     const args = { siteId, period: "lastMonth" as const, device: "", country: "fra" };
-    const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, args);
+    const chart = await admin.query(api.googleAnalyticsChannelPageReads.analyticsChannelsEachDay, args);
     expect(chart.live).toBe(false);
+    // Channels' own reads are France's too: its one channel, its squares and how far its visits got.
+    expect(chart.channels).toEqual(["Organic Search"]);
+    const squares = await admin.query(api.googleAnalyticsChannelPageReads.analyticsChannelSquares, { ...args, split: "kind" });
+    expect(squares.rows.map((row) => [row.channel, row.visits])).toEqual([["Organic Search", DAYS * 3]]);
+    const steps = await admin.query(api.googleAnalyticsChannelPageReads.analyticsChannelSteps, args);
+    expect(steps.channels.map((row) => [row.channel, row.arrived])).toEqual([["Organic Search", DAYS * 3]]);
     const all = await admin.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "page", page: 1, rows: 25 });
     const home = all.rows.find((row) => row.label === "https://www.acme-shop.test/")!.key;
     const page = (await admin.query(api.googleAnalyticsPageReads.analyticsPageStory, { ...args, page: home }))!;

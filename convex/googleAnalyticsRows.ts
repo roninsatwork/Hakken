@@ -1,7 +1,7 @@
 import { v, type Infer } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { PURCHASE_EVENT } from "./utils/analyticsEvents";
+import { BASKET_EVENT, CHECKOUT_EVENT, PURCHASE_EVENT } from "./utils/analyticsEvents";
 import { unpackNumbers } from "./utils/searchConsolePacks";
 // Only the lists' own module and utilities: every Analytics read imports this one, so it imports none of them.
 import { LIVE_PARTS, emptyRow, slotKey, unpackPart, unpackPartOnly, type ListRow, type PackedPart, type PartOnly } from "./googleAnalyticsLists";
@@ -298,9 +298,14 @@ export const shownRowValidator = v.object({
   source: v.optional(v.string()),
   /** A campaign's place in a person's words: a code, or its source as it was written (`utils/campaignNames.ts`). */
   cameFrom: v.optional(v.string()),
-  /** Channels' table (ga-channel-pages-plan.md CH9): the conversions a channel started, by the people it first brought. */
-  started: v.optional(v.union(v.number(), v.null())),
-  /** Channels' table: the page group most of a channel's visits land on, and its share. */
+  /**
+   * Channels' table and steps (channels-new-page-plan-2026-11-06.md, steps 6 and 7): the visits that stayed, added to the basket,
+   * started checkout and bought, each visit counted once, so none can pass the row's visits. `purchases` counts what was bought.
+   */
+  engaged: v.optional(v.number()),
+  basketVisits: v.optional(v.number()),
+  checkoutVisits: v.optional(v.number()),
+  boughtVisits: v.optional(v.number()),
   /** An AI assistant on AI assistants' own page (CH8): its visits Google filed outside its own AI Assistant channel. */
   elsewhere: v.optional(v.number()),
   /** A channel's landing page (ga-channel-pages-plan.md CH7): its page group, as the channel's chart groups it. */
@@ -313,9 +318,23 @@ export const shownRowValidator = v.object({
   onward: v.optional(v.union(v.number(), v.null())),
   /** The page most of those visits opened next: its number, its address once named, and its share of them. */
   next: v.optional(v.union(v.null(), v.object({ key: v.string(), page: v.string(), share: v.number() }))),
+  /** Visitors' lists: the page group most of a row's visits land on, and its share. */
   landsMost: v.optional(v.union(v.null(), v.object({ kind: v.string(), name: v.union(v.string(), v.null()), share: v.number() }))),
 });
 export type ShownRow = Infer<typeof shownRowValidator>;
+
+/** What Channels' steps read of every row: the events a shop's steps count, each in both units. */
+export const SHOP_STEPS_ONLY = { events: new Set([BASKET_EVENT, CHECKOUT_EVENT, PURCHASE_EVENT]), units: true } as const;
+
+/**
+ * A row's visits at each of a shop's steps. A row kept before both units were has Google's count standing in, and a shop that
+ * doesn't send `purchase` as a key event has its purchases.
+ */
+export function shopStepsOf(row: ListRow): { engaged: number; basketVisits: number; checkoutVisits: number; boughtVisits: number } {
+  // Never past the row's visits, where Google's count of times stands in.
+  const did = (event: string, otherwise = 0) => Math.min(row.visits, row.eventVisits?.get(event) ?? row.counts.get(event) ?? otherwise);
+  return { engaged: row.engaged, basketVisits: did(BASKET_EVENT), checkoutVisits: did(CHECKOUT_EVENT), boughtVisits: did(PURCHASE_EVENT, row.purchases) };
+}
 
 export function shown(row: ListRow, before: ListRow | null | undefined, counted: readonly Counted[], hadBefore: boolean): ShownRow {
   const { conversions, value } = conversionsOf(row, counted);

@@ -1,0 +1,29 @@
+# Google Analytics → Channels — the approved look (board "New" of docs/plans/assets/channels-new-page/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Channels
+figures
+  figure: Most visits
+  figure: Most bought
+  figure: Sells best
+  figure: Biggest change
+chart-card: Visits each day, by channel
+filter: Channels
+filter: Events
+chart-card: Where each channel's visits started
+  filter: Channels
+  filter: Classifications
+  filter: Split by
+  filter: Count
+  filter: Compare with
+conversions-map
+  channel-map
+chart-card: How far people got
+filter: Came from
+step-flow
+  page-flow
+search: Find a channel…
+table: Came from | Visits | Left straight away | Added to basket | Started checkout | Bought
+  table-bar
+    download: Download CSV
+  table-footer

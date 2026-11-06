@@ -11,7 +11,7 @@ export const ANALYTICS_SCREENS = [
 export type AnalyticsScreen = (typeof ANALYTICS_SCREENS)[number];
 
 /** Every further read a screen may have, each asked on its own after the screen's first. */
-export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website", "chart", "did"] as const;
+export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website", "chart", "did", "squares", "devices", "steps"] as const;
 
 /**
  * The orders Ask Hakken can read All pages in, each as the screen's own headings sort it (Anthony, 2026-11-04): read only
@@ -47,8 +47,20 @@ export const CAMPAIGN_ORDERS = {
 } as const;
 export type CampaignOrder = keyof typeof CAMPAIGN_ORDERS;
 export const CAMPAIGN_ORDER_NAMES = Object.keys(CAMPAIGN_ORDERS) as CampaignOrder[];
+/** Channels' orders (channels-new-page-plan-2026-11-06.md, step 9). Sells best is a rate, so a small channel can lead it: its figures say how many visits. */
+export const CHANNEL_ORDERS = {
+  mostVisits: { sort: "visits", direction: "desc" },
+  gainedMostVisits: { sort: "visitsChange", direction: "desc" },
+  lostMostVisits: { sort: "visitsChange", direction: "asc" },
+  mostBought: { sort: "bought", direction: "desc" },
+  mostConversions: { sort: "conversions", direction: "desc" },
+  sellsBest: { sort: "boughtRate", direction: "desc" },
+  bestForEvents: { sort: "rate", direction: "desc" },
+} as const;
+export type ChannelOrder = keyof typeof CHANNEL_ORDERS;
+export const CHANNEL_ORDER_NAMES = Object.keys(CHANNEL_ORDERS) as ChannelOrder[];
 /** Every order Ask Hakken can name, on any list. */
-export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder | CampaignOrder>([...ALL_PAGES_ORDER_NAMES, ...FUNNEL_ORDER_NAMES, ...CAMPAIGN_ORDER_NAMES])];
+export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder | CampaignOrder | ChannelOrder>([...ALL_PAGES_ORDER_NAMES, ...FUNNEL_ORDER_NAMES, ...CAMPAIGN_ORDER_NAMES, ...CHANNEL_ORDER_NAMES])];
 
 /**
  * The further reads a screen's figures come in, each with Convex's second to itself: overview's page panels
@@ -56,5 +68,5 @@ export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder | Campai
  * as its screen reads them, and All pages' whole website. Read whole, a page ran past the second.
  */
 export function analyticsPartsOf(screen: string): ReadonlyArray<(typeof ANALYTICS_PARTS)[number]> {
-  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : screen === "landingPages" ? ["boxes", "chart"] : screen === "campaigns" ? ["boxes", "chart", "did"] : [];
+  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : screen === "landingPages" ? ["boxes", "chart"] : screen === "campaigns" ? ["boxes", "chart", "did"] : screen === "channels" ? ["boxes", "chart", "squares", "devices", "steps"] : [];
 }

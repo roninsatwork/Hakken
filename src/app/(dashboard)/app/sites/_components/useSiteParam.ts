@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useDebounce from "@/src/hooks/useDebounce";
 import {
@@ -119,6 +119,23 @@ export function useSiteParam<Value extends string>(
   const value = raw !== null && (!allowed || (allowed as readonly string[]).includes(raw)) ? (raw as Value) : fallback;
   const update = useCallback((next: Value) => set({ [key]: next === fallback ? null : next }), [set, key, fallback]);
   return [value, update];
+}
+
+/** What a tick menu with nothing ticked says in the address: left out, the menu opens as it does for anyone. */
+const NOTHING_TICKED = "-";
+
+/**
+ * A tick menu kept in the address (Channels, channels-new-page-plan-2026-11-06.md, step 4: "Ticks live in the address, so a link opens
+ * what was showing"): what's ticked, or null for a menu nobody has touched, and a setter. The table beside it stays on its page.
+ */
+export function useSiteTicks(key: string): [string[] | null, (next: string[]) => void] {
+  const params = useSearchParams();
+  const set = useSetSiteParams();
+  const raw = params.get(key);
+  const page = params.get(TABLE_PAGE_KEY);
+  const ticks = useMemo(() => (raw === null ? null : raw === NOTHING_TICKED ? [] : raw.split(",").filter(Boolean)), [raw]);
+  const update = useCallback((next: string[]) => set({ [key]: next.length > 0 ? next.join(",") : NOTHING_TICKED, [TABLE_PAGE_KEY]: page }), [set, key, page]);
+  return [ticks, update];
 }
 
 /**
