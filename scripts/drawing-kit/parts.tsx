@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ArrowUpRight, Globe, ListChecks, Pencil, Plus, Search, Target, TextSearch, Trash2 } from "lucide-react";
-import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_TEAL } from "@/src/ui/components/charts/chartPalette";
+import { CHART_ENGAGEMENT_NONE, CHART_ENGAGEMENT_RAMP, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_TEAL } from "@/src/ui/components/charts/chartPalette";
 import { ToastProvider } from "@/src/context/ToastContext";
 import { UIProvider } from "@/src/context/UIContext";
 import Header from "@/src/ui/components/layout/Header";
@@ -42,6 +42,8 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { DetailHeader, PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { PageFlowChart } from "@/src/ui/components/screens/PageFlowChart";
 import { StepFlowChart } from "@/src/ui/components/screens/StepFlowChart";
+import { HundredGrid } from "@/src/ui/components/screens/HundredGrid";
+import { HundredStrips, stripColour } from "@/src/ui/components/screens/HundredStrips";
 import { TickActions, TickCount } from "@/src/ui/components/screens/TableTicks";
 import { Select } from "@/src/ui/components/screens/Select";
 import { FieldHint, FieldLabel, SegmentedChoice, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
@@ -529,6 +531,47 @@ const PARTS: Part[] = [
         rowVisits={(row) => (row.key === "o" ? 192 : 40)}
         conversionsWord={(count) => `${count} conv.`}
         legend={{ visits: "69 · visits that started on that kind of page", conversions: "3 conv. · conversions those visits made", shades: "a smaller to a bigger share of the channel", empty: "no visits" }}
+      />
+    ),
+  },
+  {
+    id: "hundred-grid",
+    name: "HundredGrid — whole squares you can count",
+    source: "src/ui/components/screens/HundredGrid.tsx, inside MapCard",
+    use: "A figure as whole squares out of every 100, or every 1,000 for something rare, with a key beside it. For any split of any figure.",
+    render: () => (
+      <HundredGrid
+        nowLabel="October"
+        wasLabel="September"
+        label="Out of every 100 visits"
+        groups={[
+          { key: "left", name: "Left straight away", count: 38, colour: CHART_ENGAGEMENT_NONE, was: "34", readout: [] },
+          { key: "looked", name: "Looked around, then left", count: 48, colour: CHART_ENGAGEMENT_RAMP[0], was: "52", readout: [] },
+          { key: "added", name: "Added to basket, then left", count: 8, colour: CHART_ENGAGEMENT_RAMP[2], was: "8", readout: [] },
+          { key: "checkout", name: "Started checkout, then left", count: 3, colour: CHART_ENGAGEMENT_RAMP[4], was: "3", readout: [] },
+          { key: "bought", name: "Bought", count: 3, colour: CHART_SERIES_ORANGE, was: "3", readout: [] },
+        ]}
+      />
+    ),
+  },
+  {
+    id: "hundred-strips",
+    name: "HundredStrips — one share against another",
+    source: "src/ui/components/screens/HundredStrips.tsx, inside MapCard",
+    use: "Two rows of 100 cells with a band joining each thing's share in one to its share in the other. Any figure against any other, for any split.",
+    render: () => (
+      <HundredStrips
+        topLabel="Out of every 100 visits"
+        bottomLabel="Out of every 100 sales"
+        lit={null}
+        onLit={() => undefined}
+        segments={[
+          { key: "organic", name: "Organic Search", top: 37, bottom: 24, colour: stripColour(0), readout: [] },
+          { key: "cross", name: "Cross-network", top: 25, bottom: 30, colour: stripColour(1), readout: [] },
+          { key: "shopping", name: "Paid Shopping", top: 14, bottom: 15, colour: stripColour(2), readout: [] },
+          { key: "direct", name: "Direct", top: 21, bottom: 22, colour: stripColour(3), readout: [] },
+          { key: "paid", name: "Paid Search", top: 3, bottom: 9, colour: stripColour(4), readout: [] },
+        ]}
       />
     ),
   },

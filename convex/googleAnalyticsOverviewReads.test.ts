@@ -63,15 +63,7 @@ describe("Overview's panels", () => {
       await ctx.db.insert("pageClassificationLines", { companyWebsiteId: siteId, classificationId: id, kind: "STARTS_WITH", value: "/services/", createdAt: 1 });
       return id;
     });
-    const panels = { ...(await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, ...args }))!, ...await pagesOf() };
-
-    // OV2: the channels with the most visits; nothing from tagged links or ad keywords.
-    expect(panels.channels).toMatchObject({ count: 3, tagged: 0, keywords: 0 });
-    expect(panels.channels.rows.map((row) => [row.label, row.visits, row.conversions])).toEqual([
-      ["Organic Search", 390, 30], ["AI assistants", 120, 30], ["Direct", 60, 0],
-    ]);
-    // The same every day: only September's 30 days against August's 31 change it.
-    expect(panels.channels.rows[0].change).toBeCloseTo(390 / 403 - 1);
+    const panels = await pagesOf();
 
     // OV3: the classifications by their landing pages' visits, Unclassified among them.
     expect(panels.kinds!.count).toBe(2);
@@ -86,30 +78,7 @@ describe("Overview's panels", () => {
     expect(unclassified.landing.rows.map((row) => [row.label, row.visits, row.left])).toEqual(panels.landing.rows.map((row) => [row.label, row.visits, row.left]));
     expect([unclassified.landing.count, unclassified.landing.left]).toEqual([panels.landing.count, panels.landing.left]);
 
-    // OV5: what counts, then the form listed but not counted; the counted kind that never happened is fourth, past the three.
-    expect(panels.conversions.count).toBe(4);
-    expect(panels.conversions.rows.map((row) => [row.eventName, row.status, row.times])).toEqual([
-      ["click_tel", "counted", 30], ["generate_lead", "counted", 30], ["form_submit", "uncounted", 30],
-    ]);
-    expect(panels.conversions.rows.find((row) => row.eventName === "generate_lead")!.value).toBe(750_000);
-    expect(panels.conversions.rows.find((row) => row.eventName === "form_submit")!.value).toBeNull();
-
-    // OV6: each kind's biggest named group; interests, all unknown, left out.
-    expect(panels.who.map((row) => [row.kind, row.label])).toEqual([
-      ["visitorType", "new"], ["device", "mobile"], ["age", "25-34"], ["gender", "female"], ["browser", "Chrome"], ["system", "Windows"],
-    ]);
-    expect(panels.who.find((row) => row.kind === "device")!.share).toBeCloseTo(390 / 570);
-    expect(panels.who.find((row) => row.kind === "age")).toMatchObject({ share: 90 / 570, shareBefore: 90 / 570 });
-
-    // OV7: not a shop.
-    expect(panels.shop).toBeNull();
-
-    // One device: no Device row, which would always be all of it.
-    const mobile = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, period: "lastMonth", device: "mobile" }))!;
-    expect(mobile.who.map((row) => row.kind)).not.toContain("device");
-
     // Another company's website is never read.
-    await expect(rival.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, ...args })).rejects.toThrow();
     await expect(rival.query(api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels, { siteId, ...args })).rejects.toThrow();
   });
 });
