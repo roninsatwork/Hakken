@@ -958,23 +958,33 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
 
     const overview = await read("overview");
     const shown = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "lastMonth", device: "" });
+    // What the page says, through the same reads, with no money (overview-new-page-plan-2026-11-06.md, step 12).
     expect(overview).toMatchObject({
-      ok: true, website: "acme-shop.test", screen: "overview", currency: "GBP",
-      now: { visits: shown.now!.visits, pageViews: shown.now!.views, conversions: shown.now!.conversions, value: shown.now!.value / 100 },
-      theSpanBefore: { visits: shown.before!.visits },
+      ok: true, website: "acme-shop.test", screen: "overview", kind: "service",
+      wholeWebsite: { visits: shown.now!.visits, views: shown.now!.views, conversions: shown.now!.conversions, visitsBefore: shown.before!.visits },
       link: `/app/analytics/${siteId}?period=lastMonth`,
     });
-    // Its panels, the rows the screen shows (ga-overview-plan.md OV2–OV8).
-    const panels = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPanels, { siteId, period: "lastMonth", device: "" }))!;
-    expect((overview.whereVisitsCameFrom as { mostVisits: Array<{ channel: string; visits: number }> }).mostVisits.map((row) => [row.channel, row.visits]))
-      .toEqual(panels.channels.rows.map((row) => [row.label, row.visits]));
-    expect((overview.whoVisited as Array<{ kind: string }>).map((row) => row.kind)).toEqual(panels.who.map((row) => row.kind));
-    expect(overview.trackingHealth).toBeDefined();
-    // The page panels, a read of their own the tool asks after the rest (calendar-periods audit, 2026-10-21).
+    expect(overview).not.toHaveProperty("currency");
+    expect(JSON.stringify(overview)).not.toMatch(/"value"|"revenue"/);
+    const split = (await user.query(api.googleAnalyticsOverviewSplits.analyticsOverviewSplit, { siteId, period: "lastMonth", device: "", split: "channel" }));
+    expect((overview.channels as { rows: Array<{ key: string; visits: number }> }).rows.map((row) => [row.key, row.visits])).toEqual(split.rows.map((row) => [row.key, row.visits]));
+    // The pages and the days, reads of their own the tool asks after the rest.
     const pages = await read("overview", { part: "pages" });
-    const pagePanels = (await user.query(api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels, { siteId, period: "lastMonth", device: "" }))!;
-    expect((pages.whereVisitsLanded as { mostVisits: Array<{ visits: number }> }).mostVisits.map((row) => row.visits)).toEqual(pagePanels.landing.rows.map((row) => row.visits));
+    const list = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, period: "lastMonth", device: "", list: "landing", leaveOut: true, sort: "visits", direction: "desc", page: 1, rows: 25 });
+    expect((pages.topPages as Array<{ visits: number }>).map((row) => row.visits)).toEqual(list.rows.map((row) => row.visits));
     expect(pages.link).toBe(overview.link);
+    // On every date the menu offers, Ask Hakken's figures are the screen's.
+    for (const period of ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"] as const) {
+      const answer = await read("overview", { period });
+      const screen = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period, device: "" });
+      if (!screen.now) continue;
+      expect(answer.wholeWebsite, period).toMatchObject({ visits: screen.now.visits, views: screen.now.views, conversions: screen.now.conversions });
+      const rows = await user.query(api.googleAnalyticsOverviewSplits.analyticsOverviewSplit, { siteId, period, device: "", split: "channel" });
+      expect((answer.channels as { rows: Array<{ key: string; visits: number; conversions: number }> }).rows.map((row) => [row.key, row.visits, row.conversions]), period).toEqual(rows.rows.map((row) => [row.key, row.visits, row.conversions]));
+    }
+    const days = await read("overview", { part: "days" });
+    const chart = await user.query(api.googleAnalyticsChartReads.analyticsChart, { siteId, period: "lastMonth", device: "" });
+    expect((days.days as Array<{ day: string; visits: number }>).map((row) => [row.day, row.visits])).toEqual(chart.points.map((point) => [point.day, point.visits]));
 
     const landing = await read("landingPages");
     const landingShown = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });

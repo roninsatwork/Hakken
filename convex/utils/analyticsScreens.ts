@@ -11,7 +11,7 @@ export const ANALYTICS_SCREENS = [
 export type AnalyticsScreen = (typeof ANALYTICS_SCREENS)[number];
 
 /** Every further read a screen may have, each asked on its own after the screen's first. */
-export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website", "chart", "did", "squares", "devices", "steps"] as const;
+export const ANALYTICS_PARTS = ["pages", "boxes", "story", "website", "chart", "did", "squares", "devices", "steps", "days"] as const;
 
 /**
  * The orders Ask Hakken can read All pages in, each as the screen's own headings sort it (Anthony, 2026-11-04): read only
@@ -68,5 +68,5 @@ export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder | Campai
  * as its screen reads them, and All pages' whole website. Read whole, a page ran past the second.
  */
 export function analyticsPartsOf(screen: string): ReadonlyArray<(typeof ANALYTICS_PARTS)[number]> {
-  return screen === "overview" ? ["pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : screen === "landingPages" ? ["boxes", "chart"] : screen === "campaigns" ? ["boxes", "chart", "did"] : screen === "channels" ? ["boxes", "chart", "squares", "devices", "steps"] : [];
+  return screen === "overview" ? ["days", "pages"] : screen === "page" ? ["boxes", "story"] : screen === "allPages" ? ["website"] : screen === "landingPages" ? ["boxes", "chart"] : screen === "campaigns" ? ["boxes", "chart", "did"] : screen === "channels" ? ["boxes", "chart", "squares", "devices", "steps"] : [];
 }

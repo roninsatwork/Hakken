@@ -9,7 +9,6 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { readConversions, readListPage, readOverview, type ShownRow } from "./googleAnalyticsReads";
 import { isUnknownValue } from "./utils/analyticsUnknown";
 import { liveVerdict, usualNow } from "./utils/liveFigures";
-import { readOverviewPagePanels, readOverviewPanels, type OverviewPanels } from "./googleAnalyticsOverviewReads";
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { readVisitorBars, readVisitors } from "./googleAnalyticsVisitorReads";
 import { readPageKindViews } from "./googleAnalyticsPageKindViews";
@@ -33,6 +32,7 @@ import { pageName } from "./utils/pageNames";
 import { viewsCountedDifferently } from "./utils/viewsCounted";
 import { readChannelTop } from "./googleAnalyticsChannelReads";
 import { channelsForAssistant } from "./assistantChannelReads";
+import { overviewForAssistant } from "./assistantOverviewReads";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { leftWithout } from "./utils/sees/analyticsProducts";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
@@ -64,48 +64,6 @@ const reader = (ctx: Pick<QueryCtx, "db">, companyId: Id<"companies">): SiteRead
 const money = (hundredths: number | null | undefined) => (hundredths === null || hundredths === undefined ? null : Math.round(hundredths) / 100);
 /** A share as a percentage, to one place. */
 const percent = (share: number | null | undefined) => (share === null || share === undefined ? null : Math.round(share * 1000) / 10);
-
-/** Overview's panels in plain words (ga-overview-plan.md OV2–OV7): the rows the screen shows, money in the currency. */
-function overviewPanelParts(panels: Omit<OverviewPanels, "kinds" | "landing">) {
-  return {
-    whereVisitsCameFrom: {
-      channels: panels.channels.count,
-      visitsFromTaggedLinks: panels.channels.tagged,
-      visitsFromAdKeywords: panels.channels.keywords,
-      mostVisits: panels.channels.rows.map((row) => ({ channel: row.label, visits: row.visits, changePercent: percent(row.change), conversions: row.conversions, value: money(row.value) })),
-    },
-    keyEvents: panels.conversions.rows.map((row) => ({
-      event: row.eventName,
-      status: row.status === "counted" ? "counted as a conversion" : row.status === "never" ? "counted, but never happened" : "not counted",
-      times: row.times, value: money(row.value), changePercent: percent(row.change),
-    })),
-    whoVisited: panels.who.map((row) => ({ kind: row.kind, biggestGroup: row.label, sharePercent: percent(row.share), sharePercentBefore: percent(row.shareBefore) })),
-    ...(panels.shop ? {
-      // Items, never the shop's money (Anthony, 2026-11-03: "Take money off").
-      shop: {
-        bought: panels.shop.bought, addedToBasket: panels.shop.basket,
-        bestSellers: panels.shop.rows.map((row) => ({ product: row.name, viewed: row.looks, addedToBasket: row.basket, bought: row.bought })),
-      },
-    } : {}),
-  };
-}
-
-/** Overview's page panels (OV3, OV4), a read of their own: the screen's rows, in plain names. */
-function overviewPageParts(panels: Pick<OverviewPanels, "kinds" | "landing">) {
-  const kindName = (name: string | null | undefined) => (name === undefined ? undefined : name ?? "unclassified");
-  return {
-    pagesByClassification: panels.kinds
-      ? { classifications: panels.kinds.count, mostVisits: panels.kinds.rows.map((row) => ({ classification: kindName(row.kindName), visits: row.visits, changePercent: percent(row.change), leftFromItPercent: percent(row.left), conversions: row.conversions })) }
-      : "The website's pages have no classifications yet.",
-    whereVisitsLanded: {
-      leftFromTheirLandingPagePercent: percent(panels.landing.left),
-      mostVisits: panels.landing.rows.map((row) => ({
-        page: row.title ? `${row.title} — ${pathOfAddress(row.label)}` : pathOfAddress(row.label),
-        classification: kindName(row.kindName), visits: row.visits, changePercent: percent(row.change), leftFromItPercent: percent(row.left), conversions: row.conversions,
-      })),
-    },
-  };
-}
 
 /** A list's row as the Assistant reads it: plain names and units, the screen's own figures. */
 /** A page of All pages as its screen shows it: no money, its views and conversions against the span before. */
@@ -558,6 +516,11 @@ export const googleAnalyticsInternal = internalQuery({
       return { ...noMoney, ...(did.live ? {} : campaignDidPart(did)) };
     }
 
+    // Overview has no money either, and reads what the page draws, through what the eye reads (`assistantOverviewReads.ts`).
+    if (args.screen === "overview") {
+      return await overviewForAssistant(site, common, { part: args.part, linkTo }, { ok: true, website: host, screen: args.screen, period, figuresTo: connection.newestDay ?? "" });
+    }
+
     // Channels has no money either, and its boxes, chart, squares, devices and steps are reads of their own (`assistantChannelReads.ts`).
     if (args.screen === "channels") {
       return await channelsForAssistant(site, common, { part: args.part, key: args.key, search: args.search, order: args.order, rows: ROWS, linkTo }, { ok: true, website: host, screen: args.screen, period, figuresTo: connection.newestDay });
@@ -660,31 +623,6 @@ export const googleAnalyticsInternal = internalQuery({
     }
 
     switch (args.screen) {
-      case "overview": {
-        if (args.part === "pages") {
-          const pages = await readOverviewPagePanels(site, common);
-          return { ...base, ...(pages ? overviewPageParts(pages) : {}), link: linkTo("") };
-        }
-        const answer = await readOverview(site, common);
-        const figures = (figure: typeof answer.now) => figure && {
-          visits: figure.visits, pageViews: figure.views, people: figure.people, engagedVisits: figure.engaged,
-          conversions: figure.conversions, value: money(figure.value),
-        };
-        const panels = await readOverviewPanels(site, common);
-        return {
-          ...base,
-          from: answer.from, to: answer.to,
-          now: figures(answer.now), theSpanBefore: figures(answer.before),
-          ...viewsWarning(answer.now, answer.before),
-          changedMost: answer.changedMost.map((row) => ({ name: row.title ?? pathOfAddress(row.label), kind: row.kind, conversionsChange: row.conversions, valueChange: money(row.value) })),
-          // Its panels, as the screen shows them (ga-overview-plan.md OV2–OV8): each its first rows.
-          ...(panels ? overviewPanelParts(panels) : {}),
-          trackingHealth: connection.health
-            ? { checks: connection.health.checks.length, needALook: connection.health.checks.filter((check) => !check.passing).map((check) => check.check) }
-            : "not checked yet",
-          link: linkTo(""),
-        };
-      }
       case "conversions": {
         const answer = await readConversions(site, common);
         // A classification by its name, as the screen names it (ga-conversions-visitors-plan.md CV3).
