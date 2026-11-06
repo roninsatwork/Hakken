@@ -10916,7 +10916,9 @@
         "visitsGained": "visits gained",
         "boughtLost": "purchases lost",
         "eventsLost": "events lost",
-        "wentOnPercent": "went on to the next step"
+        "wentOnPercent": "went on to the next step",
+        "timesDone": "times",
+        "addedPerHundred": "added to a basket for every 100 visits"
       }
     },
     "sidePanel": {
@@ -18517,7 +18519,15 @@
       "events": "Events",
       "noPageRecorded": "No page recorded",
       "otherChannels": "All the other channels",
-      "shareOfChannelVisits": "its share of this channel's visits"
+      "shareOfChannelVisits": "its share of this channel's visits",
+      "allChannels": "All the channels together",
+      "pagesAVisit": "Pages a visit",
+      "leftStraightAway": "Left straight away",
+      "daysBefore": "the days before",
+      "datesBefore": "the dates before",
+      "usualDay": "a usual day",
+      "visitsThatDidIt": "the visits that did it",
+      "addedToBasket": "Added to basket"
     },
     "landingPage": {
       "back": "Landing pages",

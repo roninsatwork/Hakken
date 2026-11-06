@@ -1218,7 +1218,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(conversions.seen.says[0]).toEqual({ code: "topKind", text: "generate_lead", a: 60, b: 150 });
     expect(conversions.fired).toEqual([]);
     const [site] = await user.query(api.googleAnalyticsReads.analyticsSites, {});
-    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, conversions: 150, conversionsBefore: 60, counting: true, checks: 13 });
+    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, conversions: 150, conversionsBefore: 60, counting: true, checks: 14 });
     // Your websites shows no money (Anthony, 2026-11-03: "Take money off").
     expect(site).not.toHaveProperty("value");
     expect(site).not.toHaveProperty("currency");
@@ -1244,10 +1244,11 @@ describe("tracking health", () => {
     // and 12 months are added up from what is held (calendar-periods-plan.md, rules 10 and 11), so the checks run
     // again the moment the fill holds the events' months: "sign_up" is counted but never happens in 640 visits
     // (conversion-checks-plan.md CC4), said at once rather than a week on.
-    expect(await failing()).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS"]);
+    // This sample's two conversions also happen the same number of times every day, so the check for one counted twice fails too.
+    expect(await failing()).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS", "COUNTED_TWICE"]);
     // The next checks change nothing.
     await t.mutation(internal.googleAnalyticsHealth.runHealthChecks, { connectionId });
-    expect(await failing()).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS"]);
+    expect(await failing()).toEqual(["NO_VALUE", "STRANGERS", "COUNTED_AGAIN", "NEVER_HAPPENS", "COUNTED_TWICE"]);
     expect((await checks()).find((check) => check.check === "NEVER_HAPPENS")).toMatchObject({ names: ["sign_up"], count: 90 });
     const told = async () => (await t.run(async (ctx) => await ctx.db.query("notifications").collect())).filter((row) => row.kind === "GOOGLE_ANALYTICS_HEALTH");
     expect((await told()).map((row) => row.title)).toEqual([

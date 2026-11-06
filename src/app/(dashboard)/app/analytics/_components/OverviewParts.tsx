@@ -5,13 +5,14 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { bestFor, biggestChange } from "@/convex/utils/channelPicks";
 import { endingsOf, isShop, serviceSteps, shopSteps, squaresOutOf } from "@/convex/utils/conversionSteps";
 import { outOfTotal } from "@/convex/utils/outOfTotal";
 import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import { OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
+import { overviewFigures } from "@/convex/utils/sees/overviewFigures";
 import { CHART_COMPARATOR_GREY, CHART_ENGAGEMENT_NONE, CHART_ENGAGEMENT_RAMP, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { DaysChart, type DaysLine, type DaysPoint } from "@/src/ui/components/screens/DaysChart";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
@@ -413,42 +414,37 @@ function MoreLink({ href, words }: { href: string; words: string }) {
 }
 
 /**
- * What the eye reads of the page: its boxes, its days and the same days before, every way of splitting its visits, and every
- * channel as Channels' table reads it, with the names its findings use. Never money: `AnalyticsSees` takes off what the reads carry.
+ * What the eye reads of the page: its boxes, its days and the same days before, every way of splitting its visits and the top
+ * pages, as `overviewFigures` builds them for Ask Hakken too, with the names its findings use. Never money.
  */
 export function useOverviewEye(reads: OverviewReads, status: AnalyticsStatus) {
   const args = useAnalyticsArgs();
   const names = useEyeNames();
+  const locale = useLocale();
   const nameOf = useSplitNames();
+  const eventName = useEventName();
   const chart = useQuery(api.googleAnalyticsChartReads.analyticsChart, args);
-  const before = useQuery(api.googleAnalyticsChartReads.analyticsPeriodBeforeChart, args);
+  const daysBefore = useQuery(api.googleAnalyticsChartReads.analyticsPeriodBeforeChart, args);
+  const ready = Boolean(status.connection?.newestDay);
+  const pages = useQuery(api.googleAnalyticsReads.analyticsListPage, ready ? { ...args, list: "landing", sort: "visits", direction: "desc", page: 1, rows: 25, leaveOut: true } : "skip");
   const health = status.connection?.health;
-  const { overview, channelList, splits, shop } = reads;
+  const { overview, splits, shop, cells } = reads;
   return useMemo(() => {
     if (!overview) return overview;
-    // Never Search Console's clicks, which the read carries for the old box and this page no longer shows.
-    const { searchConsole: _searchConsole, ...figures } = overview;
-    void _searchConsole;
-    const named = (split: Split) => {
-      const answer = splits[split];
-      return answer ? { ...answer, rows: answer.rows.map((row) => ({ ...row, name: nameOf(split, row) })) } : answer;
-    };
+    const eventCodes = Object.fromEntries((splits.channel?.events ?? []).map((event) => [eventName(event.name), event.name]));
     return {
-      shop,
-      figures,
-      chart,
-      before,
-      channels: named("channel"),
-      classifications: named("kind"),
-      devices: named("device"),
-      visitors: named("visitorType"),
-      ...(channelList ? { channelsTable: channelList } : {}),
+      ...overviewFigures({
+        shop, cells, now: overview.now, before: overview.before, chart, daysBefore, splits,
+        pages: pages?.rows, rowName: (split, row) => nameOf(split, row), eventName,
+      }),
+      eventCodes,
+      locale,
       health,
       names,
     };
     // The words change only with the language, which reloads the page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overview, chart, before, splits, channelList, health, names, shop]);
+  }, [overview, chart, daysBefore, splits, pages, health, names, shop, cells, locale]);
 }
 
 const SPLIT_PAGE: Record<Split, string> = { channel: "channels", kind: "all-pages", device: "visits", visitorType: "visits" };

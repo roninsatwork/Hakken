@@ -13,7 +13,7 @@ import { AnalyticsTable, type Column } from "../_components/AnalyticsListScreen"
 import { AnalyticsGate } from "../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../_components/AnalyticsSees";
 import { OverviewBandsCard, OverviewBoxes, OverviewDaysCard, OverviewSquaresCard, useOverviewEye, useOverviewReads, type OverviewReads } from "../_components/OverviewParts";
-import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, type AnalyticsStatus } from "../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, type AnalyticsStatus } from "../_components/useAnalytics";
 
 /**
  * Overview (docs/plans/active/overview-new-page-plan-2026-11-06.md; boards "The new page so far" and "For a service business"
@@ -77,8 +77,21 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
   );
 }
 
-/** The page's eye, reading what the page draws. */
+/** The page's eye, reading what the page draws, and where its "Do first" may send the reader. */
 function OverviewSees({ reads, status }: { reads: OverviewReads; status: AnalyticsStatus }) {
+  const tm = useTranslations("googleAnalytics.menu");
+  const args = useAnalyticsArgs();
+  const hrefFor = useAnalyticsHref(args.siteId);
   const data = useOverviewEye(reads, status);
-  return <AnalyticsSees screen="overview" seen={reads.overview?.seen} currency={status.connection?.currency ?? null} data={data} />;
+  const links = useMemo(() => [
+    { label: tm("channels"), href: hrefFor("channels") },
+    { label: tm("landingPages"), href: hrefFor("funnel") },
+    { label: tm("allPages"), href: hrefFor("all-pages") },
+    { label: tm("conversions"), href: hrefFor("conversions") },
+    { label: tm("visitors"), href: hrefFor("visits") },
+    { label: tm("trackingHealth"), href: hrefFor("tracking-health") },
+    ...(reads.shop ? [{ label: tm("products"), href: hrefFor("products") }] : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hrefFor is new each draw; the dates, device and country decide.
+  ], [tm, args.period, args.device, args.country, reads.shop]);
+  return <AnalyticsSees screen="overview" seen={reads.overview?.seen} currency={status.connection?.currency ?? null} data={data} links={links} />;
 }

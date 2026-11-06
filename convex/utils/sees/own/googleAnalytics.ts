@@ -7,6 +7,7 @@ import { pathOfAddress } from "../analytics";
 import { apartFrom, firstOfEachList, isNumber, isRow, moved, named, partOf, round1, rowsOf, type OwnFound, type Row } from "./shared";
 import { GROUP_LEAST, GROUP_MOVE, RATE_APART, LEFT_APART_POINTS, CONVERSIONS_LEAST, SHARE_POINTS, SHARE_APART_POINTS, HOUSEKEEPING, namesOf, nameIn, changeOf, perHundred, rowNameOf, beside, rateMoved, shareMovedOf, headline, visitMovers, perHundredApart, conversionsApartFromVisits, explainsFall, websiteOf } from "./googleAnalyticsShared";
 import { campaignsFindings } from "./googleAnalyticsCampaigns";
+import { overviewFindings } from "./googleAnalyticsOverview";
 import { channelsFindings } from "./googleAnalyticsChannels";
 
 /** Google Analytics' pages with rules of their own (ask-hakken-every-chart-page-plan-2026-11-03.md, section 5). */
@@ -228,49 +229,7 @@ function productsFindings(data: Row): OwnFound[] {
 
 // Overview ------------------------------------------------------------------
 
-/**
- * Overview: the whole website's visits against the span before, its conversions beside them, the share leaving at once,
- * the channels that moved and that convert furthest from the website, the page groups people leave from most, and who
- * visits as a share that moved. Never the shop's money, never the panels' own top-three cut as a whole.
- */
-function overviewFindings(data: Row): OwnFound[] {
-  const names = namesOf(data);
-  const website = nameIn(names, "website", "The whole website");
-  const figures = isRow(data.figures) ? data.figures : {};
-  const now = isRow(figures.now) ? figures.now : null;
-  const before = isRow(figures.before) ? figures.before : null;
-  const found: OwnFound[] = [];
-  if (!now) return found;
-  const head = headline("whole", website, "visits", now.visits, before?.visits);
-  if (head) found.push(head);
-  if (before && isNumber(now.conversions) && isNumber(before.conversions) && before.conversions > 0) {
-    const change = Math.abs(changeOf(now.conversions, before.conversions) ?? 0);
-    if (change >= LEAST_CHANGE) found.push(moved("conversions", website, "conversions", now.conversions, before.conversions, 1.0 + Math.min(0.5, change), isNumber(now.visits) && isNumber(before.visits) && before.visits > 0 ? { name: nameIn(names, "visits", "Visits"), change: (now.visits - before.visits) / before.visits } : undefined));
-  }
-  // The share of visits that left at once, as Overview's box counts it (visits not engaged), against the span before.
-  if (before && isNumber(now.engaged) && isNumber(now.visits) && isNumber(before.engaged) && isNumber(before.visits) && now.visits > 0 && before.visits > 0) {
-    const left = 100 * (1 - now.engaged / now.visits);
-    const was = 100 * (1 - before.engaged / before.visits);
-    if (Math.abs(left - was) >= SHARE_POINTS) found.push(rateMoved("left", website, "leftAtOncePercent", left, was, 0.9 + Math.min(0.5, Math.abs(left - was) / 20)));
-  }
-  // The channels, every one (the Channels table's own read, handed as `channelsTable`): the movers and the furthest apart.
-  const channels = rowsOf(isRow(data.channelsTable) ? data.channelsTable : null);
-  const siteChange = isNumber(now.visits) && before && isNumber(before.visits) ? changeOf(now.visits, before.visits) : null;
-  found.push(...visitMovers("channels", channels, { name: website, change: siteChange }).slice(0, 2));
-  found.push(...perHundredApart("channels", channels, isNumber(now.conversions) && isNumber(now.visits) ? perHundred(now.conversions, now.visits) : null, null).slice(0, 1));
-  // The page groups people land on (Overview's own panel, its busiest three): the one whose visits moved apart from the
-  // website's. Never their "left" figure: More Handles' home page read 100% left on Last week and 1.6% on Last month,
-  // the onward visits kept against "(not set)" on the short spans (2026-11-04), so it is not one the eye leans on.
-  const panels = isRow(data.panels) ? data.panels : {};
-  const kinds = rowsOf(isRow(panels.kinds) ? panels.kinds : null).map((row) => ({ ...row, name: typeof row.kindName === "string" ? row.kindName : null }));
-  found.push(...visitMovers("kinds", kinds.filter((row) => row.name), { name: website, change: siteChange }).slice(0, 1));
-  // Who visits: the group whose share of the visits moved most, in points; never a browser's, which is the market's.
-  // Handed as percentages already (`nowPercent`, `beforePercent`), so neither is turned round by `pageData.ts`.
-  const who = rowsOf(data.who).filter((row) => named(row) && row.kind !== "browser" && isNumber(row.nowPercent) && isNumber(row.beforePercent));
-  const whoBest = who.map((row) => ({ row, points: (row.nowPercent as number) - (row.beforePercent as number) })).sort((left, right) => Math.abs(right.points) - Math.abs(left.points))[0];
-  if (whoBest && Math.abs(whoBest.points) >= SHARE_POINTS) found.push(shareMovedOf("who", named(whoBest.row)!, "visits", whoBest.row.nowPercent as number, whoBest.row.beforePercent as number, 0.7 + Math.min(0.5, Math.abs(whoBest.points) / 10)));
-  return found;
-}
+
 
 // A channel's own screen ----------------------------------------------------
 

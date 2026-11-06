@@ -1,7 +1,7 @@
 import { bestFor, type ChannelFigures } from "../../channelPicks";
 import { OTHER_KIND } from "../analyticsChannel";
 import { isNumber, isRow, moved, partOf, rowsOf, type OwnFound, type Row } from "./shared";
-import { GROUP_LEAST, HOUSEKEEPING, RATE_APART, beside, changeOf, headline, leftApart, nameIn, namesOf, perHundred, perHundredApart, rowNameOf, sumOf, visitMovers, visitsBeforeOf } from "./googleAnalyticsShared";
+import { GROUP_LEAST, HOUSEKEEPING, type Names, RATE_APART, beside, changeOf, headline, leftApart, nameIn, namesOf, perHundred, perHundredApart, rowNameOf, sumOf, visitMovers, visitsBeforeOf } from "./googleAnalyticsShared";
 
 /**
  * Channels (channels-new-page-plan-2026-11-06.md, step 8). Every rule compares a figure with something and picks the biggest thing it
@@ -13,8 +13,10 @@ import { GROUP_LEAST, HOUSEKEEPING, RATE_APART, beside, changeOf, headline, left
 /** A website with fewer visits than this has too little for the usual bars: a channel of 20 visits still says something. */
 const CHANNELS_SMALL = 2_000;
 const CHANNEL_LEAST_SMALL = 20;
-/** One channel's loss explains the whole website's fall when it holds at least this share of it. */
-const FALL_EXPLAINS = 0.8;
+/** One channel's loss explains a fall when it holds at least this share of what all the channels lost between them. */
+const FALL_EXPLAINS = 0.6;
+/** Fewer visits lost than this is no story, whatever share of the fall it is. */
+const FALL_LEAST = 15;
 /** A channel's share of what's done this many points from its share of visits. */
 const SHARE_GAP = 4;
 /** A square bringing at least this share of its channel's visits, selling this far under its channel, with enough visits to trust. */
@@ -36,7 +38,7 @@ const NONE_DONE_RISE = 0.1;
 /** Columns that are no one part of the website: Not sorted yet, Other groups and No page recorded. */
 const NOT_ONE_PLACE = new Set([...HOUSEKEEPING, OTHER_KIND]);
 
-type Channel = { row: Row; name: string; visits: number; before: number | null; done: number; doneBefore: number | null };
+export type Channel = { row: Row; name: string; visits: number; before: number | null; done: number; doneBefore: number | null };
 type Square = { channel: string; key: string; column: string; visits: number; before: number | null; done: number };
 type Steps = { arrived: number; stayed: number; basket: number; checkout: number; bought: number };
 
@@ -55,21 +57,23 @@ function squaresOf(part: unknown, doneField: string): Square[] {
 }
 
 /**
- * A fall one channel explains: "Cross-network lost 1,917 visits, and the whole website lost 759". What it lost of the sales too, and
- * what all the others gained between them, for the reader to see the rest of the website held up.
+ * A fall one channel explains: "Cross-network lost 1,917 visits, and all the channels together lost 759". The list's own figures
+ * only, as Google counts each list on its own: what one channel lost is never set against the whole website's total
+ * (overview-new-page-plan-2026-11-06.md, step 1). What it lost of the sales too, and what all the others gained between them, for
+ * the reader to see the rest of the website held up. Overview and Channels both say it.
  */
-function fallOneExplains(channels: readonly Channel[], site: { name: string; visits: number; before: number | null; done: number; doneBefore: number | null }, others: string, sells: boolean): OwnFound[] {
+export function fallOneExplains(channels: readonly Channel[], names: Names, sells: boolean): OwnFound[] {
   const held = channels.flatMap((one) => (one.before === null ? [] : [{ ...one, was: one.before, lost: one.before - one.visits }]));
   const loser = held.filter((one) => one.lost > 0).sort((left, right) => right.lost - left.lost)[0];
-  if (!loser || site.before === null || site.before <= site.visits) return [];
-  const fell = site.before - site.visits;
-  if (loser.lost < fell * FALL_EXPLAINS) return [];
-  const found = [beside("channels:fall", loser.name, "visitsLost", loser.lost, fell, 1.4 + Math.min(0.4, loser.lost / fell / 10), site.name)];
-  // All the others together, up and down: the list's own, as Google counts each list on its own.
+  const fell = held.reduce((sum, one) => sum + one.lost, 0);
+  if (!loser || fell <= 0 || loser.lost < FALL_LEAST || loser.lost < fell * FALL_EXPLAINS) return [];
+  const every = nameIn(names, "allChannels", "All the channels together");
+  const found = [beside("channels:fall", loser.name, "visitsLost", loser.lost, fell, 1.4 + Math.min(0.4, loser.lost / fell / 10), every)];
   const gained = held.filter((one) => one.name !== loser.name).reduce((sum, one) => sum + one.visits - one.was, 0);
-  if (gained > 0) found.push(beside("channels:fallOthers", others, "visitsGained", gained, loser.lost, 1.05, loser.name));
-  if (loser.doneBefore !== null && site.doneBefore !== null && site.doneBefore > site.done && loser.doneBefore > loser.done) {
-    found.push(beside("channels:fallDone", loser.name, sells ? "boughtLost" : "eventsLost", loser.doneBefore - loser.done, site.doneBefore - site.done, 1.15, site.name));
+  if (gained > 0) found.push(beside("channels:fallOthers", nameIn(names, "otherChannels", "All the other channels"), "visitsGained", gained, loser.lost, 1.05, loser.name));
+  const doneFell = held.reduce((sum, one) => sum + ((one.doneBefore ?? one.done) - one.done), 0);
+  if (loser.doneBefore !== null && doneFell > 0 && loser.doneBefore > loser.done) {
+    found.push(beside("channels:fallDone", loser.name, sells ? "boughtLost" : "eventsLost", loser.doneBefore - loser.done, doneFell, 1.15, every));
   }
   return found;
 }
@@ -230,7 +234,7 @@ export function channelsFindings(data: Row): OwnFound[] {
   const top = channels.filter((one) => one.visits > 0).sort((left, right) => right.visits - left.visits)[0];
   if (top) found.push(partOf("channels:most", top.name, "visits", Math.min(top.visits, visits), visits, before === null ? 1.0 : 0.6));
 
-  found.push(...fallOneExplains(channels, { name: website, visits, before, done, doneBefore }, nameIn(names, "otherChannels", "All the other channels"), sells));
+  found.push(...fallOneExplains(channels, names, sells));
   found.push(...visitMovers("channels", rows, { name: website, change: changeOf(visits, before) }, "visits", least));
   const hiding = riseHidingFall(channels, squares, least);
   if (hiding) found.push(hiding);

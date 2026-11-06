@@ -24,19 +24,25 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
   // Google Analytics' chart pages, each with its own rules (ask-hakken-every-chart-page-plan-2026-11-03.md, section 5;
   // own/googleAnalytics.ts, 2026-11-04). Money never, on any of them (decision 1, Anthony, 2026-11-03: "Take money off").
   "googleAnalytics.overview": {
-    about: "the Google Analytics overview: the whole website's visits and conversions against the span before, where visits came from, where they landed, who visited and what counts",
+    about: "the Google Analytics overview: how many came, what came of it, and who brought the people who bought or got in touch. `kind` says which sort of website this is: a shop counts what was bought, and any other website counts its events",
     parts: [
-      "the boxes: visits, page views, people, engaged visits, time a visit, pages a visit, visits that left at once and conversions, each against the span before",
-      "visits a day",
-      "where visits came from: the busiest channels, with their visits, change and conversions",
-      "the page groups people landed on most",
-      "the landing pages with the most visits",
-      "conversions: what counts, and the key events not counted",
-      "who visited: the biggest group of each kind and how its share moved",
-      "the shop, on a website that sells: its best sellers by items bought",
-      "tracking health: the checks that need a look",
+      "the four boxes: visits; bought on a shop, or events on any other website, with how many for every 100 visits; the channel with the biggest change in visits; and the channel that does best for its visits, from 100 visits up",
+      "the website's figures each day, against the same days before where those are held: visits, page views, pages a visit, stayed, left straight away, and what the website counts",
+      "the squares: out of every 100 visits, or every 1,000 where the thing that counts is rare, how visits ended. On a shop: left straight away, looked around, added to basket, started checkout, bought. On any other website: left straight away, looked around, clicked to get in touch, sent a form",
+      "the bands: where 100 visits came from against where 100 sales or 100 events came from, by channel, Classification, device, or new and returning",
+      "top pages: the pages people started on, with their visits, how much that moved, the share who left straight away, and bought or events",
     ],
-    never: [...NO_MONEY, "Search Console's clicks: they are on Search Console's own pages, never this one", CONVERSIONS_AS_TIMES],
+    never: [
+      ...NO_MONEY,
+      "Search Console's clicks: they are on Search Console's own pages, never this one",
+      CONVERSIONS_AS_TIMES,
+      "one list's visits set against another's, or a list's sum against the whole website's total, as a difference to explain: Google counts each list on its own",
+      "on a service business (`kind` is service): sales, bought, baskets or checkout. It says events. On a shop it leads with what was bought, not conversions",
+      "a first step as the real thing: a click on Apply now is never called an application, and a click on a phone number is never called a call",
+      "a figure that stepped and stayed (`Pages a visit` or `Left straight away` from one day on, with visits flat) as a real fall or rise: that's the website's tracking changing, so the two sides aren't alike",
+      "an event done far more times than the visits that did it as more interest: it's a question for the tracking, as the same form may be counting twice",
+      "pages not sorted into a Classification yet: they are sorted for the reader",
+    ],
   },
   // Live's figures are asked of Google each minute and never saved: pressing writes a piece about right now against a
   // usual half hour last month, worked out from saved figures (decision 3, Anthony, 2026-11-03: "Yes, write one").

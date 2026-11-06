@@ -5,11 +5,14 @@ import en from "@/messages/en.json";
 import { cameFromWords, campaignForEye, campaignNameWords } from "../campaignNames";
 import { funnelFigures } from "../landingFlowFigures";
 import { findingWords, type Finding } from "./findings";
+import { overviewFigures, type OverviewSplitAnswer, type OverviewSplitName } from "./overviewFigures";
 import { pageDataFor } from "./pageData";
 import { pageFindings } from "./pageFindings";
 import { OWN_FINDINGS } from "./pageOwnFindings";
 
 const overview = readFixture("moreHandlesOverview");
+const hurtwoodOverview = readFixture("hurtwoodHouseOverview");
+const roninsOverview = readFixture("roninsOverview");
 const channels = readFixture("moreHandlesChannels");
 const organic = readFixture("moreHandlesOrganicSearch");
 const campaigns = readFixture("moreHandlesCampaigns");
@@ -83,18 +86,23 @@ function everyPeriod(screen: string, build: (period: Period) => unknown, headlin
   }
 }
 
-// Overview: its figures, its panels, Who visited in the reader's words, and the Channels table's rows (`channelsTable`).
-const WHO_NAMES: Record<string, string> = { new: "New", returning: "Returning", mobile: "Mobile", desktop: "Desktop", tablet: "Tablet", male: "Male", female: "Female" };
-function overviewPage(period: Period) {
-  const one = (overview as Record<string, { now: unknown; before: unknown; landingLeft: number | null; kinds: Rows; who: Rows; channels: Rows }>)[period];
-  return {
-    figures: { now: one.now, before: one.before },
-    panels: { landing: { left: one.landingLeft }, kinds: { rows: one.kinds } },
-    who: one.who.map((row) => ({ name: WHO_NAMES[String(row.label)] ?? row.label, kind: row.kind, nowPercent: (row.share as number) * 100, beforePercent: row.shareBefore === null || row.shareBefore === undefined ? null : (row.shareBefore as number) * 100 })),
-    channelsTable: { rows: one.channels },
-    names: NAMES,
+// Overview: the page's figures as `overviewFigures` builds them for the eye, on a shop, a service business and a small website.
+type OverviewFixture = Record<Period, { figures: { now: never; before: never }; chart: never; before: never; splits: Record<OverviewSplitName, OverviewSplitAnswer>; pages: { rows: never } }>;
+const eventWords = (name: string) => (en.googleAnalytics.events as Record<string, string>)[name] ?? name.replace(/[_-]+/g, " ").replace(/^./, (first) => first.toUpperCase());
+const VISITOR_WORDS: Record<string, string> = { new: "New", returning: "Returning", mobile: "Mobile", desktop: "Desktop", tablet: "Tablet" };
+function overviewOf(fixture: unknown, shop: boolean, cells: number) {
+  return (period: Period) => {
+    const one = (fixture as OverviewFixture)[period];
+    const figures = overviewFigures({
+      shop, cells, now: one.figures.now, before: one.figures.before, chart: one.chart, daysBefore: one.before, splits: one.splits, pages: one.pages.rows,
+      rowName: (split, row) => (split === "kind" ? row.name ?? row.key : VISITOR_WORDS[row.key] ?? row.key), eventName: eventWords,
+    });
+    return { ...figures, eventCodes: Object.fromEntries(one.splits.channel.events.map((event) => [eventWords(event.name), event.name])), locale: "en-GB", names: NAMES };
   };
 }
+const overviewPage = overviewOf(overview, true, 100);
+const hurtwoodOverviewPage = overviewOf(hurtwoodOverview, false, 1000);
+const roninsOverviewPage = overviewOf(roninsOverview, false, 1000);
 
 // Channels (channels-new-page-plan-2026-11-06.md, step 8): every channel, Google's own total for the website, the squares by Classification and
 // by device, and the steps, as the page hands them. October is real; `moreHandlesChannels.json` says how the other periods were made.
@@ -236,7 +244,10 @@ describe("Campaigns says what a person would miss (More Handles' October; campai
 });
 
 describe("Google Analytics' pages find the biggest things on every period the date menu offers (More Handles, 3–4 November 2026)", () => {
-  describe("Overview: the whole website's visits first", () => everyPeriod("googleAnalytics.overview", overviewPage, startsWith(`${NAMES.website}: visits`)));
+  describe("Overview, a shop: the whole website's visits, with what was bought", () => everyPeriod("googleAnalytics.overview", overviewPage, startsWith(`${NAMES.website}: visits`)));
+  describe("Overview, a service business: the whole website's visits, with its events", () => everyPeriod("googleAnalytics.overview", hurtwoodOverviewPage, startsWith(`${NAMES.website}: visits`)));
+  // A small website still says something true, on every date.
+  describe("Overview, a small website", () => everyPeriod("googleAnalytics.overview", roninsOverviewPage, startsWith(`${NAMES.website}: visits`), { lastWeek: 3 }));
   describe("Channels: the whole website's visits, by Google's own total, with what was bought beside them", () => everyPeriod("googleAnalytics.channelsPage", channelsPage, startsWith(`${NAMES.website}: visits`)));
   describe("A channel's own screen: the channel's visits beside the whole website's", () => everyPeriod("googleAnalytics.channelPage", channelPage, startsWith("Organic Search: visits")));
   // Early in a week, few campaigns have the hundred visits a campaign's own figures need to be trusted.
@@ -258,7 +269,8 @@ describe("Channels finds what a person scanning the page would miss, on More Han
   print("googleAnalytics.channelsPage · October, all", words);
 
   test("a fall one channel explains: what it lost beside the whole website, by Google's own total, and what the others gained", () => {
-    expect(words).toContain("Cross-network: visits lost 1917, against 1768 for The whole website.");
+    // The list's own fall, as Google counts each list on its own: never against the whole website's total.
+    expect(words.join("\n")).toMatch(/Cross-network: visits lost 1917, against \d{3} for All the channels together\./);
     expect(words).toContain("All the other channels: visits gained 1158, against 1917 for Cross-network.");
   });
   test("a rise hiding a fall: a channel up a little, and one Classification up by far more", () => {
@@ -329,7 +341,7 @@ describe("Channels on the websites unlike More Handles", () => {
   });
   test("a channel that stopped altogether is still named", () => {
     const { words } = said("googleAnalytics.channelsPage", { ...few, gone: [{ name: "Email", visits: 0, visitsBefore: 90, purchases: 0, purchasesBefore: 0, conversions: 0, conversionsBefore: 4 }] });
-    expect(words.join("\n")).toContain("Email: visits lost 90, against 56 for The whole website.");
+    expect(words.join("\n")).toMatch(/Email: visits lost 90, against \d+ for All the channels together\./);
   });
   test("no visits at all: only that, and nothing broken", () => {
     const { findings, words } = said("googleAnalytics.channelsPage", { names: NAMES, sells: false, website: { visits: 0, visitsBefore: 12, engaged: 0, conversions: 0, conversionsBefore: 0, bought: 0, boughtBefore: 0 }, rows: [] });

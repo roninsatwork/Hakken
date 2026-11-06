@@ -171,6 +171,9 @@ const COUNTS: Record<string, Measure> = {
   boughtLost: { words: "purchases lost", kind: "count", lessIsBetter: true },
   eventsLost: { words: "events lost", kind: "count", lessIsBetter: true },
   events: { words: "events", kind: "count" },
+  // Overview's own (own/googleAnalyticsOverview.ts): how many times a thing was done, and how many of every 100 visits added to a basket.
+  timesDone: { words: "times", kind: "count" },
+  addedPerHundred: { words: "visits that added to a basket, for every 100 visits", kind: "score" },
   viewsLost: { words: "views lost", kind: "count", lessIsBetter: true },
   viewsGained: { words: "views gained", kind: "count" },
   peopleInHalfHour: { words: "people in the last 30 minutes", kind: "count" },

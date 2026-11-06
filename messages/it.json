@@ -10916,7 +10916,9 @@
         "visitsGained": "visite guadagnate",
         "boughtLost": "acquisti persi",
         "eventsLost": "eventi persi",
-        "wentOnPercent": "è andato al passaggio successivo"
+        "wentOnPercent": "è andato al passaggio successivo",
+        "timesDone": "volte",
+        "addedPerHundred": "aggiunte al carrello ogni 100 visite"
       }
     },
     "sidePanel": {
@@ -18517,7 +18519,15 @@
       "events": "Eventi",
       "noPageRecorded": "Nessuna pagina registrata",
       "otherChannels": "Tutti gli altri canali",
-      "shareOfChannelVisits": "la sua quota delle visite di questo canale"
+      "shareOfChannelVisits": "la sua quota delle visite di questo canale",
+      "allChannels": "Tutti i canali insieme",
+      "pagesAVisit": "Pagine a visita",
+      "leftStraightAway": "Uscite subito",
+      "daysBefore": "i giorni prima",
+      "datesBefore": "le date precedenti",
+      "usualDay": "un giorno normale",
+      "visitsThatDidIt": "le visite che l'hanno fatto",
+      "addedToBasket": "Aggiunto al carrello"
     },
     "landingPage": {
       "back": "Pagine di destinazione",
