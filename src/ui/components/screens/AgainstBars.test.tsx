@@ -60,7 +60,6 @@ describe("AgainstBars (docs/plans/active/live-new-page-plan-2026-11-06.md)", () 
     expect(screen.getByText("In a usual half hour")).toBeTruthy();
   });
 
-  // Set on the element, as the theme's `* { transition-property }` in globals.css outranks a class (useReducedMotion.ts).
   it("moves its bars by a transition on the element, and stays still for anyone who asks for less motion", () => {
     const { container, unmount } = shown([row()]);
     expect((container.querySelector("[data-bar]") as HTMLElement).style.transition).toContain("width");

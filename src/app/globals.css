@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
 @theme {
+  /* Every transition-* class with no duration of its own, at the speed colours have always eased at. */
+  --default-transition-duration: 300ms;
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco;
 
@@ -161,11 +164,24 @@ button * {
     radial-gradient(circle at center, var(--radial-inner) 0%, var(--radial-outer) 100%);
 }
 
-/* Transitions for Theme Switching */
-* {
-  transition-property: background-color, border-color, color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
+/*
+ * Transitions for Theme Switching. In the base layer, so a part's own transition-* class outranks it: left outside any
+ * layer, as it was until 2026-11-06, it outranked every one of them and about 107 places in the app jumped instead of moving
+ * (docs/plans/active/movement-classes-note-2026-11-06.md). src/motion-classes-drift.test.ts holds it here.
+ */
+@layer base {
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+}
+
+/* Nothing eases for anyone who asks for less motion, classes and a part's own styles alike. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0s !important;
+  }
 }
 
 /* Unset transitions for high-performance elements if needed */

@@ -61,7 +61,6 @@ describe("MinuteBars (docs/plans/active/live-new-page-plan-2026-11-06.md)", () =
     expect(words.filter((word) => /^\d+$/.test(word ?? ""))).toEqual(["9", "1"]);
   });
 
-  // Set on the element, as the theme's `* { transition-property }` in globals.css outranks a class (useReducedMotion.ts).
   it("slides its bars by a transition on the element, and stays still for anyone who asks for less motion", () => {
     const { container, unmount } = render(<><MinuteBars bars={bars([1, 2])} name="People each minute" measure={measure} /><LiveDot /></>);
     expect((container.querySelector("g[data-minute]") as SVGGElement).style.transition).toContain("transform");

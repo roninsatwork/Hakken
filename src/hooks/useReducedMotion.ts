@@ -14,9 +14,9 @@ function subscribe(changed: () => void): () => void {
 const read = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(QUERY).matches;
 
 /**
- * Whether the reader has asked for less motion, for a part that sets its motion on the element. It has to set it there: the
- * theme's `* { transition-property }` in `globals.css` outranks every `transition-*` class, so a class moves nothing, and
- * `motion-reduce:` on one stops nothing (Live's bars, 2026-11-06: their tests read the class, and the bars jumped).
+ * Whether the reader has asked for less motion, for a part that sets its motion on the element and draws something different
+ * without it, as Live's `MinuteBars` and `AgainstBars` do. A `transition-*` class needs none of this: `motion-reduce:` and the rule
+ * in `globals.css` cover it.
  */
 export function useReducedMotion(): boolean {
   return useSyncExternalStore(subscribe, read, () => false);
