@@ -18,16 +18,18 @@ import { cn } from "@/src/ui/lib/utils";
  * figure the eye should land on first. `mark` goes before the label when the
  * figure is about one website — its `SiteMark` — as the competitor cards are.
  */
-export function Figure({ label, value, detail, href, framed = true, emphasis = false, mark }: {
+export function Figure({ label, value, detail, href, arrow = true, framed = true, emphasis = false, mark }: {
   label: string;
   value: ReactNode;
   detail?: ReactNode;
   href?: string;
+  /** Off where pressing filters the page rather than opening another (Tracking health; Anthony, 2026-11-06: no arrows on its boxes). */
+  arrow?: boolean;
   framed?: boolean;
   emphasis?: boolean;
   mark?: ReactNode;
 }) {
-  const title = href ? `${label} →` : label;
+  const title = href && arrow ? `${label} →` : label;
   const body = (
     <>
       {mark !== undefined ? (

@@ -111,15 +111,15 @@ export function HealthNew() {
   return <HealthOne checks={checks} notice="Most of your figures are right. 4 things are a bit out, and they're first in the list." />;
 }
 export function HealthOne({ checks = CHECKS, notice = "Most of your figures are right. 3 things are a bit out, and they're first in the list." }: { checks?: Check[]; notice?: string }) {
-  const box = (area: Area, value: string, detail: ReactNode) => <div data-press={area} style={{ display: "contents" }}><Figure label={AREA_WORD[area]} value={value} detail={detail} href="#" /></div>;
+  const box = (area: Area, value: string, detail: ReactNode) => <div data-press={area} style={{ display: "contents" }}><Figure label={AREA_WORD[area]} value={value} detail={detail} href="#" arrow={false} /></div>;
   return page(<>
     {healthHeader}
     <Notice>{notice}</Notice>
     <FigureRow columns={4}>
-      {box("visits", "All good", <StatusLabel tone="success">Counted every day</StatusLabel>)}
-      {box("came", "94 in 100", <StatusLabel tone="warning">Google doesn't know the rest</StatusLabel>)}
-      {box("conversions", "7 of 13", <StatusLabel tone="warning">The other 6 never happen</StatusLabel>)}
-      {box("pages", "760", <StatusLabel tone="warning">Counted too often</StatusLabel>)}
+      {box("visits", "All good", <span className="text-secondary">Counted every day</span>)}
+      {box("came", "94 in 100", <span className="text-secondary">Google doesn't know the rest</span>)}
+      {box("conversions", "7 of 13", <span className="text-secondary">The other 6 never happen</span>)}
+      {box("pages", "760", <span className="text-secondary">Counted too often</span>)}
     </FigureRow>
     <ListTable<Check>
       noun="checks"

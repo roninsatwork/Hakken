@@ -157,8 +157,10 @@ function HealthNotice({ checks }: { checks: readonly Check[] }) {
 function HealthBoxes({ checks, status, area, hrefFor }: { checks: readonly Check[]; status: AnalyticsStatus; area: HealthArea | "all"; hrefFor: (area: HealthArea) => string }) {
   const t = useTranslations("googleAnalytics.health");
   const find = (id: string) => checks.find((check) => check.check === id);
-  const good = (words: string) => <StatusLabel tone="success" wrap>{words}</StatusLabel>;
-  const off = (words: string) => <StatusLabel tone="warning" wrap>{words}</StatusLabel>;
+  // Plain words under each box (Anthony, 2026-11-06: no icons or arrows on these boxes).
+  const said = (words: string) => <span className="text-secondary">{words}</span>;
+  const good = said;
+  const off = said;
 
   const stopped = find("TRACKING_STOPPED");
   const fell = find("SUDDEN_FALL");
@@ -187,7 +189,7 @@ function HealthBoxes({ checks, status, area, hrefFor }: { checks: readonly Check
   const boxes = { visits, came, events, pages };
   return (
     <FigureRow columns={4}>
-      {HEALTH_AREAS.map((one) => <Figure key={one} label={t(`areas.${one}`)} value={boxes[one].value} detail={boxes[one].detail} href={hrefFor(one)} emphasis={area === one} />)}
+      {HEALTH_AREAS.map((one) => <Figure key={one} label={t(`areas.${one}`)} value={boxes[one].value} detail={boxes[one].detail} href={hrefFor(one)} arrow={false} emphasis={area === one} />)}
     </FigureRow>
   );
 }

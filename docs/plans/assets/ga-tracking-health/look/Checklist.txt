@@ -4,10 +4,10 @@
 page-header: Tracking health
 notice (info)
 figures
-  figure: Visits →
-  figure: Where visitors came from →
-  figure: Events →
-  figure: Pages →
+  figure: Visits
+  figure: Where visitors came from
+  figure: Events
+  figure: Pages
 search: Find a check
 filter: Result
 filter: Changes
