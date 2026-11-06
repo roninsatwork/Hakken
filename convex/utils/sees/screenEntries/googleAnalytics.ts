@@ -52,7 +52,7 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
     never: [
       ...NO_MONEY,
       "why it is busy or quiet: the figures say what is happening now, never its cause (an advert, a sale, a post)",
-      "a usual half hour as an exact count: it is last month's visitors spread evenly over every half hour, night and day",
+      "a usual half hour as an exact count: people and views are last month's visitors spread evenly over every half hour, night and day, and conversions are last month's at this hour on this day of the week",
     ],
   },
   "googleAnalytics.channelsPage": {

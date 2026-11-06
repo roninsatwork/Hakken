@@ -743,7 +743,8 @@ describe("Live (GA34)", () => {
     });
     // One device, and the events list.
     const phones = await user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, { siteId, device: "mobile", list: "events" });
-    expect(phones).toMatchObject({ ok: true, now: 1, people: 2, rows: [{ name: "generate_lead", people: 1, times: 1 }], countries: [{ name: "GB", people: 2 }] });
+    // An event has its times and never its people: Google refuses those live, and the whole minute failed on it (2026-11-06).
+    expect(phones).toMatchObject({ ok: true, now: 1, people: 2, rows: [{ name: "generate_lead", people: 0, times: 1 }], countries: [{ name: "GB", people: 2 }] });
     // Nothing is kept: no held list, no row of any kind.
     expect(await kept()).toBe(before);
   });
@@ -962,6 +963,9 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
       conversionsInTheLast30Minutes: { count: 1, eventName: "generate_lead", minutesAgo: 12 },
       link: `/app/analytics/${siteId}/live`,
     });
+    // An event is told in times, never as nobody.
+    const events = fields(await t.action(internal.assistantAnalyticsReads.googleAnalyticsLiveInternal, { companyId, website: "acme-shop.test", list: "events" }));
+    expect(events.events).toEqual([{ event: "generate_lead", times: 1 }]);
     // Nothing of Live kept: the only lists held are the night's funnels, kept by the collection (ga-conversions-visitors-plan.md CV4).
     expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsLive").collect()).filter((row) => !row.ask.startsWith("funnel:")).length)).toBe(0);
   });

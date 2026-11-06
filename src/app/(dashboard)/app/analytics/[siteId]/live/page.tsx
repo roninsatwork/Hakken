@@ -165,7 +165,9 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
   const bar = [t("lastThirty"), tf(`devices.${device}`).toLowerCase(), list === "pages" ? t("byTitle") : null].filter(Boolean).join(" · ");
   // What the eye reads: right now, the list on screen by its name, and a usual half hour last month worked out from the
   // figures Hakken keeps, never a second ask of Google (decision 3, Anthony, 2026-11-03: "Yes, write one").
-  const usual = useQuery(api.googleAnalyticsLiveUsual.analyticsLiveUsual, { siteId: args.siteId, device: args.device });
+  // The hour Google was last asked, so conversions can be set against this day of the week and this hour.
+  const hour = answer ? Math.floor(answer.askedAt / 3_600_000) * 3_600_000 : null;
+  const usual = useQuery(api.googleAnalyticsLiveUsual.analyticsLiveUsual, { siteId: args.siteId, device: args.device, ...(hour !== null ? { at: hour } : {}) });
   const eyeNames = useEyeNames();
   const seesData = useMemo(() => {
     if (!answer) return answer;
@@ -258,7 +260,7 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
                 rows={sorted}
                 columns={[
                   { header: t(`columns.${list}`), value: (row) => row.label },
-                  { header: t("people"), value: (row) => row.people },
+                  ...(list === "events" ? [] : [{ header: t("people"), value: (row: Row) => row.people }]),
                   ...(list === "pages" ? [{ header: t("views"), value: (row: Row) => row.views }] : []),
                   ...(list === "events" ? [{ header: t("times"), value: (row: Row) => row.times }] : []),
                 ]}
@@ -274,7 +276,8 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
         columns={[
           { key: "name", header: t(`columns.${list}`), sortable: true, className: CUT_COLUMN.first, cell: (row) => <span className="block truncate text-[13px] text-foreground" title={row.label}>{row.label}</span> },
           ...(list === "events" ? [{ key: "times", header: t("times"), align: "right" as const, sortable: true, cell: (row: Row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.times)}</span> }] : []),
-          { key: "people", header: t("people"), align: "right" as const, sortable: true, cell: (row: Row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.people)}</span> },
+          // Google's live figures give an event its times, never its people.
+          ...(list === "events" ? [] : [{ key: "people", header: t("people"), align: "right" as const, sortable: true, cell: (row: Row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.people)}</span> }]),
           ...(list === "pages" ? [{ key: "views", header: t("views"), align: "right" as const, sortable: true, cell: (row: Row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.views)}</span> }] : []),
         ]}
       />

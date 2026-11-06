@@ -270,6 +270,14 @@ describe("Live: right now against a usual half hour last month, from saved figur
     expect(words.length).toBeGreaterThanOrEqual(2);
     expectClean(words);
   });
+  test("conversions are set against this time of the week where the hours are kept, as an even spread reads too low by day", () => {
+    const { words } = said("googleAnalytics.live", { ...live.moments.busy, usual: { ...live.usual, conversionsThisTime: 41.5 }, names: NAMES });
+    expect(words.join("\n")).toContain(NAMES.usualThisTime);
+    expect(words.join("\n")).toContain("41.5");
+    expectClean(words);
+    const { words: flat } = said("googleAnalytics.live", { ...live.moments.busy, usual: { ...live.usual, conversionsThisTime: null }, names: NAMES });
+    expect(flat.join("\n")).not.toContain(NAMES.usualThisTime);
+  });
   test("nothing without a usual half hour: never a guess", () => {
     expect(said("googleAnalytics.live", { ...live.moments.busy, names: NAMES }).findings).toEqual([]);
   });

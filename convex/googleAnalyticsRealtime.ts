@@ -89,7 +89,8 @@ export async function askLiveFigures(
   // Every country: no home country here, unlike every other screen.
   const base = args.device ? { device: args.device } : {};
   const chosen: RealtimeAsk | null = args.list === "devices" ? { ...base, dimensions: ["deviceCategory"], metrics: ["activeUsers"] }
-    : args.list === "events" ? { ...base, dimensions: ["eventName"], metrics: ["activeUsers", "eventCount"] } : null;
+    // Times only: Google refuses people split by event in its live figures, and that failed the whole minute (2026-11-06).
+    : args.list === "events" ? { ...base, dimensions: ["eventName"], metrics: ["eventCount"] } : null;
   const asks: Record<string, RealtimeAsk> = {
     now: { ...base, dimensions: [], metrics: ["activeUsers"], minutes: { from: 4, to: 0 } },
     last: { ...base, dimensions: [], metrics: ["activeUsers", "screenPageViews"] },
@@ -108,8 +109,8 @@ export async function askLiveFigures(
     rowsOf[key] = answer.rows;
   }
   const total = (key: string, at = 0) => rowsOf[key]?.[0]?.values[at] ?? 0;
-  const listed = (key: string, people: number, views: number | null, times: number | null): LiveRow[] => (rowsOf[key] ?? [])
-    .map((row) => ({ name: row.keys[0] ?? "", people: row.values[people] ?? 0, views: views === null ? 0 : row.values[views] ?? 0, times: times === null ? 0 : row.values[times] ?? 0 }))
+  const listed = (key: string, people: number | null, views: number | null, times: number | null): LiveRow[] => (rowsOf[key] ?? [])
+    .map((row) => ({ name: row.keys[0] ?? "", people: people === null ? 0 : row.values[people] ?? 0, views: views === null ? 0 : row.values[views] ?? 0, times: times === null ? 0 : row.values[times] ?? 0 }))
     .sort((left, right) => right.people - left.people || right.views - left.views || right.times - left.times);
   const minutes = Array.from({ length: MINUTES }, () => 0);
   for (const row of rowsOf.minutes ?? []) {
@@ -120,16 +121,16 @@ export async function askLiveFigures(
   let count = 0;
   let newest: { eventName: string; minutesAgo: number } | null = null;
   for (const row of rowsOf.conversions ?? []) {
-    const happened = row.values[0] ?? 0;
-    if (happened <= 0) continue;
-    count += happened;
+    const times = row.values[0] ?? 0;
+    if (times <= 0) continue;
+    count += times;
     const ago = Number(row.keys[1]);
     if (!newest || ago < newest.minutesAgo) newest = { eventName: row.keys[0] ?? "", minutesAgo: ago };
   }
   const pages = listed("pages", 0, 1, null);
   const places = listed("places", 0, null, null);
   const countries = listed("countries", 0, null, null);
-  const rows = args.list === "pages" ? pages : args.list === "places" ? places : listed("chosen", 0, null, args.list === "events" ? 1 : null);
+  const rows = args.list === "pages" ? pages : args.list === "places" ? places : args.list === "events" ? listed("chosen", null, null, 0) : listed("chosen", 0, null, null);
   const now = total("now");
   const people = total("last");
   return {

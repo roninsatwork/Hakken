@@ -688,9 +688,12 @@ function liveFindings(data: Row): OwnFound[] {
     found.push(beside("views", now, "views", data.views, usual.views, 0.8 + Math.min(0.5, Math.abs(Math.log(ratio))), half));
   }
   const conversions = isRow(data.conversions) && isNumber(data.conversions.count) ? (data.conversions.count as number) : null;
-  if (conversions !== null && isNumber(usual.conversions) && usual.conversions >= 1) {
-    const ratio = Math.max(0.01, conversions / usual.conversions);
-    found.push(beside("conversions", now, "conversions", conversions, usual.conversions, 0.7 + Math.min(0.5, Math.abs(Math.log(ratio))), half));
+  // Set against this time of the week where the hours are kept: an even spread over night and day reads too low by day.
+  const thisTime = isNumber(usual.conversionsThisTime) && usual.conversionsThisTime >= 1 ? usual.conversionsThisTime : null;
+  const usualConversions = thisTime ?? (isNumber(usual.conversions) && usual.conversions >= 1 ? usual.conversions : null);
+  if (conversions !== null && usualConversions !== null) {
+    const ratio = Math.max(0.01, conversions / usualConversions);
+    found.push(beside("conversions", now, "conversions", conversions, usualConversions, 0.7 + Math.min(0.5, Math.abs(Math.log(ratio))), thisTime !== null ? nameIn(names, "usualThisTime", "A usual half hour at this time of the week") : half));
   }
   // The list on screen is pages: the page holding far more of the people now than of last month's views.
   if (data.list === "pages") {

@@ -336,6 +336,10 @@ export function fakeGoogle(visits: Visit[]): Google {
         return filter.filter!.inListFilter ? filter.filter!.inListFilter.values.map((one) => one.toLowerCase()).includes(value) : value === (filter.filter!.stringFilter?.value ?? "").toLowerCase();
       };
       const names = ask.dimensions.map(({ name }) => name);
+      // As the real one does (2026-11-06): live figures won't split people by event, and the whole ask is refused.
+      if (names.includes("eventName") && ask.metrics.some(({ name }) => name === "activeUsers")) {
+        return Response.json({ error: { code: 400, message: "Field activeUsers and eventName are incompatible.", status: "INVALID_ARGUMENT" } }, { status: 400 });
+      }
       const byEvent = names.includes("eventName") || ask.metrics.some(({ name }) => name === "eventCount");
       const sums = new Map<string, { keys: string[]; values: number[] }>();
       for (const person of google.live ?? []) {
