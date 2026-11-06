@@ -350,6 +350,7 @@ describe("a whole run, with the page reader, the web and the model stood in for"
       // Only what the website counts.
       ["scroll", undefined, undefined],
     ]);
+    await admin.mutation(api.users.impersonateCompany, { companyId });
     expect(await admin.query(api.googleAnalyticsEventNames.analyticsEventNames, { siteId: own, language: "en" })).toEqual({ form_submit_prospectus_form: "Asked for a prospectus", click_apply_now: "Clicked Apply now" });
   });
 

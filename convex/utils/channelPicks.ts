@@ -31,8 +31,13 @@ export function biggestChange(rows: readonly ChannelFigures[]): { key: string; c
   return best ? { key: best.key, change: best.change } : null;
 }
 
-/** The channel with the most wins for every 100 visits, among those with enough visits to trust. None if nothing was won. */
+/**
+ * The channel with the most wins for every 100 visits, among those with enough visits to trust. None if nothing was won, or if only
+ * one channel has enough visits: with nothing to beat it isn't the best of anything (Ronins, 6 November: Organic Search "best" at 0.5,
+ * where the whole website gets 2.0).
+ */
 export function bestFor(rows: readonly ChannelFigures[], floor = BEST_FOR_FLOOR): { key: string; per100: number } | null {
+  if (rows.filter((row) => row.visits >= floor).length < 2) return null;
   let best: { key: string; per100: number; visits: number } | null = null;
   for (const row of rows) {
     if (row.visits < floor || row.wins <= 0) continue;

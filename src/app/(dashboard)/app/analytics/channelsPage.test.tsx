@@ -186,8 +186,12 @@ describe("the four boxes", () => {
   });
 
   it("Sells best never names a channel under 100 visits, however well it sells", () => {
-    open("", { rows: [{ ...EMAIL, visits: 9, purchases: 5 }, PAID] });
+    open("", { rows: [{ ...EMAIL, visits: 9, purchases: 5 }, PAID, { ...PAID, key: "Direct", label: "Direct", purchases: 1 }] });
     expect(boxOf("Sells best")).toContain("Paid Search");
+    // One channel past the floor has nothing to beat, so it isn't the best of anything.
+    cleanup();
+    open("", { rows: [{ ...EMAIL, visits: 9, purchases: 5 }, PAID] });
+    expect(boxOf("Sells best")).not.toContain("Paid Search");
   });
 
   it("says Events on a website with nothing bought, and Best for events by the same rule", () => {

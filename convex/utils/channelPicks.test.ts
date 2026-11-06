@@ -29,7 +29,9 @@ describe("bestFor", () => {
   });
 
   it("leaves out a channel under 100 visits, as Email would win with 1 sale from 9 visits", () => {
-    expect(bestFor([row("Email", 9, null, 1), row("Direct", 1000, null, 10)])?.key).toBe("Direct");
+    expect(bestFor([row("Email", 9, null, 1), row("Direct", 1000, null, 10), row("Paid Search", 200, null, 1)])?.key).toBe("Direct");
+    // One channel past the floor has nothing to beat, so it's the best of nothing.
+    expect(bestFor([row("Email", 9, null, 1), row("Direct", 1000, null, 10)])).toBeNull();
     expect(bestFor([row("Email", 9, null, 1)])).toBeNull();
   });
 
