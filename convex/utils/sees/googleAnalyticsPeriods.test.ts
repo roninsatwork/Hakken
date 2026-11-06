@@ -26,7 +26,7 @@ const live = readFixture("moreHandlesLive");
  * figures are built as the page builds them (its `AnalyticsSees` data and its `useSeesPart` parts), cut as the eye cuts
  * them (`pageDataFor`), then read by its rules. A page whose rules go quiet on one period, or speak of money, a browser's
  * market or Hakken's own housekeeping, fails here before anyone opens the eye. Visits is in `pageFindingsPeriods.test.ts`.
- * Live has no date menu: it is held to a busy and a quiet half hour, written by hand in the shape of Google's live answer
+ * Live has no date menu: it is held to a busy, a quiet and an empty half hour, written by hand in the shape of Google's live answer, and to one real one (10:15 on 6 November 2026)
  * beside the usual half hour worked out from More Handles' saved October.
  */
 
@@ -253,21 +253,57 @@ describe("All pages says when its ups and downs may not be real (More Handles' t
 
 describe("Live: right now against a usual half hour last month, from saved figures (More Handles' October)", () => {
   const page = (moment: keyof typeof live.moments) => ({ ...live.moments[moment], usual: live.usual, names: NAMES });
-  test("a busy half hour: more people than usual, and a page holding far more of them than of last month's views", () => {
+  test("a busy half hour: more people than usual, and a page holding far more of the views than of last month's", () => {
     const { findings, words } = said("googleAnalytics.live", page("busy"));
     print(`googleAnalytics.live · busy`, words);
     expect(findings[0]?.kind, words.join("\n")).toBe("rowAbove");
     expect(words[0], words.join("\n")).toContain(`${NAMES.rightNow}: people in the last 30 minutes 64`);
-    expect(findings.some((one) => one.id.startsWith("rowAbove:pages:peopleSharePercent")), words.join("\n")).toBe(true);
+    expect(findings.some((one) => one.id.startsWith("rowAbove:pages:viewsSharePercent")), words.join("\n")).toBe(true);
     expect(words.length).toBeGreaterThanOrEqual(3);
     expectClean(words);
   });
-  test("a quiet half hour: fewer people than usual, and no page said to be busy that is busy every day", () => {
+  test("a quiet half hour: fewer people than usual, and no page said to be busy on a handful of views", () => {
     const { findings, words } = said("googleAnalytics.live", page("quiet"));
     print(`googleAnalytics.live · quiet`, words);
     expect(findings[0]?.kind, words.join("\n")).toBe("rowBelow");
     expect(findings.some((one) => one.id.startsWith("rowAbove:pages")), words.join("\n")).toBe(false);
     expect(words.length).toBeGreaterThanOrEqual(2);
+    expectClean(words);
+  });
+  test("a real half hour, 10:15 on Friday 6 November: finds what a person scanning the page would miss", () => {
+    const { findings, words } = said("googleAnalytics.live", page("real"));
+    print(`googleAnalytics.live · real`, words);
+    const all = words.join("\n");
+    // Conversions against this time of the week, where the even spread says 18.
+    expect(all).toContain(NAMES.usualThisTime);
+    expect(all).toContain("23.4");
+    // More people but fewer looks: both are said.
+    expect(findings.some((one) => one.id.startsWith("rowAbove:now:peopleInHalfHour")), all).toBe(true);
+    expect(findings.some((one) => one.id.startsWith("rowBelow:views:views")), all).toBe(true);
+    // The home page holds 12% of views now, against 6.3% last month.
+    expect(findings.some((one) => one.id.startsWith("rowAbove:pages:viewsSharePercent")), all).toBe(true);
+    expect(all).toContain("6.3");
+    // The busiest minute against an average one.
+    expect(findings.some((one) => one.id.startsWith("rowAbove:minutes:peopleInAMinute")), all).toBe(true);
+    expect(words.length).toBeGreaterThanOrEqual(4);
+    expectClean(words);
+  });
+  test("one person's repeated search is never a page above its share", () => {
+    const search = { name: "Search results for: 'black handles'", people: 1, views: 40, times: 0 };
+    const { findings, words } = said("googleAnalytics.live", { ...live.moments.real, pages: [search], usual: live.usual, names: NAMES });
+    expect(findings.some((one) => one.id.includes("Search results")), words.join("\n")).toBe(false);
+  });
+  test("nobody here: nothing made up, and nothing broken", () => {
+    const { findings, words } = said("googleAnalytics.live", page("nobody"));
+    print(`googleAnalytics.live · nobody`, words);
+    expect(findings.some((one) => /:(pages|minutes|kinds):/.test(one.id)), words.join("\n")).toBe(false);
+    expectClean(words);
+  });
+  test("people and views are set against this time of the week once the hours are saved", () => {
+    const { words } = said("googleAnalytics.live", { ...live.moments.real, usual: { ...live.usual, peopleThisTime: 41, viewsThisTime: 150 }, names: NAMES });
+    const all = words.join("\n");
+    expect(all).toContain("41");
+    expect(all).toContain("150");
     expectClean(words);
   });
   test("conversions are set against this time of the week where the hours are kept, as an even spread reads too low by day", () => {
@@ -277,6 +313,33 @@ describe("Live: right now against a usual half hour last month, from saved figur
     expectClean(words);
     const { words: flat } = said("googleAnalytics.live", { ...live.moments.busy, usual: { ...live.usual, conversionsThisTime: null }, names: NAMES });
     expect(flat.join("\n")).not.toContain(NAMES.usualThisTime);
+  });
+  test("the Classifications furthest from their share of views last month are said, either way, and Not sorted never is", () => {
+    // The real moment, 11:52 on 6 November: Cupboard Handles usually has a fifth of the views and has hardly any, on few views.
+    const kinds = [{ kind: "shop", name: "Search and basket", views: 39, pages: 11 }, { kind: "handles", name: "Handles", views: 19, pages: 8 }, { kind: "cupboard", name: "Cupboard Handles", views: 5, pages: 3 }, { kind: "NOT_SORTED", name: "Not sorted yet", views: 6, pages: 4 }];
+    const usualKinds = [
+      { kind: "shop", name: "Search and basket", viewsShare: 0.2 }, { kind: "handles", name: "Handles", viewsShare: 0.126 }, { kind: "cupboard", name: "Cupboard Handles", viewsShare: 0.207 },
+      // Usually a tenth of the views and none now: still news.
+      { kind: "locks", name: "Locks", viewsShare: 0.1 }, { kind: "NOT_SORTED", name: "Not sorted yet", viewsShare: 0.3 },
+    ];
+    const { findings, words } = said("googleAnalytics.live", { ...live.moments.real, views: 123, kinds, usual: { ...live.usual, kinds: usualKinds }, names: NAMES });
+    const ids = findings.map((one) => one.id).filter((id) => id.includes(":kinds:"));
+    expect(ids, words.join("\n")).toEqual(["rowBelow:kinds:viewsSharePercent:Cupboard Handles", "rowAbove:kinds:viewsSharePercent:Search and basket"]);
+    expect(findings.some((one) => one.id.includes("Not sorted")), words.join("\n")).toBe(false);
+    expectClean(words);
+    // Locks, when it's the furthest.
+    const { findings: gone } = said("googleAnalytics.live", { ...live.moments.real, views: 123, kinds: [], usual: { ...live.usual, kinds: [{ kind: "locks", name: "Locks", viewsShare: 0.1 }] }, names: NAMES });
+    expect(gone.some((one) => one.id === "rowBelow:kinds:viewsSharePercent:Locks")).toBe(true);
+    // Too small either way: a group with few views now that would usually have few too.
+    const { findings: small } = said("googleAnalytics.live", { ...live.moments.real, views: 30, kinds: [{ kind: "blog", name: "Blog", views: 4, pages: 1 }], usual: { ...live.usual, kinds: [{ kind: "blog", name: "Blog", viewsShare: 0.01 }] }, names: NAMES });
+    expect(small.some((one) => one.id.includes(":kinds:"))).toBe(false);
+  });
+  test("a device far from its share of people is said with the Devices list on screen, by the reader's word for it", () => {
+    const rows = [{ name: "Computer", device: "desktop", people: 19, views: 0, times: 0 }, { name: "Phone", device: "mobile", people: 7, views: 0, times: 0 }];
+    const usual = { ...live.usual, devices: [{ device: "desktop", peopleShare: 0.45 }, { device: "mobile", peopleShare: 0.5 }] };
+    const { findings, words } = said("googleAnalytics.live", { ...live.moments.real, list: "devices", rows, usual, names: NAMES });
+    expect(findings.some((one) => one.id.startsWith("rowAbove:devices:peopleSharePercent:Computer") || one.id.startsWith("rowBelow:devices:peopleSharePercent:Phone")), words.join("\n")).toBe(true);
+    expectClean(words);
   });
   test("nothing without a usual half hour: never a guess", () => {
     expect(said("googleAnalytics.live", { ...live.moments.busy, names: NAMES }).findings).toEqual([]);

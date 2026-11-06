@@ -162,6 +162,9 @@ export const ANALYTICS_LISTS = [
   // Each counted event by the day of the week and the hour it happened (conversions-and-agents-build-plan-2026-10-30.md,
   // phase 3, "When people convert"): a period list like `event`, the counted events only.
   "eventHour",
+  // The website's people and views by the day of the week and the hour (live-new-page-plan-2026-11-06.md, question 1): last
+  // month's only, for Live's usual half hour at this time of the week (`hoursDue`, `googleAnalyticsJobs.ts`).
+  "totalHour",
   "campaign", "adKeyword",
   "visitorType", "browser", "system", "age", "gender", "interest", "product",
   "firstChannel", "landingChannel",
@@ -182,6 +185,7 @@ export const analyticsListValidator = v.union(
   v.literal("series"),
   v.literal("event"),
   v.literal("eventHour"),
+  v.literal("totalHour"),
   v.literal("campaign"),
   v.literal("adKeyword"),
   v.literal("visitorType"),

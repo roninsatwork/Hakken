@@ -7,9 +7,11 @@ import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { askRealtime, openSession } from "./googleAnalyticsCollect";
 import type { RealtimeAsk } from "./googleAnalyticsApi";
+import { isUnknownValue } from "./utils/analyticsUnknown";
 import { seenValidator } from "./utils/hakkenSees";
 import { liveSees } from "./utils/sees/analyticsLive";
 import { OPENING_PERIOD } from "./utils/calendarPeriods";
+import { liveKindValidator, liveKinds, type LivePage } from "./utils/liveFigures";
 
 /**
  * Live (docs/plans/active/google-analytics-plan.md GA34, §18.2 board 14,
@@ -20,7 +22,9 @@ import { OPENING_PERIOD } from "./utils/calendarPeriods";
  * counts, as in Google's own Realtime (Anthony, 2026-10-13: it said nobody
  * while Google's said 4, all abroad), split by country among the rest; one
  * device when chosen. Google keeps no website address live, so the figures are
- * the whole property's. Only the caller's own website.
+ * the whole property's, and a page's address and Classification come from what
+ * Hakken has saved under its title (`googleAnalyticsLivePages.ts`). Only the
+ * caller's own website.
  */
 
 /** The lists the table switches between. */
@@ -29,8 +33,20 @@ export const LIVE_LISTS = ["pages", "places", "devices", "events"] as const;
 /** Minutes Google's live figures reach back. */
 const MINUTES = 30;
 
-const rowValidator = v.object({ name: v.string(), people: v.number(), views: v.number(), times: v.number() });
+const rowValidator = v.object({
+  name: v.string(),
+  people: v.number(),
+  views: v.number(),
+  times: v.number(),
+  /** A page's saved address, found by its title; null with none saved. Pages only. */
+  address: v.optional(v.union(v.string(), v.null())),
+});
 type LiveRow = typeof rowValidator.type;
+
+/** Titles looked up for one answer: far past what a website has open in 30 minutes, and well under Convex's own limit on an array. */
+const TITLES_LOOKED_UP = 1000;
+/** Pages handed to the eye and Ask Hakken. The table has them all. */
+const PAGES_HANDED_ON = 50;
 
 const problemValidator = v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_BUSY"), v.literal("GOOGLE_REFUSED"));
 
@@ -53,6 +69,14 @@ const answerValidator = v.union(
     countries: v.array(rowValidator),
     /** The list chosen; pages by title, as Google's live figures name them. */
     rows: v.array(rowValidator),
+    /** The pages with the most views, whichever list is chosen, for the eye and Ask Hakken. */
+    pages: v.array(rowValidator),
+    /** The page with the most people, whichever list is chosen; null with no page named. */
+    busiestPage: v.union(v.null(), rowValidator),
+    /** Google's pages added up by the website's Classifications: the views in the last 30 minutes. */
+    kinds: v.array(liveKindValidator),
+    /** False while the website has no Classifications: there is nothing to add the views up by. */
+    sorted: v.boolean(),
     seen: seenValidator,
   }),
 );
@@ -127,7 +151,13 @@ export async function askLiveFigures(
     const ago = Number(row.keys[1]);
     if (!newest || ago < newest.minutesAgo) newest = { eventName: row.keys[0] ?? "", minutesAgo: ago };
   }
-  const pages = listed("pages", 0, 1, null);
+  const asked = listed("pages", 0, 1, null);
+  const saved: { sorted: boolean; pages: LivePage[] } = await ctx.runQuery(internal.googleAnalyticsLivePages.livePagesOf, {
+    holdId: found.target.companyWebsiteId,
+    titles: asked.slice(0, TITLES_LOOKED_UP).map((row) => row.name),
+  });
+  const addressOf = new Map(saved.pages.map((page) => [page.title, page.address]));
+  const pages = asked.map((row) => ({ ...row, address: addressOf.get(row.name) ?? null }));
   const places = listed("places", 0, null, null);
   const countries = listed("countries", 0, null, null);
   const rows = args.list === "pages" ? pages : args.list === "places" ? places : args.list === "events" ? listed("chosen", null, null, 0) : listed("chosen", 0, null, null);
@@ -144,6 +174,10 @@ export async function askLiveFigures(
     places,
     countries,
     rows,
+    pages: [...pages].sort((left, right) => right.views - left.views).slice(0, PAGES_HANDED_ON),
+    busiestPage: pages.find((row) => !isUnknownValue(row.name)) ?? null,
+    kinds: liveKinds(pages, saved.pages),
+    sorted: saved.sorted,
     seen: liveSees({ now, people, topPage: pages[0] ? { title: pages[0].name, people: pages[0].people } : null, conversion: newest }),
   };
 }

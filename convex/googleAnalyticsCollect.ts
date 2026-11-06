@@ -28,7 +28,7 @@ import {
   SHOP_STEPS,
   fingerprint,
   groupKeys,
-  isEventList,
+  isEventList, isPlainList,
   isItemList,
   listJoiner,
   packList,
@@ -289,7 +289,7 @@ export async function askList(
   };
   const metrics = also.visitsOnly ? MAIN_METRICS.slice(0, 1) : isEventList(list) ? EVENT_LIST_METRICS : isItemList(list) ? ITEM_METRICS : MAIN_METRICS;
   // Sales asked apart only where they happen on another address: a booking page's list asks nothing more.
-  const salesApart = wide && target.salesElsewhere && !isEventList(list) && !isItemList(list);
+  const salesApart = wide && target.salesElsewhere && !isEventList(list) && !isItemList(list) && !isPlainList(list);
   // Each answer joined as it arrives, and a page list trimmed while it is read (BR2, BR3).
   const joined = listJoiner(list, lead, new Set(target.perVisit), { salesApart });
   const due = trimDue(also.hold);
@@ -323,7 +323,7 @@ export async function askList(
   }
   let events: ({ ok: true } & Report) | null = null;
   // An event list counts every event itself, and a product list cannot be split by event: no key events to join (§18.6.5, §18.6.6).
-  if (target.events.length > 0 && !isEventList(list) && !isItemList(list)) {
+  if (target.events.length > 0 && !isEventList(list) && !isItemList(list) && !isPlainList(list)) {
     const answer = await ask(session, target.property!, {
       ...base,
       hostNames: converting,

@@ -1,0 +1,141 @@
+// Five parts drawn for Live, written as shared parts would be: plain figures in, nothing read, real pixels at the page's width.
+import type { ReactNode } from "react";
+import { useElementWidth } from "@/src/hooks/useElementWidth";
+import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
+import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+
+/** A small pulsing dot: this figure is live. */
+export function LiveDot() {
+  return (
+    <span data-part="live-dot" aria-hidden className="relative inline-flex h-2.5 w-2.5 shrink-0">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full" style={{ backgroundColor: CHART_SERIES_ORANGE, opacity: 0.75 }} />
+      <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_SERIES_ORANGE }} />
+    </span>
+  );
+}
+
+/** A hover panel, kept for the board's script to show. */
+export function Panel({ id, heading, lines }: { id: string; heading: string; lines: Array<{ value: string; label: string }> }) {
+  return (
+    <div data-readout={id} className="pointer-events-none absolute z-10" style={{ left: "var(--mx, 0px)", top: "var(--my, 0px)", transform: "translate(var(--tx, 0), var(--ty, 0))" }}>
+      <ChartTooltipSurface heading={heading}>{lines.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}</ChartTooltipSurface>
+    </div>
+  );
+}
+
+/**
+ * One bar a minute, the oldest first, the newest lit and pulsing. Each bar says its figure. Drawn in real pixels, so the words stay
+ * 11 pixels and the bars their height on any screen. For any short run of recent figures.
+ */
+export function MinuteBars({ values, labelOf, height = 170, id = "minute" }: { values: readonly number[]; labelOf: (at: number) => string; height?: number; id?: string }) {
+  const [watch, measured] = useElementWidth();
+  const width = measured > 0 ? measured : 822;
+  const most = Math.max(1, ...values);
+  const gap = 4;
+  const each = (width - gap * (values.length - 1)) / values.length;
+  const top = 18;
+  const bottom = 22;
+  const room = height - top - bottom;
+  return (
+    <div ref={watch} data-part="minute-bars" className="relative">
+      <svg role="img" aria-label="One bar for each minute" width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="block">
+        {values.map((value, at) => {
+          const h = value > 0 ? Math.max(4, (value / most) * room) : 2;
+          const x = at * (each + gap);
+          const y = top + room - h;
+          const newest = at === values.length - 1;
+          return (
+            <g key={at} data-h={`${id}${at}`} data-minute={at}>
+              <rect x={x} y={0} width={each + gap} height={height} fill="transparent" />
+              <rect data-bar="" x={x} y={y} width={each} height={h} rx={3} fill={value > 0 ? CHART_SERIES_ORANGE : CHART_COMPARATOR_GREY} fillOpacity={newest ? 1 : value > 0 ? 0.55 : 0.35} />
+              {newest ? <circle data-now="" cx={x + each / 2} cy={Math.max(6, y - 13)} r={4} fill={CHART_SERIES_ORANGE} /> : null}
+              {value > 0 && !newest ? <text x={x + each / 2} y={y - 5} textAnchor="middle" fontSize={11} fill="currentColor" className="font-mono text-secondary">{value}</text> : null}
+              {newest && value > 0 ? <text x={x + each / 2 - 10} y={y - 5} textAnchor="end" fontSize={11} fill="currentColor" className="font-mono text-foreground">{value}</text> : null}
+              {at % 5 === 4 || newest ? <text x={newest ? width : x + each / 2} y={height - 5} textAnchor={newest ? "end" : "middle"} fontSize={11} fill="currentColor" className="text-muted">{labelOf(at)}</text> : null}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+export type FeedRow = { key: string; when: string; what: string; detail?: string; fresh?: boolean };
+
+/** What just happened, the newest first: when, what, and a little more. For any list of things as they happen. */
+export function LiveFeed({ rows, more }: { rows: readonly FeedRow[]; more?: string }) {
+  return (
+    <div data-part="live-feed" className="flex flex-col">
+      {rows.map((row, at) => (
+        <div key={row.key} data-feed-row={at} className="flex items-center gap-3 border-b border-border-dim py-2.5 text-[13px]">
+          <span className="shrink-0 font-mono text-[12px] text-secondary" style={{ width: 104 }}>{row.when}</span>
+          <span className="flex w-4 shrink-0 justify-center">{row.fresh ? <LiveDot /> : <span className="h-1.5 w-1.5 rounded-full bg-muted" />}</span>
+          <span className="text-foreground">{row.what}</span>
+          {row.detail ? <span className="text-[12px] text-secondary">{row.detail}</span> : null}
+        </div>
+      ))}
+      {more ? <p className="pt-3 text-[12px] text-muted">{more}</p> : null}
+    </div>
+  );
+}
+
+export type DotRow = { key: string; label: string; count: number; note?: string };
+
+/**
+ * Rows of dots, one for each thing counted, so a small number can be seen as real people or real looks. A big website shows one dot
+ * for several, and says so. For any short count of things by group.
+ */
+export function CountDots({ rows, scale = 1, id, readout }: { rows: readonly DotRow[]; scale?: number; id: string; readout?: (row: DotRow) => Array<{ value: string; label: string }> }) {
+  const template = { gridTemplateColumns: "minmax(110px, 170px) minmax(0, 1fr) 40px" };
+  let first = 0;
+  return (
+    <div data-part="count-dots" className="flex flex-col gap-2.5">
+      {rows.map((row, at) => {
+        const dots = Math.max(row.count > 0 ? 1 : 0, Math.round(row.count / scale));
+        const start = first;
+        first += dots;
+        return (
+          <div key={row.key} data-h={`${id}${at}`} className="grid items-center gap-3 rounded-md py-0.5" style={template}>
+            <span className="truncate text-right text-[12px] text-foreground" title={row.label}>{row.label}</span>
+            <span className="flex flex-wrap items-center gap-1">
+              {Array.from({ length: dots }, (_, one) => <span key={one} data-dot="" className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: CHART_SERIES_ORANGE, ["--at" as string]: start + one }} />)}
+            </span>
+            <span className="text-right font-mono text-[12px] text-secondary">{row.count}</span>
+          </div>
+        );
+      })}
+      {readout ? rows.map((row, at) => <Panel key={row.key} id={`${id}${at}`} heading={row.label} lines={readout(row)} />) : null}
+    </div>
+  );
+}
+
+export type AgainstRow = { key: string; label: string; now: number; usual: number; nowWord: string; usualWord: string; moved: ReactNode };
+
+/** A bar for now and a mark for what's usual, each row on its own scale, so very different figures can sit together. For any figure against a usual or a target. */
+export function AgainstBars({ rows, id, usualKey, nowKey }: { rows: readonly AgainstRow[]; id: string; usualKey: string; nowKey: string }) {
+  const template = { gridTemplateColumns: "minmax(110px, 170px) minmax(0, 1fr) minmax(190px, 230px)" };
+  return (
+    <div data-part="against-bars" className="flex flex-col gap-5">
+      {rows.map((row, at) => {
+        const most = Math.max(row.now, row.usual, 1) * 1.15;
+        return (
+          <div key={row.key} data-h={`${id}${at}`} className="grid items-center gap-3" style={template}>
+            <span className="text-right text-[13px] text-foreground">{row.label}</span>
+            <span className="relative block h-7 rounded-[3px] bg-foreground/10">
+              <span data-grow="" className="absolute inset-y-0 left-0 block rounded-[3px]" style={{ width: `${(100 * row.now) / most}%`, backgroundColor: CHART_SERIES_ORANGE }} />
+              <span className="absolute block rounded-full text-foreground" style={{ left: `${(100 * row.usual) / most}%`, top: -5, bottom: -5, width: 3, backgroundColor: "currentColor" }} />
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-[13px] text-foreground"><span className="font-mono">{row.nowWord}</span> {row.moved}</span>
+              <span className="text-[12px] text-secondary">{row.usualWord}</span>
+            </span>
+          </div>
+        );
+      })}
+      <div className="flex items-center justify-center gap-5 text-[12px] text-secondary">
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-[3px]" style={{ backgroundColor: CHART_SERIES_ORANGE }} />{nowKey}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block rounded-full text-foreground" style={{ width: 3, height: 14, backgroundColor: "currentColor" }} />{usualKey}</span>
+      </div>
+    </div>
+  );
+}

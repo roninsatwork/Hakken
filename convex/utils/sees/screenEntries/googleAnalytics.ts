@@ -44,15 +44,18 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
     writer: "INSIGHTS_BEHAVIOUR",
     about: "Live: who is on the website right now and what they did in the last 30 minutes, against a usual half hour last month",
     parts: [
-      "the boxes: people on the website now, people and page views in the last 30 minutes, and conversions in them",
+      "the four boxes: people on the website now, the busiest page, the busiest town and the newest conversion",
       "people each minute over the last 30 minutes",
-      "the countries and the towns they are in",
-      "the table: the list chosen, pages by title, places, devices or events, with its people",
+      "the last half hour against usual: people, views and conversions, with conversions also at this time of the week",
+      "what people are looking at: the views in the last 30 minutes by the website's own Classifications",
+      "the table: the list chosen, pages with their addresses, places, devices or events in times",
     ],
     never: [
       ...NO_MONEY,
       "why it is busy or quiet: the figures say what is happening now, never its cause (an advert, a sale, a post)",
-      "a usual half hour as an exact count: people and views are last month's visitors spread evenly over every half hour, night and day, and conversions are last month's at this hour on this day of the week",
+      "where visitors came from: Google's live figures carry no channel, and the Channels page has that for whole days",
+      "a usual half hour as an exact count: it's a guide from last month, for the home country, where Live counts every country",
+      "an event's people: Google gives an event its times live, never its people",
     ],
   },
   "googleAnalytics.channelsPage": {

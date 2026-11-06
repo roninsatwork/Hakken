@@ -96,6 +96,15 @@ export function fetchedKey(period: CalendarPeriod, country?: string): string {
 }
 
 /**
+ * The website's people and views by the day of the week and the hour, for Live's usual half hour at this time of the week
+ * (live-new-page-plan-2026-11-06.md, question 1): last month's, for the main home country. It's recorded on the connection and
+ * asked as a finished period is, so it costs two asks when a month ends and two when its figures settle, and a website that
+ * has none yet gets it on its next run. Never a list of every period: nothing else reads it.
+ */
+const HOURS_PERIOD = "lastMonth" satisfies CalendarPeriod;
+export const HOURS_DUE = `${HOURS_PERIOD}|hours`;
+
+/**
  * The finished periods a run asks (calendar-periods-plan.md, phase 6), each home country's, as `fetchedKey`s: one not
  * fetched since it ended, or fetched before Google's figures settled once they have. Worked out as the run's days
  * finish, and carried through its steps so every step asks the same lists.
@@ -110,6 +119,11 @@ export function finishedDue(fetched: ReadonlyArray<{ key: string; from: string; 
       const settled = top >= shiftDay(range.to, SETTLE_DAYS);
       if (!held || held.from !== range.from || (!held.settled && settled)) due.push(fetchedKey(period, country));
     }
+  }
+  const hours = periodRange(HOURS_PERIOD, "NOW", top);
+  if (hours) {
+    const held = fetched.find((entry) => entry.key === HOURS_DUE);
+    if (!held || held.from !== hours.from || (!held.settled && top >= shiftDay(hours.to, SETTLE_DAYS))) due.push(HOURS_DUE);
   }
   return due;
 }
@@ -195,5 +209,6 @@ export function dueJobs(
     }
     if (weekly && !country) jobs.push({ list: "series", period: SERIES_PERIOD, which: "NOW" });
   }
+  if (finished.includes(HOURS_DUE)) jobs.push({ list: "totalHour", period: HOURS_PERIOD, which: "NOW" });
   return jobs;
 }

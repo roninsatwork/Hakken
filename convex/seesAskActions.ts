@@ -190,7 +190,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     // without it, rather than leave the reader the rule's words; the run's log says so.
     const strict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true });
     verdict = !strict.ok && strict.why.startsWith("It left out a finding")
-      ? seesFrom(raw, named, page.links, { ...noTracking, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true })
+      ? seesFrom(raw, named, page.links, { ...noTracking, ...covering, coverIfItCan: true, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true })
       : strict;
     if (!strict.ok && verdict.ok) lines.push({ heading: "The Editor", detail: `Kept although ${strict.why.charAt(0).toLowerCase()}${strict.why.slice(1)}` });
     judged = written.sentBack === null && strict.ok && !strict.left?.length;
@@ -211,7 +211,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
       // After the rewrite a sentence with a fault is left off and the rest stand; words that still leave a finding out
       // stand without it, rather than leave the reader nothing.
       verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, salvage: true });
-      if (!verdict.ok && verdict.why.startsWith("It left out a finding")) verdict = seesFrom(raw, named, page.links, { ...noTracking, salvage: true });
+      if (!verdict.ok && verdict.why.startsWith("It left out a finding")) verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, coverIfItCan: true, salvage: true });
     }
   }
   if (verdict.ok && verdict.left?.length) lines.push({ heading: "The Editor", detail: `Left off: ${verdict.left.join(" ")}`.slice(0, 900) });

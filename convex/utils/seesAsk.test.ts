@@ -165,6 +165,24 @@ describe("a bubble readable in one go (2026-10-30: \"a wall of numbers\")", () =
 });
 
 describe("the findings code found (sees-findings plan, phase 3)", () => {
+  test("after the rewrite, one figure over stands if it alone carries a finding, and the rest of a crowded sentence's rule holds", () => {
+    const facts = factsByKey(factsOf(ask));
+    const crowded = "They made [[conv.total.now]] and [[conv.purchases.now]], under [[conv.rate.now]].";
+    const answer = { says: ["Conversions fell to [[conv.worth.now]].", crowded], steps: [] };
+    const carrying = [{ keys: ["conv.purchases.now"], words: "Purchases fell" }];
+    // It carries a finding not yet said: it stands.
+    expect(seesFrom(answer, facts, links, { mustCover: carrying, salvage: true })).toMatchObject({ ok: true, says: [expect.any(String), expect.stringContaining("They made")] });
+    // Before the rewrite it's still left off, and the finding goes back to the writer, to say in a sentence of its own.
+    expect(seesFrom(answer, facts, links, { mustCover: carrying })).toMatchObject({ ok: false, why: expect.stringContaining("in a sentence of its own") });
+    // A finding already said is no reason to keep it.
+    const said = { says: ["Purchases fell to [[conv.purchases.now]].", crowded], steps: [] };
+    expect(seesFrom(said, facts, links, { mustCover: carrying, salvage: true })).toMatchObject({ ok: true, says: [expect.stringContaining("Purchases fell")] });
+    // No finding to carry: left off as ever. Nor two figures over, whatever it carries.
+    expect(seesFrom(answer, facts, links, { salvage: true })).toMatchObject({ ok: true, says: [expect.stringContaining("Conversions fell")] });
+    const fourFigures = { says: ["Conversions fell to [[conv.worth.now]].", "They made [[conv.total.now]] and [[conv.purchases.now]], under [[conv.rate.now]] and [[conv.worth.now]]."], steps: [] };
+    expect(seesFrom(fourFigures, facts, links, { mustCover: carrying, salvage: true, coverIfItCan: true })).toMatchObject({ ok: true, says: [expect.stringContaining("Conversions fell")] });
+  });
+
   test("words that leave out a finding to cover go back; naming one of its figures covers it", () => {
     const finding: Array<[string, Fact]> = [["f1.rate", { key: "f1.rate", value: 9.2, unit: "percent", source: "analytics", label: "Paid Search buying" }], ["f1.siteRate", { key: "f1.siteRate", value: 3.4, unit: "percent", source: "analytics", label: "the website buying" }]];
     const facts = new Map([...factsByKey(factsOf(ask)), ...finding]);

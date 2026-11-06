@@ -10,6 +10,7 @@ import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { unpackPart, splitChannelKey, splitEventHourKey } from "./googleAnalyticsLists";
 import { decodePages } from "./holdPageRefs";
 import { KEPT_BACK, analyticsWindow, dueJobs, fetchedAfter, finishedDue, insightsYearJobs, newestWholeDayIn, overBudget, periodRange } from "./googleAnalyticsCollect";
+import { HOURS_DUE } from "./googleAnalyticsJobs";
 import { pageListJobs } from "./googleAnalyticsPageLists";
 import { afterTheHour, jobKey, startGap, startingAt } from "./googleAnalyticsAgentRun";
 import { closeConnection } from "./googleAnalyticsRunEnd";
@@ -200,9 +201,10 @@ describe("which days and lists a run asks for", () => {
 
     // Nothing fetched yet: every finished period is due — Last Week 2, Last Month 2 — beside the rest.
     const finished = finishedDue([], NEWEST);
-    expect(finished).toEqual(["lastWeek", "lastMonth"]);
+    expect(finished).toEqual(["lastWeek", "lastMonth", HOURS_DUE]);
     const first = dueJobs({ weeklyPeriodsAt: undefined }, NOW, [], NEWEST, finished);
-    expect(first).toHaveLength((2 + 2 + 2 + 2 + 2 + 2 + 2) * LISTS + 1);
+    // The series, and the website's own hours, beside the lists.
+    expect(first).toHaveLength((2 + 2 + 2 + 2 + 2 + 2 + 2) * LISTS + 2);
     expect(first.filter((job) => job.period === "last12Months").map((job) => job.which)).toEqual([
       ...Array(LISTS).fill("NOW"), ...Array(LISTS).fill("BEFORE"),
     ]);
@@ -211,7 +213,7 @@ describe("which days and lists a run asks for", () => {
     expect(insightsYearJobs()).toHaveLength(7 * 2);
     expect(insightsYearJobs().every((job) => job.period === "365" && (job.which === "NOW" || job.which === "YEAR"))).toBe(true);
     // A shop's products beside them.
-    expect(dueJobs({ weeklyPeriodsAt: undefined, shop: true }, NOW, [], NEWEST, finished)).toHaveLength((2 + 2 + 2 + 2 + 2 + 2 + 2) * (LISTS + 1) + 1);
+    expect(dueJobs({ weeklyPeriodsAt: undefined, shop: true }, NOW, [], NEWEST, finished)).toHaveLength((2 + 2 + 2 + 2 + 2 + 2 + 2) * (LISTS + 1) + 2);
 
     // On the 1st, Google has sent none of This Month: it is not asked; the rolling periods always are.
     const firstOfMonth = dueJobs({ weeklyPeriodsAt: undefined }, NOW, [], "2026-09-30");
@@ -232,12 +234,37 @@ describe("which days and lists a run asks for", () => {
     expect(periodsOf(fra.filter((job) => job.country === "fra"))).toEqual(["thisWeek", "thisMonth", "last3Months", "last6Months", "last12Months", "lastMonth"]);
   });
 
+  test("the website's people and views by the hour: once for a website with none yet, then as last month ends and settles, and no other time", () => {
+    // Last month already held and settled, on a website this list is new to: its next run asks this one list and nothing else of that month.
+    let fetched: Array<{ key: string; from: string; settled: boolean }> = [{ key: "lastMonth", from: "2026-09-01", settled: true }];
+    const night = (top: string) => {
+      const due = finishedDue(fetched, top);
+      fetched = fetchedAfter(fetched, due, top);
+      return due;
+    };
+    const due = finishedDue(fetched, "2026-10-09").filter((key) => key !== "lastWeek");
+    expect(due).toEqual([HOURS_DUE]);
+    const jobs = dueJobs({ weeklyPeriodsAt: NOW }, NOW, [], "2026-10-09", due);
+    expect(jobs.filter((job) => job.list === "totalHour")).toEqual([{ list: "totalHour", period: "lastMonth", which: "NOW" }]);
+    expect(jobs.filter((job) => job.period === "lastMonth")).toHaveLength(1);
+    expect(night("2026-10-09")).toContain(HOURS_DUE);
+    expect(night("2026-10-10")).not.toContain(HOURS_DUE);
+    // A month ends: asked with it, then once more when its figures settle, then not again.
+    expect(night("2026-10-31")).toEqual(expect.arrayContaining(["lastMonth", HOURS_DUE]));
+    expect(night("2026-11-01")).not.toContain(HOURS_DUE);
+    expect(night("2026-11-02")).toEqual(expect.arrayContaining(["lastMonth", HOURS_DUE]));
+    expect(night("2026-11-03")).not.toContain(HOURS_DUE);
+    // Never one for another home country: only the main one's usual reads it.
+    expect(finishedDue([], "2026-10-09", ["fra"]).filter((key) => key.includes("hours"))).toEqual([HOURS_DUE]);
+  });
+
   test("a finished period is asked once it ends, again once Google's figures settle two days later, then not again", () => {
     // Monday 12 October: Google's newest day is Sunday the 11th, so last week (5–11 October) has just ended. Last week
     // was held from the week before; last month and last quarter already held, settled.
     let fetched: Array<{ key: string; from: string; settled: boolean }> = [
       { key: "lastWeek", from: "2026-09-28", settled: true },
       { key: "lastMonth", from: "2026-09-01", settled: true },
+      { key: HOURS_DUE, from: "2026-09-01", settled: true },
       ];
     const night = (top: string) => {
       const due = finishedDue(fetched, top);
@@ -257,6 +284,7 @@ describe("which days and lists a run asks for", () => {
     // The others untouched all the while.
     expect(fetched.filter((entry) => entry.key !== "lastWeek")).toEqual([
       { key: "lastMonth", from: "2026-09-01", settled: true },
+      { key: HOURS_DUE, from: "2026-09-01", settled: true },
       ]);
 
     // A run that missed the settling night asks it on the next; one first fetching a period already settled, once only.
@@ -353,6 +381,13 @@ describe("collecting a website's Google Analytics", () => {
     const hourAsks = google.calls.filter((call) => call.url.endsWith(":runReport"))
       .map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; dimensionFilter?: unknown })
       .filter((ask) => ask.dimensions.some((dimension) => dimension.name === "hour"));
+    // The website's own hours (live-new-page-plan-2026-11-06.md): its people and views, never split by event, so one list costs its one ask and the whole.
+    const ownHourAsks = hourAsks.filter((ask) => !ask.dimensions.some((dimension) => dimension.name === "eventName"));
+    expect(ownHourAsks).toHaveLength(2);
+    const ownHours = (await periodRows(t, siteId, "totalHour|lastMonth|NOW|"))!;
+    expect(ownHours.rows.length).toBeGreaterThan(0);
+    expect(ownHours.rows.every((row) => row.views > 0)).toBe(true);
+    hourAsks.splice(0, hourAsks.length, ...hourAsks.filter((ask) => ask.dimensions.some((dimension) => dimension.name === "eventName")));
     expect(hourAsks.length).toBeGreaterThan(0);
     expect(hourAsks.every((ask) => ask.dimensions.map((dimension) => dimension.name).slice(-3).join() === "eventName,dayOfWeek,hour")).toBe(true);
     expect(hourAsks.every((ask) => JSON.stringify(ask.dimensionFilter).includes("generate_lead"))).toBe(true);

@@ -73,22 +73,28 @@ afterEach(() => {
 describe("Google Analytics' second-round looks", () => {
   it("14 · Live", async () => {
     at("/app/analytics/site_1/live");
+    const page = { name: "AI Agency | Agent Automation Company", people: 3, views: 9, times: 0, address: "/ai-agency/" };
     const live = {
       ok: true, askedAt: Date.parse("2026-10-11T10:42:06Z"), now: 4, people: 11, views: 27,
       conversions: { count: 1, eventName: "form_submission", minutesAgo: 12 },
       minutes: Array.from({ length: 30 }, (_, at) => at % 5),
       places: [{ name: "London", people: 5, views: 0, times: 0 }, { name: "Guildford", people: 2, views: 0, times: 0 }],
       countries: [{ name: "GB", people: 9, views: 0, times: 0 }, { name: "DE", people: 2, views: 0, times: 0 }],
-      rows: [{ name: "AI Agency | Agent Automation Company", people: 3, views: 9, times: 0 }],
+      rows: [page],
+      pages: [page],
+      busiestPage: page,
+      kinds: [{ kind: "services", name: "Services", views: 27, pages: 1 }],
+      sorted: true,
       seen: liveSees({ now: 4, people: 11, topPage: { title: "AI Agency | Agent Automation Company", people: 3 }, conversion: { eventName: "form_submission", minutesAgo: 12 } }),
     };
-    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS }, async () => live);
+    const usual = { from: "2026-09-01", to: "2026-09-30", people: 9, visits: 10, views: 30, conversions: 2, peopleThisTime: null, viewsThisTime: null, conversionsThisTime: 3, dayOfWeek: 0, hour: 11, everyDevice: false, pages: [], devices: [] };
+    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS, "googleAnalyticsLiveUsual:analyticsLiveUsual": usual }, async () => live);
     const { container } = render(<AnalyticsLivePage />);
-    await screen.findByText("AI Agency | Agent Automation Company");
+    await screen.findAllByText("AI Agency | Agent Automation Company");
     await openHakkenSees();
     await findSaid(/4 people are on the website now/);
     // Every country counts: no country named on the figures (Anthony, 2026-10-13).
-    await screen.findByText("In the last 5 minutes");
+    await screen.findByText("In the last 5 minutes.");
     await expectApprovedLook(container, PLAN, "Live", "Google Analytics → Live");
   });
 

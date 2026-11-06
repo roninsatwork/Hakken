@@ -289,6 +289,8 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
    * sentence that is kept (sees-findings-in-code-plan-2026-10-31.md, phase 3).
    */
   mustCover?: ReadonlyArray<{ keys: readonly string[]; words: string }>;
+  /** A finding still left out after the rewrite: the words stand without it, rather than leave the reader nothing. */
+  coverIfItCan?: boolean;
   /** The words after their rewrite: a sentence or step with a fault is left off, never the whole bubble. */
   salvage?: boolean;
 } = {}): SeesVerdict {
@@ -334,9 +336,17 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     }
     // Too many figures in the first sentence sends the words back; a later one is left off and the rest stand
     // (sees-every-page-plan-2026-10-31.md: whole answers were lost to one crowded sentence on Products and Clarity).
-    if (namedFacts(trimmed).length > MOST_SENTENCE_FIGURES) {
-      if (says.length === 0) fault(`A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.`);
-      continue;
+    // After the rewrite, one figure over stands if it alone carries a finding not yet said: told to cover two findings, a
+    // writer put them in one sentence, and leaving it off lost the very findings it was asked for (Live, 2026-11-06:
+    // conversions at a third of usual, the page's biggest news, gone).
+    const named = namedFacts(trimmed);
+    if (named.length > MOST_SENTENCE_FIGURES) {
+      const carriesAFinding = salvage && named.length === MOST_SENTENCE_FIGURES + 1 && says.length > 0
+        && (options.mustCover ?? []).some((finding) => !finding.keys.some((key) => namedKept.includes(key)) && finding.keys.some((key) => named.includes(key)));
+      if (!carriesAFinding) {
+        if (says.length === 0) fault(`A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.`);
+        continue;
+      }
     }
     // Past the bubble's figures the rest is left off, the most useful having come first; never the first sentence.
     if (says.length > 0 && figures + namedFacts(trimmed).length > MOST_BUBBLE_FIGURES) break;
@@ -390,7 +400,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
   }
   if (says.length === 0 && faults.length === 0) faults.push(left.length > 0 ? `Every sentence had a fault: ${left.join(" ")}`.slice(0, 900) : "It said nothing.");
   for (const finding of options.mustCover ?? []) {
-    if (!finding.keys.some((key) => namedKept.includes(key))) faults.push(`It left out a finding: "${finding.words}". Cover it by naming one of its figures.`);
+    if (!options.coverIfItCan && !finding.keys.some((key) => namedKept.includes(key))) faults.push(`It left out a finding: "${finding.words}". Cover it by naming one of its figures, in a sentence of its own.`);
   }
   if (faults.length > 0) return { ok: false, why: faults.join(" ") };
   return { ok: true, says, steps, ...(left.length > 0 ? { left } : {}) };

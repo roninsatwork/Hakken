@@ -10,12 +10,11 @@ import { isUnknownValue } from "@/convex/utils/analyticsUnknown";
 import type { VisitorList } from "@/convex/googleAnalyticsLists";
 import { BarsCard } from "@/src/ui/components/screens/BarsCard";
 import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
-import { MapCard } from "@/src/ui/components/screens/MapCard";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import type { SiteSeries } from "../../sites/_components/SiteCharts";
-import { SiteTreemap } from "../../sites/_components/SiteTreemap";
-import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { formatNumber } from "../../sites/_components/siteFormat";
+import { ClassificationMap } from "./ClassificationMap";
 import { useVisitorName } from "./useVisitorName";
 import { periodWord, useAnalyticsArgs, useAnalyticsStatus, usePeriod, useStep } from "./useAnalytics";
 
@@ -202,24 +201,13 @@ export function WhoVisitsCard({ view, onView, views, spans, host }: {
   );
 }
 
-/** A page group too small to label in the treemap: under this share of views, named in a line under it. */
-const SMALL_SHARE = 0.02;
-
-/**
- * "What people looked at, by kind of page" (Anthony, 2026-11-03: "this is pages visited by type no where they start"):
- * the kit's treemap (`SiteTreemap`, Sites → structure's), each box a page group sized by its views, Not sorted among
- * them; the groups too small to label are named in a line under it (the plan's question 4).
- */
+/** "What people looked at, by kind of page" on Visits: the shared map, for the dates chosen. */
 export function PageKindsCard({ host }: { host: string }) {
   const t = useTranslations("googleAnalytics.visitors.kinds");
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const answer = useQuery(api.googleAnalyticsPageKindViews.analyticsPageKindViews, status?.connection?.newestDay ? args : "skip");
   const kinds = useMemo(() => (answer?.kinds ?? []).map((kind) => ({ ...kind, label: kind.kind === NOT_SORTED_KIND ? t("notSorted") : kind.name ?? kind.kind })), [answer?.kinds, t]);
-  const placed = kinds.reduce((sum, kind) => sum + kind.views, 0);
-  const most = Math.max(1, ...kinds.map((kind) => kind.views));
-  const share = (views: number) => `${Math.round((views / Math.max(1, placed)) * 100)}%`;
-  const small = kinds.filter((kind) => kind.views / Math.max(1, placed) < SMALL_SHARE);
   // Not sorted marked as such, so the eye can say how much of the treemap tells the reader nothing (pageOwnFindings.ts).
   const seen = useMemo(() => (answer && answer.kinds.length > 0 ? { kinds: kinds.map((kind) => ({ name: kind.label, views: kind.views, pages: kind.pages, sorted: kind.kind !== NOT_SORTED_KIND })) } : null), [answer, kinds]);
   useSeesPart("whatPeopleLookedAt", seen);
@@ -228,26 +216,14 @@ export function PageKindsCard({ host }: { host: string }) {
       : answer && kinds.length === 0 ? t("empty")
         : null;
   return (
-    <MapCard
+    <ClassificationMap
+      boxes={kinds}
       title={t("title")}
       hint={t("hint")}
       exportName="google-analytics-views-by-kind"
-      csv={() => toCsv(["kind", "views", "pages"], kinds.map((kind) => [kind.label, kind.views, kind.pages]))}
       host={host}
       loading={answer === undefined}
       message={message}
-      under={small.length > 0 ? <p className="text-[12px] text-secondary">{t("also", { list: small.map((kind) => t("alsoOne", { name: kind.label, views: formatNumber(kind.views) })).join(" · ") })}</p> : null}
-    >
-      <SiteTreemap
-        items={kinds.map((kind) => ({
-          id: kind.kind,
-          name: kind.label,
-          value: kind.views,
-          shade: kind.views / most,
-          caption: t("caption", { views: formatNumber(kind.views), share: share(kind.views) }),
-          readout: [{ value: formatNumber(kind.views), label: t("views") }, { value: share(kind.views), label: t("ofViews") }, { value: formatNumber(kind.pages), label: t("pages") }],
-        }))}
-      />
-    </MapCard>
+    />
   );
 }

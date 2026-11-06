@@ -10805,6 +10805,7 @@
         "viewsLost": "views lost",
         "viewsGained": "views gained",
         "peopleInHalfHour": "people in the last 30 minutes",
+        "peopleInAMinute": "people in one minute",
         "conversionsPerHundred": "conversions for every 100 visits",
         "leftAtOncePercent": "share of visits that left straight away",
         "leftWithoutAnotherPercent": "left without seeing another page",
@@ -17027,8 +17028,7 @@
     },
     "live": {
       "title": "Live",
-      "description": "Who is on the website right now, from every country, and what they've done in the last 30 minutes. Google's live figures name pages by their title, count the whole Google Analytics property, and can't say where visitors came from.",
-      "askedAt": "Asked of Google once a minute, only while this page is open and in front; it stops when you leave or switch tab, and nothing is kept. Last asked {time}.",
+      "description": "Who is on your website right now, and what they did in the last 30 minutes.",
       "behind": "Waiting: this page asks Google only while it is open and in front. Bring it to the front to see who is on the website now.",
       "asking": "Asking Google…",
       "paused": "Paused: nobody has touched this page for 30 minutes, so it stopped asking Google.",
@@ -17036,22 +17036,17 @@
       "notConnected": "Google Analytics isn't connected for this website, so there are no live figures.",
       "busy": "Google couldn't answer just now. This page asks again in a minute.",
       "now": "On the website now",
-      "lastFive": "In the last 5 minutes",
+      "lastFive": "In the last 5 minutes.",
       "people": "People",
       "views": "Views",
       "times": "Times",
       "lastThirty": "In the last 30 minutes",
       "conversions": "Conversions",
-      "convertedAgo": "{event}, {minutes, plural, =0 {just now} =1 {a minute ago} other {# minutes ago}}",
-      "noConversion": "None in the last 30 minutes",
+      "noConversion": "None in the last 30 minutes.",
       "chartTitle": "People each minute",
-      "chartHint": "The last 30 minutes, the newest on the right.",
+      "chartHint": "The last 30 minutes. The newest is on the right, and a new bar comes in every minute.",
       "minute": "Minute",
       "minutesAgo": "{count, plural, =0 {Now} =1 {1 min ago} other {# min ago}}",
-      "countriesTitle": "Countries",
-      "countriesHint": "People in the last 30 minutes, by country.",
-      "placesTitle": "Where they are",
-      "placesHint": "People in the last 30 minutes, by town.",
       "showing": "Showing",
       "lists": {
         "pages": "Pages",
@@ -17071,10 +17066,68 @@
         "devices": "Device",
         "events": "Event"
       },
-      "byTitle": "pages by title, as Google's live figures give them",
       "download": "Download CSV",
       "nobody": "Nobody in the last 30 minutes.",
-      "noMatch": "Nothing matches that search."
+      "noMatch": "Nothing matches that search.",
+      "about": "Google's live figures count the whole Google Analytics property, in every country. They name pages by their title, and can't say where visitors came from. They're asked for only while this page is open and in front, and nothing is kept.",
+      "nextUpdate": "Updates every minute while this page is open. Next update in {seconds, plural, =1 {1 second} other {# seconds}}.",
+      "updating": "Updating now…",
+      "busiestPage": "Busiest page",
+      "homePage": "Home page",
+      "busiestPageDetail": "{people, plural, =1 {1 person} other {# people}} and {views, plural, =1 {1 view} other {# views}}.",
+      "noPage": "No page in the last 30 minutes.",
+      "busiestTown": "Busiest town",
+      "busiestTownDetail": "{people} of {all, plural, =1 {1 person} other {# people}}.",
+      "noTown": "Google hasn't named a town yet.",
+      "newest": "Newest conversion",
+      "newestAgo": "{minutes, plural, =0 {Just now} =1 {1 minute ago} other {# minutes ago}}.",
+      "peopleWord": "{count, plural, =1 {Person} other {People}}",
+      "againstTitle": "The last half hour against usual",
+      "againstHint": "The bars are the last half hour, and the marks are what's usual.",
+      "againstHintNone": "The bars are the last half hour. There's no usual for this website yet.",
+      "againstNow": "The last half hour",
+      "againstUsual": "Usual",
+      "againstFigure": "Figure",
+      "conversionsThisTime": "Conversions at this time",
+      "aboutCount": "About {count}",
+      "underOne": "Fewer than 1",
+      "underOneShort": "Under 1",
+      "usualEven": "{about} in a usual half hour",
+      "usualHour": "{about} in a half hour, on a {day} at {hour} in {month}",
+      "noUsual": "No usual yet",
+      "evenNote": "This usual is last month spread evenly over night and day, so it reads low in the daytime.",
+      "countryNote": "It counts your home country, and Live counts every country.",
+      "everyDeviceNote": "This device has no month saved yet, so its usual is for every device.",
+      "verdictPeople": {
+        "more": "More people than usual.",
+        "fewer": "Fewer people than usual."
+      },
+      "verdict": {
+        "more": {
+          "and": {
+            "more": "More people than usual, and more conversions."
+          },
+          "but": {
+            "fewer": "More people than usual, but fewer conversions."
+          }
+        },
+        "fewer": {
+          "and": {
+            "fewer": "Fewer people than usual, and fewer conversions."
+          },
+          "but": {
+            "more": "Fewer people than usual, but more conversions."
+          }
+        }
+      },
+      "mapTitle": "What people are looking at",
+      "mapHint": "Bigger boxes had more views in the last 30 minutes. That's {views} so far.",
+      "mapEmpty": "No page views in the last 30 minutes.",
+      "shopPages": "Search and basket",
+      "tableNote": "In the last 30 minutes.",
+      "tableNotePages": "In the last 30 minutes. One person can be on several pages.",
+      "noAddress": "No address saved",
+      "address": "Address"
     },
     "heroes": {
       "figuresTo": "Search Console's figures to {console} and Analytics' to {analytics}; the last two days can still change.",
@@ -18191,12 +18244,12 @@
         "title": "What people looked at, by classification",
         "hint": "Each box is a classification. The bigger the box, the more often people looked at its pages.",
         "notSorted": "Not sorted yet",
-        "caption": "{views} views · {share}",
-        "views": "views",
+        "caption": "{count, plural, =1 {{views} view} other {{views} views}} · {share}",
+        "views": "{count, plural, =1 {view} other {views}}",
         "ofViews": "of all views",
-        "pages": "pages",
+        "pages": "{count, plural, =1 {page} other {pages}}",
         "also": "Also: {list}",
-        "alsoOne": "{name} {views} views",
+        "alsoOne": "{name} {count, plural, =1 {{views} view} other {{views} views}}",
         "unsorted": "Your pages aren't sorted into groups yet, so there is nothing to add the views up by.",
         "waiting": "Still being collected: the next collection brings this device's pages.",
         "empty": "No page views in these dates."
@@ -18219,7 +18272,10 @@
       "shopPages": "Search, basket and account pages",
       "homePage": "The home page",
       "bought": "Bought",
-      "theirVisits": "their share of all visits"
+      "theirVisits": "their share of all visits",
+      "busiestMinute": "The busiest minute",
+      "averageMinute": "An average minute",
+      "peopleShare": "Its share of people last month"
     },
     "landingPage": {
       "back": "Landing pages",

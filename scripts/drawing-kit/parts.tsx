@@ -18,6 +18,7 @@ import { IntentLabel, PageLinkCell, PositionCell, RecordLinkCell, TrendCell } fr
 import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 import { SITE_SERIES_COLOURS, SitePieChart } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
 import { Button } from "@/src/ui/components/screens/Button";
+import { AgainstBars } from "@/src/ui/components/screens/AgainstBars";
 import { Change } from "@/src/ui/components/screens/Change";
 import { ChangeBars } from "@/src/ui/components/screens/ChangeBars";
 import { ChannelMap } from "@/src/ui/components/screens/ChannelMap";
@@ -26,6 +27,8 @@ import { ConversionsByKindChart } from "@/src/ui/components/screens/ConversionsB
 import { ConversionsOverTimeChart } from "@/src/ui/components/screens/ConversionsOverTimeChart";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
+import { LiveDot } from "@/src/ui/components/screens/LiveDot";
+import { MinuteBars } from "@/src/ui/components/screens/MinuteBars";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton } from "@/src/ui/components/screens/DownloadButton";
 import { Field } from "@/src/ui/components/screens/Field";
@@ -338,6 +341,27 @@ const PARTS: Part[] = [
         <Select value="visits" onChange={noop} chip={{ label: "Count", choice: "Visits", changed: false }}><option value="visits">Visits</option></Select>
       </div>
     ),
+  },
+  {
+    id: "live-dot",
+    name: "A live dot",
+    source: "src/ui/components/screens/LiveDot.tsx",
+    use: "This figure is live. In a figure's mark, or before a line of words that say so.",
+    render: () => <span className="flex items-center gap-2 text-[12px] text-secondary"><LiveDot />Updates every minute while this page is open.</span>,
+  },
+  {
+    id: "minute-bars",
+    name: "One bar for each step, the newest lit",
+    source: "src/ui/components/screens/MinuteBars.tsx",
+    use: "A short run of recent figures. Each bar says its figure, and the bars slide along as a new step comes in.",
+    render: () => <MinuteBars name="People each minute" measure={() => "People"} bars={[2, 1, 3, 4, 2, 1, 2, 5, 4, 2].map((value, at, all) => ({ key: at, value, label: at === all.length - 1 ? "Now" : `${all.length - 1 - at} min ago` }))} />,
+  },
+  {
+    id: "against-bars",
+    name: "A bar for now and a mark for what's usual",
+    source: "src/ui/components/screens/AgainstBars.tsx",
+    use: "Any figure against a usual or a target, each row on its own scale, so very different figures can sit together.",
+    render: () => <AgainstBars nowKey="The last half hour" usualKey="Usual" rows={[{ key: "people", label: "People", now: 26, usual: 21, nowWord: "26", usualWord: "About 21 in a usual half hour", moved: <Change by={24} format={(value) => `${Math.abs(value)}%`} />, readout: [] }, { key: "views", label: "Views", now: 92, usual: 103, nowWord: "92", usualWord: "About 103 in a usual half hour", moved: <Change by={-11} format={(value) => `${Math.abs(value)}%`} />, readout: [] }]} />,
   },
   {
     id: "dot-groups",

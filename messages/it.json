@@ -10805,6 +10805,7 @@
         "viewsLost": "visualizzazioni perse",
         "viewsGained": "visualizzazioni in più",
         "peopleInHalfHour": "persone negli ultimi 30 minuti",
+        "peopleInAMinute": "persone in un minuto",
         "conversionsPerHundred": "conversioni ogni 100 visite",
         "leftAtOncePercent": "quota di visite uscite subito",
         "leftWithoutAnotherPercent": "sono usciti senza vedere un'altra pagina",
@@ -17027,8 +17028,7 @@
     },
     "live": {
       "title": "In diretta",
-      "description": "Chi è sul sito in questo momento, da ogni paese, e cosa ha fatto negli ultimi 30 minuti. I dati in diretta di Google chiamano le pagine con il loro titolo, contano l'intera proprietà di Google Analytics e non sanno da dove sono arrivati i visitatori.",
-      "askedAt": "Chiesto a Google una volta al minuto, solo mentre questa pagina è aperta e in primo piano; si ferma quando esci o cambi scheda, e non si conserva nulla. Ultima richiesta {time}.",
+      "description": "Chi è sul tuo sito in questo momento, e cosa ha fatto negli ultimi 30 minuti.",
       "behind": "In attesa: questa pagina chiede a Google solo mentre è aperta e in primo piano. Portala in primo piano per vedere chi è sul sito ora.",
       "asking": "Chiediamo a Google…",
       "paused": "In pausa: nessuno tocca questa pagina da 30 minuti, quindi ha smesso di chiedere a Google.",
@@ -17036,22 +17036,17 @@
       "notConnected": "Google Analytics non è collegato per questo sito, quindi non ci sono dati in diretta.",
       "busy": "Google non ha risposto ora. Questa pagina chiede di nuovo tra un minuto.",
       "now": "Sul sito ora",
-      "lastFive": "Negli ultimi 5 minuti",
+      "lastFive": "Negli ultimi 5 minuti.",
       "people": "Persone",
       "views": "Visualizzazioni",
       "times": "Volte",
       "lastThirty": "Negli ultimi 30 minuti",
       "conversions": "Conversioni",
-      "convertedAgo": "{event}, {minutes, plural, =0 {proprio ora} =1 {un minuto fa} other {# minuti fa}}",
-      "noConversion": "Nessuna negli ultimi 30 minuti",
+      "noConversion": "Nessuna negli ultimi 30 minuti.",
       "chartTitle": "Persone ogni minuto",
-      "chartHint": "Gli ultimi 30 minuti, i più recenti a destra.",
+      "chartHint": "Gli ultimi 30 minuti. Il più recente è a destra, e ogni minuto arriva una nuova barra.",
       "minute": "Minuto",
       "minutesAgo": "{count, plural, =0 {Ora} =1 {1 min fa} other {# min fa}}",
-      "countriesTitle": "Paesi",
-      "countriesHint": "Persone negli ultimi 30 minuti, per paese.",
-      "placesTitle": "Dove sono",
-      "placesHint": "Persone negli ultimi 30 minuti, per città.",
       "showing": "Mostra",
       "lists": {
         "pages": "Pagine",
@@ -17071,10 +17066,68 @@
         "devices": "Dispositivo",
         "events": "Evento"
       },
-      "byTitle": "pagine per titolo, come le danno i dati in diretta di Google",
       "download": "Scarica CSV",
       "nobody": "Nessuno negli ultimi 30 minuti.",
-      "noMatch": "Nessun risultato per questa ricerca."
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "about": "I dati in diretta di Google contano l'intera proprietà di Google Analytics, in ogni paese. Chiamano le pagine con il loro titolo e non sanno da dove sono arrivati i visitatori. Vengono chiesti solo mentre questa pagina è aperta e in primo piano, e non si conserva nulla.",
+      "nextUpdate": "Si aggiorna ogni minuto mentre questa pagina è aperta. Prossimo aggiornamento tra {seconds, plural, =1 {1 secondo} other {# secondi}}.",
+      "updating": "Aggiornamento in corso…",
+      "busiestPage": "Pagina più visitata",
+      "homePage": "Pagina iniziale",
+      "busiestPageDetail": "{people, plural, =1 {1 persona} other {# persone}} e {views, plural, =1 {1 visualizzazione} other {# visualizzazioni}}.",
+      "noPage": "Nessuna pagina negli ultimi 30 minuti.",
+      "busiestTown": "Città più attiva",
+      "busiestTownDetail": "{people} su {all, plural, =1 {1 persona} other {# persone}}.",
+      "noTown": "Google non ha ancora indicato una città.",
+      "newest": "Conversione più recente",
+      "newestAgo": "{minutes, plural, =0 {Proprio ora} =1 {1 minuto fa} other {# minuti fa}}.",
+      "peopleWord": "{count, plural, =1 {Persona} other {Persone}}",
+      "againstTitle": "L'ultima mezz'ora rispetto al solito",
+      "againstHint": "Le barre sono l'ultima mezz'ora, e i segni sono il solito.",
+      "againstHintNone": "Le barre sono l'ultima mezz'ora. Per questo sito non c'è ancora un dato abituale.",
+      "againstNow": "L'ultima mezz'ora",
+      "againstUsual": "Il solito",
+      "againstFigure": "Dato",
+      "conversionsThisTime": "Conversioni a quest'ora",
+      "aboutCount": "Circa {count}",
+      "underOne": "Meno di 1",
+      "underOneShort": "Sotto 1",
+      "usualEven": "{about} in una mezz'ora normale",
+      "usualHour": "{about} in mezz'ora, di {day} alle {hour} a {month}",
+      "noUsual": "Nessun dato abituale",
+      "evenNote": "Questo dato è il mese scorso distribuito in modo uniforme tra notte e giorno, quindi di giorno risulta basso.",
+      "countryNote": "Conta il tuo paese principale, mentre Live conta ogni paese.",
+      "everyDeviceNote": "Questo dispositivo non ha ancora un mese salvato, quindi il dato abituale è per tutti i dispositivi.",
+      "verdictPeople": {
+        "more": "Più persone del solito.",
+        "fewer": "Meno persone del solito."
+      },
+      "verdict": {
+        "more": {
+          "and": {
+            "more": "Più persone del solito, e più conversioni."
+          },
+          "but": {
+            "fewer": "Più persone del solito, ma meno conversioni."
+          }
+        },
+        "fewer": {
+          "and": {
+            "fewer": "Meno persone del solito, e meno conversioni."
+          },
+          "but": {
+            "more": "Meno persone del solito, ma più conversioni."
+          }
+        }
+      },
+      "mapTitle": "Cosa stanno guardando le persone",
+      "mapHint": "I riquadri più grandi hanno avuto più visualizzazioni negli ultimi 30 minuti. Finora sono {views}.",
+      "mapEmpty": "Nessuna visualizzazione negli ultimi 30 minuti.",
+      "shopPages": "Ricerca e carrello",
+      "tableNote": "Negli ultimi 30 minuti.",
+      "tableNotePages": "Negli ultimi 30 minuti. Una persona può essere su più pagine.",
+      "noAddress": "Nessun indirizzo salvato",
+      "address": "Indirizzo"
     },
     "heroes": {
       "figuresTo": "Dati di Search Console fino al {console} e di Analytics fino al {analytics}; gli ultimi due giorni possono ancora cambiare.",
@@ -18191,12 +18244,12 @@
         "title": "Cosa hanno guardato le persone, per classificazione",
         "hint": "Ogni riquadro è una classificazione. Più è grande, più spesso le persone hanno guardato le sue pagine.",
         "notSorted": "Non ancora ordinate",
-        "caption": "{views} visualizzazioni · {share}",
-        "views": "visualizzazioni",
+        "caption": "{count, plural, =1 {{views} visualizzazione} other {{views} visualizzazioni}} · {share}",
+        "views": "{count, plural, =1 {visualizzazione} other {visualizzazioni}}",
         "ofViews": "di tutte le visualizzazioni",
-        "pages": "pagine",
+        "pages": "{count, plural, =1 {pagina} other {pagine}}",
         "also": "Anche: {list}",
-        "alsoOne": "{name} {views} visualizzazioni",
+        "alsoOne": "{name} {count, plural, =1 {{views} visualizzazione} other {{views} visualizzazioni}}",
         "unsorted": "Le tue pagine non sono ancora ordinate in gruppi, quindi non c'è niente per cui sommare le visualizzazioni.",
         "waiting": "Ancora in raccolta: la prossima raccolta porta le pagine di questo dispositivo.",
         "empty": "Nessuna pagina vista in queste date."
@@ -18219,7 +18272,10 @@
       "shopPages": "Le pagine di ricerca, carrello e account",
       "homePage": "La pagina iniziale",
       "bought": "Comprati",
-      "theirVisits": "la loro quota di tutte le visite"
+      "theirVisits": "la loro quota di tutte le visite",
+      "busiestMinute": "Il minuto più attivo",
+      "averageMinute": "Un minuto medio",
+      "peopleShare": "La sua quota di persone il mese scorso"
     },
     "landingPage": {
       "back": "Pagine di destinazione",

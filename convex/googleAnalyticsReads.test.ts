@@ -748,6 +748,100 @@ describe("Live (GA34)", () => {
     // Nothing is kept: no held list, no row of any kind.
     expect(await kept()).toBe(before);
   });
+
+  test("each page's address and Classification are found by its title, from what's saved, and nothing more is asked", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing().slice(-3));
+    const google = fakeGoogle(growing());
+    const person = (page: string, views: number) => ({ minutesAgo: 1, city: "London", page, device: "desktop", views });
+    google.live = [person("Home", 8), person("Locks", 4), person("Locks", 4), person("Checkout", 3), person("Never saved", 1), person("(not set)", 2)];
+    await t.run(async (ctx) => {
+      const page = { companyWebsiteId: siteId, crawled: true, shown: true, ranks: false };
+      await ctx.db.insert("holdPages", { ...page, page: "/live-home-test/", clicks: 0, title: "Home" });
+      await ctx.db.insert("holdPages", { ...page, page: "/locks-quiet/", clicks: 1, title: "Locks" });
+      // A title on two pages: the busier one.
+      await ctx.db.insert("holdPages", { ...page, page: "/locks/", clicks: 50, title: "Locks" });
+      await ctx.db.insert("holdPages", { ...page, page: "/checkout/onepage/", clicks: 2, title: "Checkout" });
+      const locks = await ctx.db.insert("pageClassifications", { companyWebsiteId: siteId, name: "Locks", type: "PRODUCT", createdAt: 1, updatedAt: 1 });
+      await ctx.db.insert("pageClassificationLines", { companyWebsiteId: siteId, classificationId: locks, kind: "STARTS_WITH", value: "/locks", createdAt: 1 });
+    });
+    const asks = () => google.calls.filter((call) => call.url.endsWith(":runRealtimeReport")).length;
+    const askedBefore = asks();
+    const answer = await user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, { siteId, device: "", list: "pages" });
+    if (!answer.ok) throw new Error("unreachable");
+    // Still one ask each: now, the half hour, its minutes, towns, countries, pages and conversions.
+    expect(asks() - askedBefore).toBe(7);
+    expect(Object.fromEntries(answer.rows.map((row) => [row.name, row.address]))).toEqual({ Home: "/live-home-test/", Locks: "/locks/", Checkout: "/checkout/onepage/", "Never saved": null, "(not set)": null });
+    expect(answer.busiestPage?.name).toBe("Locks");
+    expect(answer.sorted).toBe(true);
+    // By Classification; the shop's pages together, by address or by name; the rest Not sorted.
+    expect(Object.fromEntries(answer.kinds.map((kind) => [kind.name ?? kind.kind, [kind.views, kind.pages]]))).toEqual({ Locks: [8, 1], NOT_SORTED: [11, 3], SHOP_PAGES: [3, 1] });
+    expect(answer.kinds.reduce((sum, kind) => sum + kind.views, 0)).toBe(answer.views);
+    // The pages reach the eye whichever list the table shows.
+    const towns = await user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, { siteId, device: "", list: "places" });
+    if (!towns.ok) throw new Error("unreachable");
+    expect(towns.pages.map((row) => row.name)).toContain("Locks");
+    expect(towns.rows.map((row) => row.name)).toEqual(["London"]);
+  });
+
+  test("a website with no Classifications says so, and its pages still find their addresses", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing().slice(-3));
+    const google = fakeGoogle(growing());
+    google.live = [{ minutesAgo: 1, city: "London", page: "Home", device: "desktop", views: 2 }];
+    await t.run(async (ctx) => {
+      await ctx.db.insert("holdPages", { companyWebsiteId: siteId, crawled: true, shown: true, ranks: false, page: "/live-home-test/", clicks: 0, title: "Home" });
+      for (const row of await ctx.db.query("pageClassifications").collect()) await ctx.db.delete(row._id);
+    });
+    const answer = await user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, { siteId, device: "", list: "pages" });
+    if (!answer.ok) throw new Error("unreachable");
+    expect(answer.sorted).toBe(false);
+    expect(answer.rows[0]).toMatchObject({ name: "Home", address: "/live-home-test/" });
+  });
+
+  test("a usual half hour reads the website's own hours once a run has saved them, and each device's share of people", async () => {
+    const { siteId, user } = await collectedGrowing();
+    const october = Date.parse("2026-10-09T10:15:00Z");
+    const flat = await user.query(api.googleAnalyticsLiveUsual.analyticsLiveUsual, { siteId, device: "" });
+    expect(flat).not.toBeNull();
+    expect(flat!.dayOfWeek).toBeNull();
+    expect(flat!.peopleThisTime).toBeNull();
+    const usual = await user.query(api.googleAnalyticsLiveUsual.analyticsLiveUsual, { siteId, device: "", at: october });
+    expect(usual!.dayOfWeek).toBe(new Date(october).getUTCDay());
+    expect(usual!.hour).toBe(11);
+    expect(usual!.devices.reduce((sum, device) => sum + device.peopleShare, 0)).toBeCloseTo(1);
+    // One device chosen: its own figures, and no shares to set it against.
+    const phones = await user.query(api.googleAnalyticsLiveUsual.analyticsLiveUsual, { siteId, device: "mobile", at: october });
+    expect(phones!.devices).toEqual([]);
+  });
+
+  test("Ask Hakken says what the screen says: the boxes, the usual and its meaning, and the views by Classification", async () => {
+    const t = harness();
+    const { siteId } = await collected(t, growing().slice(-3));
+    const companyId = await t.run(async (ctx) => (await ctx.db.get(siteId))!.companyId);
+    const google = fakeGoogle(growing());
+    google.live = [
+      { minutesAgo: 1, city: "London", page: "Home", device: "desktop", views: 5, events: { generate_lead: 1 } },
+      { minutesAgo: 2, city: "(not set)", page: "Home", device: "mobile", views: 1 },
+    ];
+    await t.run(async (ctx) => {
+      await ctx.db.insert("holdPages", { companyWebsiteId: siteId, crawled: true, shown: true, ranks: false, page: "/live-home-test/", clicks: 0, title: "Home" });
+    });
+    const told = await t.action(internal.assistantAnalyticsReads.googleAnalyticsLiveInternal, { companyId, website: "acme-shop.test" }) as Record<string, unknown>;
+    const screen = await t.action(internal.assistantAnalyticsReads.googleAnalyticsLiveInternal, { companyId, website: "acme-shop.test", list: "events" }) as Record<string, unknown>;
+    expect(told).toMatchObject({
+      ok: true,
+      onTheWebsiteNow: 2,
+      peopleInTheLast30Minutes: 2,
+      pageViewsInTheLast30Minutes: 6,
+      busiestPage: { title: "Home", address: "/live-home-test/", people: 2, views: 6 },
+      busiestTown: { town: "London", people: 1, ofPeople: 2 },
+    });
+    expect((told.peopleEachMinuteOldestFirst as number[]).slice(-3)).toEqual([1, 1, 0]);
+    expect(told.usualHalfHour).toMatchObject({ people: { forThisTimeOfTheWeek: expect.any(Boolean) }, views: { forThisTimeOfTheWeek: expect.any(Boolean) } });
+    expect(told.rule).toEqual(expect.stringContaining("Never give a cause"));
+    expect(screen.events).toEqual([{ event: "generate lead", times: 1 }]);
+  });
 });
 
 describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
@@ -960,12 +1054,12 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
     expect(answer).toMatchObject({
       ok: true, website: "acme-shop.test", onTheWebsiteNow: 2, peopleInTheLast30Minutes: 3, pageViewsInTheLast30Minutes: 5,
       countries: [{ country: "GB", people: 2 }, { country: "DE", people: 1 }],
-      conversionsInTheLast30Minutes: { count: 1, eventName: "generate_lead", minutesAgo: 12 },
+      conversionsInTheLast30Minutes: { count: 1, newest: "generate lead", minutesAgo: 12 },
       link: `/app/analytics/${siteId}/live`,
     });
     // An event is told in times, never as nobody.
     const events = fields(await t.action(internal.assistantAnalyticsReads.googleAnalyticsLiveInternal, { companyId, website: "acme-shop.test", list: "events" }));
-    expect(events.events).toEqual([{ event: "generate_lead", times: 1 }]);
+    expect(events.events).toEqual([{ event: "generate lead", times: 1 }]);
     // Nothing of Live kept: the only lists held are the night's funnels, kept by the collection (ga-conversions-visitors-plan.md CV4).
     expect(await t.run(async (ctx) => (await ctx.db.query("googleAnalyticsLive").collect()).filter((row) => !row.ask.startsWith("funnel:")).length)).toBe(0);
   });

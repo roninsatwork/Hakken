@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { dayAndHourIn, usualThisTime, weekdaysIn } from "./googleAnalyticsLiveUsual";
-import { eventHourKey } from "./googleAnalyticsLists";
+import { dayAndHourIn, usualPeopleThisTime, usualThisTime, weekdaysIn } from "./googleAnalyticsLiveUsual";
+import { eventHourKey, totalHourKey } from "./googleAnalyticsLists";
 
 describe("A usual half hour at this time of the week (Live)", () => {
   test("a moment is read on the website's own clock, in summer time and out of it", () => {
@@ -34,5 +34,18 @@ describe("A usual half hour at this time of the week (Live)", () => {
     expect(usualThisTime(rows, new Set(["add_to_cart"]), 3, 9, 4)).toBe(0);
     // None of that day in the dates: nothing to say, rather than nought.
     expect(usualThisTime(rows, new Set(["add_to_cart"]), 5, 9, 0)).toBeNull();
+  });
+
+  test("people and views at that hour on that day, a half hour's share of each such day", () => {
+    const rows = [
+      { key: totalHourKey("5", "10"), people: 300, views: 1000 },
+      { key: totalHourKey("5", "11"), people: 999, views: 999 },
+      { key: totalHourKey("6", "10"), people: 999, views: 999 },
+    ];
+    // Five Fridays: 300 people at 10am, so 60 a Friday, so 30 a half hour.
+    expect(usualPeopleThisTime(rows, 5, 10, 5)).toEqual({ people: 30, views: 100 });
+    // Nobody at that hour is a usual of none, once the hours are saved at all.
+    expect(usualPeopleThisTime(rows, 1, 3, 4)).toEqual({ people: 0, views: 0 });
+    expect(usualPeopleThisTime(rows, 5, 10, 0)).toBeNull();
   });
 });

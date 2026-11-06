@@ -2,14 +2,18 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Live
+live-dot
 figures
   figure: On the website now
-  figure: People
-  figure: Views
-  figure: Conversions
+    live-dot
+  figure: Busiest page
+  figure: Busiest town
+  figure: Newest conversion
 chart-card: People each minute
-chart-card: Countries
-chart-card: Where they are
+minute-bars
+chart-card: The last half hour against usual
+against-bars
+chart-card: What people are looking at
 search: Find a page…
 choice: Showing: Pages | Places | Devices | Events
 table: Page | People | Views

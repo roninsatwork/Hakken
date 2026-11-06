@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { Radio } from "lucide-react";
@@ -8,14 +8,21 @@ import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { isUnknownValue } from "@/convex/utils/analyticsUnknown";
+import { LEAST_USUAL_FOR_A_VERDICT, liveVerdict, usualNow } from "@/convex/utils/liveFigures";
+import { normalisePage } from "@/convex/utils/pageClassification";
+import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
+import { SHOP_PAGES_KIND } from "@/convex/utils/shopPages";
+import { AgainstBars, type AgainstRow } from "@/src/ui/components/screens/AgainstBars";
 import { Button } from "@/src/ui/components/screens/Button";
-import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { Change } from "@/src/ui/components/screens/Change";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { ListTable } from "@/src/ui/components/screens/ListTable";
+import { LiveDot } from "@/src/ui/components/screens/LiveDot";
+import { MinuteBars } from "@/src/ui/components/screens/MinuteBars";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { TableBar } from "@/src/ui/components/screens/TableBar";
-import { SiteLineChart } from "../../../sites/_components/SiteCharts";
-import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
+import { Tooltip } from "@/src/ui/components/screens/Tooltip";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
@@ -23,15 +30,15 @@ import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { SearchConsoleChartCard } from "../../../search-console/_components/SearchConsoleChartCard";
-import { regionName } from "../../../search-console/_components/countries";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
+import { PageLink } from "../../_components/AnalyticsCells";
 import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
-import { TopBars } from "../../_components/AnalyticsChart";
+import { ClassificationMap, type ClassificationBox } from "../../_components/ClassificationMap";
 import { useEventName } from "../../_components/useEventName";
-import { CHECK_EVERY_MS, liveStep } from "../../_components/liveTiming";
+import { ASK_EVERY_MS, CHECK_EVERY_MS, liveStep } from "../../_components/liveTiming";
 import { useEyeNames } from "../../_components/useEyeFigures";
-import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, type AnalyticsStatus } from "../../_components/useAnalytics";
+import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, type AnalyticsStatus } from "../../_components/useAnalytics";
 
 const LISTS = ["pages", "places", "devices", "events"] as const;
 type LiveList = (typeof LISTS)[number];
@@ -53,13 +60,12 @@ const labelOf = (row: { label: string }) => row.label;
 const TOUCHES = ["pointermove", "pointerdown", "keydown", "scroll", "touchstart"] as const;
 
 /**
- * Live (GA34; §18.2 board 14): who is on the website right now, and what
- * they've done in the last 30 minutes — What Hakken sees, on the website now,
- * people, views and conversions, people each minute, their countries and
- * towns as bars, and one table switching between pages (by title), places,
- * devices and events. Every country counts, as in Google's own Realtime, so
- * the page offers no home country (Anthony, 2026-10-13). Asked of Google once a minute, only while this page is open and in
- * front (`liveTiming.ts`), paused after 30 minutes untouched; nothing kept.
+ * Live, as Anthony chose it (2026-11-06: "WAY 3 WITH MODIFICATIONS IS WHAT I WANT"; docs/plans/active/live-new-page-plan-2026-11-06.md):
+ * who is on the website right now, and what they've done in the last 30 minutes. A line saying when it next updates, four boxes
+ * naming the busiest things, people each minute, the last half hour against usual, what people are looking at by Classification,
+ * and one table switching between pages, places, devices and events. Every country counts, as in Google's own Realtime, so the page
+ * offers no home country (Anthony, 2026-10-13). Asked of Google once a minute, only while this page is open and in front
+ * (`liveTiming.ts`), paused after 30 minutes untouched; nothing kept.
  */
 export default function AnalyticsLivePage() {
   const t = useTranslations("googleAnalytics.live");
@@ -145,10 +151,10 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.live");
   const tf = useTranslations("googleAnalytics.filters");
   const tn = useTranslations("googleAnalytics.visitors.names");
-  const locale = useLocale();
+  const tk = useTranslations("googleAnalytics.visitors.kinds");
   const args = useAnalyticsArgs();
-  const [device] = useDevice();
   const nameOfEvent = useEventName();
+  const pageHref = usePageHref();
   const [list, setList] = useSiteParam<LiveList>("view", "pages", LISTS);
   const { answer, problem, paused, carryOn, inFront } = useLiveFigures({ siteId: args.siteId, device: args.device, list });
   const [search, setSearch, term] = useSiteSearch();
@@ -159,29 +165,19 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
   const matching = named?.filter((row) => !term || row.label.toLowerCase().includes(term.toLowerCase()));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: list === "events" ? "times" : "people", name: labelOf });
   const pager = useSitePager(sorted, { isLoading: answer === null && !problem });
-  const countryOf = (code: string) => (isUnknownValue(code) ? tn("unknown") : regionName(code, locale) ?? code);
-  const conversions = answer?.conversions ?? null;
-  const chart = (answer?.minutes ?? []).map((people, at, all) => ({ label: t("minutesAgo", { count: all.length - 1 - at }), people }));
-  const bar = [t("lastThirty"), tf(`devices.${device}`).toLowerCase(), list === "pages" ? t("byTitle") : null].filter(Boolean).join(" · ");
-  // What the eye reads: right now, the list on screen by its name, and a usual half hour last month worked out from the
-  // figures Hakken keeps, never a second ask of Google (decision 3, Anthony, 2026-11-03: "Yes, write one").
-  // The hour Google was last asked, so conversions can be set against this day of the week and this hour.
+  // The hour Google was last asked, so each figure can be set against this day of the week and this hour.
   const hour = answer ? Math.floor(answer.askedAt / 3_600_000) * 3_600_000 : null;
   const usual = useQuery(api.googleAnalyticsLiveUsual.analyticsLiveUsual, { siteId: args.siteId, device: args.device, ...(hour !== null ? { at: hour } : {}) });
-  const eyeNames = useEyeNames();
-  const seesData = useMemo(() => {
-    if (!answer) return answer;
-    // The minute it was asked is the page's own clock, never a figure.
-    const { askedAt: _askedAt, ...now } = answer;
-    void _askedAt;
-    return { ...now, list, ...(usual ? { usual } : {}), names: eyeNames };
-  }, [answer, list, usual, eyeNames]);
-
+  // Last month's views by Classification, for the eye to set the map against, the shop's own pages apart as on the map.
+  const usualKinds = useQuery(api.googleAnalyticsPageKindViews.analyticsPageKindViews, status.connection?.newestDay ? { siteId: args.siteId, period: "lastMonth", device: args.device, shopApart: true } : "skip");
+  const live = inFront && !paused && !problem && answer !== null;
+  const kindLabel = useCallback((kind: { kind: string; name: string | null }) => (
+    kind.kind === NOT_SORTED_KIND ? tk("notSorted") : kind.kind === SHOP_PAGES_KIND ? t("shopPages") : kind.name ?? kind.kind
+  ), [t, tk]);
+  const boxes = useMemo(() => (answer?.kinds ?? []).map((kind) => ({ ...kind, label: kindLabel(kind) })), [answer?.kinds, kindLabel]);
   return (
-    <div className="flex flex-col gap-6">
-      <p className="text-[12px] text-muted">
-        {!inFront ? t("behind") : answer ? t("askedAt", { time: new Date(answer.askedAt).toLocaleTimeString() }) : t("asking")}
-      </p>
+    <div className="flex flex-col gap-4">
+      <NextUpdate askedAt={answer?.askedAt ?? null} inFront={inFront} paused={paused} live={live} />
       {paused ? (
         <Notice>
           <span className="flex flex-wrap items-center gap-3">
@@ -191,90 +187,58 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
         </Notice>
       ) : null}
       {problem ? <Notice tone="warning">{t(problem === "NOT_CONNECTED" ? "notConnected" : "busy")}</Notice> : null}
-      {/* Worked out each minute and never kept: not saved as advice. */}
-      <AnalyticsSees screen="live" seen={answer?.seen} currency={status.connection?.currency} keep={false} data={seesData} />
+      <LiveSees status={status} answer={answer} list={list} usual={usual ?? null} usualKinds={usualKinds ?? null} boxes={boxes} kindLabel={kindLabel} />
+      {answer ? <LiveBoxes answer={answer} live={live} /> : null}
+      <MinutesCard answer={answer} host={status.host} />
+      {answer ? <AgainstCard answer={answer} usual={usual ?? null} device={args.device} host={status.host} /> : null}
       {answer ? (
-        <FigureRow columns={4}>
-          <Figure label={t("now")} value={formatNumber(answer.now)} detail={<span className="text-secondary">{t("lastFive")}</span>} />
-          <Figure label={t("people")} value={formatNumber(answer.people)} detail={<span className="text-secondary">{t("lastThirty")}</span>} />
-          <Figure label={t("views")} value={formatNumber(answer.views)} detail={<span className="text-secondary">{t("lastThirty")}</span>} />
-          <Figure
-            label={t("conversions")}
-            value={formatNumber(conversions?.count ?? 0)}
-            detail={(
-              <span className="text-secondary">
-                {conversions?.eventName ? t("convertedAgo", { event: nameOfEvent(conversions.eventName), minutes: conversions.minutesAgo ?? 0 }) : t("noConversion")}
-              </span>
-            )}
-          />
-        </FigureRow>
+        <ClassificationMap
+          boxes={boxes}
+          title={t("mapTitle")}
+          hint={t("mapHint", { views: formatNumber(answer.views) })}
+          exportName="google-analytics-live-map"
+          host={status.host}
+          colour={CHART_SERIES_ORANGE}
+          height={340}
+          message={!answer.sorted ? tk("unsorted") : boxes.length === 0 ? t("mapEmpty") : null}
+        />
       ) : null}
-      <SearchConsoleChartCard
-        title={t("chartTitle")}
-        hint={t("chartHint")}
-        exportName="google-analytics-live-minutes"
-        csv={() => toCsv([t("minute"), t("people")], chart.map((point) => [point.label, point.people]))}
-        host={status.host}
-        from={null}
-        to={null}
-      >
-        {chart.length > 0
-          ? <SiteLineChart data={chart} series={[{ key: "people", name: t("people"), colour: CHART_SERIES_ORANGE }]} sharedScale />
-          : <p className="py-10 text-center text-[12px] text-muted">{t("asking")}</p>}
-      </SearchConsoleChartCard>
-      <TopBars
-        title={t("countriesTitle")}
-        hint={t("countriesHint")}
-        rows={answer?.countries.slice(0, 10).map((row) => ({ label: countryOf(row.name), value: row.people }))}
-        labels={formatNumber}
-        measure={t("people")}
-        exportName="google-analytics-live-countries"
-        host={status.host}
-        from={null}
-        to={null}
-      />
-      <TopBars
-        title={t("placesTitle")}
-        hint={t("placesHint")}
-        rows={answer?.places.slice(0, 10).map((row) => ({ label: isUnknownValue(row.name) ? tn("unknown") : row.name, value: row.people }))}
-        labels={formatNumber}
-        measure={t("people")}
-        exportName="google-analytics-live-places"
-        host={status.host}
-        from={null}
-        to={null}
-      />
-      <DataTable
+      <ListTable
         rows={pager.pageRows}
         rowKey={(row) => row.name}
+        noun={NOUNS[list]}
+        summary={<span className="text-[12px] text-secondary">{list === "pages" ? t("tableNotePages") : t("tableNote")}</span>}
         search={{ value: search, onChange: setSearch, placeholder: t(`find.${list}`) }}
         filters={<SiteViewSwitch label={t("showing")} options={LISTS.map((value) => ({ value, label: t(`lists.${value}`) }))} value={list} onChange={setList} />}
-        cardHeader={
-          <TableBar
-            footer={pager.footer}
-            noun={NOUNS[list]}
-            actions={sorted ? (
-              <ListDownload
-                label={t("download")}
-                fileName={`${status.host}-google-analytics-live-${list}`}
-                rows={sorted}
-                columns={[
-                  { header: t(`columns.${list}`), value: (row) => row.label },
-                  ...(list === "events" ? [] : [{ header: t("people"), value: (row: Row) => row.people }]),
-                  ...(list === "pages" ? [{ header: t("views"), value: (row: Row) => row.views }] : []),
-                  ...(list === "events" ? [{ header: t("times"), value: (row: Row) => row.times }] : []),
-                ]}
-              />
-            ) : undefined}
-          >
-            <span className="text-[12px] text-secondary">{bar}</span>
-          </TableBar>
-        }
+        actions={sorted ? (
+          <ListDownload
+            label={t("download")}
+            fileName={`${status.host}-google-analytics-live-${list}`}
+            rows={sorted}
+            columns={[
+              { header: t(`columns.${list}`), value: (row) => row.label },
+              ...(list === "pages" ? [{ header: t("address"), value: (row: Row) => row.address ?? "" }] : []),
+              ...(list === "events" ? [] : [{ header: t("people"), value: (row: Row) => row.people }]),
+              ...(list === "pages" ? [{ header: t("views"), value: (row: Row) => row.views }] : []),
+              ...(list === "events" ? [{ header: t("times"), value: (row: Row) => row.times }] : []),
+            ]}
+          />
+        ) : undefined}
         sort={tableSort}
         empty={{ icon: <Radio className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : answer ? t("nobody") : t("asking") }}
         footer={pager.footer}
         columns={[
-          { key: "name", header: t(`columns.${list}`), sortable: true, className: CUT_COLUMN.first, cell: (row) => <span className="block truncate text-[13px] text-foreground" title={row.label}>{row.label}</span> },
+          // The page takes all the room the figures leave, and shows its address (Anthony, 2026-11-06: "show the URL").
+          { key: "name", header: t(`columns.${list}`), sortable: true, className: "w-full max-w-0", cell: (row) => (list === "pages" ? (
+            row.address
+              ? <PageLink address={fullAddress(status.host, row.address)} href={pageHref(row.address)} title={row.label} />
+              : (
+                <span className="flex min-w-0 flex-col">
+                  <span className="block truncate text-[13px] text-foreground" title={row.label}>{row.label}</span>
+                  <span className="text-[12px] text-muted">{t("noAddress")}</span>
+                </span>
+              )
+          ) : <span className="block truncate text-[13px] text-foreground" title={row.label}>{row.label}</span>) },
           ...(list === "events" ? [{ key: "times", header: t("times"), align: "right" as const, sortable: true, cell: (row: Row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.times)}</span> }] : []),
           // Google's live figures give an event its times, never its people.
           ...(list === "events" ? [] : [{ key: "people", header: t("people"), align: "right" as const, sortable: true, cell: (row: Row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.people)}</span> }]),
@@ -283,4 +247,212 @@ function LiveBody({ status }: { status: AnalyticsStatus }) {
       />
     </div>
   );
+}
+
+/** A saved page is kept as its path: the whole address for the hover. */
+function fullAddress(host: string, path: string): string {
+  return /^https?:\/\//i.test(path) ? path : `https://${host}${path}`;
+}
+
+/**
+ * The one short line at the top: when the figures next update, with the long words about them in a rollover that a tap also opens.
+ * The count runs on the page's own clock and asks nothing: when it reaches the minute, `useLiveFigures` asks.
+ */
+function NextUpdate({ askedAt, inFront, paused, live }: { askedAt: number | null; inFront: boolean; paused: boolean; live: boolean }) {
+  const t = useTranslations("googleAnalytics.live");
+  const [seconds, setSeconds] = useState<number | null>(null);
+  useEffect(() => {
+    if (askedAt === null) return undefined;
+    const count = () => setSeconds(Math.max(0, Math.ceil((askedAt + ASK_EVERY_MS - Date.now()) / 1000)));
+    count();
+    const timer = setInterval(count, 1000);
+    return () => clearInterval(timer);
+  }, [askedAt]);
+  if (paused) return null;
+  const words = !inFront ? t("behind") : askedAt === null ? t("asking") : seconds === null || seconds === 0 ? t("updating") : t("nextUpdate", { seconds });
+  return (
+    <Tooltip label={t("about")} className="relative inline-flex self-start">
+      <p tabIndex={0} className="flex items-center gap-2 text-[12px] text-secondary">
+        {live ? <LiveDot /> : null}
+        <span>{words}</span>
+      </p>
+    </Tooltip>
+  );
+}
+
+const quiet = (words: ReactNode) => <span className="text-secondary">{words}</span>;
+
+function LiveBoxes({ answer, live }: { answer: Answer; live: boolean }) {
+  const t = useTranslations("googleAnalytics.live");
+  const nameOfEvent = useEventName();
+  const page = answer.busiestPage;
+  const town = answer.places.find((place) => !isUnknownValue(place.name));
+  const { conversions } = answer;
+  const pageWord = page ? (page.address && normalisePage(page.address) === "/" ? t("homePage") : page.name) : null;
+  return (
+    <FigureRow columns={4}>
+      <Figure label={t("now")} {...(live ? { mark: <LiveDot /> } : {})} value={formatNumber(answer.now)} detail={quiet(t("lastFive"))} />
+      <Figure
+        label={t("busiestPage")}
+        value={pageWord ? <span className="line-clamp-2" title={page?.name}>{pageWord}</span> : <NoFigure />}
+        detail={quiet(page ? t("busiestPageDetail", { people: page.people, views: page.views }) : t("noPage"))}
+      />
+      <Figure
+        label={t("busiestTown")}
+        value={town ? <span className="line-clamp-2" title={town.name}>{town.name}</span> : <NoFigure />}
+        detail={quiet(town ? t("busiestTownDetail", { people: town.people, all: answer.people }) : t("noTown"))}
+      />
+      <Figure
+        label={t("newest")}
+        value={conversions.eventName ? <span className="line-clamp-2">{nameOfEvent(conversions.eventName)}</span> : <NoFigure />}
+        detail={quiet(conversions.eventName ? t("newestAgo", { minutes: conversions.minutesAgo ?? 0 }) : t("noConversion"))}
+      />
+    </FigureRow>
+  );
+}
+
+/** People each minute: a bar for each, the newest on the right. A minute keeps its key as it moves along, so the bars slide. */
+function MinutesCard({ answer, host }: { answer: Answer | null; host: string }) {
+  const t = useTranslations("googleAnalytics.live");
+  const bars = useMemo(() => {
+    if (!answer) return [];
+    const thisMinute = Math.floor(answer.askedAt / 60_000);
+    return answer.minutes.map((value, at, all) => {
+      const ago = all.length - 1 - at;
+      return { key: thisMinute - ago, value, label: t("minutesAgo", { count: ago }) };
+    });
+  }, [answer, t]);
+  return (
+    <SearchConsoleChartCard
+      title={t("chartTitle")}
+      hint={t("chartHint")}
+      exportName="google-analytics-live-minutes"
+      csv={() => toCsv([t("minute"), t("people")], bars.map((bar) => [bar.label, bar.value]))}
+      host={host}
+      from={null}
+      to={null}
+    >
+      {bars.length > 0
+        ? <MinuteBars bars={bars} name={t("chartTitle")} measure={(value) => t("peopleWord", { count: value })} />
+        : <p className="py-10 text-center text-[12px] text-muted">{t("asking")}</p>}
+    </SearchConsoleChartCard>
+  );
+}
+
+type Usual = NonNullable<FunctionReturnType<typeof api.googleAnalyticsLiveUsual.analyticsLiveUsual>>;
+
+/** The last half hour against usual: each figure with what it's set against, in words and on the bars, and a verdict in the line under the title. */
+function AgainstCard({ answer, usual, device, host }: { answer: Answer; usual: Usual | null; device: string; host: string }) {
+  const t = useTranslations("googleAnalytics.live");
+  const locale = useLocale();
+  const against = usual ? usualNow(usual) : null;
+  const when = usual && usual.dayOfWeek !== null && usual.hour !== null ? thisTimeWords(usual.dayOfWeek, usual.hour, usual.from, locale) : null;
+  const about = (count: number) => (count < 1 ? t("underOne") : t("aboutCount", { count: Math.round(count) }));
+  const shown = (count: number) => (count < 1 ? t("underOneShort") : formatNumber(Math.round(count)));
+  const evenWord = (count: number) => t("usualEven", { about: about(count) });
+  const hourWord = (count: number) => (when ? t("usualHour", { about: about(count), ...when }) : evenWord(count));
+  const moved = (now: number, mark: number) => (mark >= LEAST_USUAL_FOR_A_VERDICT
+    ? <Change by={Math.round((100 * (now - mark)) / mark)} same format={(value) => `${Math.abs(value)}%`} />
+    : undefined);
+  const evenNote = t("evenNote");
+  const countryNote = t("countryNote");
+  const row = (key: string, label: string, now: number, mark: number | null, word: string, note: string): AgainstRow => ({
+    key,
+    label,
+    now,
+    usual: mark,
+    nowWord: formatNumber(now),
+    usualWord: word,
+    moved: mark === null ? undefined : moved(now, mark),
+    readout: [
+      { value: formatNumber(now), label: t("againstNow") },
+      ...(mark === null ? [] : [{ value: shown(mark), label: word }]),
+    ],
+    note,
+  });
+  const conversions = answer.conversions.count;
+  const countsConversions = conversions > 0 || (usual !== null && (usual.conversions > 0 || (usual.conversionsThisTime ?? 0) > 0));
+  const noUsual = t("noUsual");
+  const rows: AgainstRow[] = [
+    row("people", t("people"), answer.people, against?.people ?? null, !against ? noUsual : against.peopleThisTime ? hourWord(against.people) : evenWord(against.people), `${against?.peopleThisTime ? "" : `${evenNote} `}${countryNote}`),
+    row("views", t("views"), answer.views, against?.views ?? null, !against ? noUsual : against.viewsThisTime ? hourWord(against.views) : evenWord(against.views), `${against?.viewsThisTime ? "" : `${evenNote} `}${countryNote}`),
+    ...(countsConversions ? [row("conversions", t("conversions"), conversions, usual?.conversions ?? null, usual ? evenWord(usual.conversions) : noUsual, `${evenNote} ${countryNote}`)] : []),
+    ...(countsConversions && typeof usual?.conversionsThisTime === "number" ? [row("thisTime", t("conversionsThisTime"), conversions, usual.conversionsThisTime, hourWord(usual.conversionsThisTime), countryNote)] : []),
+  ];
+  const verdict = usual ? liveVerdict({ people: answer.people, conversions: countsConversions ? conversions : null }, usual) : null;
+  const verdictWords = verdict
+    ? (verdict.conversions === null ? t(`verdictPeople.${verdict.people}`) : t(`verdict.${verdict.people}.${verdict.people === verdict.conversions ? "and" : "but"}.${verdict.conversions}`))
+    : null;
+  const hint = [verdictWords, usual ? t("againstHint") : t("againstHintNone"), device !== "" && usual?.everyDevice ? t("everyDeviceNote") : null].filter(Boolean).join(" ");
+  return (
+    <SearchConsoleChartCard
+      title={t("againstTitle")}
+      hint={hint}
+      exportName="google-analytics-live-against-usual"
+      csv={() => toCsv([t("againstFigure"), t("againstNow"), t("againstUsual")], rows.map((one) => [one.label, one.now, one.usual ?? ""]))}
+      host={host}
+      from={null}
+      to={null}
+    >
+      <AgainstBars rows={rows} nowKey={t("againstNow")} usualKey={t("againstUsual")} />
+    </SearchConsoleChartCard>
+  );
+}
+
+/** "Friday", "10am" and "October" in the reader's words. Worked out at midday UTC so a date never slips, and only the words are used. */
+function thisTimeWords(dayOfWeek: number, hour: number, from: string, locale: string): { day: string; hour: string; month: string } {
+  const language = locale === "en" ? "en-GB" : locale;
+  // 4 January 1970 was a Sunday, Google's day 0.
+  const day = new Intl.DateTimeFormat(language, { weekday: "long", timeZone: "UTC" }).format(Date.UTC(1970, 0, 4 + dayOfWeek, 12));
+  const clock = new Intl.DateTimeFormat(language, { hour: "numeric", hour12: locale === "en", timeZone: "UTC" }).format(Date.UTC(1970, 0, 4, hour)).replace(/\s/g, "").toLowerCase();
+  const month = new Intl.DateTimeFormat(language, { month: "long", timeZone: "UTC" }).format(Date.parse(`${from}T12:00:00Z`));
+  return { day, hour: clock, month };
+}
+
+/**
+ * What the eye reads: the moment's figures, with what each is set against, worked out from the figures Hakken keeps and never a
+ * second ask of Google (decision 3, Anthony, 2026-11-03: "Yes, write one"). The pages whichever list the table shows.
+ */
+function LiveSees({ status, answer, list, usual, usualKinds, boxes, kindLabel }: {
+  status: AnalyticsStatus;
+  answer: Answer | null;
+  list: LiveList;
+  usual: Usual | null;
+  usualKinds: FunctionReturnType<typeof api.googleAnalyticsPageKindViews.analyticsPageKindViews> | null;
+  boxes: ReadonlyArray<ClassificationBox>;
+  kindLabel: (kind: { kind: string; name: string | null }) => string;
+}) {
+  const tm = useTranslations("googleAnalytics.menu");
+  const tf = useTranslations("googleAnalytics.filters");
+  const args = useAnalyticsArgs();
+  const hrefFor = useAnalyticsHref(args.siteId);
+  const eyeNames = useEyeNames();
+  const data = useMemo(() => {
+    if (!answer) return answer;
+    // The minute it was asked is the page's own clock, never a figure.
+    const { askedAt: _askedAt, kinds: _kinds, ...now } = answer;
+    void _askedAt;
+    void _kinds;
+    const placed = usualKinds && usualKinds.kinds.length > 0 ? usualKinds.views : 0;
+    return {
+      ...now,
+      list,
+      // A device by the reader's word for it, never Google's code.
+      ...(list === "devices" ? { rows: now.rows.map((row) => ({ ...row, device: row.name, name: tf.has(`devices.${row.name}`) ? tf(`devices.${row.name}`) : row.name })) } : {}),
+      kinds: boxes.map((box) => ({ kind: box.kind, name: box.label, views: box.views, pages: box.pages })),
+      ...(usual ? { usual: { ...usual, kinds: placed > 0 ? usualKinds!.kinds.map((kind) => ({ kind: kind.kind, name: kindLabel(kind), viewsShare: kind.views / placed })) : [] } } : {}),
+      names: eyeNames,
+    };
+  }, [answer, list, usual, usualKinds, boxes, kindLabel, eyeNames, tf]);
+  // Where "Do first" may send the reader: where what's happening now is looked into over whole days.
+  const links = useMemo(() => [
+    { label: tm("conversions"), href: hrefFor("conversions") },
+    { label: tm("landingPages"), href: hrefFor("funnel") },
+    { label: tm("allPages"), href: hrefFor("all-pages") },
+    { label: tm("channels"), href: hrefFor("channels") },
+    { label: tm("trackingHealth"), href: hrefFor("tracking-health") },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hrefFor is new each draw; the dates, device and country decide.
+  ], [tm, args.period, args.device, args.country]);
+  // Worked out each minute and never kept: not saved as advice. Nobody in the half hour: the rule's words say it at once.
+  return <AnalyticsSees screen="live" seen={answer?.seen} currency={status.connection?.currency} keep={false} data={data} links={links} writes={answer ? answer.people > 0 : undefined} />;
 }

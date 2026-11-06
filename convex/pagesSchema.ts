@@ -119,6 +119,8 @@ export const pagesTables = {
   })
     .index("by_hold_page", ["companyWebsiteId", "page"])
     .index("by_hold_clicks", ["companyWebsiteId", "clicks"])
+    // A page by its title: Google's live figures name pages by title alone, and Live needs each one's address (live-new-page-plan-2026-11-06.md, step 1).
+    .index("by_hold_title", ["companyWebsiteId", "title"])
     // The pages one sitemap file lists: what a "listed in sitemap file" line catches, read when a chart is (`pageKinds.ts`).
     .index("by_hold_file", ["companyWebsiteId", "sitemapFile"]),
 

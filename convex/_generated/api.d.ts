@@ -266,6 +266,7 @@ import type * as googleAnalyticsLandingKinds from "../googleAnalyticsLandingKind
 import type * as googleAnalyticsListKinds from "../googleAnalyticsListKinds.js";
 import type * as googleAnalyticsLists from "../googleAnalyticsLists.js";
 import type * as googleAnalyticsLive from "../googleAnalyticsLive.js";
+import type * as googleAnalyticsLivePages from "../googleAnalyticsLivePages.js";
 import type * as googleAnalyticsLiveUsual from "../googleAnalyticsLiveUsual.js";
 import type * as googleAnalyticsOnward from "../googleAnalyticsOnward.js";
 import type * as googleAnalyticsOverviewReads from "../googleAnalyticsOverviewReads.js";
@@ -820,6 +821,7 @@ import type * as utils_lang from "../utils/lang.js";
 import type * as utils_learnLists from "../utils/learnLists.js";
 import type * as utils_libraryPage from "../utils/libraryPage.js";
 import type * as utils_linkListParts from "../utils/linkListParts.js";
+import type * as utils_liveFigures from "../utils/liveFigures.js";
 import type * as utils_memoryApplication from "../utils/memoryApplication.js";
 import type * as utils_memoryRetrieval from "../utils/memoryRetrieval.js";
 import type * as utils_memoryText from "../utils/memoryText.js";
@@ -1288,6 +1290,7 @@ declare const fullApi: ApiFromModules<{
   googleAnalyticsListKinds: typeof googleAnalyticsListKinds;
   googleAnalyticsLists: typeof googleAnalyticsLists;
   googleAnalyticsLive: typeof googleAnalyticsLive;
+  googleAnalyticsLivePages: typeof googleAnalyticsLivePages;
   googleAnalyticsLiveUsual: typeof googleAnalyticsLiveUsual;
   googleAnalyticsOnward: typeof googleAnalyticsOnward;
   googleAnalyticsOverviewReads: typeof googleAnalyticsOverviewReads;
@@ -1842,6 +1845,7 @@ declare const fullApi: ApiFromModules<{
   "utils/learnLists": typeof utils_learnLists;
   "utils/libraryPage": typeof utils_libraryPage;
   "utils/linkListParts": typeof utils_linkListParts;
+  "utils/liveFigures": typeof utils_liveFigures;
   "utils/memoryApplication": typeof utils_memoryApplication;
   "utils/memoryRetrieval": typeof utils_memoryRetrieval;
   "utils/memoryText": typeof utils_memoryText;

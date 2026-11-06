@@ -638,7 +638,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Read Google Analytics live",
         description:
-          "Who is on one of the company's own websites right now and in the last 30 minutes, from Google's live figures, asked just now and never kept: on the website now, people, page views and conversions in the last 30 minutes, the towns they are in, and pages (by title), places, devices or events. Say the figures are live, with the link returned.",
+          "Who is on one of the company's own websites right now and in the last 30 minutes, from Google's live figures, asked just now and never kept: on the website now, the busiest page and town, people, page views and conversions in the last 30 minutes, people each minute, how that compares with a usual half hour, the views by Classification, the towns they are in, and pages (by title, with their addresses), places, devices or events. Each call asks Google, so call it once for a question. Say the figures are live, with the link returned. These figures can't say where these visitors came from, or why it's busy or quiet: say so first if asked, and never give a cause from another screen.",
         handlerMapping: "assistant.googleAnalytics.live",
         modelName: "read_google_analytics_live",
         requiredRole: "ADMIN",

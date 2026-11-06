@@ -25,6 +25,8 @@ const pageKindViewsArgs = {
   siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()),
   /** All pages: each kind against the span before, with the shop's search, basket and account pages as one of their own. */
   against: v.optional(v.boolean()),
+  /** Live: the shop's search, basket and account pages as one of their own, with no span before to read. */
+  shopApart: v.optional(v.boolean()),
 };
 
 export const analyticsPageKindViews = tenantQuery({
@@ -43,7 +45,7 @@ export const analyticsPageKindViews = tenantQuery({
   handler: async (ctx, args) => await readPageKindViews(ctx, args),
 });
 
-export async function readPageKindViews(ctx: SiteReader, args: { siteId: (typeof pageKindViewsArgs)["siteId"]["type"]; period: AnalyticsPeriod; device: string; country?: string; against?: boolean }) {
+export async function readPageKindViews(ctx: SiteReader, args: { siteId: (typeof pageKindViewsArgs)["siteId"]["type"]; period: AnalyticsPeriod; device: string; shopApart?: boolean; country?: string; against?: boolean }) {
   const site = await requireMySite(ctx, args.siteId);
   const holdId = site.hold._id;
   const country = await keptCountry(ctx, site.hold, args.country);
@@ -56,7 +58,7 @@ export async function readPageKindViews(ctx: SiteReader, args: { siteId: (typeof
   const rows = list.rows.filter((row) => row.views > 0);
   const addresses = await decodePages(ctx, holdId, rows.map((row) => row.key));
   const by = new Map<string, { views: number; pages: number; viewsBefore: number }>();
-  const kindFor = (address: string) => (args.against && isShopPage(address) ? SHOP_PAGES_KIND : kinds ? kinds.kindOf(address) : NOT_SORTED_KIND);
+  const kindFor = (address: string) => ((args.against || args.shopApart) && isShopPage(address) ? SHOP_PAGES_KIND : kinds ? kinds.kindOf(address) : NOT_SORTED_KIND);
   let unplaced = 0;
   rows.forEach((row, at) => {
     const address = addresses[at];

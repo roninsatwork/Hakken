@@ -1,5 +1,6 @@
 import { pageName } from "../../pageNames";
-import { isShopPage } from "../../shopPages";
+import { NOT_SORTED_KIND } from "../../pageKinds";
+import { isShopPage, isShopTitle } from "../../shopPages";
 import { viewsCountedDifferently } from "../../viewsCounted";
 import { couldBeChance } from "../../insightEditor";
 import { pathOfAddress } from "../analytics";
@@ -678,42 +679,81 @@ function liveFindings(data: Row): OwnFound[] {
   const usual = isRow(data.usual) ? data.usual : null;
   const now = nameIn(names, "rightNow", "Right now");
   const half = nameIn(names, "usualHalfHour", "A usual half hour last month");
+  const atThisTime = nameIn(names, "usualThisTime", "A usual half hour at this time of the week");
+  const lastMonth = nameIn(names, "viewsShare", "Its share of views last month");
   const found: OwnFound[] = [];
   if (!usual) return found;
-  if (isNumber(data.people) && isNumber(usual.people) && usual.people > 0) {
-    found.push(beside("now", now, "peopleInHalfHour", data.people, usual.people, 1.6, half));
-  }
-  if (isNumber(data.views) && isNumber(usual.views) && usual.views > 0) {
-    const ratio = Math.max(0.01, data.views / usual.views);
-    found.push(beside("views", now, "views", data.views, usual.views, 0.8 + Math.min(0.5, Math.abs(Math.log(ratio))), half));
-  }
-  const conversions = isRow(data.conversions) && isNumber(data.conversions.count) ? (data.conversions.count as number) : null;
   // Set against this time of the week where the hours are kept: an even spread over night and day reads too low by day.
-  const thisTime = isNumber(usual.conversionsThisTime) && usual.conversionsThisTime >= 1 ? usual.conversionsThisTime : null;
-  const usualConversions = thisTime ?? (isNumber(usual.conversions) && usual.conversions >= 1 ? usual.conversions : null);
-  if (conversions !== null && usualConversions !== null) {
-    const ratio = Math.max(0.01, conversions / usualConversions);
-    found.push(beside("conversions", now, "conversions", conversions, usualConversions, 0.7 + Math.min(0.5, Math.abs(Math.log(ratio))), thisTime !== null ? nameIn(names, "usualThisTime", "A usual half hour at this time of the week") : half));
+  const against = (thisTime: unknown, even: unknown) => (isNumber(thisTime) && thisTime >= 1 ? { value: thisTime, name: atThisTime }
+    : isNumber(even) && even >= 1 ? { value: even, name: half } : null);
+  const far = (value: number, mean: number) => Math.min(0.5, Math.abs(Math.log(Math.max(0.01, value / mean))));
+  const people = against(usual.peopleThisTime, usual.people);
+  if (isNumber(data.people) && people) found.push(beside("now", now, "peopleInHalfHour", data.people, people.value, 1.6, people.name));
+  const views = against(usual.viewsThisTime, usual.views);
+  if (isNumber(data.views) && views) found.push(beside("views", now, "views", data.views, views.value, 0.8 + far(data.views, views.value), views.name));
+  const conversions = isRow(data.conversions) && isNumber(data.conversions.count) ? (data.conversions.count as number) : null;
+  const usualConversions = against(usual.conversionsThisTime, usual.conversions);
+  if (conversions !== null && usualConversions) found.push(beside("conversions", now, "conversions", conversions, usualConversions.value, 0.7 + far(conversions, usualConversions.value), usualConversions.name));
+
+  // The page furthest above its share of views last month, whichever list the table shows: views against views. Never a shop's
+  // search, basket or account page: one person's repeated search isn't news, and last month's share has no such page to set it against.
+  const totalViews = isNumber(data.views) ? data.views : 0;
+  const shares = new Map(rowsOf(usual.pages).flatMap((row) => (typeof row.title === "string" && isNumber(row.viewsSharePercent) ? [[row.title, row.viewsSharePercent as number] as const] : [])));
+  const page = rowsOf(data.pages).flatMap((row) => {
+    if (!named(row) || isShopTitle(named(row)!) || !isNumber(row.views) || totalViews <= 0) return [];
+    const before = shares.get(named(row)!) ?? 0;
+    const share = (100 * row.views) / totalViews;
+    return row.views >= LIVE_LEAST_VIEWS && share - before >= LIVE_PAGE_POINTS ? [{ name: named(row)!, share, before }] : [];
+  }).sort((left, right) => (right.share - right.before) - (left.share - left.before))[0];
+  if (page) found.push(beside("pages", page.name, "viewsSharePercent", page.share, page.before, 0.9 + Math.min(0.5, (page.share - page.before) / 50), lastMonth));
+
+  // The Classifications furthest from their share of views last month, either way, and one with none now counts too: a group
+  // that usually has a fifth of the views and has hardly any is the news, so the bar is on what it has now or would usually have.
+  // Not sorted says nothing about a website.
+  const kindsNow = new Map(rowsOf(data.kinds).flatMap((row) => (typeof row.kind === "string" && isNumber(row.views) ? [[row.kind, row.views as number] as const] : [])));
+  const kinds = rowsOf(usual.kinds).flatMap((row) => {
+    if (typeof row.kind !== "string" || row.kind === NOT_SORTED_KIND || !named(row) || !isNumber(row.viewsSharePercent) || totalViews <= 0) return [];
+    const before = row.viewsSharePercent as number;
+    const views = kindsNow.get(row.kind) ?? 0;
+    const share = (100 * views) / totalViews;
+    return Math.max(views, (before / 100) * totalViews) >= LIVE_LEAST_VIEWS && Math.abs(share - before) >= LIVE_KIND_POINTS ? [{ name: named(row)!, share, before }] : [];
+  }).sort((left, right) => Math.abs(right.share - right.before) - Math.abs(left.share - left.before)).slice(0, LIVE_KINDS_SAID);
+  for (const kind of kinds) found.push(beside("kinds", kind.name, "viewsSharePercent", kind.share, kind.before, 0.85 + Math.min(0.5, Math.abs(kind.share - kind.before) / 50), lastMonth));
+
+  // A device far from its share of people last month: only with the Devices list on screen, as Google is asked for devices no other time.
+  if (data.list === "devices") {
+    const deviceShares = new Map(rowsOf(usual.devices).flatMap((row) => (typeof row.device === "string" && isNumber(row.peopleSharePercent) ? [[row.device, row.peopleSharePercent as number] as const] : [])));
+    const rows = rowsOf(data).filter((row) => named(row) && typeof row.device === "string" && isNumber(row.people));
+    const everyone = rows.reduce((sum, row) => sum + (row.people as number), 0);
+    const device = rows.flatMap((row) => {
+      const before = deviceShares.get(row.device as string);
+      const share = everyone > 0 ? (100 * (row.people as number)) / everyone : 0;
+      return before !== undefined && everyone >= LIVE_LEAST_VIEWS && Math.abs(share - before) >= LIVE_DEVICE_POINTS ? [{ name: named(row)!, share, before }] : [];
+    }).sort((left, right) => Math.abs(right.share - right.before) - Math.abs(left.share - left.before))[0];
+    if (device) found.push(beside("devices", device.name, "peopleSharePercent", device.share, device.before, 0.8 + Math.min(0.5, Math.abs(device.share - device.before) / 50), nameIn(names, "peopleShare", "Its share of people last month")));
   }
-  // The list on screen is pages: the page holding far more of the people now than of last month's views.
-  if (data.list === "pages") {
-    const shares = new Map(rowsOf(usual.pages).flatMap((row) => (typeof row.title === "string" && isNumber(row.viewsSharePercent) ? [[row.title, row.viewsSharePercent as number] as const] : [])));
-    const rows = rowsOf(data).filter((row) => typeof row.name === "string" && isNumber(row.people));
-    const people = rows.reduce((sum, row) => sum + (row.people as number), 0);
-    const best = rows.flatMap((row) => {
-      const before = shares.get(row.name as string) ?? 0;
-      const share = people > 0 ? (100 * (row.people as number)) / people : 0;
-      return (row.people as number) >= LIVE_PAGE_LEAST && share - before >= LIVE_PAGE_POINTS ? [{ row, share, before }] : [];
-    }).sort((left, right) => (right.share - right.before) - (left.share - left.before))[0];
-    if (best) {
-      found.push(beside("pages", best.row.name as string, "peopleSharePercent", best.share, best.before, 0.9 + Math.min(0.5, (best.share - best.before) / 50), nameIn(names, "viewsShare", "Its share of views last month")));
-    }
+
+  // A minute that stands out from the half hour.
+  const minutes = Array.isArray(data.minutes) ? data.minutes.filter(isNumber) : [];
+  const busiest = Math.max(0, ...minutes);
+  const average = minutes.length > 0 ? minutes.reduce((sum, count) => sum + count, 0) / minutes.length : 0;
+  if (busiest >= LIVE_BURST_LEAST && busiest >= LIVE_BURST_TIMES * average) {
+    found.push(beside("minutes", nameIn(names, "busiestMinute", "The busiest minute"), "peopleInAMinute", busiest, average, 0.6 + far(busiest, average) / 2, nameIn(names, "averageMinute", "An average minute")));
   }
   return found;
 }
-/** A page with this many people now, holding this many points more of them than of last month's views. */
-const LIVE_PAGE_LEAST = 5;
-const LIVE_PAGE_POINTS = 15;
+/** Too few views in a half hour to say anything about one page, or a Classification that would usually have so few. */
+const LIVE_LEAST_VIEWS = 10;
+/** A page holding this many points more of the views now than of last month's. */
+const LIVE_PAGE_POINTS = 5;
+/** A Classification this many points from its share of last month's views, or a device from its share of people. */
+const LIVE_KIND_POINTS = 8;
+/** The Classifications said at most: the two furthest from their share. */
+const LIVE_KINDS_SAID = 2;
+const LIVE_DEVICE_POINTS = 10;
+/** A minute with at least this many people, this many times an average one in the half hour. */
+const LIVE_BURST_LEAST = 5;
+const LIVE_BURST_TIMES = 2;
 
 /** Google Analytics' pages with their own rules, by the eye's key for them. */
 export const GOOGLE_ANALYTICS_OWN: Readonly<Record<string, { general: boolean; find: (data: Row) => OwnFound[] }>> = {

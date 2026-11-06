@@ -7,6 +7,8 @@ import type { SiteReader } from "./siteAccess";
 import { holdFor } from "./assistantReads";
 import { isTrackedHold } from "./utils/websitePairing";
 import { readConversions, readListPage, readOverview, type ShownRow } from "./googleAnalyticsReads";
+import { isUnknownValue } from "./utils/analyticsUnknown";
+import { liveVerdict, usualNow } from "./utils/liveFigures";
 import { readOverviewPagePanels, readOverviewPanels, type OverviewPanels } from "./googleAnalyticsOverviewReads";
 import { readEvent, readEvents } from "./googleAnalyticsEventReads";
 import { readVisitorBars, readVisitors } from "./googleAnalyticsVisitorReads";
@@ -923,18 +925,51 @@ export const googleAnalyticsLiveInternal = internalAction({
     if (!answer.ok) {
       return { ok: false, problem: answer.problem === "NOT_CONNECTED" ? `${hold.host} has no Google Analytics connected.` : "Google couldn't answer just now; try again in a minute." };
     }
+    // The screen's own usual, for the hour Google was asked, so Ask Hakken says what the screen says.
+    const usual = await ctx.runQuery(internal.googleAnalyticsLiveUsual.liveUsualInternal, {
+      companyId: args.companyId, siteId: hold.siteId, device: args.device ?? "", at: Math.floor(answer.askedAt / 3_600_000) * 3_600_000,
+    });
+    const against = usual ? usualNow(usual) : null;
+    const counted = answer.conversions.count > 0 || (usual !== null && (usual.conversions > 0 || (usual.conversionsThisTime ?? 0) > 0));
+    const town = answer.places.find((row) => !isUnknownValue(row.name));
     return {
       ok: true,
       website: hold.host,
       askedAt: new Date(answer.askedAt).toISOString(),
       onTheWebsiteNow: answer.now,
+      busiestPage: answer.busiestPage ? { title: answer.busiestPage.name, address: answer.busiestPage.address ?? null, people: answer.busiestPage.people, views: answer.busiestPage.views } : null,
+      busiestTown: town ? { town: town.name, people: town.people, ofPeople: answer.people } : null,
       peopleInTheLast30Minutes: answer.people,
       pageViewsInTheLast30Minutes: answer.views,
-      conversionsInTheLast30Minutes: answer.conversions,
+      conversionsInTheLast30Minutes: { count: answer.conversions.count, newest: answer.conversions.eventName ? actionWords(answer.conversions.eventName) : null, minutesAgo: answer.conversions.minutesAgo },
+      peopleEachMinuteOldestFirst: answer.minutes,
+      ...(usual && against ? {
+        usualHalfHour: {
+          month: usual.from.slice(0, 7),
+          ...(usual.dayOfWeek !== null && usual.hour !== null ? { dayOfWeekSundayIs0: usual.dayOfWeek, hour: usual.hour } : {}),
+          people: { usual: against.people, forThisTimeOfTheWeek: against.peopleThisTime },
+          views: { usual: against.views, forThisTimeOfTheWeek: against.viewsThisTime },
+          ...(counted ? { conversions: { evenSpread: usual.conversions, forThisTimeOfTheWeek: usual.conversionsThisTime } } : {}),
+          // The screen's own verdict, worked out by its rule; null on a usual too small to trust, so none is said.
+          verdict: liveVerdict({ people: answer.people, conversions: counted ? answer.conversions.count : null }, usual),
+        },
+      } : { usualHalfHour: null }),
+      viewsByClassification: answer.sorted
+        ? answer.kinds.map((kind) => {
+          const usualShare = usual?.kindShares.find((one) => one.kind === kind.kind)?.share;
+          return {
+            classification: kind.kind === NOT_SORTED_KIND ? "Not sorted yet" : kind.kind === SHOP_PAGES_KIND ? "Search and basket" : kind.name ?? kind.kind,
+            views: kind.views,
+            pages: kind.pages,
+            sharePercentNow: answer.views > 0 ? Math.round((1000 * kind.views) / answer.views) / 10 : 0,
+            ...(usualShare !== undefined ? { sharePercentLastMonth: Math.round(usualShare * 1000) / 10 } : {}),
+          };
+        })
+        : "This website's pages aren't sorted into Classifications yet.",
       places: answer.places.slice(0, 10).map((row) => ({ town: row.name, people: row.people })),
       countries: answer.countries.slice(0, 10).map((row) => ({ country: row.name, people: row.people })),
-      [args.list ?? "pages"]: args.list === "events" ? answer.rows.slice(0, ROWS).map((row) => ({ event: row.name, times: row.times })) : answer.rows.slice(0, ROWS),
-      rule: "Live figures are Google's, asked just now and never kept; pages are named by title. Every country counts; `countries` splits the people by two-letter country code. Say they are live.",
+      [args.list ?? "pages"]: args.list === "events" ? answer.rows.slice(0, ROWS).map((row) => ({ event: actionWords(row.name), times: row.times })) : answer.rows.slice(0, ROWS),
+      rule: "Live figures are Google's, asked just now and never kept: say they are live. Every call asks Google, so don't ask again for the same question. Pages are named by title, and `address` is the saved page with that title, null when none is saved. Every country counts; `countries` splits the people by two-letter country code. One person can be on several pages and in two towns, so those lists add up to more than the people here. An event is told in times, never people: Google won't give people by event live. Say an event in plain words, as `newest` does, never its code. `usualHalfHour` is a guide from last month for the website's home country, never an exact count: `forThisTimeOfTheWeek` true means it's for this day and hour, false means last month spread evenly over night and day, which reads low in the daytime, so say which. Say a small usual as under 1, not a percentage. Google's live figures can't say where these visitors came from, or why it's busy or quiet. Asked either, say that first, in those words. Never give a cause, and never read another screen for one: a month's or a week's figures don't explain this half hour. To say where visits came from, point to Channels, and say its figures are for whole days, not these people. `viewsByClassification` adds up the views in the last 30 minutes.",
       link: `/app/analytics/${hold.siteId}/live`,
     };
   },

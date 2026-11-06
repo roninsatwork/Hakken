@@ -169,6 +169,7 @@ const COUNTS: Record<string, Measure> = {
   viewsLost: { words: "views lost", kind: "count", lessIsBetter: true },
   viewsGained: { words: "views gained", kind: "count" },
   peopleInHalfHour: { words: "people in the last 30 minutes", kind: "count" },
+  peopleInAMinute: { words: "people in one minute", kind: "count" },
 };
 
 /**

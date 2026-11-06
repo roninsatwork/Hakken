@@ -61,6 +61,21 @@ export function eventHourKey(eventName: string, dayOfWeek: string, hour: string)
   return `${eventName}${JOIN}${dayOfWeek}${JOIN}${hour}`;
 }
 
+/** A row of the website's people and views by day of the week and hour (`totalHour`), as Google sends them. */
+export function totalHourKey(dayOfWeek: string, hour: string): string {
+  return `${dayOfWeek}${JOIN}${hour}`;
+}
+
+export function splitTotalHourKey(key: string): { dayOfWeek: number; hour: number } {
+  const [dayOfWeek = "0", hour = "0"] = key.split(JOIN);
+  return { dayOfWeek: Number(dayOfWeek), hour: Number(hour) };
+}
+
+/** A list of the website's own figures alone: never joined to the key events or asked for sales apart, so it stays one ask. */
+export function isPlainList(list: AnalyticsList): boolean {
+  return list === "totalHour";
+}
+
 export function splitEventHourKey(key: string): { eventName: string; dayOfWeek: number; hour: number } {
   const [eventName = "", dayOfWeek = "0", hour = "0"] = key.split(JOIN);
   return { eventName, dayOfWeek: Number(dayOfWeek), hour: Number(hour) };
@@ -95,6 +110,7 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   event: ["eventName"],
   // The counted events only (`askList` keeps it to them): when people convert, by day of the week and hour.
   eventHour: ["eventName", "dayOfWeek", "hour"],
+  totalHour: ["dayOfWeek", "hour"],
   campaign: ["sessionCampaignName", "sessionSource", "sessionMedium"],
   adKeyword: ["sessionManualTerm"],
   visitorType: ["newVsReturning"],
@@ -154,6 +170,7 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   page: true,
   event: true,
   eventHour: true,
+  totalHour: true,
   campaign: true,
   adKeyword: true,
   visitorType: true,
@@ -311,6 +328,7 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   if (list === "product") return channelKey(keys[0] ?? "", keys[1] ?? "");
   // A counted event by the day of the week and the hour it happened.
   if (list === "eventHour") return eventHourKey(keys[0] ?? "", keys[1] ?? "", keys[2] ?? "");
+  if (list === "totalHour") return totalHourKey(keys[0] ?? "", keys[1] ?? "");
   // A landing page with the channel of its visits (Insights, §8): the page numbered as Landing pages' are.
   if (list === "landingChannel") return channelKey(keys[0] ?? "", keys[1] ?? "");
   // A landing page with Google's channel and the assistant's source: the page first, as `landingChannel`'s, the rest one key.

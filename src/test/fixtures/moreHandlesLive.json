@@ -1,1 +1,1124 @@
-{"usual":{"conversions":18.3,"everyDevice":false,"from":"2026-10-01","pages":[{"title":"More Handles | Handles, Knobs & Door Furniture","viewsShare":0.06320050220368022},{"title":"Luxury Drawer, Cupboard & Cabinet Handles | Stylish Designs for Every Home","viewsShare":0.02426663876646221},{"title":"Cupboard Door Knobs | Cupboard Knobs at More Handles","viewsShare":0.01547153525234427},{"title":"Alexander and Wilks Waltz Round Knob on Stepped Rose","viewsShare":0.013777905653714869},{"title":"Cupboard Handles and Knobs | More Handles","viewsShare":0.012679335103252554},{"title":"Door Handles with Backplate | Door Handles on Backplate","viewsShare":0.011999267619633025},{"title":"Door Handles on Rose | Lever on Rose at More Handles","viewsShare":0.010423342008553157},{"title":"Door Handles | More Handles","viewsShare":0.007565750755267254},{"title":"Kitchen Door Handles | More Handles","viewsShare":0.006179459346350523},{"title":"Cup Handles & Brass Cup Handles at More Handles","viewsShare":0.005211671004276578},{"title":"Kitchen Cupboard Handles | More Handles","viewsShare":0.004943567477080418},{"title":"Antique Brass Cupboard and Cabinet Handles | More Handles","viewsShare":0.00434850842891333},{"title":"Pull Handles | Door Pull Handles from More Handles","viewsShare":0.003936544472489962},{"title":"Alexander and Wilks Bardom Ridged Cup Handle | More Handles","viewsShare":0.0037207538286491504},{"title":"Door Knobs at More Handles | Door Knobs UK","viewsShare":0.003374180976419968},{"title":"Delivery | Free Delivery on orders over £75 inc VAT","viewsShare":0.003341485424322875},{"title":"A Guide To Choose The Right Tubular Latch - Our Blog","viewsShare":0.0032957116513869455},{"title":"Returns Policy | More Handles","viewsShare":0.002981834351254855},{"title":"Antique Brass Cupboard Knobs | Bronze Cupboard Knobs | More","viewsShare":0.0028902868053829957},{"title":"Door Hinges | Internal Door Hinges at More Handles","viewsShare":0.002726809044897532},{"title":"Vintage Cupboard Handles & Knobs | More Handles","viewsShare":0.00255679217399265},{"title":"Flush Handles and Recessed Cabinet Handles | More Handles","viewsShare":0.002412931744765442},{"title":"Architectural Double Sprung Tubular Latch | More Handles","viewsShare":0.002386775303087768},{"title":"Nickel Kitchen Cupboard Handles at More Handles","viewsShare":0.0023344624197324196},{"title":"Front Door Letterplates | More Handles","viewsShare":0.0023344624197324196}],"people":20.7,"to":"2026-10-31","views":102.8,"visits":24},"moments":{"busy":{"ok":true,"askedAt":1762250400000,"now":31,"people":64,"views":214,"conversions":{"count":41,"eventName":"add_to_cart","minutesAgo":1},"minutes":[1,2,2,3,2,3,2,2,3,3,2,2,3,4,3,3,4,4,5,4,5,6,5,6,7,6,7,8,7,9],"places":[{"name":"London","people":12},{"name":"Manchester","people":6}],"countries":[{"name":"GB","people":58},{"name":"US","people":6}],"rows":[{"name":"Alexander and Wilks Waltz Round Knob on Stepped Rose","people":29,"views":71},{"name":"More Handles | Handles, Knobs & Door Furniture","people":12,"views":30},{"name":"Luxury Drawer, Cupboard & Cabinet Handles | Stylish Designs for Every Home","people":8,"views":22},{"name":"Cupboard Door Knobs | Cupboard Knobs at More Handles","people":5,"views":9},{"name":"Checkout","people":4,"views":11},{"name":"Basket","people":3,"views":6}],"list":"pages"},"quiet":{"ok":true,"askedAt":1762218000000,"now":3,"people":9,"views":37,"conversions":{"count":4,"eventName":"add_to_cart","minutesAgo":12},"minutes":[0,1,0,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,1,0,1,1],"places":[{"name":"London","people":3}],"countries":[{"name":"GB","people":9}],"rows":[{"name":"More Handles | Handles, Knobs & Door Furniture","people":3,"views":8},{"name":"Luxury Drawer, Cupboard & Cabinet Handles | Stylish Designs for Every Home","people":2,"views":7},{"name":"Cupboard Door Knobs | Cupboard Knobs at More Handles","people":1,"views":4},{"name":"Checkout","people":1,"views":3}],"list":"pages"}}}
+{
+"usual": {
+"conversions": 18.3,
+"everyDevice": false,
+"from": "2026-10-01",
+"pages": [
+{
+"title": "More Handles | Handles, Knobs & Door Furniture",
+"viewsShare": 0.06320050220368022
+},
+{
+"title": "Luxury Drawer, Cupboard & Cabinet Handles | Stylish Designs for Every Home",
+"viewsShare": 0.02426663876646221
+},
+{
+"title": "Cupboard Door Knobs | Cupboard Knobs at More Handles",
+"viewsShare": 0.01547153525234427
+},
+{
+"title": "Alexander and Wilks Waltz Round Knob on Stepped Rose",
+"viewsShare": 0.013777905653714869
+},
+{
+"title": "Cupboard Handles and Knobs | More Handles",
+"viewsShare": 0.012679335103252554
+},
+{
+"title": "Door Handles with Backplate | Door Handles on Backplate",
+"viewsShare": 0.011999267619633025
+},
+{
+"title": "Door Handles on Rose | Lever on Rose at More Handles",
+"viewsShare": 0.010423342008553157
+},
+{
+"title": "Door Handles | More Handles",
+"viewsShare": 0.007565750755267254
+},
+{
+"title": "Kitchen Door Handles | More Handles",
+"viewsShare": 0.006179459346350523
+},
+{
+"title": "Cup Handles & Brass Cup Handles at More Handles",
+"viewsShare": 0.005211671004276578
+},
+{
+"title": "Kitchen Cupboard Handles | More Handles",
+"viewsShare": 0.004943567477080418
+},
+{
+"title": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+"viewsShare": 0.00434850842891333
+},
+{
+"title": "Pull Handles | Door Pull Handles from More Handles",
+"viewsShare": 0.003936544472489962
+},
+{
+"title": "Alexander and Wilks Bardom Ridged Cup Handle | More Handles",
+"viewsShare": 0.0037207538286491504
+},
+{
+"title": "Door Knobs at More Handles | Door Knobs UK",
+"viewsShare": 0.003374180976419968
+},
+{
+"title": "Delivery | Free Delivery on orders over £75 inc VAT",
+"viewsShare": 0.003341485424322875
+},
+{
+"title": "A Guide To Choose The Right Tubular Latch - Our Blog",
+"viewsShare": 0.0032957116513869455
+},
+{
+"title": "Returns Policy | More Handles",
+"viewsShare": 0.002981834351254855
+},
+{
+"title": "Antique Brass Cupboard Knobs | Bronze Cupboard Knobs | More",
+"viewsShare": 0.0028902868053829957
+},
+{
+"title": "Door Hinges | Internal Door Hinges at More Handles",
+"viewsShare": 0.002726809044897532
+},
+{
+"title": "Vintage Cupboard Handles & Knobs | More Handles",
+"viewsShare": 0.00255679217399265
+},
+{
+"title": "Flush Handles and Recessed Cabinet Handles | More Handles",
+"viewsShare": 0.002412931744765442
+},
+{
+"title": "Architectural Double Sprung Tubular Latch | More Handles",
+"viewsShare": 0.002386775303087768
+},
+{
+"title": "Nickel Kitchen Cupboard Handles at More Handles",
+"viewsShare": 0.0023344624197324196
+},
+{
+"title": "Front Door Letterplates | More Handles",
+"viewsShare": 0.0023344624197324196
+}
+],
+"people": 20.7,
+"to": "2026-10-31",
+"views": 102.8,
+"visits": 24,
+"conversionsThisTime": 23.4,
+"peopleThisTime": null,
+"viewsThisTime": null,
+"dayOfWeek": 5,
+"hour": 10,
+"devices": []
+},
+"moments": {
+"busy": {
+"ok": true,
+"askedAt": 1762250400000,
+"now": 31,
+"people": 64,
+"views": 214,
+"conversions": {
+"count": 41,
+"eventName": "add_to_cart",
+"minutesAgo": 1
+},
+"minutes": [
+1,
+2,
+2,
+3,
+2,
+3,
+2,
+2,
+3,
+3,
+2,
+2,
+3,
+4,
+3,
+3,
+4,
+4,
+5,
+4,
+5,
+6,
+5,
+6,
+7,
+6,
+7,
+8,
+7,
+9
+],
+"places": [
+{
+"name": "London",
+"people": 12
+},
+{
+"name": "Manchester",
+"people": 6
+}
+],
+"countries": [
+{
+"name": "GB",
+"people": 58
+},
+{
+"name": "US",
+"people": 6
+}
+],
+"rows": [
+{
+"name": "Alexander and Wilks Waltz Round Knob on Stepped Rose",
+"people": 29,
+"views": 71
+},
+{
+"name": "More Handles | Handles, Knobs & Door Furniture",
+"people": 12,
+"views": 30
+},
+{
+"name": "Luxury Drawer, Cupboard & Cabinet Handles | Stylish Designs for Every Home",
+"people": 8,
+"views": 22
+},
+{
+"name": "Cupboard Door Knobs | Cupboard Knobs at More Handles",
+"people": 5,
+"views": 9
+},
+{
+"name": "Checkout",
+"people": 4,
+"views": 11
+},
+{
+"name": "Basket",
+"people": 3,
+"views": 6
+}
+],
+"list": "pages",
+"pages": [
+{
+"name": "Alexander and Wilks Waltz Round Knob on Stepped Rose",
+"people": 29,
+"views": 71
+},
+{
+"name": "More Handles | Handles, Knobs & Door Furniture",
+"people": 12,
+"views": 30
+},
+{
+"name": "Luxury Drawer, Cupboard & Cabinet Handles | Stylish Designs for Every Home",
+"people": 8,
+"views": 22
+},
+{
+"name": "Checkout",
+"people": 4,
+"views": 11
+},
+{
+"name": "Cupboard Door Knobs | Cupboard Knobs at More Handles",
+"people": 5,
+"views": 9
+},
+{
+"name": "Basket",
+"people": 3,
+"views": 6
+}
+],
+"kinds": [],
+"sorted": true,
+"busiestPage": {
+"name": "Alexander and Wilks Waltz Round Knob on Stepped Rose",
+"people": 29,
+"views": 71
+}
+},
+"quiet": {
+"ok": true,
+"askedAt": 1762218000000,
+"now": 3,
+"people": 9,
+"views": 37,
+"conversions": {
+"count": 4,
+"eventName": "add_to_cart",
+"minutesAgo": 12
+},
+"minutes": [
+0,
+1,
+0,
+1,
+1,
+0,
+1,
+1,
+0,
+1,
+1,
+1,
+0,
+1,
+1,
+1,
+0,
+1,
+1,
+0,
+1,
+1,
+1,
+0,
+1,
+1,
+1,
+0,
+1,
+1
+],
+"places": [
+{
+"name": "London",
+"people": 3
+}
+],
+"countries": [
+{
+"name": "GB",
+"people": 9
+}
+],
+"rows": [
+{
+"name": "More Handles | Handles, Knobs & Door Furniture",
+"people": 3,
+"views": 8
+},
+{
+"name": "Luxury Drawer, Cupboard & Cabinet Handles | Stylish Designs for Every Home",
+"people": 2,
+"views": 7
+},
+{
+"name": "Cupboard Door Knobs | Cupboard Knobs at More Handles",
+"people": 1,
+"views": 4
+},
+{
+"name": "Checkout",
+"people": 1,
+"views": 3
+}
+],
+"list": "pages",
+"pages": [
+{
+"name": "More Handles | Handles, Knobs & Door Furniture",
+"people": 3,
+"views": 8
+},
+{
+"name": "Luxury Drawer, Cupboard & Cabinet Handles | Stylish Designs for Every Home",
+"people": 2,
+"views": 7
+},
+{
+"name": "Cupboard Door Knobs | Cupboard Knobs at More Handles",
+"people": 1,
+"views": 4
+},
+{
+"name": "Checkout",
+"people": 1,
+"views": 3
+}
+],
+"kinds": [],
+"sorted": true,
+"busiestPage": {
+"name": "More Handles | Handles, Knobs & Door Furniture",
+"people": 3,
+"views": 8
+}
+},
+"real": {
+"ok": true,
+"askedAt": 1793960122102,
+"now": 9,
+"people": 26,
+"views": 92,
+"conversions": {
+"count": 15,
+"eventName": "add_to_cart",
+"minutesAgo": 1
+},
+"minutes": [
+0,
+2,
+2,
+1,
+3,
+1,
+0,
+1,
+2,
+4,
+3,
+3,
+5,
+2,
+1,
+1,
+2,
+3,
+0,
+2,
+1,
+2,
+1,
+2,
+5,
+4,
+4,
+4,
+4,
+2
+],
+"places": [
+{
+"name": "London",
+"people": 5
+},
+{
+"name": "Alton",
+"people": 2
+},
+{
+"name": "Brighton and Hove",
+"people": 2
+},
+{
+"name": "",
+"people": 1
+},
+{
+"name": "Charing",
+"people": 1
+},
+{
+"name": "Charlton Kings",
+"people": 1
+},
+{
+"name": "Chelmsford",
+"people": 1
+},
+{
+"name": "Deal",
+"people": 1
+},
+{
+"name": "Kendal",
+"people": 1
+},
+{
+"name": "Luton",
+"people": 1
+}
+],
+"countries": [
+{
+"name": "GB",
+"people": 26
+}
+],
+"rows": [
+{
+"name": "More Handles | Handles, Knobs & Door Furniture",
+"people": 4,
+"views": 11
+},
+{
+"name": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+"people": 2,
+"views": 7
+},
+{
+"name": "Checkout",
+"people": 2,
+"views": 2
+},
+{
+"name": "Customer Login",
+"people": 2,
+"views": 2
+},
+{
+"name": "Shopping Basket",
+"people": 2,
+"views": 2
+},
+{
+"name": "Hafele Self Colour Standard M4 Cupboard Bolt | More Handles",
+"people": 1,
+"views": 7
+},
+{
+"name": "Frelan Bell Push | More Handles",
+"people": 1,
+"views": 6
+},
+{
+"name": "Euro Cylinder Locks | More Handles",
+"people": 1,
+"views": 3
+},
+{
+"name": "Door Handle Spares & Fixings | More Handles",
+"people": 1,
+"views": 2
+},
+{
+"name": "Door Handles | More Handles",
+"people": 1,
+"views": 2
+},
+{
+"name": "Eurolite Concealed 3mm 2 Gang Socket",
+"people": 1,
+"views": 2
+},
+{
+"name": "Frelan Cube Turn and Release | More Handles",
+"people": 1,
+"views": 2
+},
+{
+"name": "Prima Hardware Profile Bell Push",
+"people": 1,
+"views": 2
+},
+{
+"name": "Search results for: 'multipoint'",
+"people": 1,
+"views": 2
+},
+{
+"name": "Spira Brass Connaught Knurled Door Handle on Backplate",
+"people": 1,
+"views": 2
+},
+{
+"name": "Alexander and Wilks Kingston Knurled Door Handle on Rose",
+"people": 1,
+"views": 1
+},
+{
+"name": "Atlantic Hardware AGB Euro Profile 15 Pin Double Cylinder",
+"people": 1,
+"views": 1
+},
+{
+"name": "Black Cupboard and Cabinet Handles | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "British Standard Fortress Euro Profile Single Cylinder Lock",
+"people": 1,
+"views": 1
+},
+{
+"name": "Carlisle Brass Delamain Beehive Reeded Door Knob",
+"people": 1,
+"views": 1
+},
+{
+"name": "Carlisle Brass Scroll Multipoint Door Handle | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Chatsworth Country Rose Porcelain Finger Plates",
+"people": 1,
+"views": 1
+},
+{
+"name": "Contact Us",
+"people": 1,
+"views": 1
+},
+{
+"name": "Croft Hardware Edinburgh Pull Handle | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Cupboard Handles, Drawer & Wardrobe Handles | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Delivery | Free Delivery on orders over £75 inc VAT",
+"people": 1,
+"views": 1
+},
+{
+"name": "Door Catches and Latches | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Door Handle Not Springing Back - How To Fix a Door Handle Spring - Our Blog",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurolite Concealed 3mm 2 Gang Switch",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurospec CEAM 3D Cabinet Concealed Hinge 929 | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurospec Grade 304 Square Mortice Door Knob | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurospec MPX6 Euro Profile Cylinder & Turn | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurospec Small Ceam 3D Concealed Hinge | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "How to Fit Door Handles on Backplate - DIY Instruction Video - Our Blog",
+"people": 1,
+"views": 1
+},
+{
+"name": "Häfele Cupboard Handles | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Häfele Twister Cupboard Knob | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Kirkpatrick Locking Bar 3430 | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Luxury Door Knobs | Designer Door Knobs at More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "M.Marcus Heritage Brass Apollo Cupboard Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "M.Marcus Heritage Brass Diplomat Door Handle on Backplate",
+"people": 1,
+"views": 1
+},
+{
+"name": "M.Marcus Heritage Brass Square Vintage Cupboard Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "M.Marcus Heritage Brass Wide Metro Cupboard Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "My Account",
+"people": 1,
+"views": 1
+},
+{
+"name": "Order # 2000133992",
+"people": 1,
+"views": 1
+},
+{
+"name": "Other Ironmongery | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Prima Hardware Stepped Bell Push",
+"people": 1,
+"views": 1
+},
+{
+"name": "Returns Policy | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Scotch Rim Lock at More Handles Locks and Latches",
+"people": 1,
+"views": 1
+},
+{
+"name": "Search results for: 'CYF77370SB'",
+"people": 1,
+"views": 1
+},
+{
+"name": "Search results for: 'Spira Brass Connaught Knurled'",
+"people": 1,
+"views": 1
+},
+{
+"name": "Search results for: 'V900-ULB'",
+"people": 1,
+"views": 1
+},
+{
+"name": "Spira Brass Jura Lever on Backplate Bathroom | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Success Page",
+"people": 1,
+"views": 1
+},
+{
+"name": "Carlisle Brass Wall Mounted Door Stop AZ21",
+"people": 1,
+"views": 0
+},
+{
+"name": "M.Marcus Heritage Brass Bridge Cupboard Handles",
+"people": 1,
+"views": 0
+},
+{
+"name": "More Handles Frequently Asked Questions",
+"people": 1,
+"views": 0
+}
+],
+"pages": [
+{
+"name": "More Handles | Handles, Knobs & Door Furniture",
+"people": 4,
+"views": 11
+},
+{
+"name": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+"people": 2,
+"views": 7
+},
+{
+"name": "Hafele Self Colour Standard M4 Cupboard Bolt | More Handles",
+"people": 1,
+"views": 7
+},
+{
+"name": "Frelan Bell Push | More Handles",
+"people": 1,
+"views": 6
+},
+{
+"name": "Euro Cylinder Locks | More Handles",
+"people": 1,
+"views": 3
+},
+{
+"name": "Checkout",
+"people": 2,
+"views": 2
+},
+{
+"name": "Customer Login",
+"people": 2,
+"views": 2
+},
+{
+"name": "Shopping Basket",
+"people": 2,
+"views": 2
+},
+{
+"name": "Door Handle Spares & Fixings | More Handles",
+"people": 1,
+"views": 2
+},
+{
+"name": "Door Handles | More Handles",
+"people": 1,
+"views": 2
+},
+{
+"name": "Eurolite Concealed 3mm 2 Gang Socket",
+"people": 1,
+"views": 2
+},
+{
+"name": "Frelan Cube Turn and Release | More Handles",
+"people": 1,
+"views": 2
+},
+{
+"name": "Prima Hardware Profile Bell Push",
+"people": 1,
+"views": 2
+},
+{
+"name": "Search results for: 'multipoint'",
+"people": 1,
+"views": 2
+},
+{
+"name": "Spira Brass Connaught Knurled Door Handle on Backplate",
+"people": 1,
+"views": 2
+},
+{
+"name": "Alexander and Wilks Kingston Knurled Door Handle on Rose",
+"people": 1,
+"views": 1
+},
+{
+"name": "Atlantic Hardware AGB Euro Profile 15 Pin Double Cylinder",
+"people": 1,
+"views": 1
+},
+{
+"name": "Black Cupboard and Cabinet Handles | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "British Standard Fortress Euro Profile Single Cylinder Lock",
+"people": 1,
+"views": 1
+},
+{
+"name": "Carlisle Brass Delamain Beehive Reeded Door Knob",
+"people": 1,
+"views": 1
+},
+{
+"name": "Carlisle Brass Scroll Multipoint Door Handle | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Chatsworth Country Rose Porcelain Finger Plates",
+"people": 1,
+"views": 1
+},
+{
+"name": "Contact Us",
+"people": 1,
+"views": 1
+},
+{
+"name": "Croft Hardware Edinburgh Pull Handle | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Cupboard Handles, Drawer & Wardrobe Handles | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Delivery | Free Delivery on orders over £75 inc VAT",
+"people": 1,
+"views": 1
+},
+{
+"name": "Door Catches and Latches | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Door Handle Not Springing Back - How To Fix a Door Handle Spring - Our Blog",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurolite Concealed 3mm 2 Gang Switch",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurospec CEAM 3D Cabinet Concealed Hinge 929 | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurospec Grade 304 Square Mortice Door Knob | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurospec MPX6 Euro Profile Cylinder & Turn | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Eurospec Small Ceam 3D Concealed Hinge | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "How to Fit Door Handles on Backplate - DIY Instruction Video - Our Blog",
+"people": 1,
+"views": 1
+},
+{
+"name": "Häfele Cupboard Handles | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Häfele Twister Cupboard Knob | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Kirkpatrick Locking Bar 3430 | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Luxury Door Knobs | Designer Door Knobs at More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "M.Marcus Heritage Brass Apollo Cupboard Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "M.Marcus Heritage Brass Diplomat Door Handle on Backplate",
+"people": 1,
+"views": 1
+},
+{
+"name": "M.Marcus Heritage Brass Square Vintage Cupboard Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "M.Marcus Heritage Brass Wide Metro Cupboard Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "My Account",
+"people": 1,
+"views": 1
+},
+{
+"name": "Order # 2000133992",
+"people": 1,
+"views": 1
+},
+{
+"name": "Other Ironmongery | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Prima Hardware Stepped Bell Push",
+"people": 1,
+"views": 1
+},
+{
+"name": "Returns Policy | More Handles",
+"people": 1,
+"views": 1
+},
+{
+"name": "Scotch Rim Lock at More Handles Locks and Latches",
+"people": 1,
+"views": 1
+},
+{
+"name": "Search results for: 'CYF77370SB'",
+"people": 1,
+"views": 1
+},
+{
+"name": "Search results for: 'Spira Brass Connaught Knurled'",
+"people": 1,
+"views": 1
+}
+],
+"kinds": [
+{
+"kind": "Not sorted yet",
+"name": "Not sorted yet",
+"views": 15,
+"pages": 8
+},
+{
+"kind": "Brand",
+"name": "Brand",
+"views": 14,
+"pages": 5
+},
+{
+"kind": "Search and basket",
+"name": "Search and basket",
+"views": 14,
+"pages": 10
+},
+{
+"kind": "Locks",
+"name": "Locks",
+"views": 14,
+"pages": 6
+},
+{
+"kind": "Cupboard Handles",
+"name": "Cupboard Handles",
+"views": 10,
+"pages": 5
+},
+{
+"kind": "Handles",
+"name": "Handles",
+"views": 9,
+"pages": 7
+},
+{
+"kind": "Door Knobs",
+"name": "Door Knobs",
+"views": 5,
+"pages": 4
+},
+{
+"kind": "Electrical",
+"name": "Electrical",
+"views": 4,
+"pages": 3
+},
+{
+"kind": "Other Ironmongery",
+"name": "Other Ironmongery",
+"views": 2,
+"pages": 3
+},
+{
+"kind": "Blog",
+"name": "Blog",
+"views": 2,
+"pages": 2
+},
+{
+"kind": "Hinges",
+"name": "Hinges",
+"views": 2,
+"pages": 2
+},
+{
+"kind": "Buy By Brand",
+"name": "Buy By Brand",
+"views": 1,
+"pages": 1
+}
+],
+"list": "pages",
+"sorted": true,
+"busiestPage": {
+"name": "More Handles | Handles, Knobs & Door Furniture",
+"people": 4,
+"views": 11
+}
+},
+"nobody": {
+"ok": true,
+"askedAt": 1793960122102,
+"now": 0,
+"people": 0,
+"views": 0,
+"conversions": {
+"count": 0,
+"eventName": null,
+"minutesAgo": null
+},
+"minutes": [
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0
+],
+"places": [],
+"countries": [],
+"rows": [],
+"pages": [],
+"kinds": [],
+"list": "pages",
+"sorted": true,
+"busiestPage": null
+}
+}
+}
