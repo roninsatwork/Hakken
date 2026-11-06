@@ -294,6 +294,19 @@ describe("Channels finds what a person scanning the page would miss, on More Han
   });
 });
 
+describe("Channels hands the eye all of it, whichever the dates", () => {
+  for (const period of [...WHOLE, ...BEGUN]) {
+    test(`${period}: every channel fits, with a chart's 92 points each side`, () => {
+      const page = channelsPage(period);
+      const day = (at: number) => ({ day: `2026-08-${String((at % 28) + 1).padStart(2, "0")}`, ...Object.fromEntries((page.rows as Array<{ name: string }>).map((row) => [row.name, 1234])) });
+      const days = Array.from({ length: 92 }, (_, at) => day(at));
+      const handed = pageDataFor({ ...page, channelsByDay: { days, daysBefore: days } }, "googleAnalytics.channelsPage") as { rows: unknown[]; channelSquares: { rows: unknown[] } };
+      expect(handed.rows).toHaveLength(page.rows.length);
+      expect(handed.channelSquares.rows).toHaveLength(page.channelSquares.rows.length);
+    });
+  }
+});
+
 describe("Channels on the websites unlike More Handles", () => {
   const row = (name: string, visits: number, visitsBefore: number, conversions: number, conversionsBefore: number, bounceRate = 0.4) => ({ name, visits, visitsBefore, purchases: 0, purchasesBefore: 0, conversions, conversionsBefore, bounceRate, engaged: Math.round(visits * (1 - bounceRate)), addedToBasket: 0, startedCheckout: 0 });
   // Ronins' October, near enough: 245 visits and a handful of events, on a website with nothing bought.

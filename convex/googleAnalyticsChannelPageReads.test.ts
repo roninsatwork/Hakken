@@ -135,6 +135,24 @@ describe("How far people got", () => {
   });
 });
 
+describe("one device chosen at the top of the page", () => {
+  test("the chart, the squares, the steps and the table are that device's own, and don't say every device", async () => {
+    const { fixture: { siteId, user } } = await collectedShop();
+    const args = { siteId, period: "lastMonth" as const, device: "desktop" };
+    const chart = await user.query(api.googleAnalyticsChannelPageReads.analyticsChannelsEachDay, args);
+    expect(chart.channels).toEqual(["Paid Search", "AI assistants"]);
+    const squares = await user.query(api.googleAnalyticsChannelPageReads.analyticsChannelSquares, { ...args, split: "kind" });
+    expect(squares.everyDevice).toBe(false);
+    expect(squares.rows.map((row) => [row.channel, row.visits])).toEqual([["Paid Search", 120], ["AI assistants", 30]]);
+    const steps = await user.query(api.googleAnalyticsChannelPageReads.analyticsChannelSteps, args);
+    expect(steps.everyDevice).toBe(false);
+    expect(steps.everywhere).toMatchObject({ arrived: 150, basket: 60 });
+    expect(steps.channels.map((row) => [row.channel, row.arrived, row.bought])).toEqual([["Paid Search", 120, 60], ["AI assistants", 30, 0]]);
+    const list = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "channel", page: 1, rows: 25, sort: "visits", direction: "desc" });
+    expect(list.rows.map((row) => [row.label, row.visits, row.basketVisits])).toEqual([["Paid Search", 120, 60], ["AI assistants", 30, 0]]);
+  });
+});
+
 describe("the table", () => {
   test("each channel's visits at each step and what was bought, sorted over the whole list, and a channel that stopped altogether", async () => {
     const { fixture: { siteId, user } } = await collectedShop();

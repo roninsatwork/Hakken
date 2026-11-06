@@ -57,7 +57,7 @@ export function useChannels() {
   return { every, overview, sells };
 }
 
-export type Channels = ReturnType<typeof useChannels>;
+type Channels = ReturnType<typeof useChannels>;
 
 /** The list as the boxes' rule weighs it: a channel that stopped altogether can still be the biggest change. */
 function boxRowsOf({ every, sells }: Channels): ChannelBoxRow[] {
@@ -119,7 +119,7 @@ function useEachDay() {
 }
 
 /** The figure a line draws for one channel at one point: its visits, or the times the ticked events happened, added up. */
-export function dayFigure(point: EachDay["points"][number], channelAt: number, eventsAt: readonly number[]): number {
+function dayFigure(point: EachDay["points"][number], channelAt: number, eventsAt: readonly number[]): number {
   if (eventsAt.length === 0) return point.visits[channelAt] ?? 0;
   return eventsAt.reduce((sum, at) => sum + (point.events[at]?.[channelAt] ?? 0), 0);
 }
@@ -240,7 +240,7 @@ function figureOf(figures: SquareFigures, count: SquareCount): { now: number; be
 }
 
 /** For every 100 visits. What was bought can't read over 100 by accident; events can, as one visit can count many times, and the key says so. */
-export function squareRate(figures: SquareFigures, count: SquareCount, which: "now" | "before" = "now"): number | null {
+function squareRate(figures: SquareFigures, count: SquareCount, which: "now" | "before" = "now"): number | null {
   const visits = which === "now" ? figures.visits : figures.visitsBefore;
   const part = figureOf(figures, count)[which];
   if (visits === null || part === null || visits <= 0) return which === "now" ? 0 : null;
@@ -362,7 +362,7 @@ export function ChannelSquaresCard({ channels }: { channels: Channels }) {
       hint={hint}
       controls={<ExplorerToolbar controls={toolbar} />}
       columns={columns}
-      rows={mapRows}
+      rows={nothingTicked ? [] : mapRows}
       count="events"
       compare={false}
       words={mapWords}

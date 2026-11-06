@@ -331,8 +331,9 @@ export const SHOP_STEPS_ONLY = { events: new Set([BASKET_EVENT, CHECKOUT_EVENT, 
  * doesn't send `purchase` as a key event has its purchases.
  */
 export function shopStepsOf(row: ListRow): { engaged: number; basketVisits: number; checkoutVisits: number; boughtVisits: number } {
-  const did = (event: string) => row.eventVisits?.get(event) ?? row.counts.get(event);
-  return { engaged: row.engaged, basketVisits: did(BASKET_EVENT) ?? 0, checkoutVisits: did(CHECKOUT_EVENT) ?? 0, boughtVisits: did(PURCHASE_EVENT) ?? row.purchases };
+  // Never past the row's visits, where Google's count of times stands in.
+  const did = (event: string, otherwise = 0) => Math.min(row.visits, row.eventVisits?.get(event) ?? row.counts.get(event) ?? otherwise);
+  return { engaged: row.engaged, basketVisits: did(BASKET_EVENT), checkoutVisits: did(CHECKOUT_EVENT), boughtVisits: did(PURCHASE_EVENT, row.purchases) };
 }
 
 export function shown(row: ListRow, before: ListRow | null | undefined, counted: readonly Counted[], hadBefore: boolean): ShownRow {

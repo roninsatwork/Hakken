@@ -7,7 +7,7 @@ import { keptCountry } from "./googleAnalyticsCountries";
 import { readChannelPoints } from "./googleAnalyticsHistory";
 import { periodRange } from "./googleAnalyticsJobs";
 import { EVERY_DEVICE, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
-import { SHOP_STEPS_ONLY, connectionOf, conversionsOf, countedOf, readSlot, shopStepsOf, type Counted } from "./googleAnalyticsRows";
+import { SHOP_STEPS_ONLY, addInto, blank, connectionOf, conversionsOf, countedOf, readSlot, shopStepsOf, type Counted } from "./googleAnalyticsRows";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { tenantQuery } from "./tenantFunctions";
@@ -349,7 +349,8 @@ export async function readChannelSteps(ctx: SiteReader, args: Args) {
     channels.set(channel, held ? { arrived: held.arrived + steps.arrived, stayed: held.stayed + steps.stayed, basket: held.basket + steps.basket, checkout: held.checkout + steps.checkout, bought: held.bought + steps.bought } : steps);
   }
   const events = new Set((connection.events ?? []).map((event) => event.eventName));
-  const wholeRow = total?.rows[0];
+  const wholeRow = total ? blank("") : null;
+  if (wholeRow && total) for (const row of total.rows) addInto(wholeRow, row);
   return {
     collecting: false,
     everyDevice: !own && args.device !== EVERY_DEVICE,

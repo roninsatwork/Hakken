@@ -7,10 +7,10 @@ import { Tooltip } from "./Tooltip";
 
 /**
  * Rows across columns, each square a count shaded by its share of its row
- * (docs/plans/active/ga-channel-pages-plan.md CH9): Channels' "Where each
- * channel lands, by page classification" — channels down the side, page
+ * (docs/plans/active/ga-channel-pages-plan.md CH9): channels down the side, page
  * groups across, each square the channel's visits that landed there, with
- * their conversions beneath (Anthony, 2026-10-13: "love this").
+ * their conversions beneath (Anthony, 2026-10-13: "love this"). Conversions,
+ * Campaigns and Channels draw it through `ConversionsMap`; Visitors' grid draws it itself.
  *
  * Brighter is a bigger share of the row, on the engagement ramp's blues: the
  * owner reads intensity, not hue. An empty square is grey. The square's own

@@ -358,6 +358,12 @@ describe("the squares: their five menus", () => {
     expect(squares().textContent).toContain("1,770");
   });
 
+  it("nothing ticked says what to tick, and the menus stay", () => {
+    open("square-kinds=-");
+    expect(screen.getByText("Tick at least one channel and one Classification.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Classifications:/ })).toBeTruthy();
+  });
+
   it("Split by Device reads the device squares, and the Classifications menu goes", () => {
     open("split=device");
     expect(asked.some((one) => one.path.endsWith("analyticsChannelSquares") && one.args.split === "device")).toBe(true);

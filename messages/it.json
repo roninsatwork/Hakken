@@ -17281,11 +17281,11 @@
         "nobody": "Nessuno",
         "hover": {
           "head": "{channel}, {column}",
-          "visits": "Visite a {when}: {figure}",
+          "visits": "Visite in {when}: {figure}",
           "ofChannel": "Delle visite di questo canale: {share}%",
-          "bought": "Comprati a {when}: {figure}",
-          "conversions": "Conversioni a {when}: {figure}",
-          "events": "Eventi a {when}: {figure}"
+          "bought": "Comprati in {when}: {figure}",
+          "conversions": "Conversioni in {when}: {figure}",
+          "events": "Eventi in {when}: {figure}"
         },
         "pick": "Canale",
         "csvChannel": "Canale",
