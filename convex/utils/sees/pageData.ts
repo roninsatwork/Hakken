@@ -133,7 +133,11 @@ function cutLists(value: unknown, rows: number, dated: number): unknown {
 export function pageFacts(screen: string, data: unknown, at: { from?: string; to?: string; country?: string; currency?: string | null } = {}): { shown: unknown; facts: Fact[] } {
   const entry = seesScreenFor(screen);
   if (!entry || data === null || data === undefined) return { shown: null, facts: [] };
-  return keyedRead(data, "page", { source: sourceOfSection(entry.section), ...at });
+  // A screen whose figures pass what a writer may name says which matter first: a long list must not use up the keys.
+  const first = entry.figuresFirst ?? [];
+  const held = first.length > 0 && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : null;
+  const ordered = held ? { ...Object.fromEntries(first.filter((name) => name in held).map((name) => [name, held[name]])), ...held } : data;
+  return keyedRead(ordered, "page", { source: sourceOfSection(entry.section), ...at });
 }
 
 

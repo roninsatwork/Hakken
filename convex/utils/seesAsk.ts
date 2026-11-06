@@ -348,8 +348,12 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
         continue;
       }
     }
-    // Past the bubble's figures the rest is left off, the most useful having come first; never the first sentence.
-    if (says.length > 0 && figures + namedFacts(trimmed).length > MOST_BUBBLE_FIGURES) break;
+    // Past the bubble's figures the rest is left off, the most useful having come first; never the first sentence, and after the
+    // rewrite never one carrying a finding not yet said (Overview, 2026-11-06: a writer put the page's biggest finding fourth, and it was lost).
+    if (says.length > 0 && figures + namedFacts(trimmed).length > MOST_BUBBLE_FIGURES) {
+      const carries = salvage && (options.mustCover ?? []).some((finding) => !finding.keys.some((key) => namedKept.includes(key)) && finding.keys.some((key) => named.includes(key)));
+      if (!carries) continue;
+    }
     const filled = fillFacts(trimmed, facts);
     const why = filled.missing.length > 0 ? `A sentence named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.`
       : filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS ? `A sentence ran past ${MOST_SENTENCE_WORDS} words: "${filled.text}". Split it in two, or say less.`

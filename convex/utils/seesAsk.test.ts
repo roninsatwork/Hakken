@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
+import type { Fact } from "./insightEditor";
 import { factsOf, fromSeesKey, seesFrom, seesKey, seesPath, writerFor } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
@@ -83,6 +84,19 @@ describe("the eye's ask", () => {
     // A first sentence with no figure is left off and the next one leads; nothing sound at all still goes back.
     expect(seesFrom({ says: ["Nothing much happened here.", "Conversions fell to [[conv.total.now]]."], steps: [] }, facts, links, { salvage: true })).toMatchObject({ ok: true, says: ["Conversions fell to 28,623."] });
     expect(seesFrom({ says: ["3 in 4 baskets were left."], steps: [] }, facts, links, { salvage: true })).toMatchObject({ ok: false, why: expect.stringContaining("Every sentence had a fault") });
+  });
+
+  test("past the bubble's figures, a sentence carrying a finding not yet said still stands (Overview, 2026-11-06)", () => {
+    const many: Fact[] = Array.from({ length: 12 }, (_, at) => ({ key: `n.${at}`, value: at + 1, unit: "count" as const, source: "analytics" as const, label: `figure ${at}` }));
+    const facts = factsByKey(many);
+    const says = ["A went to [[n.0]] from [[n.1]].", "B went to [[n.2]] from [[n.3]].", "C went to [[n.4]] from [[n.5]].", "D went to [[n.6]] from [[n.7]].", "E went to [[n.8]] from [[n.9]].", "F went to [[n.10]] from [[n.11]]."];
+    const kept = seesFrom({ says, steps: [] }, facts, links, { salvage: true, mustCover: [{ keys: ["n.8"], words: "E moved." }] });
+    expect(kept).toMatchObject({ ok: true });
+    if (kept.ok) {
+      expect(kept.says).toContain("E went to 9 from 10.");
+      // Anything else past the eight is still left off.
+      expect(kept.says).not.toContain("F went to 11 from 12.");
+    }
   });
 
   test("a sentence never names a part of the page: a leading one is cut off, any other goes back (the Visits eye, 2026-11-03)", () => {

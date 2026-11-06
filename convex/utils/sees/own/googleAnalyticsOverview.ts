@@ -223,11 +223,14 @@ export function overviewFindings(data: Row): OwnFound[] {
   const visitsChange = changeOf(visits, visitsBefore);
   const rate = perHundred(done, visits);
   const rateBefore = doneBefore !== null && visitsBefore ? perHundred(doneBefore, visitsBefore) : null;
-  const locale = typeof data.locale === "string" ? data.locale : "en-GB";
+  const locale = typeof data.locale === "string" && data.locale !== "en" ? data.locale : "en-GB";
   const dayWord = (day: string) => new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
   const channels = rowsOf(isRow(data.channels) ? data.channels.rows : null);
-  const kinds = rowsOf(isRow(data.classifications) ? data.classifications.rows : null);
-  const devices = rowsOf(isRow(data.devices) ? data.devices.rows : null);
+  // What each row's visits did is kept apart from its main figures (`overviewFigures`): set back beside them for the rules.
+  const did = isRow(data.whatEachDid) ? data.whatEachDid : {};
+  const withDid = (rows: readonly Row[], list: string) => rows.map((row) => ({ ...rowsOf(did[list]).find((one) => one.key === row.key), ...row }));
+  const kinds = withDid(rowsOf(isRow(data.classifications) ? data.classifications.rows : null), "classifications");
+  const devices = withDid(rowsOf(isRow(data.devices) ? data.devices.rows : null), "devices");
   const visitors = rowsOf(isRow(data.visitors) ? data.visitors.rows : null);
   const days = rowsOf(data.days);
   const daysBefore = rowsOf(data.daysBefore);
@@ -251,7 +254,7 @@ export function overviewFindings(data: Row): OwnFound[] {
   const stepped = steppedFigures(daysBefore, days, {
     pagesFrom: (day) => `${nameIn(names, "pagesAVisit", "Pages a visit")}, ${dayWord(day)}`,
     leftFrom: (day) => `${nameIn(names, "leftStraightAway", "Left straight away")}, ${dayWord(day)}`,
-    daysBefore: nameIn(names, "daysBefore", "the days before"),
+    daysBefore: nameIn(names, "daysBefore", "The days before"),
   });
   found.push(...stepped);
   if (stepped.length === 0 && isNumber(site.stayed) && isNumber(site.stayedBefore) && visits > 0 && visitsBefore) {
@@ -283,7 +286,7 @@ export function overviewFindings(data: Row): OwnFound[] {
   found.push(...perHundredApart("kinds", kinds, rate, website, doneField, rateMeasure, least).filter((one) => one.kind === "rowBelow"));
 
   // Each page's own news: come from nowhere with nothing to show for it, and the visits with no page at all.
-  const jumped = pageJumped(pages, doneField, visits >= SMALL_WEBSITE ? PAGE_JUMP : PAGE_JUMP_SMALL, nameIn(names, "datesBefore", "the dates before"));
+  const jumped = pageJumped(pages, doneField, visits >= SMALL_WEBSITE ? PAGE_JUMP : PAGE_JUMP_SMALL, nameIn(names, "datesBefore", "The dates before"));
   if (jumped) found.push(jumped);
   const noPage = pages.find((row) => row.key === NOT_SET);
   if (noPage && isNumber(noPage.visits) && noPage.visits >= visits * NO_PAGE_SHARE && noPage.visits >= least) {
@@ -292,7 +295,7 @@ export function overviewFindings(data: Row): OwnFound[] {
 
   // One day far from the rest, for what the website counts.
   const eventFields = events.flatMap((event) => (typeof event.name === "string" ? [event.name] : []));
-  const far = dayFarFromRest(days, eventFields, nameIn(names, "usualDay", "a usual day"), dayWord);
+  const far = dayFarFromRest(days, eventFields, nameIn(names, "usualDay", "A usual day"), dayWord);
   if (far) found.push(far);
 
   if (!shop) {
@@ -301,7 +304,7 @@ export function overviewFindings(data: Row): OwnFound[] {
     const held = eventHeldByOne(kinds, events);
     if (held) found.push(held);
     const rawNames = isRow(data.eventCodes) ? data.eventCodes : {};
-    const twice = countedTwice(events, (name) => !isFirstStep(typeof rawNames[name] === "string" ? (rawNames[name] as string) : name), nameIn(names, "visitsThatDidIt", "the visits that did it"));
+    const twice = countedTwice(events, (name) => !isFirstStep(typeof rawNames[name] === "string" ? (rawNames[name] as string) : name), nameIn(names, "visitsThatDidIt", "The visits that did it"));
     if (twice) found.push(twice);
   }
 

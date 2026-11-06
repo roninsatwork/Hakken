@@ -25,6 +25,8 @@ import { seesScreenFor } from "./utils/sees/screens";
 import type { SeesStageNote } from "./utils/sees/stages";
 
 /** A list's rows in the writer's brief once code has found the figures: enough for the page's setting. */
+/** Fewer sentences than this, with this many findings to say, is too thin to leave the reader with. */
+const THIN_BUBBLE = 3;
 const BRIEF_ROWS = 8;
 
 /**
@@ -217,15 +219,34 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   if (verdict.ok && verdict.left?.length) lines.push({ heading: "The Editor", detail: `Left off: ${verdict.left.join(" ")}`.slice(0, 900) });
   // Jev reads the words as they will be shown: a guess stated as fact, or a step that fits any website, is left off,
   // so long as a sentence stands (ask-hakken-every-chart-page-plan-2026-11-03.md).
-  if (verdict.ok && !judged) {
-    const shown = verdict;
+  const leaveOffGuesses = async (shown: Extract<SeesVerdict, { ok: true }>) => {
     if (prepared.model) await note("guessing");
     const flagged = await judgeLeftOff(ctx, judgeRun, prepared, page.host, shown.says, shown.steps.map((step) => step.words), figuresForJev);
     const says = shown.says.filter((_, at) => !flagged.says.includes(at));
-    if (says.length > 0 && (flagged.says.length > 0 || flagged.steps.length > 0)) {
-      const gone = [...flagged.says.map((at) => shown.says[at]), ...flagged.steps.map((at) => shown.steps[at].words)];
-      lines.push({ heading: "Jev", detail: `Left off as a guess or advice for any website: ${gone.map((words) => `"${words}"`).join(" ")}`.slice(0, 900) });
-      verdict = { ...shown, says, steps: shown.steps.filter((_, at) => !flagged.steps.includes(at)) };
+    if (says.length === 0 || (flagged.says.length === 0 && flagged.steps.length === 0)) return { kept: shown, gone: [] as string[] };
+    const gone = [...flagged.says.map((at) => shown.says[at]), ...flagged.steps.map((at) => shown.steps[at].words)];
+    lines.push({ heading: "Jev", detail: `Left off as a guess or advice for any website: ${gone.map((words) => `"${words}"`).join(" ")}`.slice(0, 900) });
+    return { kept: { ...shown, says, steps: shown.steps.filter((_, at) => !flagged.steps.includes(at)) }, gone };
+  };
+  let gone: string[] = [];
+  if (verdict.ok && !judged) {
+    const after = await leaveOffGuesses(verdict);
+    verdict = after.kept;
+    gone = after.gone;
+  }
+  // Checks that left the reader almost nothing get one more go, told what stood and why the rest went: the eye is never weak
+  // (Anthony, 2026-11-03), and on Overview they had left one sentence of five (2026-11-06). The better answer stands.
+  if (verdict.ok && verdict.says.length < THIN_BUBBLE && findings.length >= THIN_BUBBLE) {
+    const thin = verdict;
+    lines.push({ heading: "The Editor", detail: `Only ${thin.says.length} sentence${thin.says.length === 1 ? "" : "s"} stood, so it went back once more.` });
+    await note("rewriting");
+    const again = await ask(ctx, run, writer, who, system, `${prompt}\n\nOnly this stood of your last answer: ${JSON.stringify(thin.says)}.${gone.length > 0 ? ` These were left off, as they said why something happened or would fit any website: ${JSON.stringify(gone)}.` : ""} Write it again. Say the first findings each in a short sentence of its own, the most useful first, with at most two figures in each. Say what the figures show, and never why it happened. Keep every rule.`, undefined, (value: unknown) => value !== null && typeof value === "object" && "says" in value);
+    await note("checking");
+    const strict = seesFrom(again, named, page.links, { ...noTracking, ...covering, salvage: true });
+    const next = !strict.ok && strict.why.startsWith("It left out a finding") ? seesFrom(again, named, page.links, { ...noTracking, ...covering, coverIfItCan: true, salvage: true }) : strict;
+    if (next.ok) {
+      const after = await leaveOffGuesses(next);
+      if (after.kept.says.length > thin.says.length) verdict = after.kept;
     }
   }
   return { verdict, role: chosen, lines, findings };

@@ -25,6 +25,7 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
   // own/googleAnalytics.ts, 2026-11-04). Money never, on any of them (decision 1, Anthony, 2026-11-03: "Take money off").
   "googleAnalytics.overview": {
     about: "the Google Analytics overview: how many came, what came of it, and who brought the people who bought or got in touch. `kind` says which sort of website this is: a shop counts what was bought, and any other website counts its events",
+    figuresFirst: ["website", "squares", "events", "channels", "classifications", "devices", "visitors", "topPages", "whatEachDid", "squaresBy", "days", "daysBefore"],
     parts: [
       "the four boxes: visits; bought on a shop, or events on any other website, with how many for every 100 visits; the channel with the biggest change in visits; and the channel that does best for its visits, from 100 visits up",
       "the website's figures each day, against the same days before where those are held: visits, page views, pages a visit, stayed, left straight away, and what the website counts",
@@ -39,7 +40,7 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
       "one list's visits set against another's, or a list's sum against the whole website's total, as a difference to explain: Google counts each list on its own",
       "on a service business (`kind` is service): sales, bought, baskets or checkout. It says events. On a shop it leads with what was bought, not conversions",
       "a first step as the real thing: a click on Apply now is never called an application, and a click on a phone number is never called a call",
-      "a figure that stepped and stayed (`Pages a visit` or `Left straight away` from one day on, with visits flat) as a real fall or rise: that's the website's tracking changing, so the two sides aren't alike",
+      "a figure that stepped and stayed (`Pages a visit` or `Left straight away` from one day on, with visits flat) as a real fall or rise, or why it changed: say it changed on that day and stayed there while visits held, so the days either side can't be compared",
       "an event done far more times than the visits that did it as more interest: it's a question for the tracking, as the same form may be counting twice",
       "pages not sorted into a Classification yet: they are sorted for the reader",
     ],

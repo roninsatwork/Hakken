@@ -32,6 +32,8 @@ export type SeesScreen = {
   never?: readonly string[];
   /** False where pressing writes nothing: the page's words are already the team's (Insights' weekly boxes). */
   writes?: boolean;
+  /** The page's top-level figures the writer may name first, where they pass what it may name (`pageFacts`). */
+  figuresFirst?: readonly string[];
 };
 
 /** Each section's writer and the source its figures are filed under, for a page the list does not name yet. */

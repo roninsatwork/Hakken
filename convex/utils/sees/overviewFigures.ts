@@ -112,37 +112,41 @@ export function overviewFigures(input: OverviewFiguresInput) {
   const rowsOf = (split: OverviewSplitName) => {
     const answer = splits[split];
     if (!answer) return null;
-    const visitsAll = answer.rows.reduce((sum, row) => sum + row.visits, 0);
-    const doneAll = answer.rows.reduce((sum, row) => sum + (shop ? row.bought : row.conversions), 0);
     const topRow = outOfTotal(answer.rows.map((row) => row.visits));
     const bottomRow = outOfTotal(answer.rows.map((row) => (shop ? row.bought : row.conversions)));
     return {
       everyDevice: answer.everyDevice === true,
-      visitsOfTheList: visitsAll,
-      doneOfTheList: doneAll,
       rows: answer.rows.map((row, at) => ({
         key: row.key,
         name: rowName(split, row),
         visits: row.visits,
         visitsBefore: row.visitsBefore,
         stayed: row.stayed,
-        stayedBefore: row.stayedBefore,
         views: row.views,
-        viewsBefore: row.viewsBefore,
-        ...(shop ? { bought: row.bought, boughtBefore: row.boughtBefore } : {}),
-        conversions: row.conversions,
-        conversionsBefore: row.conversionsBefore,
+        ...(shop ? { bought: row.bought, boughtBefore: row.boughtBefore } : { conversions: row.conversions, conversionsBefore: row.conversionsBefore }),
         // The two rows of the page's bands: this row's whole numbers out of every 100.
         ofEvery100Visits: topRow[at] ?? 0,
         ofEvery100Done: bottomRow[at] ?? 0,
-        visitsThatDid: byEvent(answer.events, row.did, eventName),
-        visitsThatDidBefore: byEvent(answer.events, row.didBefore, eventName),
-        timesDone: byEvent(answer.events, row.times, eventName),
-        timesDoneBefore: byEvent(answer.events, row.timesBefore, eventName),
-        squares: squaresOf(shop, 100, stepsOf(shop, answer.events, row)),
       })),
     };
   };
+  // What each row's visits did, apart from its main figures, as there are many: the rules read them, and the writer if it can.
+  const didOf = (split: OverviewSplitName) => (splits[split]?.rows ?? []).map((row) => {
+    const answer = splits[split]!;
+    return {
+      key: row.key,
+      name: rowName(split, row),
+      visitsThatDid: byEvent(answer.events, row.did, eventName),
+      timesDone: byEvent(answer.events, row.times, eventName),
+      timesDoneBefore: byEvent(answer.events, row.timesBefore, eventName),
+    };
+  });
+  // The page's squares for each row, as whole squares out of every 100.
+  const squaresBy = (split: OverviewSplitName) => (splits[split]?.rows ?? []).map((row) => {
+    const answer = splits[split]!;
+    const squares = squaresOf(shop, 100, stepsOf(shop, answer.events, row));
+    return { key: row.key, name: rowName(split, row), ...Object.fromEntries(Object.entries(squares).map(([stage, value]) => [stage, value.squares])) };
+  });
   const sum = (values: (row: SplitRow) => readonly number[] | null) => Array.from({ length: channel?.events.length ?? 0 }, (_, at) => (channel?.rows ?? []).reduce((total, row) => total + (values(row)?.[at] ?? 0), 0));
   const didNow = sum((row) => row.did);
   const didBefore = sum((row) => row.didBefore);
@@ -174,6 +178,8 @@ export function overviewFigures(input: OverviewFiguresInput) {
     classifications: rowsOf("kind"),
     devices: rowsOf("device"),
     visitors: rowsOf("visitorType"),
+    whatEachDid: { channels: didOf("channel"), classifications: didOf("kind"), devices: didOf("device"), visitors: didOf("visitorType") },
+    squaresBy: { channels: squaresBy("channel"), classifications: squaresBy("kind"), devices: squaresBy("device") },
     topPages: (pages ?? []).map((row) => ({
       key: row.key,
       address: row.label,
