@@ -29,7 +29,7 @@ function shapeOf(cells: number, width: number) {
   return width > 0 && width < 480 ? { columns: 25, size: 10, gap: 2 } : { columns: 40, size: 8, gap: 1 };
 }
 
-const KEY_COLUMNS = ["22px", "64px", "minmax(0, 1fr)", "auto"].join(" ");
+const KEY_COLUMNS = ["22px", "64px", "minmax(0,1fr)", "auto"].join(" ");
 /** How long the squares take to fill in, whatever their number. */
 const FILL_MS = 1200;
 

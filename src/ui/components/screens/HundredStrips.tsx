@@ -53,14 +53,12 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
   const yBottom = yBand + BAND;
   const height = yBottom + STRIP + WORDS + HEAD;
   const cell = width / 100;
-  let topAt = 0;
-  let bottomAt = 0;
-  const placed = segments.map((segment) => {
-    const held = { segment, top: topAt, bottom: bottomAt };
-    topAt += segment.top;
-    bottomAt += segment.bottom;
-    return held;
-  });
+  // Each thing's place in the two rows: everything before it, added up.
+  const placed = segments.map((segment, at) => ({
+    segment,
+    top: segments.slice(0, at).reduce((sum, one) => sum + one.top, 0),
+    bottom: segments.slice(0, at).reduce((sum, one) => sum + one.bottom, 0),
+  }));
   const shown = hover ?? lit;
   const hovered = hover ? segments.find((segment) => segment.key === hover) : null;
   const dimmed = (key: string) => shown !== null && shown !== key;
