@@ -784,6 +784,21 @@ describe("Live (GA34)", () => {
     expect(towns.rows.map((row) => row.name)).toEqual(["London"]);
   });
 
+  test("a page's number is found from its address, for a screen that only has the address, and only that exact page", async () => {
+    const { siteId, user } = await collectedGrowing();
+    const listed = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", period: "lastMonth", device: "", page: 1, rows: 5, sort: "views", direction: "desc" });
+    const row = listed.rows[0];
+    expect(row.key.startsWith("~")).toBe(true);
+    const path = new URL(row.label, "https://acme-shop.test").pathname;
+    const key = (page: string) => user.query(api.googleAnalyticsPageReads.analyticsPageKey, { siteId, page, period: "lastMonth", device: "" });
+    expect(await key(path)).toBe(row.key);
+    // However the address is written.
+    expect(await key(path.toUpperCase())).toBe(row.key);
+    expect(await key(`https://acme-shop.test${path}`)).toBe(row.key);
+    // Never another page that's nearly it: a page with no views in these dates says so.
+    expect(await key(`${path}-not-this-one`)).toBeNull();
+  });
+
   test("a website with no Classifications says so, and its pages still find their addresses", async () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing().slice(-3));

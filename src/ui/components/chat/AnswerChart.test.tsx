@@ -59,6 +59,11 @@ describe("a chart under an answer", () => {
     expect(screen.getByTestId("lines")).toHaveAttribute("data-shared", "true");
   });
 
+  it("draws a line of a page's minutes, in the page's order, not only of its days", () => {
+    renderWithProviders(<AnswerChart chart={{ look: "pageChart", kind: "line", title: "People each minute", measure: "People", link: "/app/analytics/s/live", groups: [{ name: "2 min ago", value: 3 }, { name: "1 min ago", value: 5 }, { name: "Now", value: 1 }] } as never} />);
+    expect(screen.getAllByRole("listitem").map((line) => line.textContent)).toEqual(["People: 3,5,1"]);
+  });
+
   it("says the dates when they are not a month, names a page's chart by its page, and draws no line before when none is held", () => {
     renderWithProviders(
       <AnswerChart

@@ -110,7 +110,11 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
     : to.screen === "channel" ? to.name ?? tm("channels")
       : to.screen === "event" ? to.name ?? tm("events")
         : tm(to.screen);
-  const page = useSearchParams().get("key") ?? "";
+  // Pages are named by number here. Live's table only has a page's address, so it's found first; none in these dates reads as no views.
+  const asked = useSearchParams().get("key") ?? "";
+  const byNumber = !asked || asked.startsWith("~");
+  const found = useQuery(api.googleAnalyticsPageReads.analyticsPageKey, byNumber ? "skip" : { ...args, page: asked });
+  const page = byNumber ? asked : found === undefined ? "" : found ?? asked;
   // Its own figures and its story are two reads, each with Convex's second to itself; the screen shows them together.
   const main = useQuery(api.googleAnalyticsPageReads.analyticsPage, page ? { ...args, page } : "skip");
   const told = useQuery(api.googleAnalyticsPageReads.analyticsPageStory, page ? { ...args, page } : "skip");

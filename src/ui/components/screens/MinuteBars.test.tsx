@@ -61,10 +61,17 @@ describe("MinuteBars (docs/plans/active/live-new-page-plan-2026-11-06.md)", () =
     expect(words.filter((word) => /^\d+$/.test(word ?? ""))).toEqual(["9", "1"]);
   });
 
-  it("stays still for anyone who asks for less motion", () => {
-    const { container } = render(<><MinuteBars bars={bars([1, 2])} name="People each minute" measure={measure} /><LiveDot /></>);
-    expect(container.querySelector("g[data-minute]")!.getAttribute("class")).toContain("motion-reduce:transition-none");
-    expect(container.querySelector("[data-now]")!.getAttribute("class")).toContain("motion-reduce:animate-none");
-    expect(container.querySelector('[data-part="live-dot"] span')!.getAttribute("class")).toContain("motion-reduce:animate-none");
+  // Set on the element, as the theme's `* { transition-property }` in globals.css outranks a class (useReducedMotion.ts).
+  it("slides its bars by a transition on the element, and stays still for anyone who asks for less motion", () => {
+    const { container, unmount } = render(<><MinuteBars bars={bars([1, 2])} name="People each minute" measure={measure} /><LiveDot /></>);
+    expect((container.querySelector("g[data-minute]") as SVGGElement).style.transition).toContain("transform");
+    expect((container.querySelector("[data-bar]") as SVGRectElement).style.transition).toContain("height");
+    unmount();
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce"), addEventListener: () => undefined, removeEventListener: () => undefined }));
+    const still = render(<><MinuteBars bars={bars([1, 2])} name="People each minute" measure={measure} /><LiveDot /></>).container;
+    expect((still.querySelector("g[data-minute]") as SVGGElement).style.transition).toBe("none");
+    expect((still.querySelector("[data-bar]") as SVGRectElement).style.transition).toBe("none");
+    expect(still.querySelector("[data-now]")!.getAttribute("class")).toContain("motion-reduce:animate-none");
+    expect(still.querySelector('[data-part="live-dot"] span')!.getAttribute("class")).toContain("motion-reduce:animate-none");
   });
 });

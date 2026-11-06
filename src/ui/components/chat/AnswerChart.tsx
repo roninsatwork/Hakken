@@ -33,7 +33,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * A chart from the page the conversation started on, redrawn (ask-hakken-every-chart-page-plan-2026-11-03.md, shared
  * work 9): the page's own title and figures, drawn another way by the parts the app's screens use — bars to rank, a
- * pie for shares, a line by day, stacked bars against the column set beside it — with a link back to the page.
+ * pie for shares, a line by day or by minute, stacked bars against the column set beside it — with a link back to the page.
  */
 function PageAnswerChart({ chart }: { chart: PageChart }) {
   const t = useTranslations("ai.assistant.chart");
@@ -71,16 +71,14 @@ function PageAnswerChart({ chart }: { chart: PageChart }) {
     if (chart.kind === "pie") {
       return <SitePieChart slices={chart.groups.map((group, at) => ({ key: `${group.name}-${at}`, name: group.name, value: group.value, colour: SITE_SERIES_COLOURS[at % SITE_SERIES_COLOURS.length] }))} formatValue={number} />;
     }
-    if (chart.kind === "line" && chart.groups.every((group) => DAY.test(group.name))) {
-      const rows = chart.groups.map((group) => datedRow({ day: group.name }, { now: group.value, ...(group.before !== undefined ? { before: group.before } : {}) }));
-      return <SiteLineChart data={rows} series={series} sharedScale height={210} />;
-    }
-    // Bars of days stand along the dates, in order, as a line of them would.
     const days = chart.groups.every((group) => DAY.test(group.name));
     const rows = chart.groups.map((group) => {
       const figures = { now: group.value, ...(group.before !== undefined ? { before: group.before } : {}) };
       return days ? datedRow({ day: group.name }, figures) : { label: group.name, ...figures };
     });
+    // A line of whatever the page runs along, in its order: days, or Live's minutes ("5 min ago"), which fell through to bars lying down (2026-11-06).
+    if (chart.kind === "line") return <SiteLineChart data={rows} series={series} sharedScale height={210} />;
+    // Bars of days stand along the dates, in order, as a line of them would.
     return <SiteBarChart data={rows} series={series} horizontal={chart.kind !== "stacked" && !days} {...(chart.kind === "stacked" ? { stacked: true } : {})} updateKey={false} formatValue={number} />;
   })();
   return (

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useElementWidth } from "@/src/hooks/useElementWidth";
+import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { MouseReadout } from "@/src/ui/components/charts/MouseReadout";
@@ -42,6 +43,7 @@ export function MinuteBars({ bars, name, measure, height = 170 }: {
   const [watch, measured] = useElementWidth();
   const area = useRef<HTMLDivElement | null>(null);
   const [hovered, setHovered] = useState<string | number | null>(null);
+  const still = useReducedMotion();
   const width = measured > 0 ? measured : UNMEASURED;
   const each = bars.length > 0 ? (width - GAP * (bars.length - 1)) / bars.length : 0;
   const most = Math.max(1, ...bars.map((bar) => bar.value));
@@ -69,8 +71,7 @@ export function MinuteBars({ bars, name, measure, height = 170 }: {
             <g
               key={bar.key}
               data-minute={at}
-              className="transition-transform duration-500 ease-out motion-reduce:transition-none"
-              style={{ transform: `translateX(${at * (each + GAP)}px)` }}
+              style={{ transform: `translateX(${at * (each + GAP)}px)`, transition: still ? "none" : "transform 500ms ease-out" }}
               onMouseEnter={() => setHovered(bar.key)}
             >
               <rect x={0} y={0} width={each + GAP} height={height} fill="transparent" />
@@ -83,7 +84,7 @@ export function MinuteBars({ bars, name, measure, height = 170 }: {
                 rx={Math.min(3, each / 2)}
                 fill={bar.value > 0 ? CHART_SERIES_ORANGE : CHART_COMPARATOR_GREY}
                 fillOpacity={lit ? 1 : bar.value > 0 ? 0.55 : 0.35}
-                style={{ transition: "y 400ms ease-out, height 400ms ease-out, fill-opacity 120ms ease-out" }}
+                style={{ transition: still ? "none" : "y 400ms ease-out, height 400ms ease-out, fill-opacity 120ms ease-out" }}
               />
               {newest ? (
                 <circle

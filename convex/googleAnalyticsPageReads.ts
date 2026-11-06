@@ -2,6 +2,7 @@ import { v, type Infer, type ObjectType } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { decodePages, isPageRef } from "./holdPageRefs";
+import { normalisePage } from "./utils/pageClassification";
 import { MOST_PLOTTED } from "./utils/pageMoves";
 import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
@@ -244,6 +245,28 @@ export const analyticsPageStory = tenantQuery({
  * Read from the page list its screen reads, never All pages' search, which works out the whole screen to find one row
  * and took half of Convex's second on its own (0.53s on More Handles).
  */
+/**
+ * A page's number from its address, for a screen that only has the address: Live's table, whose pages come from Google by title and
+ * from the saved pages list by address (live-new-page-plan-2026-11-06.md). A page's own screen reads by number, and an address it
+ * doesn't know reads as a page with no views. Only the exact page, and null with none in these dates, which is true of it. The whole
+ * list is read to find it, once, when the screen opens, so Live doesn't read it each minute for links nobody may press.
+ */
+export const analyticsPageKey = tenantQuery({
+  args: analyticsPageArgs,
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
+    const list = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country, PAGE_READING);
+    if (!list || list === "LIVE") return null;
+    const wanted = normalisePage(args.page);
+    const addresses = await decodePages(ctx, holdId, list.rows.map((row) => row.key));
+    const at = addresses.findIndex((address) => normalisePage(address) === wanted);
+    return at >= 0 ? list.rows[at].key : null;
+  },
+});
+
 export async function findPage(ctx: SiteReader, args: Omit<ObjectType<typeof analyticsPageArgs>, "page"> & { page: string }) {
   const site = await requireMySite(ctx, args.siteId);
   const holdId = site.hold._id;

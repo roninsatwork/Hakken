@@ -28,7 +28,7 @@ export const ASSISTANT_PAGE_CHARTS_CONNECTOR: ToolConnectorDefinition = {
         required: ["chart"],
         properties: {
           chart: { type: "number", description: "The chart's number on the page, as listed." },
-          kind: { type: "string", enum: ["bars", "pie", "line", "stacked", "map"], description: "bars (rows ranked, the default), pie (shares), line (rows by day, in the page's order), stacked, or map (boxes sized by the measure; give against to colour them by up or down)." },
+          kind: { type: "string", enum: ["bars", "pie", "line", "stacked", "map"], description: "bars (rows ranked, the default), pie (shares), line (rows by day or by minute, in the page's order), stacked, or map (boxes sized by the measure; give against to colour them by up or down)." },
           measure: { type: "string", description: "The column of figures to draw, by its name as listed. Leave out for the chart's first column of figures." },
           against: { type: "string", description: "Another column of figures to set beside it as the period before, by its name as listed." },
           top: { type: "number", description: "Draw only the biggest so many rows, e.g. 10." },

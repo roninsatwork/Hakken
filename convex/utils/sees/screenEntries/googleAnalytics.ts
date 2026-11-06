@@ -55,6 +55,7 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
       "why it is busy or quiet: the figures say what is happening now, never its cause (an advert, a sale, a post)",
       "where visitors came from: Google's live figures carry no channel, and the Channels page has that for whole days",
       "a usual half hour as an exact count: it's a guide from last month, for the home country, where Live counts every country",
+      "a usual half hour of under one as a figure: its key reads as nought, so say it in words, as under one person",
       "an event's people: Google gives an event its times live, never its people",
     ],
   },

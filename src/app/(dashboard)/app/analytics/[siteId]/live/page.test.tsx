@@ -1,10 +1,12 @@
 import { act, cleanup, renderWithProviders as render, screen, waitFor, within } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { getFunctionName } from "convex/server";
 import { useScreenDay } from "@/src/test/realTime";
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { STATUS } from "@/src/test/googleAnalyticsFixtures";
 import AnalyticsLivePage from "./page";
+import AnalyticsPageScreen from "../all-pages/page/page";
 
 /**
  * Live as Anthony chose it (docs/plans/active/live-new-page-plan-2026-11-06.md): that each part says the right thing for the figures
@@ -212,6 +214,26 @@ describe("the table", () => {
     await screen.findByText("Leeds", { selector: "td span" });
     expect(screen.getByText("In the last 30 minutes.")).toBeTruthy();
     expect(within(screen.getByRole("table")).queryByText("Views")).toBeNull();
+  });
+});
+
+describe("a page's own screen, opened from the table", () => {
+  it("is asked for by the page's number, found from its address, never by the address itself", async () => {
+    nav.search = "key=/cupboard-handles/antique-brass.html";
+    const page = vi.fn((asked: { page: string }) => asked.page);
+    vi.mocked(useQuery).mockImplementation(((ref: unknown, args: unknown) => {
+      const name = getFunctionName(ref as never);
+      if (args === "skip") return undefined;
+      if (name === "googleAnalyticsConnect:googleAnalyticsStatus") return STATUS;
+      if (name === "googleAnalyticsPageReads:analyticsPageKey") return "~t";
+      if (name === "googleAnalyticsPageReads:analyticsPage") page(args as { page: string });
+      return undefined;
+    }) as never);
+    vi.mocked(useMutation).mockImplementation((() => vi.fn()) as never);
+    vi.mocked(useAction).mockImplementation((() => vi.fn(async () => FIGURES)) as never);
+    render(<AnalyticsPageScreen />);
+    await waitFor(() => expect(page).toHaveBeenCalled());
+    expect(page.mock.calls.every(([asked]) => asked.page === "~t")).toBe(true);
   });
 });
 

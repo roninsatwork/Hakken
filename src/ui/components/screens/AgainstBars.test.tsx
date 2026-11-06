@@ -1,5 +1,5 @@
 import { fireEvent } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { AgainstBars, type AgainstRow } from "./AgainstBars";
 
@@ -60,9 +60,15 @@ describe("AgainstBars (docs/plans/active/live-new-page-plan-2026-11-06.md)", () 
     expect(screen.getByText("In a usual half hour")).toBeTruthy();
   });
 
-  it("stays still for anyone who asks for less motion", () => {
-    const { container } = shown([row()]);
-    expect(container.querySelector("[data-bar]")!.getAttribute("class")).toContain("motion-reduce:transition-none");
-    expect(container.querySelector("[data-mark]")!.getAttribute("class")).toContain("motion-reduce:transition-none");
+  // Set on the element, as the theme's `* { transition-property }` in globals.css outranks a class (useReducedMotion.ts).
+  it("moves its bars by a transition on the element, and stays still for anyone who asks for less motion", () => {
+    const { container, unmount } = shown([row()]);
+    expect((container.querySelector("[data-bar]") as HTMLElement).style.transition).toContain("width");
+    expect((container.querySelector("[data-mark]") as HTMLElement).style.transition).toContain("left");
+    unmount();
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce"), addEventListener: () => undefined, removeEventListener: () => undefined }));
+    const still = shown([row()]).container;
+    expect((still.querySelector("[data-bar]") as HTMLElement).style.transition).toBe("none");
+    expect((still.querySelector("[data-mark]") as HTMLElement).style.transition).toBe("none");
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { MouseReadout } from "@/src/ui/components/charts/MouseReadout";
@@ -39,6 +40,7 @@ export function AgainstBars({ rows, nowKey, usualKey }: {
 }) {
   const area = useRef<HTMLDivElement | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+  const still = useReducedMotion();
   const hoveredRow = rows.find((row) => row.key === hovered);
   return (
     <div ref={area} data-part="against-bars" className="relative flex flex-col gap-5" onMouseLeave={() => setHovered(null)}>
@@ -55,14 +57,14 @@ export function AgainstBars({ rows, nowKey, usualKey }: {
             <span className="relative block h-7 rounded-[3px] bg-foreground/10">
               <span
                 data-bar=""
-                className="absolute inset-y-0 left-0 block rounded-[3px] transition-[width] duration-500 ease-out motion-reduce:transition-none"
-                style={{ width: `${(100 * row.now) / most}%`, backgroundColor: CHART_SERIES_ORANGE }}
+                className="absolute inset-y-0 left-0 block rounded-[3px]"
+                style={{ width: `${(100 * row.now) / most}%`, backgroundColor: CHART_SERIES_ORANGE, transition: still ? "none" : "width 500ms ease-out" }}
               />
               {row.usual !== null ? (
                 <span
                   data-mark=""
-                  className="absolute block rounded-full text-foreground transition-[left] duration-500 ease-out motion-reduce:transition-none"
-                  style={{ left: `${(100 * row.usual) / most}%`, top: -5, bottom: -5, width: 3, backgroundColor: "currentColor" }}
+                  className="absolute block rounded-full text-foreground"
+                  style={{ left: `${(100 * row.usual) / most}%`, top: -5, bottom: -5, width: 3, backgroundColor: "currentColor", transition: still ? "none" : "left 500ms ease-out" }}
                 />
               ) : null}
             </span>
