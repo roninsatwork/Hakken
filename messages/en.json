@@ -16971,7 +16971,7 @@
         "nothingMoved": "No channel moved in these dates.",
         "bestRate": "{rate} bought for every 100 visits. Your website gets {site}.",
         "bestRateEvents": "{rate} events for every 100 visits. Your website gets {site}.",
-        "tooFewToSay": "No channel has enough visits to say yet."
+        "tooFewToSay": "There isn't enough to compare yet."
       },
       "days": {
         "title": "{name} each {step, select, day {day} week {week} other {month}}",
@@ -17285,8 +17285,8 @@
         "noVisits": "No visits in these dates.",
         "noneBought": "Nothing bought in these dates.",
         "noEvents": "No events in these dates.",
-        "noBest": "No channel has {floor} visits and a sale.",
-        "noBestEvents": "No channel has {floor} visits and an event.",
+        "noBest": "There isn't enough to compare yet.",
+        "noBestEvents": "There isn't enough to compare yet.",
         "noChange": "Nothing to compare these dates with."
       },
       "daily": {

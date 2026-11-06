@@ -84,11 +84,13 @@ export function ChannelBoxes({ channels }: { channels: Channels }) {
     <FigureRow columns={4}>
       <Figure
         label={t("mostVisits")}
+        named
         value={mostVisits?.key ?? "–"}
         detail={quiet(mostVisits ? t(mostVisits.sharePercent === null ? "visitsAlone" : "visitsLine", { visits: formatNumber(mostVisits.visits), share: Math.round(mostVisits.sharePercent ?? 0) }) : t("noVisits"))}
       />
       <Figure
         label={t(sells ? "mostBought" : "mostEvents")}
+        named
         value={mostDone?.key ?? "–"}
         detail={quiet(mostDone
           ? t(`${sells ? "bought" : "events"}${mostDone.sharePercent === null ? "Alone" : "Line"}`, { count: mostDone.done, figure: formatNumber(mostDone.done), share: Math.round(mostDone.sharePercent ?? 0) })
@@ -96,6 +98,7 @@ export function ChannelBoxes({ channels }: { channels: Channels }) {
       />
       <Figure
         label={t(sells ? "sellsBest" : "bestForEvents")}
+        named
         value={bestFor?.key ?? "–"}
         detail={quiet(bestFor
           ? t(`${sells ? "sellsBest" : "bestForEvents"}${bestFor.sitePer100 === null ? "Alone" : "Line"}`, { rate: per100Words(bestFor.per100), site: per100Words(bestFor.sitePer100 ?? 0) })
@@ -103,6 +106,7 @@ export function ChannelBoxes({ channels }: { channels: Channels }) {
       />
       <Figure
         label={t("biggestChange")}
+        named
         value={biggestChange?.key ?? "–"}
         detail={biggestChange ? quiet(t(biggestChange.change > 0 ? "more" : "fewer", { count: formatNumber(Math.abs(biggestChange.change)), before: inWords.before }), days) : quiet(t("noChange"))}
       />

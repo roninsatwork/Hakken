@@ -82,6 +82,8 @@ export function useSplitNames() {
   }, [t, tf, visitor]);
 }
 
+/** "These dates", where the words start a sentence. */
+const capitalFirst = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
 const per100 = (part: number, visits: number) => (visits > 0 ? (100 * part) / visits : 0);
 const oneDecimal = (value: number) => value.toFixed(1);
 const quiet = (words: string) => <span className="text-secondary">{words}</span>;
@@ -127,12 +129,14 @@ export function OverviewBoxes({ reads }: { reads: OverviewReads }) {
       <Figure
         label={t("biggest")}
         href={moved ? hrefFor("channels/channel", { key: moved.key }) : hrefFor("channels")}
+        named
         value={moved ? moved.key : "–"}
         detail={quiet(moved ? t(moved.change < 0 ? "fewerVisits" : "moreVisits", { count: formatNumber(Math.abs(moved.change)), before: inWords.before }) : t("nothingMoved"))}
       />
       <Figure
         label={t(shop ? "sellsBest" : "bestForEvents")}
         href={best ? hrefFor("channels/channel", { key: best.key }) : hrefFor("channels")}
+        named
         value={best ? best.key : "–"}
         detail={quiet(best ? t(shop ? "bestRate" : "bestRateEvents", { rate: oneDecimal(best.per100), site: rateWords }) : t("tooFewToSay"))}
       />
@@ -213,7 +217,7 @@ export function OverviewDaysCard({ reads, status, onDays }: { reads: OverviewRea
   return (
     <DaysChart
       title={t("title", { name: line.name, step })}
-      hint={<span title={t("listsDiffer")}>{comparing ? t("hintAgainst", { now: inWords.now, before: inWords.before }) : held ? t("hint", { now: inWords.now }) : t("hintNotHeld", { now: inWords.now })}</span>}
+      hint={<span title={t("listsDiffer")}>{comparing ? t("hintAgainst", { now: capitalFirst(inWords.now), before: inWords.before }) : held ? t("hint", { now: capitalFirst(inWords.now) }) : t("hintNotHeld", { now: capitalFirst(inWords.now) })}</span>}
       exportName="google-analytics-overview"
       csvDay={t("csvDay")}
       host={status.host}

@@ -18,7 +18,7 @@ import { cn } from "@/src/ui/lib/utils";
  * figure the eye should land on first. `mark` goes before the label when the
  * figure is about one website — its `SiteMark` — as the competitor cards are.
  */
-export function Figure({ label, value, detail, href, arrow = true, framed = true, emphasis = false, mark }: {
+export function Figure({ label, value, detail, href, arrow = true, framed = true, emphasis = false, named = false, mark }: {
   label: string;
   value: ReactNode;
   detail?: ReactNode;
@@ -27,6 +27,8 @@ export function Figure({ label, value, detail, href, arrow = true, framed = true
   arrow?: boolean;
   framed?: boolean;
   emphasis?: boolean;
+  /** The value is a name, not a number: smaller, so "Organic Search" doesn't fill the box over two lines (Anthony, 2026-11-06). */
+  named?: boolean;
   mark?: ReactNode;
 }) {
   const title = href && arrow ? `${label} →` : label;
@@ -41,7 +43,7 @@ export function Figure({ label, value, detail, href, arrow = true, framed = true
       ) : (
         <div data-part-title className="text-[12px] text-secondary">{title}</div>
       )}
-      <div className="mt-1 text-[24px] font-semibold tabular-nums text-foreground">{value}</div>
+      <div className={cn("mt-1 font-semibold text-foreground", named ? "text-[16px]" : "text-[24px] tabular-nums")}>{value}</div>
       {detail !== undefined ? <div className="mt-1 text-[12px]">{detail}</div> : null}
     </>
   );

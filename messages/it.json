@@ -16971,7 +16971,7 @@
         "nothingMoved": "Nessun canale si è mosso in queste date.",
         "bestRate": "{rate} acquisti ogni 100 visite. Il tuo sito ne ha {site}.",
         "bestRateEvents": "{rate} eventi ogni 100 visite. Il tuo sito ne ha {site}.",
-        "tooFewToSay": "Nessun canale ha ancora abbastanza visite per dirlo."
+        "tooFewToSay": "Non c'è ancora abbastanza da confrontare."
       },
       "days": {
         "title": "{name} {step, select, day {ogni giorno} week {ogni settimana} other {ogni mese}}",
@@ -17285,8 +17285,8 @@
         "noVisits": "Nessuna visita in queste date.",
         "noneBought": "Niente comprato in queste date.",
         "noEvents": "Nessun evento in queste date.",
-        "noBest": "Nessun canale ha {floor} visite e una vendita.",
-        "noBestEvents": "Nessun canale ha {floor} visite e un evento.",
+        "noBest": "Non c'è ancora abbastanza da confrontare.",
+        "noBestEvents": "Non c'è ancora abbastanza da confrontare.",
         "noChange": "Niente con cui confrontare queste date."
       },
       "daily": {

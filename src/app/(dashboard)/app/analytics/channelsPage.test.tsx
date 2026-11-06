@@ -224,7 +224,7 @@ describe("the four boxes", () => {
     open("", { rows: [{ ...EMAIL, visitsBefore: 9, purchases: 0, conversions: 0 }] });
     expect(boxOf("Most visits")).toContain("Email");
     expect(boxOf("Most bought")).toContain("Nothing bought in these dates.");
-    expect(boxOf("Sells best")).toContain("No channel has 100 visits and a sale.");
+    expect(boxOf("Sells best")).toContain("There isn't enough to compare yet.");
     expect(boxOf("Biggest change")).toContain("Nothing to compare these dates with.");
   });
 });

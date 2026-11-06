@@ -5,7 +5,7 @@ import { viewsCountedDifferently } from "../../viewsCounted";
 import { couldBeChance } from "../../insightEditor";
 import { pathOfAddress } from "../analytics";
 import { apartFrom, firstOfEachList, isNumber, isRow, moved, named, partOf, round1, rowsOf, type OwnFound, type Row } from "./shared";
-import { GROUP_LEAST, GROUP_MOVE, RATE_APART, LEFT_APART_POINTS, CONVERSIONS_LEAST, SHARE_POINTS, SHARE_APART_POINTS, HOUSEKEEPING, namesOf, nameIn, changeOf, perHundred, rowNameOf, beside, rateMoved, shareMovedOf, headline, visitMovers, perHundredApart, conversionsApartFromVisits, explainsFall, websiteOf } from "./googleAnalyticsShared";
+import { GROUP_LEAST, GROUP_MOVE, RATE_APART, LEFT_APART_POINTS, CONVERSIONS_LEAST, SHARE_APART_POINTS, HOUSEKEEPING, namesOf, nameIn, changeOf, perHundred, rowNameOf, beside, headline, visitMovers, perHundredApart, conversionsApartFromVisits, explainsFall, websiteOf } from "./googleAnalyticsShared";
 import { campaignsFindings } from "./googleAnalyticsCampaigns";
 import { overviewFindings } from "./googleAnalyticsOverview";
 import { channelsFindings } from "./googleAnalyticsChannels";

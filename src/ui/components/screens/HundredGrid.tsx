@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "re
 import { useElementWidth } from "@/src/hooks/useElementWidth";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { LAYER } from "@/src/ui/lib/layers";
 
 /**
  * A figure as whole squares a person can count: out of every 100, or every 1,000 for something rare, each colour one row of
@@ -130,7 +131,7 @@ export function HundredGrid({ groups, cells = 100, nowLabel, wasLabel, label }: 
           </div>
         ))}
       </div>
-      <div ref={tip} className="pointer-events-none absolute z-10" style={{ visibility: hovered ? "visible" : "hidden" }}>
+      <div ref={tip} className={`pointer-events-none absolute ${LAYER.RAISED}`} style={{ visibility: hovered ? "visible" : "hidden" }}>
         {hovered ? (
           <ChartTooltipSurface heading={hovered.name} wide>
             {hovered.readout.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}

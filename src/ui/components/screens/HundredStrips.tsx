@@ -3,6 +3,7 @@
 import { useRef, useState, type MouseEvent } from "react";
 import { useElementWidth } from "@/src/hooks/useElementWidth";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { LAYER } from "@/src/ui/lib/layers";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_ROSE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 
 /**
@@ -130,7 +131,7 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
           </div>
         ))}
       </div>
-      <div ref={tip} className="pointer-events-none absolute z-10" style={{ visibility: hovered ? "visible" : "hidden" }}>
+      <div ref={tip} className={`pointer-events-none absolute ${LAYER.RAISED}`} style={{ visibility: hovered ? "visible" : "hidden" }}>
         {hovered ? (
           <ChartTooltipSurface heading={hovered.name} wide>
             {hovered.readout.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}
