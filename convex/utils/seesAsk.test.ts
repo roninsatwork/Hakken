@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import type { Fact } from "./insightEditor";
 import { factsOf, fromSeesKey, seesFrom, seesKey, seesPath, writerFor } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
