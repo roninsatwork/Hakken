@@ -1263,6 +1263,9 @@
         "topPage": "{text} made {a} of the {b}.",
         "weakest": "{text} converts least of the busy pages: {aRate} of its {b} visits.",
         "seeBest": "See {text}, the page that converts most here."
+      },
+      "channelsPage": {
+        "none": "No visits in these dates."
       }
     },
     "searchConsole.seen": {
@@ -2735,6 +2738,9 @@
         "topPage": "{text} ne ha fatte {a} su {b}.",
         "weakest": "{text} converte meno tra le pagine più visitate: {aRate} delle sue {b} visite.",
         "seeBest": "Vedi {text}, la pagina che converte di più qui."
+      },
+      "channelsPage": {
+        "none": "Nessuna visita in queste date."
       }
     },
     "searchConsole.seen": {
