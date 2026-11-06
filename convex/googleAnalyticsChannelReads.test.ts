@@ -157,10 +157,10 @@ describe("a channel's own page", () => {
     expect(top.seen.says.map((say) => say.code)).toContain("filedElsewhere");
     // Where they land: every assistant visit, from the assistants' own list, though Google filed them as Referral (CH13).
     expect(top.kinds.reduce((sum, kind) => sum + kind.visits, 0)).toBe(120);
-    // Counted once: AI assistants' row of Channels' map holds them, and Referral's none.
-    const channels = await user.query(api.googleAnalyticsChannelReads.analyticsChannelsTop, { siteId, ...args });
-    expect(channels.map.rows.find((row) => row.channel === "AI assistants")?.visits).toBe(120);
-    expect(channels.map.rows.find((row) => row.channel === "Referral")).toBeUndefined();
+    // Counted once: AI assistants' row of Channels' squares holds them, and Referral's none.
+    const channels = await user.query(api.googleAnalyticsChannelPageReads.analyticsChannelSquares, { siteId, ...args, split: "kind" });
+    expect(channels.rows.find((row) => row.channel === "AI assistants")?.cells.reduce((sum, cell) => sum + cell.visits, 0)).toBe(120);
+    expect(channels.rows.find((row) => row.channel === "Referral")).toBeUndefined();
     // Its table: each assistant with the visits filed elsewhere, and only those filed as one channel when asked.
     const list = { siteId, ...args, list: "source" as const, channel: "AI assistants", page: 1, rows: 25 };
     const every = await user.query(api.googleAnalyticsReads.analyticsListPage, list);
@@ -213,36 +213,8 @@ describe("a channel's own page", () => {
     await expect(rival.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, ...args, channel: "Organic Search" })).rejects.toThrow();
     await expect(rival.query(api.googleAnalyticsChannelReads.analyticsChannelDays, { siteId, ...args, channel: "Organic Search" })).rejects.toThrow();
     await expect(rival.query(api.googleAnalyticsChannelReads.analyticsChannelEvents, { siteId, ...args, channel: "Organic Search" })).rejects.toThrow();
-    await expect(rival.query(api.googleAnalyticsChannelReads.analyticsChannelsTop, { siteId, ...args })).rejects.toThrow();
-  });
-});
-
-describe("Channels", () => {
-  test("each channel by page group, how often a visit converts, and What Hakken sees", async () => {
-    const { siteId, user } = await collectedShifting();
-    const top = await user.query(api.googleAnalyticsChannelReads.analyticsChannelsTop, { siteId, ...args });
-    expect(top.state).toBe("READY");
-    // A lead and a call a day, and the service page's lead a day before.
-    expect(top.figures).toMatchObject({ conversions: 30 * 2, conversionsBefore: 30 * 3 });
-    const organic = top.map.rows.find((row) => row.channel === "Organic Search");
-    expect(organic?.visits).toBe(390);
-    expect(organic?.cells.find((cell) => cell.kind === "HOME")).toMatchObject({ visits: 300, conversions: 30 });
-    expect(top.perVisit.rows.map((row) => row.channel)).toContain("AI assistants");
-    // Conversions out of visits, never money (Anthony, 2026-11-03: "Take money off").
-    expect(top.perVisit.rows.every((row) => !("value" in row))).toBe(true);
-    expect(top.figures && "value" in top.figures).toBe(false);
-    expect(top.figures?.uncounted).toEqual([{ eventName: "form_submit", count: 30, enquiry: false }]);
-    expect(top.seen.says[0].code).toMatch(/^lead\./);
-  });
-
-  test("the table's extras: the conversions each channel started and where most of its visits land, filtered by that page group", async () => {
-    const { siteId, user } = await collectedShifting();
-    const page = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, ...args, list: "channel", page: 1, rows: 25 });
-    const organic = page.rows.find((row) => row.label === "Organic Search");
-    expect(organic).toMatchObject({ started: 30, landsMost: { kind: "HOME", name: null } });
-    expect(organic?.landsMost?.share).toBeCloseTo(300 / 390);
-    const home = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, ...args, list: "channel", group: "HOME", page: 1, rows: 25 });
-    expect(home.rows.map((row) => row.label)).toContain("Organic Search");
-    expect(home.rows.map((row) => row.label)).not.toContain("AI assistants");
+    await expect(rival.query(api.googleAnalyticsChannelPageReads.analyticsChannelsEachDay, { siteId, ...args })).rejects.toThrow();
+    await expect(rival.query(api.googleAnalyticsChannelPageReads.analyticsChannelSquares, { siteId, ...args, split: "kind" })).rejects.toThrow();
+    await expect(rival.query(api.googleAnalyticsChannelPageReads.analyticsChannelSteps, { siteId, ...args })).rejects.toThrow();
   });
 });

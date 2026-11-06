@@ -36,8 +36,9 @@ export async function collectedWebsite(
   /**
    * `firstNight: false`: only connected and collected, its two years not filled yet. `connection`: fields set on the
    * connection before it is collected — the finished periods fetched already, say, for a test that reads none of them.
+   * `keyEvents`: more key events on the property, a shop's steps say.
    */
-  options: { firstNight?: boolean; connection?: { periodsFetched?: Array<{ key: string; from: string; settled: boolean }>; countedWith?: string } } = {},
+  options: { firstNight?: boolean; connection?: { periodsFetched?: Array<{ key: string; from: string; settled: boolean }>; countedWith?: string }; keyEvents?: ReadonlyArray<{ eventName: string; counted: boolean }> } = {},
 ) {
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
@@ -53,6 +54,7 @@ export async function collectedWebsite(
         { eventName: "click_tel", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },
         { eventName: "sign_up", counted: true, analyticsValue: 10, hakkenValue: null, lastThirtyDays: 0 },
         { eventName: "form_submit", counted: false, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 },
+        ...(options.keyEvents ?? []).map((event) => ({ ...event, analyticsValue: null, hakkenValue: null, lastThirtyDays: 0 })),
       ],
       ...options.connection,
       createdAt: 1, updatedAt: 1,
@@ -76,6 +78,7 @@ export async function collectedWebsite(
       { eventName: "click_tel", counted: true, hakkenValue: null },
       { eventName: "sign_up", counted: true, hakkenValue: null },
       { eventName: "form_submit", counted: false, hakkenValue: null },
+      ...(options.keyEvents ?? []).map((event) => ({ ...event, hakkenValue: null })),
     ],
   });
   await finishScheduled(t);

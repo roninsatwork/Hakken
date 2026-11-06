@@ -7,8 +7,8 @@ import { keptCountry } from "./googleAnalyticsCountries";
 import { UNTAGGED, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import type { Id } from "./_generated/dataModel";
-import { blank, connectionOf, conversionsOf, countedOf, displayChannel, readSlot } from "./googleAnalyticsReads";
-import { merged, readChannelPoints, readDayPoints } from "./googleAnalyticsHistory";
+import { blank, connectionOf, conversionsOf, countedOf, readSlot } from "./googleAnalyticsReads";
+import { merged, readDayPoints } from "./googleAnalyticsHistory";
 import { coverageOf } from "./googleAnalyticsCoverage";
 import { dayDevice } from "./utils/analyticsHistory";
 import { cameFromOf } from "./utils/campaignNames";
@@ -16,7 +16,7 @@ import { cameFromOf } from "./utils/campaignNames";
 /**
  * What the Google Analytics charts read (docs/plans/active/google-analytics-plan.md
  * §5, GA35, §18.2): the website's figures a day, the same over the days
- * just before, and each channel's visits a day. Apart from `googleAnalyticsReads.ts` to keep each module inside its
+ * just before, and the campaigns' figures a day. Apart from `googleAnalyticsReads.ts` to keep each module inside its
  * size. Only the caller's own website (`requireMySite`).
  */
 
@@ -168,81 +168,6 @@ export async function readPeriodBeforeChart(ctx: SiteReader, args: ObjectType<ty
       events,
     };
 }
-
-/** Channels drawn as lines of their own on Channels' chart; the rest are one line, "everything else" (§18.2 board 16). */
-const CHANNEL_LINES = 4;
-
-
-/**
- * Each channel's visits a day (GA35; §18.2 board 16): the four channels with
- * the most visits a line each, the rest one line. From each home country's
- * channels kept a day, then a week, then a month (ga-stored-figures-plan.md
- * SF2, SF7) — `live` while the dates reach past what is held, the minutes
- * before a new website's two years are filled; nothing is asked of Google.
- */
-export const analyticsChannelChart = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
-  returns: v.object({
-    live: v.boolean(),
-    /** The channels with lines of their own, the most visits first; the last line is everything else when there is any. */
-    channels: v.array(v.string()),
-    rest: v.boolean(),
-    /**
-     * Each line's visits a day, and its conversions in the same order (ga-channel-pages-plan.md CH9: a dot on each day
-     * with one); a week's or month's last day where the past is held by week or month (ga-stored-figures-plan.md SF2b).
-     */
-    points: v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.array(v.number()), conversions: v.array(v.number()) })),
-  }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    const none = { live: false, channels: [] as string[], rest: false, points: [] as Array<{ day: string; lastDay?: string; visits: number[]; conversions: number[] }> };
-    if (!connection?.newestDay) return none;
-    const counted = countedOf(connection);
-    const byDay = new Map<string, Map<string, { visits: number; conversions: number }>>();
-    const add = (day: string, rows: readonly ListRow[]) => {
-      const channels = byDay.get(day) ?? new Map<string, { visits: number; conversions: number }>();
-      for (const row of rows) {
-        const own = channels.get(displayChannel(row.key)) ?? { visits: 0, conversions: 0 };
-        own.visits += row.visits;
-        own.conversions += conversionsOf(row, counted).conversions;
-        channels.set(displayChannel(row.key), own);
-      }
-      byDay.set(day, channels);
-    };
-    const lastDays = new Map<string, string>();
-    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
-    if (!total) return none;
-    const held = await readChannelPoints(ctx, connection, args.device, total.from, total.to, country);
-    if (!held) return { ...none, live: true };
-    for (const point of held) {
-      add(point.start, point.rows);
-      if (point.end !== point.start) lastDays.set(point.start, point.end);
-    }
-    const totals = new Map<string, number>();
-    for (const channels of byDay.values()) for (const [channel, own] of channels) totals.set(channel, (totals.get(channel) ?? 0) + own.visits);
-    const ranked = [...totals.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0])).map(([channel]) => channel);
-    const lines = ranked.slice(0, CHANNEL_LINES);
-    const rest = ranked.length > CHANNEL_LINES;
-    const days = [...byDay.keys()].sort();
-    return {
-      live: false,
-      channels: lines,
-      rest,
-      points: days.map((day) => {
-        const channels = byDay.get(day)!;
-        const others = [...channels.entries()].filter(([channel]) => !lines.includes(channel)).map(([, own]) => own);
-        const of = (measure: "visits" | "conversions") => {
-          const own = lines.map((channel) => channels.get(channel)?.[measure] ?? 0);
-          return rest ? [...own, others.reduce((sum, one) => sum + one[measure], 0)] : own;
-        };
-        return { day, ...(lastDays.has(day) ? { lastDay: lastDays.get(day) } : {}), visits: of("visits"), conversions: of("conversions") };
-      }),
-    };
-  },
-});
 
 const campaignPointValidator = v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.number(), engaged: v.number(), conversions: v.number(), bought: v.number() });
 

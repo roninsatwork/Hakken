@@ -10907,7 +10907,16 @@
         "timesPerHundred": "volte ogni 100 visite",
         "shareOfBought": "quota di tutto ciò che è stato comprato",
         "shareOfConversions": "quota di tutte le conversioni",
-        "visitsDidPercent": "delle visite l'hanno fatto"
+        "visitsDidPercent": "delle visite l'hanno fatto",
+        "events": "eventi",
+        "eventsPerHundred": "eventi ogni 100 visite",
+        "shareOfEvents": "quota di tutti gli eventi",
+        "shareOfChannelBought": "degli acquisti di questo canale",
+        "shareOfChannelEvents": "degli eventi di questo canale",
+        "visitsGained": "visite guadagnate",
+        "boughtLost": "acquisti persi",
+        "eventsLost": "eventi persi",
+        "wentOnPercent": "è andato al passaggio successivo"
       }
     },
     "sidePanel": {
@@ -16677,8 +16686,6 @@
         "elsewhere": "Archiviate altrove",
         "elsewhereTitle": "Visite che Google Analytics ha archiviato sotto un canale diverso da AI Assistant",
         "assistant": "Assistente",
-        "started": "Avviate",
-        "startedTitle": "Conversioni da persone portate per prime da questo canale, in qualsiasi visita",
         "landsMost": "Arriva più spesso su",
         "landsMostTitle": "La classificazione delle pagine su cui è iniziata la maggior parte delle visite del canale, e la sua quota",
         "left": "Usciti",
@@ -16698,7 +16705,16 @@
         "visitsChangeTitle": "Visite di {now} rispetto a {before}.",
         "bought": "Comprati",
         "boughtTitle": "Quante volte le persone hanno comprato da questa campagna, e quante sono ogni 100 visite.",
-        "conversionsTimesTitle": "Conta ogni volta, quindi una visita può contare più di una volta."
+        "conversionsTimesTitle": "Conta ogni volta, quindi una visita può contare più di una volta.",
+        "visitsListTitle": "Google conta ogni elenco per conto suo, quindi queste visite possono sommare un po' di più o di meno del tuo totale.",
+        "leftStraightAway": "Usciti subito",
+        "leftStraightAwayTitle": "Persone rimaste meno di 10 secondi che non hanno fatto nulla.",
+        "basket": "Aggiunto al carrello",
+        "basketTitle": "Visite che hanno aggiunto qualcosa al carrello, e quante sono ogni 100 visite.",
+        "checkout": "Pagamento iniziato",
+        "checkoutTitle": "Visite che hanno iniziato il pagamento, e quante sono ogni 100 visite.",
+        "boughtChannelTitle": "Quante volte le persone hanno comprato da questo canale, e quante sono ogni 100 visite.",
+        "events": "Eventi"
       },
       "notSorted": "Non classificate",
       "pagesCount": "{count, plural, =1 {1 pagina} other {# pagine}}",
@@ -16720,7 +16736,6 @@
         "viewsChange": "Variazione visualizzazioni",
         "rate": "Tasso di conversione (%)",
         "conversionsChange": "Variazione conversioni",
-        "started": "Conversioni avviate",
         "landsMost": "Arriva più spesso su",
         "left": "Uscite qui",
         "onward": "Proseguite",
@@ -16729,7 +16744,11 @@
         "visitsNow": "Visite",
         "visitsBefore": "Visite prima",
         "visitsChange": "Su o giù",
-        "bought": "Comprati"
+        "bought": "Comprati",
+        "basket": "Aggiunto al carrello",
+        "checkout": "Pagamento iniziato",
+        "leftStraightAway": "Usciti subito (%)",
+        "events": "Eventi"
       },
       "downloadFailed": "Impossibile preparare il download. Riprova.",
       "untagged": "{count, plural, =1 {una visita non è arrivata} other {# visite non sono arrivate}} da una campagna",
@@ -16750,7 +16769,9 @@
       "noPageLost": "Google Analytics ha perso la pagina",
       "per100Visits": "<figure>{rate}</figure> ogni 100 visite",
       "pageNotKnown": "Pagina non nota",
-      "noAdKeyword": "{count, plural, =1 {una visita non aveva} other {# visite non avevano}} una parola chiave"
+      "noAdKeyword": "{count, plural, =1 {una visita non aveva} other {# visite non avevano}} una parola chiave",
+      "channelsBar": "Aggiunto al carrello e Pagamento iniziato contano le visite, quindi non possono superare 100.",
+      "channelsBarEvents": "Gli eventi contano ogni volta, quindi una visita può contare più di una volta."
     },
     "chart": {
       "title": "Visite e conversioni nel tempo",
@@ -17142,45 +17163,160 @@
     },
     "channels": {
       "title": "Canali",
-      "description": "Da dove sono arrivate le visite, nei canali di Google con gli assistenti AI come canale a sé, dove è arrivato ciascuno e cosa ha portato. La variazione è sulle visite rispetto a {before}.",
+      "description": "Da dove sono arrivate le tue visite, e dove sono iniziate sul tuo sito.",
       "searchPlaceholder": "Trova un canale…",
       "empty": "Nessuna visita in queste date."
     },
     "channelsPage": {
-      "landsMost": "Arriva più spesso su",
-      "everyClassification": "Ogni classificazione",
-      "figures": {
+      "boxes": {
+        "mostVisits": "Più visite",
+        "mostBought": "Più comprati",
+        "mostEvents": "Più eventi",
+        "sellsBest": "Vende meglio",
+        "bestForEvents": "Migliore per gli eventi",
+        "biggestChange": "Cambiamento maggiore",
+        "visitsLine": "{visits} visite. È il {share}% di tutte le tue visite.",
+        "visitsAlone": "{visits} visite.",
+        "boughtLine": "{figure} comprati. È il {share}% di tutto ciò che è stato comprato.",
+        "boughtAlone": "{figure} comprati.",
+        "eventsLine": "{count, plural, =1 {1 evento} other {{figure} eventi}}. È il {share}% di tutti i tuoi eventi.",
+        "eventsAlone": "{count, plural, =1 {1 evento} other {{figure} eventi}}.",
+        "sellsBestLine": "{rate} comprati ogni 100 visite. Il tuo sito ne fa {site}.",
+        "sellsBestAlone": "{rate} comprati ogni 100 visite.",
+        "bestForEventsLine": "{rate} eventi ogni 100 visite. Il tuo sito ne fa {site}.",
+        "bestForEventsAlone": "{rate} eventi ogni 100 visite.",
+        "more": "{count} visite in più rispetto a {before}.",
+        "fewer": "{count} visite in meno rispetto a {before}.",
+        "days": "Dal {from} al {to}",
+        "noVisits": "Nessuna visita in queste date.",
+        "noneBought": "Niente comprato in queste date.",
+        "noEvents": "Nessun evento in queste date.",
+        "noBest": "Nessun canale ha {floor} visite e una vendita.",
+        "noBestEvents": "Nessun canale ha {floor} visite e un evento.",
+        "noChange": "Niente con cui confrontare queste date."
+      },
+      "daily": {
+        "title": {
+          "visits": {
+            "day": "Visite ogni giorno, per canale",
+            "week": "Visite ogni settimana, per canale",
+            "month": "Visite ogni mese, per canale"
+          },
+          "event": {
+            "day": "{event} ogni giorno, per canale",
+            "week": "{event} ogni settimana, per canale",
+            "month": "{event} ogni mese, per canale"
+          },
+          "events": {
+            "day": "Eventi ogni giorno, per canale",
+            "week": "Eventi ogni settimana, per canale",
+            "month": "Eventi ogni mese, per canale"
+          }
+        },
+        "hint": "{now}. Ogni canale che selezioni ha la sua linea, e gli altri condividono una linea grigia. Seleziona gli eventi per contare quelli al posto delle visite.",
+        "hintEvent": "{now}. Questo conta le volte, non le visite, quindi una visita può contare più di una volta.",
+        "hintEvents": "{now}. Questi contano le volte, non le visite. Se ne selezioni più di uno si sommano, e una visita può contare molte volte.",
+        "channels": "Canali",
+        "everyChannel": "Tutti i canali",
+        "events": "Eventi",
+        "everyEvent": "Tutti gli eventi",
+        "notCounted": "{event} (non conteggiato come conversione)",
+        "nothingTicked": "Seleziona almeno un canale.",
         "visits": "Visite",
-        "conversions": "Conversioni",
-        "best": "Converte meglio",
-        "bestDetail": "{rate} delle sue visite · sito {siteRate} · 12 mesi",
-        "bestNone": "Nessun canale batte il sito in 12 mesi",
-        "uncounted": "Eventi chiave non contati",
-        "uncountedDetail": "{events} {count, plural, =1 {è successo, ma non è contato come conversione} other {sono successi, ma non sono contati come conversioni}}",
-        "dwell": "Tempo di permanenza",
-        "dwellDetail": "tempo di coinvolgimento per visita"
+        "times": "Volte",
+        "csvDay": "Giorno",
+        "collecting": "Ancora in raccolta.",
+        "empty": "Niente da mostrare in queste date."
       },
-      "map": {
-        "title": "Dove arriva ogni canale, per classificazione delle pagine",
-        "hint": "{period}. Ogni quadrato sono le visite di un canale arrivate sulle pagine di quella classificazione, più chiaro per una quota maggiore del canale, con le sue conversioni.",
-        "everyDevice": "Di ogni dispositivo, come vengono conservate le pagine di destinazione.",
-        "visits": "{count, plural, =1 {1 visita} other {# visite}}",
-        "conversions": "{count, plural, =1 {1 conv.} other {# conv.}}",
-        "conversionsColumn": "conversioni",
-        "hover": "{channel} → {kind}: {visits, plural, =1 {1 visita} other {# visite}}, {conversions, plural, =1 {1 conversione} other {# conversioni}}",
-        "legendVisits": "69 · visite iniziate sulle pagine di quella classificazione",
-        "legendConversions": "3 conv. · conversioni fatte da quelle visite",
-        "legendShades": "da una quota minore a una maggiore del canale",
-        "legendEmpty": "nessuna visita",
-        "empty": "Nessuna pagina di destinazione in queste date."
+      "squares": {
+        "title": "Dove sono iniziate le visite di ogni canale",
+        "hint": {
+          "kind": "Ogni riga è un canale. Ogni quadrato sono le sue visite a una parte del tuo sito.",
+          "device": "Ogni riga è un canale. Ogni quadrato sono le sue visite da un dispositivo."
+        },
+        "hintOther": {
+          "kind": "Ogni riga è un canale. Ogni quadrato è una parte del tuo sito.",
+          "device": "Ogni riga è un canale. Ogni quadrato è un dispositivo."
+        },
+        "everyDevice": "Qui vedi tutti i dispositivi, perché questo elenco non è tenuto per dispositivo in queste date.",
+        "channels": "Canali",
+        "everyChannel": "Tutti i canali",
+        "classifications": "Classificazioni",
+        "everyClassification": "Tutte le classificazioni",
+        "splitBy": "Dividi per",
+        "splits": {
+          "kind": "Classificazione",
+          "device": "Dispositivo"
+        },
+        "count": "Conteggio",
+        "counts": {
+          "visits": "Visite",
+          "bought": "Comprati",
+          "boughtPer100": "Comprati ogni 100 visite",
+          "conversions": "Conversioni",
+          "events": "Eventi",
+          "conversionsPer100": "Eventi ogni 100 visite"
+        },
+        "compareWith": "Confronta con",
+        "noComparison": "Nessun confronto",
+        "otherGroups": "Altri gruppi",
+        "notSorted": "Non ancora ordinate",
+        "noPage": "Nessuna pagina registrata",
+        "otherHolds": "Altri gruppi contiene {names}.",
+        "rowTotal": "{visits} visite",
+        "boughtNote": "{figure} comprati",
+        "eventsNote": "{figure} eventi",
+        "new": "Nuovo",
+        "key": {
+          "visits": "Ogni quadrato mostra le sue visite, e la sua quota del canale.",
+          "bought": "Ogni quadrato mostra cosa è stato comprato, e la sua quota del canale.",
+          "boughtPer100": "Ogni quadrato mostra quanti comprati ogni 100 visite, e quanti in tutto.",
+          "conversions": "Ogni quadrato conta ogni volta, quindi una visita può contare più di una volta.",
+          "events": "Ogni quadrato conta ogni volta, quindi una visita può contare più di una volta.",
+          "conversionsPer100": "Ogni quadrato conta ogni volta, quindi può superare 100."
+        },
+        "keyCompare": "Il numero piccolo è il cambiamento rispetto a {before}.",
+        "shadesShare": "Più chiaro significa una quota maggiore di quel canale",
+        "shadesRate": "Più chiaro significa di più rispetto agli altri canali",
+        "nobody": "Nessuno",
+        "hover": {
+          "head": "{channel}, {column}",
+          "visits": "Visite a {when}: {figure}",
+          "ofChannel": "Delle visite di questo canale: {share}%",
+          "bought": "Comprati a {when}: {figure}",
+          "conversions": "Conversioni a {when}: {figure}",
+          "events": "Eventi a {when}: {figure}"
+        },
+        "pick": "Canale",
+        "csvChannel": "Canale",
+        "collecting": "Ancora in raccolta.",
+        "nothingTicked": "Seleziona almeno un canale e una classificazione.",
+        "none": "Nessuna visita in queste date."
       },
-      "perVisit": {
-        "title": "Quanto spesso una visita converte, per canale",
-        "hint": "Gli ultimi 12 mesi, così i canali piccoli hanno abbastanza visite per giudicarli. La barra sono le conversioni sulle visite (passa sopra per la cifra). In arancione chi converte meglio del {siteRate} del sito, su almeno {few} visite.",
-        "rate": "Tasso di conversione",
-        "readout": "{rate} di {visits} visite convertite",
-        "empty": "Ancora niente da valutare negli ultimi 12 mesi.",
-        "readoutFew": "{rate} di {visits} visite convertite · meno di 100 visite: troppo poche per fidarsi"
+      "steps": {
+        "title": "Fin dove sono arrivate le persone",
+        "hint": "Quante visite hanno raggiunto ogni passaggio. Scegli un canale per vedere i suoi passaggi.",
+        "everyDevice": "Qui vedi tutti i dispositivi, perché questo elenco non è tenuto per dispositivo in queste date.",
+        "cameFrom": "Arrivati da",
+        "everywhere": "Ovunque",
+        "arrived": "Arrivati",
+        "stayed": "Rimasti",
+        "basket": "Nel carrello",
+        "checkout": "Al pagamento",
+        "bought": "Comprati",
+        "everyVisit": "Ogni visita",
+        "ofAll": "{percent}% di tutte le visite",
+        "stopped": "{visits} si sono fermati qui",
+        "visits": "{visits} visite",
+        "visitsLabel": "Visite",
+        "ofAllLabel": "Di tutte le visite",
+        "stoppedLabel": "Si sono fermati qui",
+        "ofStep": "Di {name}",
+        "route": "Da {from} a {to}",
+        "stoppedKey": "Si sono fermati qui",
+        "csvChannel": "Arrivati da",
+        "collecting": "Ancora in raccolta.",
+        "empty": "Nessuna visita in queste date."
       }
     },
     "channel": {
@@ -18260,7 +18396,11 @@
       "theirVisits": "la loro quota di tutte le visite",
       "busiestMinute": "Il minuto più attivo",
       "averageMinute": "Un minuto medio",
-      "peopleShare": "La sua quota di persone il mese scorso"
+      "peopleShare": "La sua quota di persone il mese scorso",
+      "events": "Eventi",
+      "noPageRecorded": "Nessuna pagina registrata",
+      "otherChannels": "Tutti gli altri canali",
+      "shareOfChannelVisits": "la sua quota delle visite di questo canale"
     },
     "landingPage": {
       "back": "Pagine di destinazione",
@@ -18676,40 +18816,6 @@
         "noneConverted": "Nessuno di loro ha convertito.",
         "nextStep": "Guarda verso quali pagine {text} manda le persone, e dai a ciascuna un passo successivo chiaro.",
         "checkAnswers": "Controlla cosa dice {text} dei tuoi servizi, così i visitatori che manda trovano ciò che ha promesso."
-      },
-      "channelsPage": {
-        "none": "Nessuna visita in queste date.",
-        "leadNew": "Il sito ha avuto {a} visite e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, senza niente prima con cui confrontarle.",
-        "lead": {
-          "up": {
-            "up": "Il sito ha avuto {a} visite, in crescita da {b}, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in crescita da {more}.",
-            "down": "Il sito ha avuto {a} visite, in crescita da {b}, ma {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in calo da {more}.",
-            "same": "Il sito ha avuto {a} visite, in crescita da {b}, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, quante prima.",
-            "none": "Il sito ha avuto {a} visite, in crescita da {b}, e nessuna conversione, come prima."
-          },
-          "down": {
-            "up": "Il sito ha avuto {a} visite, in calo da {b}, ma {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in crescita da {more}.",
-            "down": "Il sito ha avuto {a} visite, in calo da {b}, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in calo da {more}.",
-            "same": "Il sito ha avuto {a} visite, in calo da {b}, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, quante prima.",
-            "none": "Il sito ha avuto {a} visite, in calo da {b}, e nessuna conversione, come prima."
-          },
-          "same": {
-            "up": "Il sito ha avuto {a} visite, quante prima, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in crescita da {more}.",
-            "down": "Il sito ha avuto {a} visite, quante prima, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in calo da {more}.",
-            "same": "Il sito ha avuto {a} visite, quante prima, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, quante prima.",
-            "none": "Il sito ha avuto {a} visite, quante prima, e nessuna conversione, come prima."
-          }
-        },
-        "topNone": "{text} ha portato più visite, il {aRate}, ma nessuna ha convertito; le {b} visite di {more} hanno fatto {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}.",
-        "top": "{countC, plural, =0 {{text} ha portato più visite, il {aRate}; niente ha convertito.} other {{text} ha portato più visite, il {aRate}, e ha fatto {b} delle {c} conversioni.}}",
-        "uncountedEnquiry": "{event} è successo {count, plural, =1 {una volta} other {# volte}}, per lo più da {more}, e sembra una richiesta, ma non è contato come conversione.",
-        "uncounted": "{event} è successo {count, plural, =1 {una volta} other {# volte}}, per lo più da {more}; non è contato come conversione.",
-        "best": "In 12 mesi, {text} converte meglio: il {aRate} delle sue visite, contro il {bRate} del sito.",
-        "filedElsewhere": "Google ha archiviato {a} di {b} visite da assistenti AI sotto altri canali; qui sono tutte contate come assistenti AI.",
-        "whyStopped": "Scopri perché {text} ha smesso di convertire: {count, plural, =1 {1 conversione} other {# conversioni}} prima, nessuna ora.",
-        "countIt": "Se {event} è una richiesta, contalo come conversione: è successo {count, plural, =1 {una volta} other {# volte}}.",
-        "fixNoPage": "Scopri perché {a} visite non hanno una pagina registrata, così le loro pagine di destinazione sono note.",
-        "seeAssistants": "Vedi la pagina degli assistenti AI: {a} visite, archiviate da Google sotto più canali."
       },
       "channelPage": {
         "none": "Nessuna visita da {text} in queste date.",

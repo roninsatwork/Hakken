@@ -6,20 +6,19 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
 import { CHANNEL, ROW, STATUS, list } from "@/src/test/googleAnalyticsFixtures";
-import { channelPageSees, channelsPageSees } from "@/convex/utils/sees/analyticsChannel";
-import AnalyticsChannelsPage from "./[siteId]/channels/page";
+import { channelPageSees } from "@/convex/utils/sees/analyticsChannel";
 import AnalyticsChannelPage from "./[siteId]/channels/channel/page";
 import { findSaid, openHakkenSees } from "@/src/test/openHakkenSees";
 
 /**
- * Channels and a channel's own page hold to the looks Anthony approved on
- * 2026-10-13 (docs/plans/active/ga-channel-pages-plan.md; the boards in
- * docs/plans/assets/ga-channel-pages/): Channels with its figures, the
- * channels a day, the channel map and what a visit is worth above the table;
- * a channel's page with its figures, the channel a day, where it lands, the
- * pages behind the change and its table in each view; AI assistants with
- * their own parts. Each, rendered with sample figures in English, reads as
- * the outline saved in docs/plans/assets/ga-channel-pages/look/.
+ * A channel's own page holds to the looks Anthony approved on 2026-10-13
+ * (docs/plans/active/ga-channel-pages-plan.md; the boards in
+ * docs/plans/assets/ga-channel-pages/): its figures, the channel a day, where
+ * it lands, the pages behind the change and its table in each view; AI
+ * assistants with their own parts. Each, rendered with sample figures in
+ * English, reads as the outline saved in
+ * docs/plans/assets/ga-channel-pages/look/. Channels itself has a new look:
+ * `channelsPage.test.tsx`.
  */
 
 const nav = vi.hoisted(() => ({ pathname: "/app/analytics/site_1", search: "" }));
@@ -37,42 +36,6 @@ vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () =>
 const PLAN = "ga-channel-pages";
 
 const DAYS = Array.from({ length: 30 }, (_, at) => `2026-09-${String(at + 1).padStart(2, "0")}`);
-
-const CHANNELS_TOP = {
-  state: "READY" as const,
-  figures: {
-    visits: 248, visitsBefore: 199, conversions: 3, conversionsBefore: 4, value: 75_000, seconds: 11_000,
-    best: { channel: "AI assistants", rate: 0.059, siteRate: 0.015, visits: 254 },
-    uncounted: [{ eventName: "form_submit", count: 7, enquiry: true }],
-  },
-  map: {
-    kinds: [{ kind: "SERVICE", name: null }, { kind: "ARTICLE", name: null }, { kind: "NO_PAGE", name: null }],
-    rows: [
-      { channel: "Organic Search", visits: 192, cells: [{ kind: "SERVICE", visits: 69, conversions: 0 }, { kind: "ARTICLE", visits: 53, conversions: 0 }, { kind: "NO_PAGE", visits: 32, conversions: 0 }] },
-      { channel: "Direct", visits: 40, cells: [{ kind: "SERVICE", visits: 6, conversions: 0 }, { kind: "ARTICLE", visits: 0, conversions: 0 }, { kind: "NO_PAGE", visits: 4, conversions: 0 }] },
-    ],
-  },
-  worth: {
-    siteRate: 0.015, few: 100,
-    rows: [{ channel: "AI assistants", visits: 254, conversions: 15, value: 30_000, fewVisits: false }, { channel: "Organic Search", visits: 3305, conversions: 36, value: 72_000, fewVisits: false }],
-  },
-  everyDevice: false,
-  seen: channelsPageSees({
-    rows: [
-      { channel: "Organic Search", visits: 192, visitsBefore: 150, conversions: 0, conversionsBefore: 3 },
-      { channel: "Direct", visits: 40, visitsBefore: 33, conversions: 3, conversionsBefore: 0 },
-    ],
-    best: { channel: "AI assistants", rate: 0.059, siteRate: 0.015 },
-    uncounted: [{ eventName: "form_submit", count: 7, enquiry: true, channel: "Organic Search" }],
-    noPage: 38,
-    ai: null,
-  }),
-};
-
-const CHANNEL_CHART = {
-  live: false, channels: ["Organic Search", "Direct"], rest: false,
-  points: DAYS.map((day, at) => ({ day, visits: [6, 1], conversions: [0, at % 10 === 0 ? 1 : 0] })),
-};
 
 const KINDS = [
   { kind: "SERVICE", name: null, pages: 19, visits: 69, visitsBefore: 83, conversions: 0, conversionsBefore: 2 },
@@ -155,23 +118,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("Channels and a channel's own page: the approved looks", () => {
-  it("Channels", async () => {
-    nav.pathname = "/app/analytics/site_1/channels";
-    nav.search = "";
-    answer({
-      "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
-      "googleAnalyticsChannelReads:analyticsChannelsTop": CHANNELS_TOP,
-      "googleAnalyticsChartReads:analyticsChannelChart": CHANNEL_CHART,
-      "googleAnalyticsReads:analyticsListPage": list([{ ...CHANNEL, started: 0, landsMost: { kind: "SERVICE", name: null, share: 0.359 } }]),
-      "pageKinds:pageKindChoices": null,
-    });
-    const { container } = render(<AnalyticsChannelsPage />);
-    await openHakkenSees();
-    await findSaid(/Organic Search brought the most visits, 82\.8% of them, but none converted/);
-    await expectApprovedLook(container, PLAN, "Main", "Google Analytics → Channels");
-  });
-
+describe("a channel's own page: the approved looks", () => {
   it("a channel's own page, on its landing pages", async () => {
     nav.pathname = "/app/analytics/site_1/channels/channel";
     nav.search = "key=Organic+Search";

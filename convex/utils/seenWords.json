@@ -886,40 +886,6 @@
         "nextStep": "See which pages {text} sends people to, and give each one a clear next step.",
         "checkAnswers": "Check what {text} says about your services, so the visitors it sends find what it promised."
       },
-      "channelsPage": {
-        "none": "No visits in these dates.",
-        "leadNew": "The website had {a} visits and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, with nothing before to compare them with.",
-        "lead": {
-          "up": {
-            "up": "The website had {a} visits, up from {b}, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, up from {more}.",
-            "down": "The website had {a} visits, up from {b}, but {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, down from {more}.",
-            "same": "The website had {a} visits, up from {b}, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, as many as before.",
-            "none": "The website had {a} visits, up from {b}, and no conversions, as before."
-          },
-          "down": {
-            "up": "The website had {a} visits, down from {b}, but {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, up from {more}.",
-            "down": "The website had {a} visits, down from {b}, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, down from {more}.",
-            "same": "The website had {a} visits, down from {b}, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, as many as before.",
-            "none": "The website had {a} visits, down from {b}, and no conversions, as before."
-          },
-          "same": {
-            "up": "The website had {a} visits, as many as before, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, up from {more}.",
-            "down": "The website had {a} visits, as many as before, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, down from {more}.",
-            "same": "The website had {a} visits, as many as before, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, as many as before.",
-            "none": "The website had {a} visits, as many as before, and no conversions, as before."
-          }
-        },
-        "topNone": "{text} brought the most visits, {aRate} of them, but none converted; {more}'s {b} visits made {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}.",
-        "top": "{countC, plural, =0 {{text} brought the most visits, {aRate} of them; nothing converted.} other {{text} brought the most visits, {aRate} of them, and made {b} of the {c} conversions.}}",
-        "uncountedEnquiry": "{event} happened {count, plural, =1 {once} other {# times}}, most from {more}, and looks like an enquiry, but isn't counted as a conversion.",
-        "uncounted": "{event} happened {count, plural, =1 {once} other {# times}}, most from {more}; it isn't counted as a conversion.",
-        "best": "Over 12 months, {text} converts best: {aRate} of its visits, against {bRate} for the website.",
-        "filedElsewhere": "Google filed {a} of {b} AI assistant visits under other channels; they are all counted here as AI assistants.",
-        "whyStopped": "Find out why {text} stopped converting: {count, plural, =1 {1 conversion} other {# conversions}} before, none now.",
-        "countIt": "If {event} is an enquiry, count it as a conversion: it happened {count, plural, =1 {once} other {# times}}.",
-        "fixNoPage": "Find out why {a} visits have no page recorded, so their landing pages are known.",
-        "seeAssistants": "See AI assistants' own page: {a} visits, filed by Google under several channels."
-      },
       "channelPage": {
         "none": "No visits from {text} in these dates.",
         "leadNew": "{text} brought {a} visits and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, with nothing before to compare them with.",
@@ -2391,40 +2357,6 @@
         "noneConverted": "Nessuno di loro ha convertito.",
         "nextStep": "Guarda verso quali pagine {text} manda le persone, e dai a ciascuna un passo successivo chiaro.",
         "checkAnswers": "Controlla cosa dice {text} dei tuoi servizi, così i visitatori che manda trovano ciò che ha promesso."
-      },
-      "channelsPage": {
-        "none": "Nessuna visita in queste date.",
-        "leadNew": "Il sito ha avuto {a} visite e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, senza niente prima con cui confrontarle.",
-        "lead": {
-          "up": {
-            "up": "Il sito ha avuto {a} visite, in crescita da {b}, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in crescita da {more}.",
-            "down": "Il sito ha avuto {a} visite, in crescita da {b}, ma {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in calo da {more}.",
-            "same": "Il sito ha avuto {a} visite, in crescita da {b}, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, quante prima.",
-            "none": "Il sito ha avuto {a} visite, in crescita da {b}, e nessuna conversione, come prima."
-          },
-          "down": {
-            "up": "Il sito ha avuto {a} visite, in calo da {b}, ma {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in crescita da {more}.",
-            "down": "Il sito ha avuto {a} visite, in calo da {b}, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in calo da {more}.",
-            "same": "Il sito ha avuto {a} visite, in calo da {b}, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, quante prima.",
-            "none": "Il sito ha avuto {a} visite, in calo da {b}, e nessuna conversione, come prima."
-          },
-          "same": {
-            "up": "Il sito ha avuto {a} visite, quante prima, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in crescita da {more}.",
-            "down": "Il sito ha avuto {a} visite, quante prima, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, in calo da {more}.",
-            "same": "Il sito ha avuto {a} visite, quante prima, e {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}, quante prima.",
-            "none": "Il sito ha avuto {a} visite, quante prima, e nessuna conversione, come prima."
-          }
-        },
-        "topNone": "{text} ha portato più visite, il {aRate}, ma nessuna ha convertito; le {b} visite di {more} hanno fatto {countC, plural, =0 {nessuna conversione} =1 {1 conversione} other {# conversioni}}.",
-        "top": "{countC, plural, =0 {{text} ha portato più visite, il {aRate}; niente ha convertito.} other {{text} ha portato più visite, il {aRate}, e ha fatto {b} delle {c} conversioni.}}",
-        "uncountedEnquiry": "{event} è successo {count, plural, =1 {una volta} other {# volte}}, per lo più da {more}, e sembra una richiesta, ma non è contato come conversione.",
-        "uncounted": "{event} è successo {count, plural, =1 {una volta} other {# volte}}, per lo più da {more}; non è contato come conversione.",
-        "best": "In 12 mesi, {text} converte meglio: il {aRate} delle sue visite, contro il {bRate} del sito.",
-        "filedElsewhere": "Google ha archiviato {a} di {b} visite da assistenti AI sotto altri canali; qui sono tutte contate come assistenti AI.",
-        "whyStopped": "Scopri perché {text} ha smesso di convertire: {count, plural, =1 {1 conversione} other {# conversioni}} prima, nessuna ora.",
-        "countIt": "Se {event} è una richiesta, contalo come conversione: è successo {count, plural, =1 {una volta} other {# volte}}.",
-        "fixNoPage": "Scopri perché {a} visite non hanno una pagina registrata, così le loro pagine di destinazione sono note.",
-        "seeAssistants": "Vedi la pagina degli assistenti AI: {a} visite, archiviate da Google sotto più canali."
       },
       "channelPage": {
         "none": "Nessuna visita da {text} in queste date.",

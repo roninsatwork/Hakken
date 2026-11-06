@@ -31,7 +31,8 @@ import { funnelFigures } from "./utils/landingFlowFigures";
 import { flowBoxes, type BoxNames, type RouteBox } from "./utils/landingFlowRoutes";
 import { pageName } from "./utils/pageNames";
 import { viewsCountedDifferently } from "./utils/viewsCounted";
-import { readChannelTop, readChannelsTop } from "./googleAnalyticsChannelReads";
+import { readChannelTop } from "./googleAnalyticsChannelReads";
+import { channelsForAssistant } from "./assistantChannelReads";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { leftWithout } from "./utils/sees/analyticsProducts";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
@@ -409,31 +410,6 @@ function pageStoryParts(story: NonNullable<Awaited<ReturnType<typeof readPageSto
 }
 
 /**
- * Channels' parts above its table, as its screen shows them
- * (ga-channel-pages-plan.md CH9): the channel converting best over 12
- * months, the key events not counted, each channel by page group, and how
- * often a visit converts by channel — never money (Anthony, 2026-11-03).
- */
-function channelsParts(top: Awaited<ReturnType<typeof readChannelsTop>>) {
-  const names = new Map(top.map.kinds.map((kind) => [kind.kind, kindWords(kind.kind, kind.name)]));
-  return {
-    convertsBest: top.figures?.best ? { channel: top.figures.best.channel, conversionRatePercent: percent(top.figures.best.rate), websitePercent: percent(top.figures.best.siteRate), over: "the last 12 months" } : null,
-    keyEventsNotCounted: top.figures?.uncounted.map((event) => ({ event: event.eventName, times: event.count, looksLikeAnEnquiry: event.enquiry })) ?? [],
-    whereEachChannelLands: top.map.rows.map((row) => ({
-      channel: row.channel,
-      visits: row.visits,
-      byKindOfPage: row.cells.filter((cell) => cell.visits > 0).map((cell) => ({ kindOfPage: names.get(cell.kind) ?? cell.kind, visits: cell.visits, conversions: cell.conversions })),
-    })),
-    conversionsAVisitByChannel: top.perVisit.rows.map((row) => ({
-      channel: row.channel, visits: row.visits, conversions: row.conversions,
-      conversionRatePercent: percent(row.visits > 0 ? row.conversions / row.visits : null),
-      ...(row.fewVisits ? { note: "under 100 visits: too few to trust" } : {}),
-    })),
-    conversionsAVisitByChannelOver: "the last 12 months, every device",
-  };
-}
-
-/**
  * A channel's own page above its table (CH3–CH8): its conversions started
  * and dwell time, where it lands by page group, the pages behind the change,
  * and AI assistants by how Google filed them.
@@ -454,7 +430,6 @@ function channelParts(top: Awaited<ReturnType<typeof readChannelTop>>) {
 
 /** The list each list screen reads, and its segment in the address. */
 const LISTS: Partial<Record<Screen, { list: "channel" | "source" | "campaign" | "adKeyword" | "landing" | "page"; segment: string }>> = {
-  channels: { list: "channel", segment: "channels" },
   channel: { list: "source", segment: "channels/channel" },
   campaigns: { list: "campaign", segment: "campaigns" },
   adKeywords: { list: "adKeyword", segment: "campaigns" },
@@ -583,6 +558,11 @@ export const googleAnalyticsInternal = internalQuery({
       return { ...noMoney, ...(did.live ? {} : campaignDidPart(did)) };
     }
 
+    // Channels has no money either, and its boxes, chart, squares, devices and steps are reads of their own (`assistantChannelReads.ts`).
+    if (args.screen === "channels") {
+      return await channelsForAssistant(site, common, { part: args.part, key: args.key, search: args.search, order: args.order, rows: ROWS, linkTo }, { ok: true, website: host, screen: args.screen, period, figuresTo: connection.newestDay });
+    }
+
     const list = LISTS[args.screen];
     if (list && (args.screen === "campaigns" || args.screen === "adKeywords")) {
       const keywords = args.screen === "adKeywords";
@@ -627,9 +607,7 @@ export const googleAnalyticsInternal = internalQuery({
         ...(order ?? {}), ...(chosen ? { group: chosen.id } : {}), ...(allPages && args.move ? { move: args.move } : {}), ...(leaveOut ? { leaveOut: true } : {}),
       });
       if (answer.live) return { ...base, ...asked, link: linkTo(list.segment) };
-      const parts = args.screen === "channels" ? channelsParts(await readChannelsTop(site, common))
-        : args.screen === "channel" && args.key ? channelParts(await readChannelTop(site, { ...common, channel: args.key }))
-          : {};
+      const parts = args.screen === "channel" && args.key ? channelParts(await readChannelTop(site, { ...common, channel: args.key })) : {};
       return {
         ...base,
         ...parts,

@@ -10907,7 +10907,16 @@
         "timesPerHundred": "times for every 100 visits",
         "shareOfBought": "share of everything bought",
         "shareOfConversions": "share of all conversions",
-        "visitsDidPercent": "of visits did this"
+        "visitsDidPercent": "of visits did this",
+        "events": "events",
+        "eventsPerHundred": "events for every 100 visits",
+        "shareOfEvents": "share of all events",
+        "shareOfChannelBought": "of this channel's purchases",
+        "shareOfChannelEvents": "of this channel's events",
+        "visitsGained": "visits gained",
+        "boughtLost": "purchases lost",
+        "eventsLost": "events lost",
+        "wentOnPercent": "went on to the next step"
       }
     },
     "sidePanel": {
@@ -16677,8 +16686,6 @@
         "elsewhere": "Filed elsewhere",
         "elsewhereTitle": "Visits Google Analytics filed under another channel than AI Assistant",
         "assistant": "Assistant",
-        "started": "Started",
-        "startedTitle": "Conversions by people this channel brought first, on any visit",
         "landsMost": "Lands most on",
         "landsMostTitle": "The page classification most of the channel's visits started on, and its share",
         "left": "Left",
@@ -16698,7 +16705,16 @@
         "visitsChangeTitle": "Visits in {now} compared with {before}.",
         "bought": "Bought",
         "boughtTitle": "How many times people bought from this campaign, and how many that is for every 100 visits.",
-        "conversionsTimesTitle": "This counts every time, so one visit can count more than once."
+        "conversionsTimesTitle": "This counts every time, so one visit can count more than once.",
+        "visitsListTitle": "Google counts each list on its own, so these can add up to a little more or less than your total visits.",
+        "leftStraightAway": "Left straight away",
+        "leftStraightAwayTitle": "People who stayed under 10 seconds and did nothing.",
+        "basket": "Added to basket",
+        "basketTitle": "Visits that added something to the basket, and how many that is for every 100 visits.",
+        "checkout": "Started checkout",
+        "checkoutTitle": "Visits that started checkout, and how many that is for every 100 visits.",
+        "boughtChannelTitle": "How many times people bought from this channel, and how many that is for every 100 visits.",
+        "events": "Events"
       },
       "notSorted": "Unclassified",
       "pagesCount": "{count, plural, =1 {1 page} other {# pages}}",
@@ -16720,7 +16736,6 @@
         "viewsChange": "Change in views",
         "rate": "Conversion rate (%)",
         "conversionsChange": "Change in conversions",
-        "started": "Conversions started",
         "landsMost": "Lands most on",
         "left": "Left here",
         "onward": "Went on",
@@ -16729,7 +16744,11 @@
         "visitsNow": "Visits",
         "visitsBefore": "Visits before",
         "visitsChange": "Up or down",
-        "bought": "Bought"
+        "bought": "Bought",
+        "basket": "Added to basket",
+        "checkout": "Started checkout",
+        "leftStraightAway": "Left straight away (%)",
+        "events": "Events"
       },
       "downloadFailed": "Couldn't prepare the download. Try again.",
       "untagged": "{count, plural, =1 {one visit} other {# visits}} came from no campaign",
@@ -16750,7 +16769,9 @@
       "noPageLost": "Google Analytics lost the page",
       "per100Visits": "<figure>{rate}</figure> per 100 visits",
       "pageNotKnown": "Page not known",
-      "noAdKeyword": "{count, plural, =1 {one visit had} other {# visits had}} no ad keyword"
+      "noAdKeyword": "{count, plural, =1 {one visit had} other {# visits had}} no ad keyword",
+      "channelsBar": "Added to basket and Started checkout count visits, so they can't go over 100.",
+      "channelsBarEvents": "Events count every time, so one visit can count more than once."
     },
     "chart": {
       "title": "Visits and conversions over time",
@@ -17142,45 +17163,160 @@
     },
     "channels": {
       "title": "Channels",
-      "description": "Where the visits came from, in Google's own channels with AI assistants as their own, where each landed and what each brought in. Change is the visits against {before}.",
+      "description": "Where your visits came from, and where they started on your website.",
       "searchPlaceholder": "Find a channel…",
       "empty": "No visits in these dates."
     },
     "channelsPage": {
-      "landsMost": "Lands most on",
-      "everyClassification": "Every classification",
-      "figures": {
+      "boxes": {
+        "mostVisits": "Most visits",
+        "mostBought": "Most bought",
+        "mostEvents": "Most events",
+        "sellsBest": "Sells best",
+        "bestForEvents": "Best for events",
+        "biggestChange": "Biggest change",
+        "visitsLine": "{visits} visits. That's {share}% of all your visits.",
+        "visitsAlone": "{visits} visits.",
+        "boughtLine": "{figure} bought. That's {share}% of everything bought.",
+        "boughtAlone": "{figure} bought.",
+        "eventsLine": "{count, plural, =1 {1 event} other {{figure} events}}. That's {share}% of all your events.",
+        "eventsAlone": "{count, plural, =1 {1 event} other {{figure} events}}.",
+        "sellsBestLine": "{rate} bought for every 100 visits. Your website gets {site}.",
+        "sellsBestAlone": "{rate} bought for every 100 visits.",
+        "bestForEventsLine": "{rate} events for every 100 visits. Your website gets {site}.",
+        "bestForEventsAlone": "{rate} events for every 100 visits.",
+        "more": "{count} more visits than {before}.",
+        "fewer": "{count} fewer visits than {before}.",
+        "days": "{from} to {to}",
+        "noVisits": "No visits in these dates.",
+        "noneBought": "Nothing bought in these dates.",
+        "noEvents": "No events in these dates.",
+        "noBest": "No channel has {floor} visits and a sale.",
+        "noBestEvents": "No channel has {floor} visits and an event.",
+        "noChange": "Nothing to compare these dates with."
+      },
+      "daily": {
+        "title": {
+          "visits": {
+            "day": "Visits each day, by channel",
+            "week": "Visits each week, by channel",
+            "month": "Visits each month, by channel"
+          },
+          "event": {
+            "day": "{event} each day, by channel",
+            "week": "{event} each week, by channel",
+            "month": "{event} each month, by channel"
+          },
+          "events": {
+            "day": "Events each day, by channel",
+            "week": "Events each week, by channel",
+            "month": "Events each month, by channel"
+          }
+        },
+        "hint": "{now}. Each channel you tick gets its own line, and the rest share one grey line. Tick events to count those instead of visits.",
+        "hintEvent": "{now}. This counts times, not visits, so one visit can count more than once.",
+        "hintEvents": "{now}. These count times, not visits. Ticking several adds them up, and one visit can count many times.",
+        "channels": "Channels",
+        "everyChannel": "Every channel",
+        "events": "Events",
+        "everyEvent": "Every event",
+        "notCounted": "{event} (not counted as a conversion)",
+        "nothingTicked": "Tick at least one channel.",
         "visits": "Visits",
-        "conversions": "Conversions",
-        "best": "Converts best",
-        "bestDetail": "{rate} of its visits · website {siteRate} · 12 months",
-        "bestNone": "No channel beats the website over 12 months",
-        "uncounted": "Key events not counted",
-        "uncountedDetail": "{events} {count, plural, =1 {happened, but isn't counted as a conversion} other {happened, but aren't counted as conversions}}",
-        "dwell": "Dwell time",
-        "dwellDetail": "time engaged a visit"
+        "times": "Times",
+        "csvDay": "Day",
+        "collecting": "Still being collected.",
+        "empty": "Nothing to show in these dates."
       },
-      "map": {
-        "title": "Where each channel lands, by page classification",
-        "hint": "{period}. Each square is a channel's visits that landed on that classification's pages, brighter for a bigger share of the channel, with its conversions.",
-        "everyDevice": "Every device's, as landing pages are kept.",
-        "visits": "{count, plural, =1 {1 visit} other {# visits}}",
-        "conversions": "{count, plural, =1 {1 conv.} other {# conv.}}",
-        "conversionsColumn": "conversions",
-        "hover": "{channel} → {kind}: {visits, plural, =1 {1 visit} other {# visits}}, {conversions, plural, =1 {1 conversion} other {# conversions}}",
-        "legendVisits": "69 · visits that started on that classification's pages",
-        "legendConversions": "3 conv. · conversions those visits made",
-        "legendShades": "a smaller to a bigger share of the channel",
-        "legendEmpty": "no visits",
-        "empty": "No landing pages in these dates."
+      "squares": {
+        "title": "Where each channel's visits started",
+        "hint": {
+          "kind": "Each row is a channel. Each square is its visits to one part of your website.",
+          "device": "Each row is a channel. Each square is its visits on one device."
+        },
+        "hintOther": {
+          "kind": "Each row is a channel. Each square is one part of your website.",
+          "device": "Each row is a channel. Each square is one device."
+        },
+        "everyDevice": "This shows every device, as this list isn't kept by device for these dates.",
+        "channels": "Channels",
+        "everyChannel": "Every channel",
+        "classifications": "Classifications",
+        "everyClassification": "Every Classification",
+        "splitBy": "Split by",
+        "splits": {
+          "kind": "Classification",
+          "device": "Device"
+        },
+        "count": "Count",
+        "counts": {
+          "visits": "Visits",
+          "bought": "Bought",
+          "boughtPer100": "Bought for every 100 visits",
+          "conversions": "Conversions",
+          "events": "Events",
+          "conversionsPer100": "Events for every 100 visits"
+        },
+        "compareWith": "Compare with",
+        "noComparison": "No comparison",
+        "otherGroups": "Other groups",
+        "notSorted": "Not sorted yet",
+        "noPage": "No page recorded",
+        "otherHolds": "Other groups holds {names}.",
+        "rowTotal": "{visits} visits",
+        "boughtNote": "{figure} bought",
+        "eventsNote": "{figure} events",
+        "new": "New",
+        "key": {
+          "visits": "Each square shows its visits, and its share of the channel.",
+          "bought": "Each square shows what was bought, and its share of the channel.",
+          "boughtPer100": "Each square shows what's bought for every 100 visits, and how many.",
+          "conversions": "Each square counts every time, so one visit can count more than once.",
+          "events": "Each square counts every time, so one visit can count more than once.",
+          "conversionsPer100": "Each square counts every time, so it can go over 100."
+        },
+        "keyCompare": "The small figure is the change since {before}.",
+        "shadesShare": "Brighter means a bigger share of that channel",
+        "shadesRate": "Brighter means more than other channels",
+        "nobody": "None",
+        "hover": {
+          "head": "{channel}, {column}",
+          "visits": "Visits in {when}: {figure}",
+          "ofChannel": "Of this channel's visits: {share}%",
+          "bought": "Bought in {when}: {figure}",
+          "conversions": "Conversions in {when}: {figure}",
+          "events": "Events in {when}: {figure}"
+        },
+        "pick": "Channel",
+        "csvChannel": "Channel",
+        "collecting": "Still being collected.",
+        "nothingTicked": "Tick at least one channel and one Classification.",
+        "none": "No visits in these dates."
       },
-      "perVisit": {
-        "title": "How often a visit converts, by channel",
-        "hint": "The last 12 months, so the small channels have enough visits to judge. The bar is conversions out of visits (hover for the figure). Orange converts better than the website's {siteRate}, on {few} visits or more.",
-        "rate": "Conversion rate",
-        "readout": "{rate} of {visits} visits converted",
-        "empty": "Nothing to weigh over the last 12 months yet.",
-        "readoutFew": "{rate} of {visits} visits converted · under 100 visits: too few to trust"
+      "steps": {
+        "title": "How far people got",
+        "hint": "How many visits reached each step. Pick a channel to see its own steps.",
+        "everyDevice": "This shows every device, as this list isn't kept by device for these dates.",
+        "cameFrom": "Came from",
+        "everywhere": "Everywhere",
+        "arrived": "Arrived",
+        "stayed": "Stayed",
+        "basket": "In basket",
+        "checkout": "At checkout",
+        "bought": "Bought",
+        "everyVisit": "Every visit",
+        "ofAll": "{percent}% of all visits",
+        "stopped": "{visits} stopped here",
+        "visits": "{visits} visits",
+        "visitsLabel": "Visits",
+        "ofAllLabel": "Of all visits",
+        "stoppedLabel": "Stopped here",
+        "ofStep": "Of {name}",
+        "route": "{from} to {to}",
+        "stoppedKey": "Stopped here",
+        "csvChannel": "Came from",
+        "collecting": "Still being collected.",
+        "empty": "No visits in these dates."
       }
     },
     "channel": {
@@ -18260,7 +18396,11 @@
       "theirVisits": "their share of all visits",
       "busiestMinute": "The busiest minute",
       "averageMinute": "An average minute",
-      "peopleShare": "Its share of people last month"
+      "peopleShare": "Its share of people last month",
+      "events": "Events",
+      "noPageRecorded": "No page recorded",
+      "otherChannels": "All the other channels",
+      "shareOfChannelVisits": "its share of this channel's visits"
     },
     "landingPage": {
       "back": "Landing pages",
@@ -18676,40 +18816,6 @@
         "noneConverted": "None of them converted.",
         "nextStep": "See which pages {text} sends people to, and give each one a clear next step.",
         "checkAnswers": "Check what {text} says about your services, so the visitors it sends find what it promised."
-      },
-      "channelsPage": {
-        "none": "No visits in these dates.",
-        "leadNew": "The website had {a} visits and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, with nothing before to compare them with.",
-        "lead": {
-          "up": {
-            "up": "The website had {a} visits, up from {b}, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, up from {more}.",
-            "down": "The website had {a} visits, up from {b}, but {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, down from {more}.",
-            "same": "The website had {a} visits, up from {b}, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, as many as before.",
-            "none": "The website had {a} visits, up from {b}, and no conversions, as before."
-          },
-          "down": {
-            "up": "The website had {a} visits, down from {b}, but {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, up from {more}.",
-            "down": "The website had {a} visits, down from {b}, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, down from {more}.",
-            "same": "The website had {a} visits, down from {b}, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, as many as before.",
-            "none": "The website had {a} visits, down from {b}, and no conversions, as before."
-          },
-          "same": {
-            "up": "The website had {a} visits, as many as before, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, up from {more}.",
-            "down": "The website had {a} visits, as many as before, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, down from {more}.",
-            "same": "The website had {a} visits, as many as before, and {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}, as many as before.",
-            "none": "The website had {a} visits, as many as before, and no conversions, as before."
-          }
-        },
-        "topNone": "{text} brought the most visits, {aRate} of them, but none converted; {more}'s {b} visits made {countC, plural, =0 {no conversions} =1 {1 conversion} other {# conversions}}.",
-        "top": "{countC, plural, =0 {{text} brought the most visits, {aRate} of them; nothing converted.} other {{text} brought the most visits, {aRate} of them, and made {b} of the {c} conversions.}}",
-        "uncountedEnquiry": "{event} happened {count, plural, =1 {once} other {# times}}, most from {more}, and looks like an enquiry, but isn't counted as a conversion.",
-        "uncounted": "{event} happened {count, plural, =1 {once} other {# times}}, most from {more}; it isn't counted as a conversion.",
-        "best": "Over 12 months, {text} converts best: {aRate} of its visits, against {bRate} for the website.",
-        "filedElsewhere": "Google filed {a} of {b} AI assistant visits under other channels; they are all counted here as AI assistants.",
-        "whyStopped": "Find out why {text} stopped converting: {count, plural, =1 {1 conversion} other {# conversions}} before, none now.",
-        "countIt": "If {event} is an enquiry, count it as a conversion: it happened {count, plural, =1 {once} other {# times}}.",
-        "fixNoPage": "Find out why {a} visits have no page recorded, so their landing pages are known.",
-        "seeAssistants": "See AI assistants' own page: {a} visits, filed by Google under several channels."
       },
       "channelPage": {
         "none": "No visits from {text} in these dates.",

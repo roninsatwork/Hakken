@@ -7,6 +7,7 @@ import { funnelFigures } from "../landingFlowFigures";
 import { findingWords, type Finding } from "./findings";
 import { pageDataFor } from "./pageData";
 import { pageFindings } from "./pageFindings";
+import { OWN_FINDINGS } from "./pageOwnFindings";
 
 const overview = readFixture("moreHandlesOverview");
 const channels = readFixture("moreHandlesChannels");
@@ -95,10 +96,15 @@ function overviewPage(period: Period) {
   };
 }
 
-// Channels: its own read's figures, and the table's rows (`channelsTable`).
+// Channels (channels-new-page-plan-2026-11-06.md, step 8): every channel, Google's own total for the website, the squares by Classification and
+// by device, and the steps, as the page hands them. October is real; `moreHandlesChannels.json` says how the other periods were made.
 function channelsPage(period: Period) {
-  const one = (channels as Record<string, { figures: unknown; rows: Rows }>)[period];
-  return { ...{ figures: one.figures }, channelsTable: { rows: one.rows }, names: NAMES };
+  const one = (channels as unknown as Record<string, { website: Record<string, number>; rows: Rows; channelSquares: { rows: Rows }; channelDevices: { rows: Rows }; channelSteps: Record<string, unknown> }>)[period];
+  const words = en.googleAnalytics.channelsPage.steps;
+  return {
+    names: NAMES, sells: true, website: one.website, rows: one.rows, channelSquares: one.channelSquares, channelDevices: one.channelDevices,
+    channelSteps: { ...one.channelSteps, steps: { arrived: words.arrived, stayed: words.stayed, basket: words.basket, checkout: words.checkout, bought: words.bought } },
+  };
 }
 
 // A channel's own screen, Organic Search: its own read (`figures`), the channel's name as its title says it.
@@ -231,7 +237,7 @@ describe("Campaigns says what a person would miss (More Handles' October; campai
 
 describe("Google Analytics' pages find the biggest things on every period the date menu offers (More Handles, 3–4 November 2026)", () => {
   describe("Overview: the whole website's visits first", () => everyPeriod("googleAnalytics.overview", overviewPage, startsWith(`${NAMES.website}: visits`)));
-  describe("Channels: the whole website's visits, with its conversions beside them", () => everyPeriod("googleAnalytics.channelsPage", channelsPage, startsWith(`${NAMES.website}: visits`)));
+  describe("Channels: the whole website's visits, by Google's own total, with what was bought beside them", () => everyPeriod("googleAnalytics.channelsPage", channelsPage, startsWith(`${NAMES.website}: visits`)));
   describe("A channel's own screen: the channel's visits beside the whole website's", () => everyPeriod("googleAnalytics.channelPage", channelPage, startsWith("Organic Search: visits")));
   // Early in a week, few campaigns have the hundred visits a campaign's own figures need to be trusted.
   describe("Campaigns: every campaign visit together", () => everyPeriod("googleAnalytics.campaigns", campaignsPage, startsWith(`${NAMES.tagged}: visits`), {}, 1));
@@ -240,6 +246,86 @@ describe("Google Analytics' pages find the biggest things on every period the da
   describe("A page's own screen: its views", () => everyPeriod("googleAnalytics.page", pagePage, startsWith(`${NAMES.thisPage}: views`), { lastWeek: 3 }));
   describe("The pages behind a square: the pages that made most of its conversions", () => everyPeriod("googleAnalytics.conversionPages", conversionPagesPage, (_words, findings) => findings.some((one) => one.kind === "holdsMost"), { lastWeek: 2, lastMonth: 3, last3Months: 3, last6Months: 3 }, 1));
   describe("Products: the step the shop loses most at", () => everyPeriod("googleAnalytics.products", productsPage, (_words, findings) => findings.some((one) => one.kind === "step")));
+});
+
+describe("Channels finds what a person scanning the page would miss, on More Handles' October (channels-new-page-plan-2026-11-06.md, step 8)", () => {
+  // Every finding its rules can make, not only the six the panel shows.
+  const screen = "googleAnalytics.channelsPage";
+  const findings = OWN_FINDINGS[screen].find(pageDataFor(channelsPage("lastMonth"), screen) as Record<string, unknown>) as Finding[];
+  const words = findings.map(findingWords);
+  const all = words.join("\n");
+  const found = (id: string) => findings.some((one) => one.id === id);
+  print("googleAnalytics.channelsPage · October, all", words);
+
+  test("a fall one channel explains: what it lost beside the whole website, by Google's own total, and what the others gained", () => {
+    expect(words).toContain("Cross-network: visits lost 1917, against 1768 for The whole website.");
+    expect(words).toContain("All the other channels: visits gained 1158, against 1917 for Cross-network.");
+  });
+  test("a rise hiding a fall: a channel up a little, and one Classification up by far more", () => {
+    expect(all).toContain("Organic Search, Brand: visits up 129.9%, to 2035 from 885 the span before; Organic Search: up 2.8%.");
+  });
+  test("the channel that sells best, and why", () => {
+    expect(all).toContain("Paid Search: bought for every 100 visits 9.1, against 3.4 for The whole website.");
+    expect(found("rowAbove:squares:bestWhere:shareOfChannelBought:Paid Search, Brand")).toBe(true);
+  });
+  test("big, but sells less", () => {
+    expect(all).toContain("Organic Search: share of everything bought 23.5%, against 36.8% for their share of all visits.");
+  });
+  test("a Classification people read and don't buy from", () => {
+    expect(all).toContain("Organic Search, Blog: bought for every 100 visits 0.1, against 2.2 for Organic Search.");
+  });
+  test("busy, and nobody bought: against the whole website, and how many left", () => {
+    expect(all).toContain("Paid Social: bought for every 100 visits 0, against 3.4 for The whole website.");
+    expect(all).toContain("Paid Social: share of visits that left at once");
+  });
+  test("a step far from the rest, each visit counted once", () => {
+    expect(all).toContain("Referral, In basket to At checkout: went on to the next step 12.4%, against 42.8% for The whole website.");
+  });
+  test("a gap between devices, on enough visits to trust", () => {
+    expect(findings.some((one) => one.id.startsWith("rowAbove:devices:gap:boughtPerHundred:") || one.id.startsWith("rowBelow:devices:gap:boughtPerHundred:"))).toBe(true);
+  });
+  test("the visits with no page recorded", () => {
+    expect(found("holdsMost:channels:noPage:visits:No page recorded")).toBe(true);
+  });
+  test("and it speaks of nothing the page doesn't: no money, no cost, no conversions as if they were visits", () => {
+    expectClean(words);
+    expect(all).not.toMatch(/cost|paid for itself|%.*conversions? rate/i);
+    expect(all).not.toMatch(/conversions for every 100 visits/);
+  });
+});
+
+describe("Channels on the websites unlike More Handles", () => {
+  const row = (name: string, visits: number, visitsBefore: number, conversions: number, conversionsBefore: number, bounceRate = 0.4) => ({ name, visits, visitsBefore, purchases: 0, purchasesBefore: 0, conversions, conversionsBefore, bounceRate, engaged: Math.round(visits * (1 - bounceRate)), addedToBasket: 0, startedCheckout: 0 });
+  // Ronins' October, near enough: 245 visits and a handful of events, on a website with nothing bought.
+  const few = { names: NAMES, sells: false, website: { visits: 245, visitsBefore: 301, engaged: 150, conversions: 9, conversionsBefore: 6, bought: 0, boughtBefore: 0 }, rows: [row("Organic Search", 150, 170, 6, 2), row("Direct", 60, 90, 2, 3), row("Referral", 35, 41, 1, 1)] };
+
+  test("a website with few visits and nothing bought still says something true, and speaks of events", () => {
+    const { findings, words } = said("googleAnalytics.channelsPage", few);
+    const all = words.join("\n");
+    expect(words[0]).toContain("The whole website: visits down");
+    expect(findings.length).toBeGreaterThanOrEqual(3);
+    expect(all).not.toMatch(/purchases|bought/i);
+    expect(all).not.toMatch(/conversions/i);
+    expect(all).toContain("Events: up");
+    expect(all).toMatch(/events for every 100 visits|share of all events|events lost/);
+    expectClean(words);
+  });
+  test("with nothing to set it against, it says who brought the most", () => {
+    const { words } = said("googleAnalytics.channelsPage", { ...few, website: { visits: 245, engaged: 150, conversions: 9, bought: 0 }, rows: [{ ...few.rows[0], visitsBefore: null, conversionsBefore: null }, { ...few.rows[1], visitsBefore: null, conversionsBefore: null }] });
+    expect(words.join("\n")).toContain("Organic Search holds 61.2% of the list's visits.");
+  });
+  test("a channel that stopped altogether is still named", () => {
+    const { words } = said("googleAnalytics.channelsPage", { ...few, gone: [{ name: "Email", visits: 0, visitsBefore: 90, purchases: 0, purchasesBefore: 0, conversions: 0, conversionsBefore: 4 }] });
+    expect(words.join("\n")).toContain("Email: visits lost 90, against 56 for The whole website.");
+  });
+  test("no visits at all: only that, and nothing broken", () => {
+    const { findings, words } = said("googleAnalytics.channelsPage", { names: NAMES, sells: false, website: { visits: 0, visitsBefore: 12, engaged: 0, conversions: 0, conversionsBefore: 0, bought: 0, boughtBefore: 0 }, rows: [] });
+    expect(findings.map((one) => one.kind)).toEqual(["movedDown"]);
+    expectClean(words);
+  });
+  test("nothing held at all: nothing made up", () => {
+    expect(said("googleAnalytics.channelsPage", { names: NAMES, rows: [] }).findings).toEqual([]);
+  });
 });
 
 describe("All pages says when its ups and downs may not be real (More Handles' tag, 3 September 2026)", () => {

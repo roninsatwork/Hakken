@@ -1,4 +1,4 @@
-import { v, type Infer, type ObjectType } from "convex/values";
+import { v, type Infer } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
@@ -13,17 +13,15 @@ import { pageTypeByAddress } from "./utils/siteShapes";
 import { AI_ASSISTANTS_CHANNEL, GOOGLE_AI_CHANNEL, assistantOf, channelOf } from "./utils/aiAssistants";
 import { channelKey, splitChannelKey, type ListRow, type PartOnly } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
-import { FEW_VISITS, addInto, blank, connectionOf, conversionsOf, countedOf, eachSlotPart, readSlot, type Counted, type Held, type SlotNotes } from "./googleAnalyticsRows";
-import { merged, readChannelPoints } from "./googleAnalyticsHistory";
+import { addInto, blank, connectionOf, conversionsOf, countedOf, eachSlotPart, readSlot, type Counted, type Held, type SlotNotes } from "./googleAnalyticsRows";
+import { readChannelPoints } from "./googleAnalyticsHistory";
 import { periodRange } from "./googleAnalyticsJobs";
 import { seen, seenValidator, type Seen, type SeenPhrase } from "./utils/hakkenSees";
 import { pathOfAddress } from "./utils/sees/analytics";
 import {
   NO_PAGE_ADDRESS as NOT_SET,
   NO_PAGE_KIND,
-  OTHER_KIND,
   channelPageSees,
-  channelsPageSees,
   type ChannelPageFacts,
   type CopyFacts,
   type PageFacts,
@@ -31,15 +29,11 @@ import {
 } from "./utils/sees/analyticsChannel";
 
 /**
- * What Channels and a channel's own page read
- * (docs/plans/active/ga-channel-pages-plan.md): one channel's figures with
- * the conversions it started and its dwell time (CH3), where its visits land
- * by page group (CH5), the pages behind the change (CH6), every key event
- * (CH7), the channel a day against the span before (CH4), and — on Channels
- * — each channel by page group, how often a visit converts and each channel's
- * extras for the table (CH9). Google Analytics' own figures only (CH1), read
- * from the lists Hakken already keeps; one device's landing pages are
- * every device's, as those lists are kept. Only the caller's own website.
+ * What a channel's own page reads (docs/plans/active/ga-channel-pages-plan.md): one channel's figures with the
+ * conversions it started and its dwell time (CH3), where its visits land by page group (CH5), the pages behind the
+ * change (CH6), every key event (CH7), and the channel a day against the span before (CH4). Google Analytics' own
+ * figures only (CH1), read from the lists Hakken already keeps; one device's landing pages are every device's, as
+ * those lists are kept. Only the caller's own website. Channels' own reads are in `googleAnalyticsChannelPageReads.ts`.
  */
 
 type Reader = { db: QueryCtx["db"] };
@@ -51,15 +45,12 @@ export const MOVERS_EACH = 4;
 const LANDED_NAMED = 3;
 /** Sources drawn as lines of their own on a channel's sources chart; the rest are one. */
 const SOURCE_LINES = 4;
-/** Page groups drawn as columns of Channels' map; the rest are one, Other. */
-const MAP_KINDS = 7;
-
 // ---------------------------------------------------------------------------
 // Shared
 // ---------------------------------------------------------------------------
 
 /** A channel row's channel as the screens show it: assistants as AI assistants, whatever Google filed them under. */
-function displayOf(key: string): string {
+export function displayOf(key: string): string {
   const { channel, source } = splitChannelKey(key);
   return channelOf(channel, source);
 }
@@ -255,7 +246,7 @@ export async function channelLanding(
 }
 
 /** Each kept page key read to its address. */
-async function addressesOf(ctx: Reader, holdId: HoldId, keys: readonly string[]): Promise<Map<string, string>> {
+export async function addressesOf(ctx: Reader, holdId: HoldId, keys: readonly string[]): Promise<Map<string, string>> {
   const unique = [...new Set(keys)];
   const named = await decodePages(ctx, holdId, unique);
   return new Map(unique.map((key, index) => [key, named[index]]));
@@ -712,220 +703,5 @@ export async function readChannelDays(ctx: SiteReader, args: ChannelArgs) {
     rest,
     now: (nowEntries ?? []).map(pointOf),
     before: (beforeEntries ?? []).map(pointOf),
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Channels (CH9)
-// ---------------------------------------------------------------------------
-
-/** A channel's extras for Channels' table (CH9): the conversions it started, and the page group most of its visits land on. */
-export type ChannelExtras = { started: number | null; landsMost: { kind: string; name: string | null; share: number } | null };
-
-/** Each channel's extras, by its name as the screens show it: every device, as the two lists are kept. */
-export async function channelExtras(ctx: Reader, holdId: HoldId, period: AnalyticsPeriod, country: string, counted: readonly Counted[], device = ""): Promise<Map<string, ChannelExtras>> {
-  const first = await rowsOf(ctx, holdId, slotKey("firstChannel", period, "NOW", "", country));
-  // Each landing page by channel with its visits alone, read a part at a time (2026-11-04: read whole as rows, the
-  // year's ran Channels' table out of its 64MB on More Handles).
-  const landing: Array<{ page: string; channel: string; visits: number }> = [];
-  const landed = await eachLandingByChannel(ctx, holdId, period, "NOW", country, device, { events: new Set() }, (row) => {
-    const { channel: page, source: channel } = splitChannelKey(row.key);
-    landing.push({ page, channel, visits: row.visits });
-  });
-  const out = new Map<string, ChannelExtras>();
-  const extrasOf = (channel: string) => out.get(channel) ?? { started: first ? 0 : null, landsMost: null };
-  for (const row of first ?? []) {
-    const channel = displayOf(row.key);
-    const entry = extrasOf(channel);
-    entry.started = (entry.started ?? 0) + conversionsOf(row, counted).conversions;
-    out.set(channel, entry);
-  }
-  if (landed) {
-    const addresses = await addressesOf(ctx, holdId, landing.map((row) => row.page));
-    const classifier = await classifierFor(ctx, holdId);
-    const byChannel = new Map<string, Map<string, number>>();
-    for (const { page, channel, visits } of landing) {
-      const kinds = byChannel.get(channel) ?? new Map<string, number>();
-      const kind = classifier.kindOf(addresses.get(page) ?? page);
-      kinds.set(kind, (kinds.get(kind) ?? 0) + visits);
-      byChannel.set(channel, kinds);
-    }
-    for (const [channel, kinds] of byChannel) {
-      const visits = [...kinds.values()].reduce((sum, count) => sum + count, 0);
-      const [kind, count] = [...kinds.entries()].sort((left, right) => right[1] - left[1])[0] ?? [null, 0];
-      if (!kind || visits === 0) continue;
-      out.set(channel, { ...extrasOf(channel), landsMost: { kind, name: classifier.nameOf(kind), share: count / visits } });
-    }
-  }
-  return out;
-}
-
-const mapCellValidator = v.object({ kind: v.string(), visits: v.number(), conversions: v.number() });
-
-/**
- * Channels above its table (CH9): the website's figures with the channel
- * converting best over 12 months and the key events not counted, each
- * channel by page group (ChannelMap), how often a visit converts by channel over
- * 12 months, and What Hakken sees.
- */
-export const analyticsChannelsTop = tenantQuery({
-  args: argsOf,
-  returns: v.object({
-    state: v.union(v.literal("READY"), v.literal("PREPARING"), v.literal("NONE")),
-    figures: v.union(v.null(), v.object({
-      visits: v.number(),
-      visitsBefore: v.union(v.number(), v.null()),
-      conversions: v.number(),
-      conversionsBefore: v.union(v.number(), v.null()),
-      seconds: v.number(),
-      /** The channel converting best over 12 months, from 100 visits (R8). */
-      best: v.union(v.null(), v.object({ channel: v.string(), rate: v.number(), siteRate: v.number(), visits: v.number() })),
-      /** The key events not counted that happened in these dates, most first. */
-      uncounted: v.array(v.object({ eventName: v.string(), count: v.number(), enquiry: v.boolean() })),
-    })),
-    map: v.object({
-      kinds: v.array(v.object({ kind: v.string(), name: v.union(v.string(), v.null()) })),
-      rows: v.array(v.object({ channel: v.string(), visits: v.number(), cells: v.array(mapCellValidator) })),
-    }),
-    /** How often a visit converts, by channel, over 12 months (CH9): never money (Anthony, 2026-11-03: "Take money off"). */
-    perVisit: v.object({
-      siteRate: v.number(),
-      /** The visits a channel needs before its rate is trusted (`FEW_VISITS`), for the chart's words. */
-      few: v.number(),
-      /** `fewVisits`: under 100 visits, too few to judge its rate (GA22), never shown as beating the website. */
-      rows: v.array(v.object({ channel: v.string(), visits: v.number(), conversions: v.number(), fewVisits: v.boolean() })),
-    }),
-    everyDevice: v.boolean(),
-    seen: seenValidator,
-  }),
-  handler: async (ctx, args) => await readChannelsTop(ctx, args),
-});
-
-export async function readChannelsTop(ctx: SiteReader, args: ObjectType<typeof argsOf>) {
-  const site = await requireMySite(ctx, args.siteId);
-  const holdId = site.hold._id;
-  const country = await keptCountry(ctx, site.hold, args.country);
-  const connection = await connectionOf(ctx, holdId);
-  const empty = { figures: null, map: { kinds: [], rows: [] }, perVisit: { siteRate: 0, few: FEW_VISITS, rows: [] }, everyDevice: false, seen: seen([]) };
-  if (!connection?.newestDay) return { ...empty, state: connection?.status === "CONNECTED" ? "PREPARING" as const : "NONE" as const };
-  const counted = countedOf(connection);
-  const now = await rowsOf(ctx, holdId, slotKey("channel", args.period, "NOW", args.device, country));
-  if (!now) return { ...empty, state: "PREPARING" as const };
-  const before = await rowsOf(ctx, holdId, slotKey("channel", args.period, "BEFORE", args.device, country));
-  const group = (rows: readonly ListRow[]) => {
-    const by = new Map<string, ListRow>();
-    for (const row of rows) {
-      const channel = displayOf(row.key);
-      const entry = by.get(channel) ?? blank(channel);
-      addInto(entry, row);
-      by.set(channel, entry);
-    }
-    return by;
-  };
-  const nowBy = group(now);
-  const beforeBy = before ? group(before) : null;
-  const total = totalsOf(now, counted);
-  const was = before ? totalsOf(before, counted) : null;
-
-  // How often a visit converts over the last 12 months, every device (CH9, R8): added up from the days, weeks and months
-  // held — visits and conversions add up (calendar-periods-plan.md, rule 10). Never money.
-  const yearPoints = await readChannelPoints(ctx, connection, "", shiftDay(connection.newestDay, -364), connection.newestDay, country);
-  const year = yearPoints ? merged(yearPoints.flatMap((point) => point.rows)) : null;
-  const yearBy = year ? group(year) : new Map<string, ListRow>();
-  const yearTotal = year ? totalsOf(year, counted) : null;
-  const siteRate = yearTotal && yearTotal.visits > 0 ? yearTotal.conversions / yearTotal.visits : 0;
-  const perVisitRows = [...yearBy.values()]
-    .map((row) => ({ channel: row.key, visits: row.visits, conversions: conversionsOf(row, counted).conversions }))
-    .filter((row) => row.visits > 0)
-    .map((row) => ({ channel: row.channel, visits: row.visits, conversions: row.conversions, fewVisits: row.visits < FEW_VISITS }))
-    .sort((left, right) => right.conversions / right.visits - left.conversions / left.visits || right.visits - left.visits);
-  const bestRow = perVisitRows.filter((row) => row.visits >= FEW_VISITS && row.conversions > 0)[0] ?? null;
-  const best = bestRow && bestRow.conversions / bestRow.visits > siteRate ? { channel: bestRow.channel, rate: bestRow.conversions / bestRow.visits, siteRate, visits: bestRow.visits } : null;
-
-  // Key events not counted, each with the channel bringing it most (R3).
-  const { enquiries } = verdictsOf(connection);
-  const all = summed(now);
-  const uncounted = (connection.events ?? [])
-    .filter((event) => !event.counted)
-    .map((event) => {
-      const count = all.counts.get(event.eventName) ?? 0;
-      const top = [...nowBy.values()].sort((left, right) => (right.counts.get(event.eventName) ?? 0) - (left.counts.get(event.eventName) ?? 0))[0];
-      return { eventName: event.eventName, count, enquiry: enquiries.has(event.eventName), channel: top?.key ?? "" };
-    })
-    .filter((event) => event.count > 0)
-    .sort((left, right) => right.count - left.count);
-
-  // Each channel by page group (ChannelMap), every device: each landing page's visits and conversions alone, read a part
-  // at a time (2026-11-04: read whole as rows, the year's ran Channels out of its 64MB on More Handles).
-  const landing: Array<{ page: string; channel: string; visits: number; conversions: number }> = [];
-  const mapped = await eachLandingByChannel(ctx, holdId, args.period, "NOW", country, args.device, { events: new Set(counted.map((event) => event.eventName)) }, (row) => {
-    const { channel: page, source: channel } = splitChannelKey(row.key);
-    landing.push({ page, channel, visits: row.visits, conversions: conversionsOf(row, counted).conversions });
-  });
-  const addresses = mapped ? await addressesOf(ctx, holdId, landing.map((row) => row.page)) : new Map<string, string>();
-  const classifier = await classifierFor(ctx, holdId);
-  const cells = new Map<string, Map<string, { visits: number; conversions: number }>>();
-  const kindTotals = new Map<string, number>();
-  let noPage = 0;
-  for (const row of landing) {
-    const { page, channel } = row;
-    const kind = classifier.kindOf(addresses.get(page) ?? page);
-    if (kind === NO_PAGE_KIND) noPage += row.visits;
-    const byKind = cells.get(channel) ?? new Map<string, { visits: number; conversions: number }>();
-    const cell = byKind.get(kind) ?? { visits: 0, conversions: 0 };
-    cell.visits += row.visits;
-    cell.conversions += row.conversions;
-    byKind.set(kind, cell);
-    cells.set(channel, byKind);
-    kindTotals.set(kind, (kindTotals.get(kind) ?? 0) + row.visits);
-  }
-  // The busiest page groups a column each, No page recorded last, the rest as Other.
-  const ranked = [...kindTotals.entries()].filter(([kind]) => kind !== NO_PAGE_KIND).sort((left, right) => right[1] - left[1]).map(([kind]) => kind);
-  const columns = ranked.slice(0, MAP_KINDS);
-  const others = ranked.length > MAP_KINDS;
-  const mapKinds = [...columns, ...(others ? [OTHER_KIND] : []), ...(kindTotals.has(NO_PAGE_KIND) ? [NO_PAGE_KIND] : [])];
-  const mapRows = [...cells.entries()].map(([channel, byKind]) => {
-    const row = mapKinds.map((kind) => {
-      if (kind !== OTHER_KIND) return { kind, ...(byKind.get(kind) ?? { visits: 0, conversions: 0 }) };
-      const rest = [...byKind.entries()].filter(([own]) => !columns.includes(own) && own !== NO_PAGE_KIND);
-      return { kind, visits: rest.reduce((sum, [, cell]) => sum + cell.visits, 0), conversions: rest.reduce((sum, [, cell]) => sum + cell.conversions, 0) };
-    });
-    return { channel, visits: [...byKind.values()].reduce((sum, cell) => sum + cell.visits, 0), cells: row };
-  }).filter((row) => row.visits > 0).sort((left, right) => right.visits - left.visits);
-
-  const aiRows = now.filter((row) => displayOf(row.key) === AI_ASSISTANTS_CHANNEL);
-  const aiVisits = aiRows.reduce((sum, row) => sum + row.visits, 0);
-  const aiElsewhere = aiRows.filter((row) => splitChannelKey(row.key).channel !== GOOGLE_AI_CHANNEL).reduce((sum, row) => sum + row.visits, 0);
-  const box = channelsPageSees({
-    rows: [...nowBy.values()].map((row) => {
-      const earlier = beforeBy?.get(row.key);
-      return {
-        channel: row.key,
-        visits: row.visits,
-        visitsBefore: beforeBy ? earlier?.visits ?? 0 : null,
-        conversions: conversionsOf(row, counted).conversions,
-        conversionsBefore: beforeBy ? (earlier ? conversionsOf(earlier, counted).conversions : 0) : null,
-      };
-    }),
-    best: best ? { channel: best.channel, rate: best.rate, siteRate: best.siteRate } : null,
-    uncounted,
-    noPage,
-    ai: aiVisits > 0 ? { visits: aiVisits, elsewhere: aiElsewhere } : null,
-  });
-  return {
-    state: "READY" as const,
-    figures: {
-      visits: total.visits,
-      visitsBefore: was?.visits ?? null,
-      conversions: total.conversions,
-      conversionsBefore: was?.conversions ?? null,
-      seconds: total.seconds,
-      best,
-      uncounted: uncounted.map((event) => ({ eventName: event.eventName, count: event.count, enquiry: event.enquiry })),
-    },
-    map: { kinds: mapKinds.map((kind) => ({ kind, name: classifier.nameOf(kind) })), rows: mapRows },
-    perVisit: { siteRate, few: FEW_VISITS, rows: perVisitRows },
-    everyDevice: mapped?.everyDevice ?? false,
-    seen: box,
   };
 }

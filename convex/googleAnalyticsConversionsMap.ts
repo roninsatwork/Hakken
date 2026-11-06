@@ -30,7 +30,7 @@ import { seenValidator } from "./utils/hakkenSees";
 export const conversionColumnsValidator = v.union(v.literal("kind"), v.literal("channel"), v.literal("device"), v.literal("country"));
 export type ConversionColumns = "kind" | "channel" | "device" | "country";
 
-const DEVICES = ["desktop", "mobile", "tablet"] as const;
+export const DEVICES = ["desktop", "mobile", "tablet"] as const;
 
 
 /** A cell's two units; null where the span before is not held. */

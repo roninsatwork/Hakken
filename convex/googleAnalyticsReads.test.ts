@@ -987,12 +987,12 @@ describe("Ask Hakken reads every Google Analytics screen (§18.6.8)", () => {
     const channelTop = await user.query(api.googleAnalyticsChannelReads.analyticsChannelTop, { siteId, period: "lastMonth", device: "", channel: "Organic Search" });
     expect(channel.conversionsItStarted).toMatchObject({ now: channelTop.figures!.started });
     expect((channel.whereItLands as Array<{ visits: number }>).map((kind) => kind.visits)).toEqual(channelTop.kinds.map((kind) => kind.visits));
+    // Channels as its page shows it (channels-new-page-plan-2026-11-06.md, step 9), never what a visit is worth: `googleAnalyticsChannelPageReads.test.ts` holds the rest.
     const channels = await read("channels");
-    expect((channels.conversionsAVisitByChannel as unknown[]).length).toBeGreaterThan(0);
-    // How often a visit converts, never what it is worth (Anthony, 2026-11-03: "Take money off").
     expect(channels).not.toHaveProperty("whatAVisitIsWorth");
-    expect(JSON.stringify(channels.conversionsAVisitByChannel)).not.toMatch(/valuePerVisit|"value"/);
-    expect((channels.whereEachChannelLands as Array<{ channel: string }>).map((row) => row.channel)).toContain("Organic Search");
+    expect(JSON.stringify(channels.rows)).not.toMatch(/valuePerVisit|"value"/);
+    expect((channels.rows as unknown as Array<{ channel: string }>).map((row) => row.channel)).toContain("Organic Search");
+    expect(channels.link).toBe(`/app/analytics/${siteId}/channels?period=lastMonth`);
 
     const page = await read("page", { key: "https://www.acme-shop.test/ai-agency/" });
     // As the redone screen shows it (page-screen-redo-plan-2026-11-03.md): its views, never money, people or the page before.

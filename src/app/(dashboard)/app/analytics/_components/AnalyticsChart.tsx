@@ -1,10 +1,9 @@
 "use client";
 
-import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
+import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_EMERALD, CHART_SERIES_ORANGE, CHART_SERIES_ROSE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { SITE_SERIES_COLOURS, SiteBarChart, SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
 import { datedRow } from "../../sites/_components/datedRows";
 import { formatMonth, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
@@ -238,6 +237,8 @@ export function TopBars({ title, hint, rows, measure, exportName, host, from, to
  * "Visits needed for one conversion, by channel" draws its channels in the same colours.
  */
 export const CHANNEL_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_TEAL];
+/** Every channel's own colour on Channels' first chart, seven before they repeat. Slate stays Everything else's. */
+export const CHANNEL_LINE_COLOURS = [...CHANNEL_COLOURS, CHART_SERIES_ROSE, CHART_SERIES_AMBER, CHART_SERIES_EMERALD];
 
 /**
  * Channels' chart (GA35; §18.2 board 16): each of the four busiest channels'
@@ -336,27 +337,6 @@ export function ListTopBars({ list, sort, bars, nameOf }: {
       host={status?.host ?? ""}
       from={top?.from ?? null}
       to={top?.to ?? null}
-    />
-  );
-}
-
-/** Channels' chart, read for itself from the channels kept a day, then a week, then a month (GA35; ga-stored-figures-plan.md SF2). */
-export function ChannelsDailyChart() {
-  const args = useAnalyticsArgs();
-  const status = useAnalyticsStatus();
-  const chart = useQuery(api.googleAnalyticsChartReads.analyticsChannelChart, status?.connection?.newestDay ? args : "skip");
-  useSeesPart("channelsByDay", chart);
-  return (
-    <ChannelsChart
-      channels={chart?.channels ?? []}
-      rest={chart?.rest ?? false}
-      points={chart?.points ?? []}
-      host={status?.host ?? ""}
-      from={null}
-      to={null}
-      exportName="google-analytics-channels-daily"
-      marked
-      updateKey={false}
     />
   );
 }

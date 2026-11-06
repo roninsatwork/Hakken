@@ -180,7 +180,7 @@ describe("home countries", () => {
     expect(days).toHaveLength(70);
 
     const args = { siteId, period: "lastMonth" as const, device: "", country: "fra" };
-    const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, args);
+    const chart = await admin.query(api.googleAnalyticsChannelPageReads.analyticsChannelsEachDay, args);
     expect(chart.live).toBe(false);
     const all = await admin.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "page", page: 1, rows: 25 });
     const home = all.rows.find((row) => row.label === "https://www.acme-shop.test/")!.key;

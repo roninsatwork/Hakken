@@ -42,7 +42,7 @@ function shadeOf(share: number): string {
   return CHART_ENGAGEMENT_RAMP[0];
 }
 
-export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, headingTooltips = false, cellTooltips = false }: {
+export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, headingTooltips = false, cellTooltips = false, columnHovers }: {
   columns: readonly string[];
   rows: readonly ChannelMapRow[];
   /** Each row's visits, to shade its squares by their share. */
@@ -58,6 +58,8 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, 
   headingTooltips?: boolean;
   /** Each square says its words on hover in the app's own tooltip, standard on the Conversions map (Anthony, 2026-10-29). */
   cellTooltips?: boolean;
+  /** A heading's hover where it says more than its name: Channels' Other groups names what's in it. In `columns`' order. */
+  columnHovers?: ReadonlyArray<string | undefined>;
 }) {
   // The name column gives way before the squares do, so eleven columns still fit a narrow card.
   const template = { gridTemplateColumns: `minmax(96px, 140px) repeat(${columns.length}, minmax(0, 1fr))` };
@@ -65,9 +67,9 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, 
     <div data-part="channel-map" className="flex flex-col gap-1">
       <div className="grid gap-1 text-[11px] text-muted" style={template}>
         <span />
-        {columns.map((column) => headingTooltips ? (
+        {columns.map((column, at) => headingTooltips ? (
           <span key={column} className="min-w-0 px-1 text-center">
-            <Tooltip label={column} className="relative flex w-full min-w-0 justify-center"><span tabIndex={0} className="block min-w-0 max-w-full truncate">{column}</span></Tooltip>
+            <Tooltip label={columnHovers?.[at] ?? column} className="relative flex w-full min-w-0 justify-center"><span tabIndex={0} className="block min-w-0 max-w-full truncate">{column}</span></Tooltip>
           </span>
         ) : <span key={column} className="truncate px-1 text-center" title={column}>{column}</span>)}
       </div>

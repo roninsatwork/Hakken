@@ -27,7 +27,7 @@ import { searchConsoleMonth, searchConsoleMonthValidator } from "./googleAnalyti
 import { seeing, seen, seenValidator, type Seen, type SeenPhrase } from "./utils/hakkenSees";
 import { PAGE_MOVES, moveOf, type PageMove, busyVisitsFor, pageBandsOf, viewsConcentration, type PageBands, type ViewsConcentration } from "./utils/pageMoves";
 import { moveCountsValidator, withQuietPages, type PageMoves } from "./googleAnalyticsPageMoves";
-import { channelExtras, channelLanding, classifierFor } from "./googleAnalyticsChannelReads";
+import { channelLanding, classifierFor } from "./googleAnalyticsChannelReads";
 import {
   addInto,
   blank,
@@ -37,6 +37,8 @@ import {
   grouped,
   readFor,
   readSlot,
+  SHOP_STEPS_ONLY,
+  shopStepsOf,
   shown,
   shownRowValidator,
   type Counted,
@@ -150,12 +152,6 @@ type ListArgs = {
    */
   quiet?: boolean;
   /**
-   * Channels' table (ga-channel-pages-plan.md CH9): each channel with the
-   * conversions it started and the page group most of its visits land on —
-   * `group` then keeps the channels landing most on that page group.
-   */
-  extras?: boolean;
-  /**
    * Page groups only: the landing pages themselves too, as Landing pages shows them (address, change, what left),
    * from the same read — Overview's two page panels in one pass (calendar-periods audit, 2026-10-21).
    */
@@ -189,6 +185,8 @@ export type ListAnswer = {
   untagged: number | null;
   /** Campaigns: every place a link was, with its visits, the most first, whichever one is chosen; null on any other list. */
   cameFromChoices: Array<{ cameFrom: string; visits: number }> | null;
+  /** Channels: those with visits in the dates before and none now, so a channel that stopped altogether can still be named. */
+  gone: GoneChannel[] | null;
   /** All pages read whole: how many pages each filter holds, and the pages nobody viewed Google sends most clicks. */
   moves: PageMoves | null;
   /** All pages read whole: its busy and quiet pages, and how few pages make half its views. */
@@ -203,10 +201,11 @@ export type ListAnswer = {
 };
 
 type Figures = ReturnType<typeof figuresOf>;
+type GoneChannel = { key: string; visitsBefore: number; purchasesBefore: number; conversionsBefore: number };
 
 const EMPTY: Omit<ListAnswer, "live" | "preparing"> = {
   rows: [], from: null, to: null, folded: false, thresholded: false, cut: false, groups: null,
-  every: [], everyDevice: null, totals: null, site: null, counting: false, untagged: null, cameFromChoices: null, moves: null, bands: null, concentration: null, shop: null, spanBefore: null,
+  every: [], everyDevice: null, totals: null, site: null, counting: false, untagged: null, cameFromChoices: null, gone: null, moves: null, bands: null, concentration: null, shop: null, spanBefore: null,
 };
 
 /** The display channel of a kept channel row. */
@@ -242,7 +241,9 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   const kept: { every: Held | null } = { every: null };
   // Each row with only the counted events, read a part at a time: all a list here reads of a row. Read whole as rows, a
   // year's pages, or a channel's landing pages, ran this out of its 64MB on More Handles (2026-11-04).
-  const only = { events: new Set(counted.map((event) => event.eventName)) };
+  const countedNames = counted.map((event) => event.eventName);
+  // Channels' table reads the visits at each of a shop's steps too (channels-new-page-plan-2026-11-06.md, step 7).
+  const only = args.list === "channel" ? { events: new Set([...countedNames, ...SHOP_STEPS_ONLY.events]), units: true } : { events: new Set(countedNames) };
   // A channel's pages: each assistant's visits credited to AI assistants once, whichever channel Google filed them under (CH13).
   const channelPages = async (which: "NOW" | "BEFORE") => (ofChannel !== null ? await channelLanding(ctx, holdId, args.period, which, args.country ?? "", args.device, ofChannel, only.events) : null);
   const channelNow = await channelPages("NOW");
@@ -383,14 +384,11 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     out = whole.rows;
     moves = whole.moves;
   }
-  if (args.list === "channel" && args.extras) {
-    const extras = await channelExtras(ctx, holdId, args.period, args.country ?? "", counted, args.device);
-    for (const row of out) {
-      const own = extras.get(row.label);
-      row.started = own?.started ?? null;
-      row.landsMost = own?.landsMost ?? null;
-    }
-    if (args.group !== undefined) out = out.filter((row) => row.landsMost?.kind === args.group);
+  let gone: GoneChannel[] | null = null;
+  if (args.list === "channel") {
+    const byKey = new Map(rows.map((row) => [row.key, row]));
+    for (const row of out) Object.assign(row, shopStepsOf(byKey.get(row.key) ?? blank(row.key)));
+    gone = (earlier ?? []).filter((row) => row.visits > 0 && !byKey.has(row.key)).map((row) => ({ key: row.key, visitsBefore: row.visits, purchasesBefore: row.purchases, conversionsBefore: conversionsOf(row, counted).conversions }));
   }
   const every = out;
   const bands = moves ? pageBandsOf(every, busyVisitsFor(now.from, now.to)) : null;
@@ -421,6 +419,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     counting,
     untagged,
     cameFromChoices,
+    gone,
     moves,
     bands,
     concentration,
@@ -568,6 +567,8 @@ export const analyticsListPage = tenantQuery({
       bought: v.number(), boughtBefore: v.union(v.number(), v.null()),
       conversions: v.number(), conversionsBefore: v.union(v.number(), v.null()),
     })),
+    /** Channels: those with visits in the dates before and none now; null on any other list. */
+    gone: v.union(v.null(), v.array(v.object({ key: v.string(), visitsBefore: v.number(), purchasesBefore: v.number(), conversionsBefore: v.number() }))),
     /** All pages: how many pages each filter holds (all-pages-rethink-plan.md AP5); null on any other list. */
     moves: v.union(v.null(), moveCountsValidator),
     /** All pages: its busy and quiet pages, and how few pages make half its views. */
@@ -596,7 +597,7 @@ async function withVisitorLands(ctx: SiteReader, args: ObjectType<typeof listArg
 /** Its screen's read, for the screen and Ask Hakken alike (google-analytics-plan.md §18.6.8): the caller's own website only. */
 export async function readListPage(ctx: SiteReader, args: ObjectType<typeof analyticsListPageArgs>) {
   const site = await requireMySite(ctx, args.siteId);
-  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page", extras: args.list === "channel" });
+  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page" });
   const page = pageOfList(list.rows, args.page, args.rows);
   const named = await nameRows(ctx, site.hold._id, page.rows);
   return {
@@ -618,6 +619,7 @@ export async function readListPage(ctx: SiteReader, args: ObjectType<typeof anal
     figures: args.list === "source" && !list.live && !list.preparing ? channelFigures(list) : null,
     untagged: list.untagged,
     cameFromChoices: list.cameFromChoices,
+    gone: list.gone,
     campaignTotals: args.list === "campaign" && list.totals ? {
       visits: list.totals.now.visits, visitsBefore: list.totals.before?.visits ?? null,
       engaged: list.totals.now.engaged, engagedBefore: list.totals.before?.engaged ?? null,
@@ -651,7 +653,7 @@ args: { ...listArgs, part: v.number() },
 returns: v.object({ rows: v.array(shownRowValidator), total: v.number(), live: v.boolean() }),
 handler: async (ctx, { part, ...args }) => {
   const site = await requireMySite(ctx, args.siteId);
-  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page", extras: args.list === "channel" });
+  const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country), quiet: args.list === "page" });
   const start = Math.max(0, Math.floor(part)) * DOWNLOAD_PART;
   const rows = await addressRows(ctx, site.hold._id, list.rows.slice(start, start + DOWNLOAD_PART));
   return { rows: await withVisitorLands(ctx, args, list, rows), total: list.rows.length, live: list.live };
