@@ -107,10 +107,10 @@ const roninsOverviewPage = overviewOf(roninsOverview, false, 1000);
 // Channels (channels-new-page-plan-2026-11-06.md, step 8): every channel, Google's own total for the website, the squares by Classification and
 // by device, and the steps, as the page hands them. October is real; `moreHandlesChannels.json` says how the other periods were made.
 function channelsPage(period: Period) {
-  const one = (channels as unknown as Record<string, { website: Record<string, number>; rows: Rows; channelSquares: { rows: Rows }; channelDevices: { rows: Rows }; channelSteps: Record<string, unknown> }>)[period];
+  const one = (channels as unknown as Record<string, { website: Record<string, number>; rows: Rows; gone: Rows; channelSquares: { rows: Rows }; channelDevices: { rows: Rows }; channelSteps: Record<string, unknown> }>)[period];
   const words = en.googleAnalytics.channelsPage.steps;
   return {
-    names: NAMES, sells: true, website: one.website, rows: one.rows, channelSquares: one.channelSquares, channelDevices: one.channelDevices,
+    names: NAMES, sells: true, website: one.website, rows: one.rows, gone: one.gone, channelSquares: one.channelSquares, channelDevices: one.channelDevices,
     channelSteps: { ...one.channelSteps, steps: { arrived: words.arrived, stayed: words.stayed, basket: words.basket, checkout: words.checkout, bought: words.bought } },
   };
 }
@@ -291,7 +291,7 @@ describe("Channels finds what a person scanning the page would miss, on More Han
     expect(all).toContain("Paid Social: share of visits that left at once");
   });
   test("a step far from the rest, each visit counted once", () => {
-    expect(all).toContain("Referral, In basket to At checkout: went on to the next step 12.4%, against 42.8% for The whole website.");
+    expect(all).toContain("Referral, In basket to At checkout: went on to the next step 12.4%, against 43.2% for The whole website.");
   });
   test("a gap between devices, on enough visits to trust", () => {
     expect(findings.some((one) => one.id.startsWith("rowAbove:devices:gap:boughtPerHundred:") || one.id.startsWith("rowBelow:devices:gap:boughtPerHundred:"))).toBe(true);
