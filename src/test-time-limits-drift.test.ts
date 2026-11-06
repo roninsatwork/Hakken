@@ -287,6 +287,15 @@ describe('test time limits', () => {
 
   // Written with the folder's real name, `(dashboard)`, it matched nothing: brackets are pattern syntax, so Arcade's tests
   // went on running on every push, and nothing failed to say so (CI #54, 2026-11-04).
+  // CI #55, 2026-11-06: 9,080 tests passed and the run failed, as a log was still on its way when a file closed.
+  test("a test's logs never go through Vitest's channel, on every project", () => {
+    const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
+    expect(config).toContain('const LOGS_GO_STRAIGHT = { disableConsoleIntercept: true }')
+    const projects = config.match(/\.\.\.STUBS_PUT_BACK,/g)?.length ?? 0
+    expect(projects).toBeGreaterThanOrEqual(2)
+    expect(config.match(/\.\.\.LOGS_GO_STRAIGHT,/g)?.length ?? 0).toBe(projects)
+  })
+
   test("a push to dev really does leave out Arcade's tests", () => {
     const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
     const pattern = /const ARCADE_CODE = '([^']+)'/.exec(config)?.[1] ?? ''

@@ -109,6 +109,13 @@ const LOCAL_RUN = !process.env.GITHUB_ACTIONS
  * it, as each sets its time limit: a project takes nothing from the root.
  */
 const STUBS_PUT_BACK = { unstubEnvs: true, unstubGlobals: true } as const
+/*
+ * A test's console output goes straight to the terminal, never through Vitest's message channel to the main process (2026-11-06,
+ * CI #55: every test passed and the run failed). Work a test leaves running, such as a scheduled function, can still log after its
+ * file's last test. On GitHub's busy runner that message was still in flight when the file closed, and Vitest counts that as a failed
+ * run, whichever file it happens in. With no message in the channel, there's nothing to be caught there.
+ */
+const LOGS_GO_STRAIGHT = { disableConsoleIntercept: true } as const
 
 /*
  * Whether this run measures coverage, told to the tests: the Sites speed test
@@ -156,6 +163,7 @@ export default defineConfig({
           testTimeout: TEST_TIMEOUT_MS,
           hookTimeout: TEST_TIMEOUT_MS,
           ...STUBS_PUT_BACK,
+          ...LOGS_GO_STRAIGHT,
         },
       },
       {
@@ -207,6 +215,7 @@ export default defineConfig({
           testTimeout: TEST_TIMEOUT_MS,
           hookTimeout: TEST_TIMEOUT_MS,
           ...STUBS_PUT_BACK,
+          ...LOGS_GO_STRAIGHT,
         },
       },
     ],

@@ -297,6 +297,13 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   `vitest.setup.ts` clears every timer a test started once its screens are
   unmounted (`src/test/testTimers.ts`); leave it on, and never count on a timer
   from one test firing in the next.
+- **A test's logs go straight to the terminal** (2026-11-06, CI #55: 9,080 tests
+  passed and the run failed). Work a test leaves running, such as a scheduled
+  function, can log after its file's last test. That message was still in Vitest's
+  channel when the file closed on GitHub's busy runner, and Vitest fails the run for
+  it: "Closing rpc while onUserConsoleLog was pending". `disableConsoleIntercept` in
+  `vitest.config.ts` keeps logs out of that channel, on every project, so it can't
+  happen in any file. `src/test-time-limits-drift.test.ts` holds it. Leave it on.
 - **Stubs go back by themselves.** The config undoes every `vi.stubEnv` and
   `vi.stubGlobal` after each test (`unstubEnvs`, `unstubGlobals`); stub what a
   test needs in that test or its `beforeEach`, never rely on one carrying over.
