@@ -5,14 +5,14 @@ feature_area: website holdings and Visibility navigation
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/websites-and-visibility.md
-last_reviewed: '2026-10-26T08:59:02+00:00'
+last_reviewed: '2026-11-05T08:44:16+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Websites And Visibility
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Website holdings and Visibility navigation
-> **Reviewed:** 26 October 2026, 08:59:02 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:44:16 GMT (Europe/London)
 > **Source path:** `docs/developer/websites-and-visibility.md` · **Status:** Current
 
 ## Identity, holdings and scope
@@ -187,3 +187,11 @@ review and guide coverage. Keep those queue entries open. Any future changes
 to tracking membership, scoring semantics, tenant access, schedule behavior or
 destructive cleanup require the repository's product agreement and full code
 verification, not an incidental fix while maintaining Markdown.
+
+## November date and eye integration — scoped review
+
+The shared UI is `SiteDateRange.tsx` plus `siteRange.ts`: `parseSitePeriod` accepts named periods or ordered custom bounds no later than the UK's current day. It computes inclusive spans, the prior range and default day/week/month step through `calendarPeriods.ts`. Visibility checks are filed by check day, whereas connected-source sections clip to their own newest day. `SiteDateRange` exposes custom selection only when a caller opts in; do not advertise it for every panel solely because the shared parser accepts it.
+
+`siteCharts.ts` maintains private-hold authorization with `requireMySite` before reading the company-configured rivals. Its latest group projections and dated lines answer different questions. `assistantVisibilityReads.ts` reuses saved Visibility reads for supported chart requests, including a line against a named rival, rather than buying new supplier observations. Shared website facts do not imply shared private rival lists. The eye's Visibility prefix registry selects relevant search, market, local, links or AI specialists while using the supplied page data.
+
+The period helper tests and screen/Assistant chart tests support these paths. No supplier purchase or live browser check was run. This update covers common dates and integration points only; changed overview, competitor, link, review, crawl and Radar projections require their own targeted source/document comparisons and remain in the inventory queue. Preserve their existing bounds and uncertainty rather than declaring all Visibility reports revalidated by this timestamp.

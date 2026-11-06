@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync } from 'fs'
-import { join } from 'path'
+import { existsSync, readFileSync, readdirSync } from 'fs'
+import { join , matchesGlob } from 'path'
 import { describe, expect, test } from 'vitest'
 import { repoRoot } from './test/driftUtils'
 
@@ -283,6 +283,20 @@ describe('test time limits', () => {
       'The panel\'s words come in one at a time, each in a piece of its own, so `findByText` cannot find a sentence with every word on screen. '
       + 'Use `findSaid` from src/test/openHakkenSees.ts.',
     ).toEqual([])
+  })
+
+  // Written with the folder's real name, `(dashboard)`, it matched nothing: brackets are pattern syntax, so Arcade's tests
+  // went on running on every push, and nothing failed to say so (CI #54, 2026-11-04).
+  test("a push to dev really does leave out Arcade's tests", () => {
+    const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
+    const pattern = /const ARCADE_CODE = '([^']+)'/.exec(config)?.[1] ?? ''
+    expect(pattern).not.toMatch(/[()]/)
+    const anArcadeTest = 'src/app/(dashboard)/app/arcade/ronins-run/engine/Levels.test.ts'
+    expect(existsSync(join(repoRoot, anArcadeTest))).toBe(true)
+    expect(matchesGlob(anArcadeTest, pattern)).toBe(true)
+    expect(matchesGlob('src/app/(dashboard)/app/analytics/googleAnalyticsLook.test.tsx', pattern)).toBe(false)
+    const workflow = readFileSync(join(repoRoot, '.github/workflows/ci.yml'), 'utf8')
+    expect(workflow).toContain("HAKKEN_SKIP_ARCADE_TESTS: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' && '1' || '' }}")
   })
 
   test('the run is set as measured, and the one default for screens is where it is said to be', () => {

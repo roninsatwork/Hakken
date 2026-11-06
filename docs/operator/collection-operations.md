@@ -5,14 +5,14 @@ feature_area: collection and saved-chain operations
 audience: operators
 source_repository: roninsatwork/Hakken
 source_path: docs/operator/collection-operations.md
-last_reviewed: '2026-10-26T15:21:11+00:00'
+last_reviewed: '2026-11-05T08:46:36+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Data Collection Operations
 
 > **Product:** Hakken · **Document type:** operator runbook · **Feature area:** collection and saved-chain operations
-> **Reviewed:** 26 October 2026, 15:21:11 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:46:36 GMT (Europe/London)
 > **Source path:** `docs/operator/collection-operations.md` · **Status:** Current
 
 
@@ -69,7 +69,7 @@ or close the chain. A completed run with a skip needs its summary read; it
 must not be reported as complete source coverage.
 
 Google Analytics quota waits are expected: work can wait for allowance and
-continue within its nightly budget. Search Console has its own paced fill
+continue within its 22-hour run budget. Search Console has its own paced fill
 and bounded busy waits. Bing has its own transport and weekly-data behavior.
 Do not use one provider's quota or retention policy for all collectors.
 Use the [Analytics](../developer/google-analytics.md),

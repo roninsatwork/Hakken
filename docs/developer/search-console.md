@@ -5,14 +5,14 @@ feature_area: Search Console
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/search-console.md
-last_reviewed: '2026-10-26T08:52:19+00:00'
+last_reviewed: '2026-11-05T08:44:16+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Search Console
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Search Console
-> **Reviewed:** 26 October 2026, 08:52:19 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:44:16 GMT (Europe/London)
 > **Source path:** `docs/developer/search-console.md` · **Status:** Current
 
 ## Boundaries and route composition
@@ -196,3 +196,11 @@ selected implementations and declarations without executing the tests.
 Future code changes still require the complete repository gates and mocked
 provider coverage. No saved or local fixture result establishes that Google
 consent, deployed callbacks or a live sixteen-month fill has succeeded.
+
+## November date and eye integration — scoped review
+
+`utils/calendarPeriods.ts` now defines the seven menu literals, `periodSpan`, `spanBefore`, `customSpans` and default chart steps. Sites and Search Console share `SiteDateRange.tsx` and `siteRange.ts`; URL custom choices carry `period=custom`, `from`, `to`. `periodOrOpening` is an explicit fallback for screens unable to answer a custom range. Do not pass retired quarter literals into current validators.
+
+`searchConsoleLists.readListPage` resolves `periodOf` with the requested period and source newest day. A non-prepared span returns the live-read shape; detail keyword/page relationships can also require Google even for a named period. Other source-country readiness rules still apply. This differs from Analytics' custom-key list generation, Bing's weekly reconstruction and Clarity's scheduled local aggregation; share date arithmetic without merging their storage semantics. The changed `calendarPeriods.test.ts`, `searchConsolePeriods.test.ts` and list tests are verification sources, not run results here.
+
+The page's eye receives its own query answers through the section wrapper and shared child-part registration. Follow the [eye guide](./what-hakken-sees-guide.md) for provenance, credits and run checks. This is a scoped date/eye refresh; recent search-change, volatility, demand and large-list optimizations remain separate queue items in the central inventory.

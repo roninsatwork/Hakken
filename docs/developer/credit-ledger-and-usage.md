@@ -5,17 +5,17 @@ feature_area: credit ledger, pricing and Usage projections
 audience: backend developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/credit-ledger-and-usage.md
-last_reviewed: '2026-10-26T10:55:35+00:00'
+last_reviewed: '2026-11-05T08:48:34+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Credit Ledger And Usage
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** credit ledger, pricing and Usage projections
-> **Reviewed:** 26 October 2026, 10:55:35 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:48:34 GMT (Europe/London)
 > **Source path:** `docs/developer/credit-ledger-and-usage.md` · **Status:** Current
 
-The credit system records company usage, batch balances, adjustment lines and supplier-cost evidence. Its current phase monitors and accounts for work rather than refusing a request when credits run out. `creditLedger.ts` is the shared write service; customer projections are in `creditUsage.ts`, pricing oversight in `creditPricesAdmin.ts`, request hooks in `creditHooks.ts` and personal recurring-task charging in `hakkenTaskCredits.ts`. Read the [customer Usage guide](../end-user/credits-and-usage.md) for the screen-level workflow.
+The credit system records company usage, batch balances, adjustment lines and supplier-cost evidence. Its current phase monitors and accounts for work with a feature-specific preflight refusal for new eye writing; the general ledger can still record owed work. `creditLedger.ts` is the shared write service; customer projections are in `creditUsage.ts`, pricing oversight in `creditPricesAdmin.ts`, request hooks in `creditHooks.ts` and personal recurring-task charging in `hakkenTaskCredits.ts`. Read the [customer Usage guide](../end-user/credits-and-usage.md) for the screen-level workflow.
 
 ## Routes And Authorization
 
@@ -33,7 +33,7 @@ Monthly customer rollups are keyed by company/month/kind/website, platform month
 
 ## Price And Unit Rules
 
-`creditKinds.ts` defines nine kinds and provisional defaults: rankings four credits per thousand units; AI answers one per answer; keyword research five per unit; audit one per fifty pages; backlinks ten per thousand; assistant one per reply; alert/report checks one each; task research five each. These are code fallbacks, not a current commercial tariff. `readCreditPrice` prefers the saved per-kind row. `openCreditRun` snapshots that price, so later price edits do not rewrite old open or settled runs automatically.
+`creditKinds.ts` defines ten kinds and provisional defaults: rankings four credits per thousand units; AI answers one per answer; keyword research five per unit; audit one per fifty pages; backlinks ten per thousand; assistant two per reply; alert/report checks one each; task research five each; a successful new eye piece eight each. These are code fallbacks, not a current commercial tariff. `readCreditPrice` prefers the saved per-kind row. `openCreditRun` snapshots that price, so later price edits do not rewrite old open or settled runs automatically.
 
 `creditsForUnits` returns zero for nonpositive units, otherwise rounds up the proportional price with a small floating-point tolerance and a minimum of one. Thus a saved zero-credit price still produces one for positive units. The editor permits zero through one hundred thousand integer credits; documentation must not call zero free until a separate source/policy decision addresses this behavior. `creditCoversUsd` is a recommendation setting, not a cash conversion contract.
 
@@ -74,3 +74,15 @@ When extending a work kind, preserve company scope, captured price semantics, lo
 ## Retention Manifest
 
 `keepRules.ts` classifies accounts, prices and settings as owner records, and batches, charges, monthly/platform totals and daily totals as retained FOREVER ledger/history. The generic time-based purge register does not give these credit tables a routine expiry pipeline. This is the declared data-retention design, not evidence that every company-deletion or personal-data path has been independently audited here. Do not promise that ordinary log expiry or removing a tracked search erases its accounting history.
+
+## November eye preflight and cost-based price suggestions
+
+`creditKinds.ts` adds `sees` to the validator/default map, with eight credits per unit; Assistant defaults are now two per reply. `creditHooks.creditSeesPress` attributes the requester, answer/asked-time run key and optional agent run cost. The quiet-hook pattern remains, so a successful answer is not proof of a successful ledger write when a caught recording error occurred. Cached reading does not call this hook. `seesAsk.saveSeesAnswer` charges successful WRITTEN publication unless `notCharged` is set by a super-admin refresh.
+
+`seesCreditsLeft` calls `ensurePlanBatch` before comparing `creditBalance` with `creditsForUnits(readCreditPrice('sees'), 1)`. `askSees` performs this check after site authorization and reuse lookup. This is not a reservation or a universal change to `openCreditRun`: the older statements about recording owed amounts still describe general ledger settlement, but must not be read as denying this explicit eye gate. The refresh mutation uses `superAdminMutation` and bypasses company charging; ordinary writes remain tenant scoped through their resolved website hold.
+
+`creditPriceReport` now reads current and preceding `creditPlatformMonths.by_month_kind` rows, current `creditPrices` and `creditSettings`. It derives unit cost from the selected month where units exist, otherwise the immediately preceding month. Returned `costMonth` tells the operator which evidence was used. `suggestedCredits` in `utils/creditMargin.ts` calculates cost per unit divided by one minus margin, multiplied by the saved per-unit batch and divided by dollars covered per credit. It rounds upward to at least one credit and returns null without usable cost evidence. This is a suggestion, never an automatic tariff mutation.
+
+`DEFAULT_MARGIN_PERCENT` is 80; saving accepts finite margins from zero through 95. `saveCreditPrices` keeps its super-admin mutation boundary, validates price and plan bounds, records changed fields in `CREDIT_PRICES_CHANGED`, and persists the margin only when supplied/changed. Month grants and already opened charge prices keep their earlier semantics. The read wrapper's READ_ONLY oversight access remains distinct from source comments saying super-admin-only. The customer projections must continue to omit these cross-company costs.
+
+`creditPricesAdmin.test.ts`, `creditLedger.test.ts` and the shared margin helper are the local verification sources for these changes. Tests, live charges and Stripe operations were not run. No new purchase flow was established by this review, and external rename metadata acceptance remains separate from these code defaults. For the eye's reuse and completion path see [What Hakken Sees](./what-hakken-sees-guide.md).

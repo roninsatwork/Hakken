@@ -5,14 +5,14 @@ feature_area: Microsoft Clarity
 audience: company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/microsoft-clarity.md
-last_reviewed: '2026-10-26T09:13:34+00:00'
+last_reviewed: '2026-11-05T08:44:16+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Microsoft Clarity
 
 > **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Microsoft Clarity
-> **Reviewed:** 26 October 2026, 09:13:34 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:44:16 GMT (Europe/London)
 > **Source path:** `docs/end-user/microsoft-clarity.md` · **Status:** Current
 
 ## What Clarity helps you inspect
@@ -179,3 +179,13 @@ Export token. The [developer guide](../developer/microsoft-clarity.md) explains
 storage, quotas, aggregation and the remaining cleanup uncertainty. This
 documentation review connected no project, fetched no recording and started
 no collector.
+
+## Rolling periods, custom dates and the eye
+
+The shared Dates menu now offers This week, Last week, This month, Last month, Last 3 months, Last 6 months and Last 12 months. Quarters and This year are no longer current choices. Weeks start on Monday. The rolling choices run back by whole months from the source's newest day; they are not financial quarters. The comparison is the block before, while an incomplete calendar week or month uses the corresponding portion of the preceding period. Read the actual bounds rather than treating the menu label as proof that every date has data.
+
+Where custom dates are supported, the comparison covers the same number of days immediately before the chosen span. Choosing dates does not create missing source history. A new connection may open on This month if it has nothing for Last month. Dates and chart step travel in the address, so check the link's filters when comparing two screens. An older quarter bookmark falls back to the section's opening choice.
+
+Supported website data pages also have [What Hakken Sees](./what-hakken-sees.md) in the top-bar eye. Its findings and conversation use the page context; a setup page is not evidence of collected figures. New checked writing uses the configured company credits, while reused writing and a follow-up Assistant answer follow separate rules. This update reviews date and eye integration only; the earlier connection and retention sections retain their original source-review scope. It does not certify every later report change or a live deployment.
+
+Custom date reports are assembled from the days and months Hakken already holds for the project. They do not ask Clarity to recreate missing old days. The page can show a preparation state while those aggregates are built, and recently built custom records can be reused for a day. Check recorded coverage, especially for a new project or a long span whose detailed source/browser history is shorter than its headline totals.

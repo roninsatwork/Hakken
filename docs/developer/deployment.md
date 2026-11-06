@@ -5,14 +5,14 @@ feature_area: build, CI, container release and deployment evidence
 audience: developers and release operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/deployment.md
-last_reviewed: '2026-10-26T10:49:59+00:00'
+last_reviewed: '2026-11-05T08:46:36+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Infrastructure And Deployment
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** build, CI, container release and deployment evidence
-> **Reviewed:** 26 October 2026, 10:49:59 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:46:36 GMT (Europe/London)
 > **Source path:** `docs/developer/deployment.md` · **Status:** Current
 
 Hakken has a GitHub-driven release path that deploys a Next.js container to Google Cloud Run and separately deploys its Convex backend. This guide describes repository configuration, not a verified live deployment or high-availability guarantee.
@@ -189,8 +189,7 @@ image builds the app itself in its builder stage — so it was about five minute
 a release spent on output that was thrown away.
 
 The Docker build command sets `NODE_OPTIONS=--max-old-space-size=4096` so
-Next's TypeScript worker has the same 4 GiB heap allowance as the normal
-`npm run typecheck`. The container's default 2 GiB heap was exhausted during the
+Next's build process has a 4 GiB heap allowance. The standalone `npm run typecheck` now uses the separately pinned TypeScript 7 alias without that command-line heap override. The container's default 2 GiB heap was exhausted during the
 2026-09-13 release. This setting applies only to the build command; the
 separate runtime stage does not inherit it, and type checking remains enabled.
 
@@ -423,3 +422,7 @@ Backend deployment happens before Docker build and frontend release. If a later 
 The runner image uses a non-root user, standalone Next output and port 3000. Its liveness probe does not request dependencies. Default health can return 200 with absent Convex configuration because that mode skips the dependency check; inspect the configured flags as well as the status. Readiness's network result is intentionally weaker than an authenticated backend smoke test. No health URL was requested here.
 
 This source review covered workflow triggers/steps, Docker stages and exclusions, package/version gates, coverage configuration, mocked versus real-auth lanes, health implementation, setup validation and the existing migration/runtime configuration references. It did not install dependencies, run application gates, inspect GitHub secrets, deploy, query a live service or perform rollback. PRODUCT.md section 33's external rename cutover remains a separate acceptance concern. The voice relay lives under `services/voice-relay` and is excluded from this frontend Docker context; this app deployment does not implicitly release that service.
+
+## November verification scope change
+
+The CI coverage step sets `HAKKEN_SKIP_ARCADE_TESTS` only on a push to dev. PRs and main deploy checks still include the Arcade code; this does not reduce the local pre-release requirements in AGENTS.md. `npm run typecheck` now runs TypeScript 7 through the `typescript-7` package alias while lint/scripts retain TypeScript 6. The smoke server uses port 3100 and `.next-e2e`, separate from the normal development app. These are inspected workflow/configuration facts, not evidence that a release or external integration passed. The November review did not run CI, a build, dependency installation or deployment.

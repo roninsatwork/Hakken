@@ -5,14 +5,14 @@ feature_area: Hakken tasks
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/hakken-tasks.md
-last_reviewed: '2026-10-26T15:16:13+00:00'
+last_reviewed: '2026-11-05T08:45:39+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Hakken Tasks
 
 > **Product:** Hakken · **Document type:** developer guide · **Feature area:** Hakken tasks
-> **Reviewed:** 26 October 2026, 15:16:13 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:45:39 GMT (Europe/London)
 > **Source path:** `docs/developer/hakken-tasks.md` · **Status:** Current
 
 
@@ -176,3 +176,15 @@ permission to inspect other users' tasks.
 ## Recovery diagnosis
 
 For a task that appears late, distinguish the next scheduled evaluation from the condition's observed truth and the notification's delivery state. Record the task's timezone and source freshness before concluding the schedule is broken. Reconfirming or recreating the task can change its confirmation identity and is not a substitute for inspecting the existing check. The normal owner endpoints and platform oversight endpoints deliberately remain separate even when they render the same table.
+
+## Chart reports: proposal, scheduled read and delivery
+
+`assistantTaskHandlers.ts` adds `assistant.tasks.proposeChartReport`. It requires the runtime company and user, validates a one-off day or weekly weekday, builds today's preview with the supported chart reader and returns a PENDING CREATE proposal. `chartDay` bounds one-off dates to today through 366 days ahead. A weekly request defaults to `lastWeek`, a one-off to `lastMonth`. The normal confirmation path remains the write boundary; tool success alone does not insert an approved task. `utils/hakkenChartReport.ts` provides the spec and titles shared with the UI.
+
+The task's report stores `look: analyticsChart`, measure/event/period, once/week, weekday and optional `sendOn`, plus optional group kind/by/source. The historic look name does not mean every group chart is Analytics. `hakkenStatReporter` dispatches these to `hakkenChartReporter.sendChartReport`; group specs use `sendGroupsChartReport` and `groupsChartOf`. Lines read saved Analytics days and the prior span. A period-wide conversion rate uses weighted converted visits over visits, rather than an average of daily percentages. A missing named counted event yields GONE; missing readable data yields NOTHING_YET. Verify the caretaker's response to those outcomes before promising user-visible removal or automatic recovery.
+
+`hakkenTaskChecks.by_task_day` records the owner's local send-day and guards the task-report charge and bell. Outbox insertion uses `TASK_CHART:<taskId>:<sentOn>` for idempotency, independent of the model conversation that created it. Lines carry `look: analyticsChart`; group emails carry `analyticsGroups` plus the resolved source, groups and optional grid rows. `taskReportEmail.ts` renders supported chart images and accompanying group words. `queueOutboxMessage` applies the normal email delivery machinery. SENT means this task path processed delivery/queueing, not remote inbox acceptance. A successful once report patches the task to PAUSED.
+
+The chart sender explicitly implements email and bell. It contains no Telegram send, even when a general task proposal inherits a linked Telegram channel. That mismatch is a source/product decision to review separately, not permission for documentation maintenance to add a delivery channel. Daily check insertion, credit hooks and Outbox idempotency should also be kept distinct from exactly-once remote delivery. A new chart family must share supported definitions rather than accepting arbitrary captured page CSV as a live recurring source.
+
+Read `hakkenStatReporter.test.ts`, `taskReportEmail.test.ts`, `utils/hakkenChartReport.test.ts` and timing/proposal tests for the intended local contracts. This pass inspected implementation without sending a report, executing a scheduled worker or invoking a provider. For retained captured-page chart limits see [Assistant Chat](./assistant-chat.md); for ordinary source reading and the eye's context see [What Hakken Sees](./what-hakken-sees-guide.md). Ownership, task deletion and generic task separation above still apply.

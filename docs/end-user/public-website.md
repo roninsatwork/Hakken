@@ -1,159 +1,68 @@
 ---
 product: Hakken
-documentation_type: User guide
-feature_area: public home page and contact entry points
-audience: sales, support and platform operators
+documentation_type: end-user guide
+feature_area: public home page and sign-in entry
+audience: visitors, support and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/public-website.md
-last_reviewed: '2026-10-26T10:52:01+00:00'
+last_reviewed: '2026-11-05T08:51:08+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Public Website
 
-> **Product:** Hakken · **Document type:** User guide · **Feature area:** public home page and contact entry points
-> **Reviewed:** 26 October 2026, 10:52:01 GMT (Europe/London)
+> **Product:** Hakken · **Document type:** end-user guide · **Feature area:** public home page and sign-in entry
+> **Reviewed:** 5 November 2026, 08:51:08 GMT (Europe/London)
 > **Source path:** `docs/end-user/public-website.md` · **Status:** Current
 
+## What the public website is
 
-## What The Public Website Is
+The public Hakken website is the page at `/`, before you enter a company workspace. It introduces Hakken and provides Sign in links. The current page uses the application's dark look, with the words on one side and an animated rain field on the other. On a narrower display the two areas stack. The earlier cream landing page, multi-section navigation and contact footer have been removed from the active page. Instructions referring to those old elements no longer describe the current visitor journey.
 
-The public website is the pre-login Hakken experience at `/`. It explains Hakken
-to someone who has not signed in yet. The current repository public surface is a
-single home page with a different visual style from the logged-in app: a warm
-cream public layout, a forest-coloured hero panel, large editorial typography,
-animated product-style visuals, and calls to talk to the team.
+The home page is public: reading it does not show customer data, private reports, conversations, company settings or platform administration. It explains the product rather than performing an analysis for an anonymous visitor. A description of what Hakken aims to do is not proof that every part is available in a particular account or that a live integration has been accepted. [PRODUCT.md](../../PRODUCT.md) remains the authority for intent and the implemented/planned distinction; the [documentation inventory](../index.md#documentation-coverage-inventory) records known discrepancies for separate decisions.
 
-This page is not the authenticated Hakken dashboard. It does not expose customer
-data, admin controls, agent configuration, workflows, reports, property records,
-or Posture Studio recordings. It is a public sales and explanation surface.
+This guide reflects static source review on 5 November 2026. No browser was opened, account was created, sign-in email was requested or live service was tested for this documentation pass. Use it to understand the current entry points, then check account-specific availability inside the application. Local implementation and a successful customer login are different kinds of evidence.
 
-The current page still presents an inherited framework message: Hakken is the production layer behind AI products. This is visible implementation copy, not a replacement for PRODUCT.md's business-asset discovery product intent. It describes the foundations that already exist in the
-platform, including workspaces, knowledge, model routing, assistants, agents,
-workflows, APIs, webhooks, widgets, evals, memory, approvals, observability, and
-cost control.
+## What the home page contains
 
-## What The Current Home Page Contains
+The page names Hakken and shows the progression Found, Visited, Converted, Won. Its introductory words describe agents doing the work of an SEO firm and examining pages, listings and feeds. Treat that paragraph as public positioning. It is not a public report of your website's performance and does not display a personal score, estimated return or account entitlement. Nothing on this home page connects a Google account or purchases a supplier observation.
 
-The implemented public site currently includes:
+There are two Sign in links: the main action below the introduction and a quieter link over the rain area. Both go to `/login`. There is no longer a public navigation drawer with a separate contact action, a row of product foundation sections, a pricing comparison, or a contact form on the home page. The copyright remains visible. If you remember an old screenshot showing those earlier sections, begin with the current link rather than trying to find a hidden mobile version of them.
 
-- the public home page at `/`
-- a public navigation bar with the Hakken wordmark, Sign in, and Talk to us
-- a mobile navigation drawer with Sign in and Talk to us
-- a hero section explaining the product category
-- a "What Hakken is" section that breaks the platform into five foundations
-- a "Who it is for" section explaining which teams benefit from Hakken
-- an inherited name-story block whose preparedness wording differs from PRODUCT.md
-- a closing call to get in touch
-- a footer with contact and sign-in links plus the configured company credit
+The page is intended to occupy a single desktop screen, but screen size, zoom and text settings can change how much scrolling is needed. On a phone, stacked content can extend below the first screen. That is not evidence of a second product flow. The decorative rain does not accept account information or change the business state. With reduced motion enabled, it becomes still rather than requiring you to interact with an animation before signing in.
 
-The home page is read before a buyer or partner has seen the logged-in app. Its current framework positioning is a product-copy discrepancy to resolve separately; documentation maintenance does not approve a revised positioning or change the public page.
+## Sign in to the correct workspace
 
-## Navigation And Calls To Action
+Choose Sign in to reach the login page. The reviewed login offers Google sign-in and email-based paths, including a sign-in link and a six-digit code. Use the identity associated with your Hakken account and company. The public page cannot tell you which private company access you have, and seeing a login option does not grant company-admin or super-admin privileges. Those permissions are determined after authentication by the account and backend policies.
 
-The current navigation is intentionally short. It includes:
+For local development, the normal application address is `http://hakken.localhost:3000`. Its distinct hostname is required by the configured development sign-in return and keeps these cookies separate from other local apps. A browser test server using its own port and hostname is a separate controlled testing setup. Support should not tell a normal user to switch to plain localhost as a general login repair. Production users should use the deployment address supplied for their actual account.
 
-- Hakken wordmark, linking back to `/`
-- Sign in, linking to `/login`
-- Talk to us, using the configured contact destination
+A protected link can carry a return destination so you reach the relevant application area after sign-in. Use the application's own links. If a destination cannot be accepted, the application sanitizes it rather than treating arbitrary return text as authority to send someone to another site. Signing in still does not bypass company ownership, plan checks or website connection prerequisites on the page you ultimately reach.
 
-Public pages that are still planned, such as Platform, Built on Hakken, Trust &
-Security, and Contact, are not part of the shipped public navigation yet. Those
-pages are tracked in the active Public Website Plan and should not be described
-to customers as available until the routes are implemented.
+## Use an email link or code
 
-The Talk to us links use deployment configuration. If a deployment sets
-`NEXT_PUBLIC_CONTACT_URL`, the link opens that external destination in a new
-tab. If it is not set, the link falls back to `/contact`. The `/contact` page is
-planned but not part of the current route list, so production deployments should
-set the contact URL until the in-app contact page ships.
+When choosing the email-link path, enter your address and follow the login screen's instructions. Delivery depends on the configured sign-in provider and email service. A completion message is not confirmation that a particular inbox has received the mail, nor does it disclose whether an address belongs to an existing user. This is intentional: sign-in feedback should not let a stranger enumerate accounts.
 
-## The Home Page Story
+The code path offers six digits that can be entered in separate boxes. Typing moves between boxes; pasting a complete code can fill them together. Check that the code belongs to the current request and email address. A code is time limited and cannot be retried indefinitely. The reviewed service allows ten minutes and limits failed attempts. The interface can refuse a code without saying whether it was wrong, expired or already used, so do not interpret a general refusal as proof that the company account was removed.
 
-The hero presents Hakken as a way to "Build agent-powered products with
-governance built in." The supporting idea is that product teams should not have
-to rebuild the difficult platform layer before building the customer-specific
-experience.
+If a fresh request is needed, use the login controls rather than repeatedly submitting an old code. Requests are throttled, and an apparently normal acknowledgement can still occur when another message is not sent. Repeatedly requesting mail can make troubleshooting harder. Never share the code, sign-in link or session token in a support ticket; explain the visible state and approximate time instead.
 
-The visual in the hero is a drawn product-style dashboard rather than a live
-customer screenshot. It shows examples of agent activity, approval waiting
-states, daily usage, runs, and a ledger of work. The numbers are illustrative
-interface copy, not live operational data. This avoids leaking customer data and
-avoids dependence on a particular demo workspace.
+The email-link verification page and the code path are different entry mechanics for the same account system. The verification page has its own state and confirmation behaviour. Opening an email link is not the same as granting a new company permission or changing a subscription. For the complete account workflow and permission model, read [Login, Access, And Authentication](./login-access-and-authentication.md).
 
-The "What Hakken is" section explains five foundations:
+## Contact links and deployment settings
 
-- launching AI products faster
-- staying in control as AI takes action
-- improving AI from evidence rather than guessing
-- using the right model for the job
-- seeing cost, approvals, failures, and activity
+The current home page has no Talk to us action and does not read the old contact destination setting. It therefore does not offer a fallback `/contact` page. A deployment setting left from the earlier public site does not restore that removed button or create a route. If sales or support wants a contact flow, that is a product change requiring its own discussion and implementation; documentation maintenance cannot create it by promising a link.
 
-The current home-page composition no longer renders the old Properties, Reports or Posture Studio proof panels. Do not use this page as evidence that those experiences are available in this Hakken checkout. The older public website plan and dated records remain historical context; their broader route and showcase ideas are not delivered features merely because they were once described.
+Likewise, the home page is not a billing portal, demo launcher or public client directory. Company administrators manage subscriptions through the user application's Billing settings where enabled. Platform setup is separate. Do not send someone looking for an invoice to a nonexistent home-page pricing or contact section, and do not infer paid status from being able to load the public page.
 
-## Sign In
+## Related pre-sign-in pages
 
-The Sign in link sends users to `/login`. The login page uses the public visual
-tokens so it feels connected to the public site, but authentication behavior is
-the normal Hakken sign-in behavior. Users still need the correct account and
-workspace access before they can use the dashboard.
+Some other screens share the rain layout without being part of the marketing home page. Login, email verification and unsubscribe have their own purposes and security rules. An unsubscribe link can work without a signed-in session because its token supplies the required proof. The browser page asks for confirmation before changing the selected communication preference; merely loading that page is not the same as confirming it. A mail client's one-click unsubscribe uses a separate backend endpoint.
 
-If someone cannot sign in, use the Login, Access, And Authentication guide
-rather than treating the public site as the source of access rules.
+For email preferences and delivery, use [Emails](./emails.md). Changing a communication preference does not sign you out, delete a company, remove saved reports or cancel a subscription. A copied link can also become incomplete or unusable. Describe that state plainly to support without posting its token. The public home page cannot diagnose or repair an unsubscribe token.
 
-## Footer And Ownership Credit
+## Practical support and accessibility checks
 
-The footer explains the Hakken name and includes a company credit. The credit
-text is "Powered by Ronins." If `NEXT_PUBLIC_COMPANY_URL` is configured, the
-credit links externally. If it is not configured, the credit renders as plain
-text.
+If Sign in appears to lead back to login, record the hostname, whether you used Google, a link or a code, and the safe path you intended to reach. Do not record query parameters that contain credentials. Check that you are using the intended deployment and account before attempting another setup. Operators need to distinguish a frontend navigation problem, a failed email delivery and a backend authorization refusal; the same final screen can arise from different causes.
 
-The footer deliberately avoids hardcoded customer-specific or builder-specific
-fallback URLs. This matters because Hakken can be packaged and deployed in
-different contexts.
-
-## Routes Not Found In This Checkout
-
-The older public website plan lists the following routes, but their page files were not found in the current public route group:
-
-- `/platform`
-- `/showcase`
-- `/showcase/properties`
-- `/showcase/reports`
-- `/showcase/studio`
-- `/trust`
-- `/contact`
-
-Do not tell customers those pages are live until the routes exist. If a public
-page links to one of these planned routes before the route ships, treat that as
-implementation drift to resolve under the Public Website Plan.
-
-## Related Documentation
-
-- [Hakken Product Overview](./platform-overview.md)
-- [Login, Access, And Authentication](./login-access-and-authentication.md)
-- Property Research And Board Reports (not included in this copy)
-- Temporary Posture Studio Demo (not included in this copy)
-- [Historical public website plan](../plans/active/public-website-plan.md) — inherited design intent, not current availability
-
-## Explain The Current Copy Without Changing Product Intent
-
-PRODUCT.md identifies Hakken with discovery and the business goal of finding which digital assets make money, improving the broken stage and proving a result in leads and sales. The current public home page still carries framework-led language and a Japanese-name explanation about preparedness. That name explanation does not match PRODUCT.md. Support and sales should not repeat it as the approved Hakken definition. The discrepancy is recorded for a product decision; no public copy, acceptance criteria or roadmap was changed in this documentation review.
-
-Similarly, a public illustration of a run or approval is not proof of a connected customer workflow. The drawn dashboard in the hero uses presentation numbers, labels and bars. It does not identify a real customer, show live revenue, establish a completed provider call or grant visitor access to the app. When discussing implemented functionality, use the relevant reviewed feature guide and distinguish the inherited foundation from a complete planned Hakken product outcome.
-
-The current home-page section order is the hero, five-foundation explanation, audience section, name story and final contact call to action. The older showcase introduction and product panels are not part of that composition. A guide or sales handoff that still points to those panels is stale even if the illustration or plan once existed. Missing routes are not automatically promises of future delivery; the owner's product direction and current implementation must be reconciled separately.
-
-## Contact, Access And Practical Limits
-
-A visitor does not need to sign in to read the home page. Sign in opens the normal login route; it does not create a workspace, confer an admin role or enable every product area. Invite, company membership, billing and module permissions are handled after the public-site boundary. A support conversation that starts from the public page should use the authentication guide when the issue is account access.
-
-Talk to us and Get in touch use the same configured destination. If the deployment was built with `NEXT_PUBLIC_CONTACT_URL`, the link opens that destination in another tab with the usual external-link isolation. If no destination was configured, the code falls back to `/contact`, whose page was not found. This means a displayed button can lead to an unavailable route; seeing the button is not evidence that an enquiry was submitted or received. There is no implemented contact form in the reviewed home-page group.
-
-The footer uses product identity for its name and tagline and shows a Powered by Ronins credit. `NEXT_PUBLIC_COMPANY_URL` makes that credit an external link when present; absent configuration leaves it as text. The credit destination and contact destination serve different purposes and should not be assumed to be the same setting. Public configuration belongs to the deployment's browser build, so merely changing a runtime environment after building may not change an already shipped link.
-
-A visitor with reduced motion enabled should receive the non-animated presentation on initial mount. The motion helper checks that preference and the generic page animation returns early; it is not a guarantee that every future dynamic preference change is observed without a reload. The public mobile menu is a small action row opened by its menu button. This guide was checked against the relevant components without running a browser or proving responsive rendering on a deployed device.
-
-For an operator handoff, identify the actual website address, approved contact destination, responsible recipient and sign-in entry point. Keep the known missing-route and product-copy issues visible. Do not ask a customer to provide credentials, private analytics or payment information through an assumed contact flow that has not been verified. A separately authorized live acceptance check would establish reachability and delivery; this documentation pass did neither.
-
-Implementation evidence for this review is `src/app/(public)/page.tsx`, its layout, navigation/footer/contact components, the three retained home sections and the public motion helper. Related public widget, reception, unsubscribe, login and verification routes have their own purpose and guides. The fact that a route is unauthenticated does not make it another marketing page or a proof that the Hakken product surface has been fully delivered.
+For a display problem, note the device size, browser zoom and reduced-motion setting. Both Sign in actions should remain understandable without relying on the animation. The source includes look tests for the home and login states, but this review did not execute them or claim every browser is visually verified. Engineers should use [Public Website Developer Guide](../developer/public-website.md) for component ownership, configuration boundaries and the relevant verification sources.

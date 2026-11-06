@@ -5,15 +5,15 @@ feature_area: coverage inventory and prioritized queue
 audience: all documentation audiences
 source_repository: roninsatwork/Hakken
 source_path: docs/index.md
-last_reviewed: '2026-10-26T15:24:20+00:00'
+last_reviewed: '2026-11-05T08:52:48+00:00'
 reviewed_against: current implementation
-status: Current
+status: Needs review
 ---
 # Hakken Documentation
 
 > **Product:** Hakken · **Document type:** documentation index · **Feature area:** coverage inventory and prioritized queue
-> **Reviewed:** 26 October 2026, 15:24:20 GMT (Europe/London)
-> **Source path:** `docs/index.md` · **Status:** Current
+> **Reviewed:** 5 November 2026, 08:52:48 GMT (Europe/London)
+> **Source path:** `docs/index.md` · **Status:** Needs review
 
 
 
@@ -287,33 +287,44 @@ Before changing movement-side behaviour, read **Movement Mirror And Side-Ownersh
 ## Documentation Coverage Inventory
 
 Repository root resolved by Git: `/Users/ants/Projects/Kakken`. Branch: `dev`.
-Origin: `https://github.com/roninsatwork/Hakken.git`. Baseline local HEAD:
-`d3c105f8ad0fe75660d8b32a372d65be35cd77b1`. No fetch or pull. Initial discovery began at
-2026-10-26T08:43:26+00:00; each row and guide records its actual subsequent review.
-Final inventory reconciliation: **2026-10-26T15:20:24+00:00**, Europe/London.
+Origin: `https://github.com/roninsatwork/Hakken.git`. Current reviewed HEAD:
+`5e5ebd80`; prior run's committed documentation/source checkpoint is `4519f557`
+(the prior memory also records its earlier `d3c105f8` base). No fetch or pull.
+Current review checkpoint: **2026-11-05T08:52:48+00:00**, Europe/London.
 
-This first run began with **41 queued work units** and expanded to **89** through
-implementation-led discovery and subdivision. All **89/89 known units have received
-the scoped source/documentation review recorded below (100%)**. No identified missing,
-stale or thin guide remains in the executable documentation queue after validation.
-This means completion of this discovered inventory, not a proof that every behavior
-of every source file is exhaustively audited or that no undiscovered capability exists.
-Current source and future changes can reveal additional work.
+The table below is the **historical 26 October baseline of 89 scoped units**.
+Its per-row timestamps remain unchanged unless a row has actually been re-reviewed;
+read the November overlay and queue for current changed-area completeness. Earlier
+100% completion applied only to the then-discovered inventory. It is not a claim
+that every current screen, backend function or integration has been audited.
 
-Discovery enumerated **419 page files, five Next route handlers, 2099 recognized
-registered exports across 430 top-level Convex modules, 300 table declarations and
-84 directly referenced environment names**. Route families, navigation, backend families,
-roles/tenancy, jobs, integrations, storage, scripts and relevant test sources were compared
-with the capability rows. These are static-pattern/file counts, not feature or live-acceptance
-counts. Detailed behavior depth is stated per row. Concurrent uncommitted Insights source
-changes were reinspected and documented under Q89; the baseline commit alone does not
-identify that working-tree implementation.
+The November structural scan found **421 page files and five Next route handlers**,
+and 896 committed changed paths after `4519f557` (398 under src, 283 under convex,
+195 under docs, plus other configuration/scripts). Counts include tests and dated
+records and are not feature counts. The earlier 419-page/2099-export/300-table
+reference counts are historical and have not been regenerated in full this run.
+Navigation, route additions, screen parts, collectors, schemas, task/email/credit
+paths and relevant test sources were inspected selectively. No application or
+provider operation was executed.
 
-Documentation discovery classes are **39 new, 45 changed,
-3 existing and 2 possibly removed**.
-These describe documentation discovery, not newly delivered or deleted products.
-Implemented foundations, product intent and dated plans remain distinct. A missing file
-is never a link target; internal-only areas have no artificial customer guide.
+Current discovery has **16 change-review units: three newly documented subcapabilities
+and thirteen changed areas; no newly suspected removal**. Eleven have completed scoped
+source/guide work; five remain queued. These units overlap baseline capabilities,
+so adding 16 to 89 would double-count features. **Known changed-area documentation
+coverage: 11/16, about 69%; current-run completed-slice validation: 11/11, 100%**.
+The exhaustive platform denominator remains unknown; unchanged baseline areas retain
+26 October review dates rather than receiving an invented current timestamp.
+
+Auth/tenant builders, billing modules, crons, generic notifications/tasks, upload,
+workflow and generic connector/MCP families have no committed path changes after the
+checkpoint. Selected ownership/wrapper/cron paths were reread; unchanged path evidence
+is not a fresh audit of every handler. The initial three modified source/config files
+and untracked plan/assets were preserved. No eligible guide conflicted with an initial
+edit. Research, PRODUCT.md, plans and dated verification records remain untouched.
+
+The baseline discovery classes were 39 new, 45 changed, three existing and two possibly
+removed. Those historical classifications are not new feature delivery/removal counts.
+Internal-only work retains developer/operator coverage rather than artificial user guides.
 
 | ID | Capability and implementation status | Classification | Evidence paths and symbols (repository relative; a shared directory prefix may be omitted after semicolons) | Audience guide coverage | Reviewed work, limits and remaining decision |
 | --- | --- | --- | --- | --- | --- |
@@ -353,8 +364,8 @@ is never a link target; internal-only areas have no artificial customer guide.
 | 34 | **Public API and webhook surfaces** — Tenant keys, run admission, direct workflow webhook and unconnected outbound delivery engine. Implemented; reviewed. | changed | `convex/publicApi.ts; apiKeys.ts:authenticatePublicRequest; workflows.ts:handleWebhook; webhookDeliveryActions.ts; http.ts` | [User](./end-user/public-api-and-webhooks.md) / [Developer](./developer/public-api-and-webhooks.md) | Review priority P0; complete. Q34. Pair refreshed: body caps, auth-before-business logging, no trigger dedupe, agent-only status, removed outbound monitor and residual Apify route distinguished. Other supplier routes owned by their feature guides. Reviewed 2026-10-26T10:39:47+00:00. |
 | 35 | **Screen kit, hooks and theme** — Shared UI contracts, drawing and outline checks. Implemented; reviewed. | changed | `src/ui/components/screens/; src/hooks/useServerPagedTable.ts,useAdminAction.ts; scripts/drawing-kit.mjs; src/test/lookOutline.ts` | N/A / [Screen kit](./developer/screen-kit.md); [Drawing guide](./developer/drawing-guide.md) | Review priority P2; complete. Q35. Core contracts and remaining documented chart/schema/rule/drawing/look-test sections reviewed. Not an every-consuming-screen visual audit. Reviewed 2026-10-26T10:48:18+00:00. |
 | 36 | **Build, deployment and dependency verification** — Workflow triggers, gates, images and health. Implemented; reviewed. | changed | `.github/workflows/ci.yml,deploy.yml,security-audit.yml; Dockerfile; scripts/validate-setup.mjs; src/app/api/health/route.ts` | N/A / [Developer](./developer/deployment.md) | Review priority P2; complete. Q36. Guide refreshed: Socket dev-push scan, real-auth/mock flags, network-only readiness, CI reuse, backend-before-image failure and retired Gmail. No live release or audit. Reviewed 2026-10-26T10:49:59+00:00. |
-| 37 | **Public website** — One-screen home page in the app's dark look, with the rain symbol. Rebuilt 2026-10-29. | changed | `src/app/(public)/page.tsx; _components/home/HomeScreen.tsx,RainField.tsx; home.css` | [User](./end-user/public-website.md) / [Developer](./developer/public-website.md) | Review priority P1; complete. Q37. Pair refreshed. Removed panels, absent routes and public preparedness/framework copy versus PRODUCT.md discovery intent recorded. Auxiliary experiences remain Q40–Q41. Reviewed 2026-10-26T10:52:01+00:00. |
-| 38 | **Credits, pricing and Usage** — Batch accounting, statement, forecasts and internal price audit. Implemented; reviewed. | new | `convex/creditLedger.ts; creditUsage.ts; creditPricesAdmin.ts; creditKinds.ts; creditHooks.ts; src/app/(dashboard)/app/usage/` | [User](./end-user/credits-and-usage.md) / [Developer](./developer/credit-ledger-and-usage.md) | Review priority P1; complete. Q38. New pair complete. Negative balance records owed without refusal; topup purchase not found; zero saved price still minimum-one positive charge; no live charging proof. Reviewed 2026-10-26T10:55:35+00:00. |
+| 37 | **Public website** — One-screen home page in the app's dark look, with the rain symbol. Rebuilt 2026-10-29. | changed | `src/app/(public)/page.tsx; _components/home/HomeScreen.tsx; src/ui/components/public/RainField.tsx; rain.css` | [User](./end-user/public-website.md) / [Developer](./developer/public-website.md) | Review priority P1; complete. Q37. Original review 2026-10-26T10:52:01+00:00; superseded public composition rechecked in M11 on 5 November. Pair now describes the dark single-screen home with no contact fallback. Auxiliary experiences remain Q40–Q41 historical reviews. |
+| 38 | **Credits, pricing and Usage** — Batch accounting, statement, forecasts and internal price audit. Implemented; reviewed. | new | `convex/creditLedger.ts; creditUsage.ts; creditPricesAdmin.ts; creditKinds.ts; creditHooks.ts; src/app/(dashboard)/app/usage/` | [User](./end-user/credits-and-usage.md) / [Developer](./developer/credit-ledger-and-usage.md) | Review priority P1; complete. Q38. New pair complete. General ledger records owed; the newer eye preflight refusal and margin suggestions are covered in M10; topup purchase not found; zero saved price still minimum-one positive charge; no live charging proof. Reviewed 2026-10-26T10:55:35+00:00. |
 | 39 | **Organic keyword and page reports** — Held rankings, movement/position bands, pages and record evidence. Implemented; reviewed. | new | `convex/siteKeywords.ts:listKeywords,listPages; siteRecords.ts:keywordRecord,pageRecord; siteBands.ts; siteKeywordCopy.ts` | [User](./end-user/organic-keywords-and-pages.md) / [Developer](./developer/organic-keywords-and-pages.md) | Review priority P1; complete. Q39. New pair complete. Older versus lost, held-list totals, comparison conventions, private citation filtering and bounded detail/filing reviewed. Other Visibility capabilities remain Q58–Q70. Reviewed 2026-10-26T11:00:56+00:00. |
 | 40 | **Ronin’s Run arcade and sandbox** — Implemented; scoped review complete. | new | `src/app/(dashboard)/app/arcade/ronins-run/; ronins-run-3d/; agentic-testing/; convex/arcade.ts; orchestrator.ts` | [User](./end-user/auxiliary-app-experiences.md) / [Developer](./developer/auxiliary-app-experiences.md) | Review priority P1; complete. Q40. Existing pair refreshed; persisted workspace campaign versus local 3D results, receipt/idempotency bounds, loaded-row search and real sandbox effects documented. Reviewed 2026-10-26T14:44:07+00:00. |
 | 41 | **Removed-copy vertical references** — Possibly deprecated / not found in current implementation. | possibly removed | `src/app route inventory; SidebarNavTrees.tsx; convex filenames; utils/companyModules.ts; utils/coreModules.ts; schema.ts:swarmLogs` | [User](./end-user/auxiliary-app-experiences.md) / [Developer](./developer/auxiliary-app-experiences.md) | Review priority P2; complete. Q41. Checked current page routes, optional-module registry, backend filenames, navigation and retained schema/purge/allowlist references for Sales, Properties, movement/Posture and Swarm. No current routed capability found; residual identifiers remain. Manual review required before deleting records or guides. Reviewed 2026-10-26T15:20:24+00:00. |
@@ -409,30 +420,45 @@ is never a link target; internal-only areas have no artificial customer guide.
 
 ### Prioritized Documentation Queue
 
-**No currently identified documentation-writing item remains pending.** The run
-processed the expanded queue sequentially and revisited shared guides as deeper
-implementation contracts were found. The final pass also reconciled stale overview,
-reference, setup, diagnostics and operator procedures, rather than treating an
-existing file as automatically complete.
+The initial current-run queue was **16 located change-review units**; it is now **five pending**.
+Completed work is **ten scoped user/developer pair operations** (one new user guide paired
+with the extended existing eye developer guide, nine refreshed pairs) plus one internal
+reference unit. These are scoped guide updates, not ten newly delivered product features.
+Both audience indexes link the new durable eye coverage. Closely related date work reuses
+existing guides. Partial discovery is explicit: M13/M14/M16 are umbrellas requiring further
+subdivision, not claims that unseen subfeatures were reviewed.
 
-Coverage comprises **67 distinct end-user feature guide bundles paired with developer
-coverage: 34 newly created and 33 refreshed**. Count each primary end-user feature
-once, even when several developer guides support it or multiple inventory rows deepen
-it. The widget handoff is an additional supporting user guide. Fourteen internal-only
-work units use developer/operator coverage; retirement/not-found reviews are recorded
-separately and do not count as newly written feature pairs. All attempted scoped guide
-work is complete; no attempted pair was left as an outline.
+| ID | Capability / implemented status | Discovery | Current implementation evidence | Coverage | Priority, completeness and remaining work |
+| --- | --- | --- | --- | --- | --- |
+| M01 | **Screen eye and page conversations** — implemented modules located; scoped review complete | new | `convex/seesAsk.ts:askSees/refreshSees; seesAskActions.ts:writeBubble; src/ui/components/screens/HakkenSeesEye.tsx` | [User](./end-user/what-hakken-sees.md) / [Developer](./developer/what-hakken-sees-guide.md) | Complete scoped pair: supplied figures, findings, checks, reuse, failure, credits, chat and Live snapshot. Reviewed 2026-11-05T08:52:48+00:00. |
+| M02 | **Assistant multi-source and captured-page charts** — implemented modules located; scoped review complete | new | `convex/assistantChartHandlers.ts; assistantGroupChartReads.ts; assistantPageChartHandlers.ts; utils/assistantPageCharts.ts` | [User](./end-user/assistant-chat.md) / [Developer](./developer/assistant-chat.md) | Complete scoped pair: supported sources/kinds, company guard, captured-data limits and marker rendering. Reviewed 2026-11-05T08:52:48+00:00. |
+| M03 | **Once/weekly chart delivery** — implemented modules located; scoped review complete | new | `convex/assistantTaskHandlers.ts:proposeChartReport; hakkenChartReporter.ts; taskReportEmail.ts` | [User](./end-user/hakken-tasks.md) / [Developer](./developer/hakken-tasks.md) | Complete scoped pair: confirmation, saved reads, local send-day idempotency, Outbox and no Telegram sender. Reviewed 2026-11-05T08:52:48+00:00. |
+| M04 | **Analytics rebuilt screens, units and run budget** — implemented modules located; scoped review complete | changed | `src/app/(dashboard)/app/analytics/; convex/googleAnalyticsConversionsMap.ts; googleAnalyticsPageBoxes.ts; googleAnalyticsShopSteps.ts; googleAnalyticsBudget.ts` | [User](./end-user/google-analytics.md) / [Developer](./developer/google-analytics.md) | Complete scoped pair: Visits redirect, Products, All pages, page boxes, conversions, custom lists and 22-hour budget. No exhaustive numeric audit of every query. Reviewed 2026-11-05T08:52:48+00:00. |
+| M05 | **Search Console date and eye integration** — implemented modules located; scoped review complete | changed | `convex/searchConsoleLists.ts:readListPage; utils/calendarPeriods.ts; src/app/(dashboard)/app/sites/_components/siteRange.ts` | [User](./end-user/search-console.md) / [Developer](./developer/search-console.md) | Complete date/eye slice; other changed read semantics remain M13. Reviewed 2026-11-05T08:52:48+00:00. |
+| M06 | **Bing custom periods and comparisons** — implemented modules located; scoped review complete | changed | `convex/bingWebmasterCollect.ts:prepareBingCustom; bingWebmasterReads.ts:daysBefore` | [User](./end-user/bing-webmaster.md) / [Developer](./developer/bing-webmaster.md) | Complete date/eye slice: saved whole-week list build, daily span, preparation and prior coverage; other reads M13. Reviewed 2026-11-05T08:52:48+00:00. |
+| M07 | **Clarity custom aggregation and eye** — implemented modules located; scoped review complete | changed | `convex/clarity.ts:prepareCustomSpan/tidyFigures; clarityScreens.ts` | [User](./end-user/microsoft-clarity.md) / [Developer](./developer/microsoft-clarity.md) | Complete date/eye slice: local scheduled aggregation, 24-hour reuse and retained coverage; other projections M13. Reviewed 2026-11-05T08:52:48+00:00. |
+| M08 | **Visibility rolling/custom date integration** — implemented modules located; scoped review complete | changed | `src/app/(dashboard)/app/sites/_components/SiteDateRange.tsx; siteRange.ts; convex/siteCharts.ts` | [User](./end-user/websites-and-visibility.md) / [Developer](./developer/websites-and-visibility.md) | Complete common date/eye slice: opt-in custom controls, saved checks versus estimates, latest versus dated; report subareas M14. Reviewed 2026-11-05T08:52:48+00:00. |
+| M09 | **Local compiler, CI and collection references** — implemented modules located; scoped review complete | changed | `package.json:typecheck; .github/workflows/ci.yml; vitest.config.ts; playwright.config.ts; convex/googleAnalyticsBudget.ts` | Internal: [Scripts](./developer/operational-scripts-reference.md), [Setup](./developer/getting-started.md), [Deployment](./developer/deployment.md), [Collection](./operator/collection-operations.md) | Complete scoped reference refresh; TypeScript 7/6 split, dev-only Arcade omission, separate smoke output and collection-budget wording. No user pair applicable. Reviewed 2026-11-05T08:52:48+00:00. |
+| M10 | **Eye balance refusal and price-margin suggestions** — implemented modules located; scoped review complete | changed | `convex/creditKinds.ts; creditHooks.ts; creditPricesAdmin.ts:creditPriceReport/saveCreditPrices; utils/creditMargin.ts` | [User](./end-user/credits-and-usage.md) / [Developer](./developer/credit-ledger-and-usage.md) | Complete scoped pair: defaults 8 eye/2 Assistant, configured prices, feature refusal versus general owed ledger, prior-month cost fallback and margin save. Reviewed 2026-11-05T08:52:48+00:00. |
+| M11 | **Public landing page and before-sign-in frame** — implemented modules located; scoped review complete | changed | `src/app/(public)/_components/home/HomeScreen.tsx; src/ui/components/public/RainSplit.tsx; src/app/login/page.tsx; src/app/unsubscribe/page.tsx` | [User](./end-user/public-website.md) / [Developer](./developer/public-website.md) | Complete scoped pair: removed old contact/navigation claims; dark single-page home, sign-in links, code states, shared frame, no live authentication claim. Reviewed 2026-11-05T08:52:48+00:00. |
+| M12 | **Insights tools and sections-only boundary** — implemented modules located; detailed review incomplete | changed | `convex/insightsToolAsk.ts; insightsTools.ts; insightsAsk.ts; agentReads.ts; insightsRunAfter.ts` | [User](./end-user/insights-findings.md) / [Developer](./developer/insights-findings.md) | P1 pending. Diff discovery only: compare current tools, derived/saved reads and residual provider paths with AGENTS sections-only intent; audit report/history changes against Q89. Existing guides not revalidated here. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
+| M13 | **Changed connected-section report projections** — implemented modules located; detailed review incomplete | changed | `convex/searchConsoleChanges.ts; searchConsoleDemand.ts; searchConsoleVolatility.ts; bingWebmasterReads.ts; clarityScreens.ts` | Reuse M05–M07 pairs; their date slices are complete, report internals are not | P1 pending. Review Search Console changes/demand/volatility and list source naming; Bing prior/list completeness; Clarity record/page projection and bounds. Split additional coherent subunits on detailed inspection. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
+| M14 | **Changed Visibility report projections** — implemented modules located; detailed review incomplete | changed | `convex/siteOverview.ts; siteCompetitors.ts; siteLinks.ts; siteLinkLists.ts; siteReviews.ts; siteBrandRadar.ts; siteCrawl.ts; siteWebMentions.ts; siteAi.ts` | [Visibility](./end-user/websites-and-visibility.md), [Developer](./developer/websites-and-visibility.md); reuse baseline Q39/Q58–Q70 specialist pairs | P1 pending. Review overview, organic/tracked search, backlink lists, reviews, Radar/AI, competitors, audit and mentions separately against specialist guides. Evidence paths located, complete behaviour review not claimed. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
+| M15 | **Agent reads, objective work and tool synchronization** — implemented modules located; detailed review incomplete | changed | `convex/agentReads.ts; agentObjectiveLoopService.ts; agentRunStepWriter.ts; utils/agentTools.ts; builtInToolSync.ts; decisionRegistry.ts` | [Agents](./end-user/agents.md) / [Developer](./developer/agents.md); [Tools](./developer/ai-tools-and-connectors.md) | P2 pending. Inspect role/read scope, tool-call limits and model/Decision use beyond reviewed eye/chart paths; refresh agent operations/AI guides as evidence requires. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
+| M16 | **Route/API/schema references and shared chart kit** — implemented modules located; detailed review incomplete | changed | `src/app page.tsx inventory; convex/schema.ts; convex/_generated/api.d.ts; src/ui/components/screens/ChartCard.tsx; scripts/drawing-kit/parts.tsx` | [Routes](./developer/route-reference.md), [API/schema](./developer/convex-api-and-schema-reference.md), [Screen kit](./developer/screen-kit.md) | P2 pending. Regenerate scoped references from static source; review chart registration, hover/layout and look-test contracts; verify source paths before changing any declared counts. No artificial end-user pair. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
 
-Overall discovered-inventory review: **89/89, 100%**. This continuation inherited
-19 pending units, expanded its work through discovery, and completed **37/37, 100%**.
-Whole-platform exhaustive behavior coverage has an unknown denominator, so no overall
-percentage is claimed beyond the explicitly discovered inventory.
+Resume in order: **M12 → M13 → M14 → M15 → M16**. The next feature is the
+Insights tool/read boundary, starting with `insightsToolAsk.ts` and the source-read
+handlers. The dated sections-only audit and plan are context, not approval to change
+implementation. Preserve PRODUCT.md, research and plans. No guides were automatically
+deleted and no additional capability was classified as removed in this run.
 
-Next maintenance action: compare current source/history with this review checkpoint,
-starting with any further changes to the shared Insights chain and report workers, then
-add newly discovered or changed capabilities here before editing their established guides.
-There is no next uncompleted feature in the current documentation queue. Product/security/
-operational decisions below remain outside documentation-only authority.
+**Documentation status: UPDATED; STOPPED_DUE_TO_EXECUTION_OR_CONTEXT_LIMIT.**
+The remaining source review spans several large report and agent families and needs a
+fresh focused context. The present context was used for cross-source discovery, ten
+substantive paired updates, reference corrections and validation; remaining capacity is
+reserved for the final safety/link checks and durable handoff. This is not an eight-item
+batch cutoff. Existing library coverage remains incomplete for current changes.
 
 ### Discrepancies and Limits Requiring Review
 
@@ -476,8 +502,8 @@ operational decisions below remain outside documentation-only authority.
 
 - Screen-kit core review found a 720px mobile table minimum despite broad no-sideways-scrolling instructions. Theme checking contacts a development backend and can exit successfully without comparing when skipped/unavailable. These implementation/policy differences are documented without changing the UI or theme record.
 
-- Public home-page source still describes preparedness and framework positioning, contradicting PRODUCT.md's discovery product intent. Old showcase modules are absent and contact falls back to a missing route. Documentation reports these facts; source and product intent were not changed.
-- Credit recording currently permits owed balances without refusal. Topup purchase creation was not found, while the model/read path can represent topups. The price editor accepts zero but positive-unit arithmetic charges at least one credit. Commercial policy and any source changes require separate authorization.
+- Superseded public-site finding: the 29 October rebuild removed the framework/preparedness showcase and the contact fallback. M11 now documents the dark single-screen home and Sign in links. Its marketing copy still does not certify every planned capability or live integration.
+- The general credit ledger permits owed balances; the eye now has a feature-specific balance refusal before new writing (M10). Topup purchase creation was not found, while the model/read path can represent topups. The price editor accepts zero but positive-unit arithmetic charges at least one credit. Commercial policy and any source changes require separate authorization.
 
 - Organic report Download all sends kind/site/sort, not screen search/filter state; its CSV can therefore contain more than the displayed filtered subset and is bounded with a completion flag. Tracking source review confirmed private list scope, bounded first checks and shared purchase reuse without exposing other companies' list choices.
 
@@ -486,7 +512,71 @@ operational decisions below remain outside documentation-only authority.
 
 - Concurrent Insights reliability changes introduce saved recovery stages and publication guards; no application tests or deployment were performed by this documentation task. Preserve other workers’ source changes and use their separate verification before release.
 
-### Run Checkpoint And Validation
+### Current Run Validation
+
+**Documentation status: UPDATED.** Twenty-eight allowed Markdown files changed: one
+new end-user guide and 27 existing files refreshed, including three indexes. Ten
+scoped user/developer pairs completed from ten attempted; one internal reference
+unit completed. Eleven of sixteen identified change-review units are complete
+(about 69%); five remain prioritized above. The true complete-library denominator
+is unknown. No additional possibly removed feature was identified; the two older
+not-found reviews remain historical and do not authorize deleting guides.
+
+Checks passed for changed files: `git diff --check`; `wc -w` and at least 1,200
+body words for all 24 material user/developer guides; YAML parsed with Ruby's
+standard YAML library; required frontmatter identity/status/ISO-offset fields;
+metadata immediately after H1; relative paths/anchors; and contextual unfinished-text
+search. No empty Markdown file was found anywhere under docs. The only keyword match
+was historical validation wording, not unfinished guide content. The queue-heading
+anchor found during validation was corrected before the final pass.
+
+The initial modified `next-env.d.ts`, `src/test-time-limits-drift.test.ts` and
+`vitest.config.ts`, plus all initially untracked plan/assets, retain their starting
+SHA-256 fingerprints. No conflicting documentation file required skipping. The final
+status contains only those original paths and this run's allowed Markdown changes.
+No dedicated docs-only package check exists. Dependency install, application tests,
+coverage, browser/capture tests, builds, live APIs, fills and deployments were not run;
+no commit, push, PR, schedule change or external message occurred. These static source
+checks do not establish local application correctness or deployed/live acceptance.
+PRODUCT.md section 33's external cutover remains unverified.
+
+STOPPED_DUE_TO_EXECUTION_OR_CONTEXT_LIMIT: remaining review would require fresh detailed
+source passes through the five queued report/agent/reference areas after the broad
+discovery and ten pair updates used this context. The exact restart is M12, Insights
+read tools and the sections-only boundary. There is no application blocker and no new
+approval is needed for the authorized documentation work. Edits remain uncommitted.
+
+Current non-index word counts (`wc -w`, including metadata; indexes have no minimum):
+
+| Changed guide or runbook | Words |
+| --- | ---: |
+| [docs/developer/assistant-chat.md](./developer/assistant-chat.md) | 4462 |
+| [docs/developer/bing-webmaster.md](./developer/bing-webmaster.md) | 1562 |
+| [docs/developer/collection-operations.md](./developer/collection-operations.md) | 1401 |
+| [docs/developer/credit-ledger-and-usage.md](./developer/credit-ledger-and-usage.md) | 1976 |
+| [docs/developer/deployment.md](./developer/deployment.md) | 4336 |
+| [docs/developer/getting-started.md](./developer/getting-started.md) | 1500 |
+| [docs/developer/google-analytics.md](./developer/google-analytics.md) | 2286 |
+| [docs/developer/hakken-tasks.md](./developer/hakken-tasks.md) | 1683 |
+| [docs/developer/microsoft-clarity.md](./developer/microsoft-clarity.md) | 1492 |
+| [docs/developer/operational-scripts-reference.md](./developer/operational-scripts-reference.md) | 1936 |
+| [docs/developer/public-website.md](./developer/public-website.md) | 1307 |
+| [docs/developer/search-console.md](./developer/search-console.md) | 1574 |
+| [docs/developer/websites-and-visibility.md](./developer/websites-and-visibility.md) | 1548 |
+| [docs/developer/what-hakken-sees-guide.md](./developer/what-hakken-sees-guide.md) | 2789 |
+| [docs/end-user/assistant-chat.md](./end-user/assistant-chat.md) | 3527 |
+| [docs/end-user/bing-webmaster.md](./end-user/bing-webmaster.md) | 1802 |
+| [docs/end-user/credits-and-usage.md](./end-user/credits-and-usage.md) | 1920 |
+| [docs/end-user/google-analytics.md](./end-user/google-analytics.md) | 2318 |
+| [docs/end-user/hakken-tasks.md](./end-user/hakken-tasks.md) | 1788 |
+| [docs/end-user/microsoft-clarity.md](./end-user/microsoft-clarity.md) | 1744 |
+| [docs/end-user/public-website.md](./end-user/public-website.md) | 1453 |
+| [docs/end-user/search-console.md](./end-user/search-console.md) | 1891 |
+| [docs/end-user/websites-and-visibility.md](./end-user/websites-and-visibility.md) | 1796 |
+| [docs/end-user/what-hakken-sees.md](./end-user/what-hakken-sees.md) | 1486 |
+| [docs/operator/collection-operations.md](./operator/collection-operations.md) | 766 |
+
+### Historical 26 October Run Checkpoint And Validation
 
 Final validation passed at **2026-10-26T15:24:20+00:00** (Europe/London): 183 allowed Markdown paths, 181 parsed frontmatter blocks plus two narrowly edited existing operator guides, 167 substantive user/developer guides, valid relative links/anchors, no empty Markdown and clean diff whitespace. The three original protected files retain their starting hashes. Fifty other working-tree paths are concurrent/pre-existing work and were not edited by this task.
 
@@ -513,7 +603,7 @@ and `manage-agents-secondary-tabs-plan.md` are historical/planned developer reco
 current instructions or newly implemented features. Earlier execution checkpoints are
 retained in automation memory rather than competing with this current queue.
 
-### Changed Guide Word Counts
+### Historical 26 October Changed Guide Word Counts
 
 Counts are actual `wc -w` results including YAML/visible metadata. Indexes are excluded
 from this table because they are navigation/coverage records rather than feature guides.

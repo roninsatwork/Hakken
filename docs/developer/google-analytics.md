@@ -5,19 +5,19 @@ feature_area: Google Analytics
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/google-analytics.md
-last_reviewed: '2026-10-26T08:30:17+00:00'
+last_reviewed: '2026-11-05T08:42:20+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Google Analytics
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Google Analytics
-> **Reviewed:** 26 October 2026, 08:30:17 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:42:20 GMT (Europe/London)
 > **Source path:** `docs/developer/google-analytics.md` · **Status:** Current
 
 ## Scope and evidence boundary
 
-Google Analytics has a routed frontend, private company connections, report collection, retained data, derived reads and tracking checks. This guide documents the implementation at commit `d3c105f8ad0fe75660d8b32a372d65be35cd77b1`. It is not a deployment acceptance record. No Google request, collection run, application session or test suite was executed for this documentation review. Two pre-existing changes in Analytics read tests were preserved; this guide does not validate those edits.
+Google Analytics has a routed frontend, private company connections, report collection, retained data, derived reads and tracking checks. The original connection review was at `d3c105f8ad0fe75660d8b32a372d65be35cd77b1`; the 5 November update checks the changed screen, date, counting and collection modules at `5e5ebd80`. It is not a deployment acceptance record. No Google request, collection run, application session or test suite was executed for this documentation review. Pre-existing working-tree source/configuration changes were preserved; this guide does not validate them.
 
 [PRODUCT.md](../../PRODUCT.md) remains the authority for intent, but its Part Three statement that GA4 is unbuilt disagrees with the modules described here. The [coverage inventory](../index.md#documentation-coverage-inventory) records that discrepancy for manual reconciliation. Do not use this implementation evidence to declare the complete asset P&L, attribution strategy or other planned product work delivered.
 
@@ -25,7 +25,7 @@ Google Analytics has a routed frontend, private company connections, report coll
 
 The section root is `src/app/(dashboard)/app/analytics/page.tsx`. Website pages sit beneath `[siteId]`, where the parameter is a `companyWebsites` identifier. Shared section behavior lives in `_components/useAnalytics.ts`: `ANALYTICS_PAGES` defines the current menu, `analyticsQuery` carries shared filters, and the URL helpers preserve a detail screen's return context. `AnalyticsMenu` filters the Products item using the connection's shop flag.
 
-The route family contains Overview, Live, Channels, Campaigns, the landing-page funnel, All pages, Conversions, Products, Visitors, Tracking health and Connection. Nested routes provide individual page, event, channel and check views. Some route names are retained implementation addresses rather than literal menu labels: Landing pages uses `funnel`, for example. Read `ANALYTICS_PAGES` before documenting a menu change from a directory listing alone.
+The route family contains Overview, Live, Channels, Campaigns, Funnel, All pages, Conversions, Products, Visits, Tracking health and Connection. Nested routes provide individual page, event, channel and check views. Some route names are retained implementation addresses rather than literal menu labels: Funnel uses `funnel`; `visitors` forwards to `visits`, preserving the query string. Read `ANALYTICS_PAGES` before documenting a menu change from a directory listing alone.
 
 Historical screens use Convex queries and shared list/chart components. `AnalyticsGate` in `AnalyticsNotices.tsx` handles connection prerequisites; the Connection screen handles connecting, property selection, event choices and connected details. Writes use `useAdminAction` and confirmation components. No special connection secret belongs in a browser argument or a URL. The [end-user guide](../end-user/google-analytics.md) explains the workflow without exposing these module boundaries.
 
@@ -65,7 +65,7 @@ Connecting and changing choices insert audit rows with action types such as `GOO
 
 `googleAnalyticsSession.ts` centralizes token access, report requests and recoverable transport behavior. `ask` passes paginated results and quota observations through the API layer, preserving report progress after a partial failure. `googleAnalyticsApi.ts` requests `returnPropertyQuota`. `googleAnalyticsQuota.noteQuota` persists the last allowance and `quotaSeenOf` supplies it to later sessions. `googleAnalyticsBudget.quotaStillSeen` retains hourly observations for ten minutes and daily observations until Google's Pacific calendar day changes.
 
-The budget keeps 2,800 project-hour tokens, 8,000 property-hour tokens, 40,000 daily tokens and 24 threshold-sensitive hourly requests in reserve. These are implementation thresholds, not a promise that external quotas will never change. At the reserve or an hourly refusal, collection waits instead of issuing repeated requests. `afterTheHour` schedules continuation an hour and two minutes later. Website collection and follow-on fills share a 4.5-hour nightly window; unfinished work can wait for the next night. Busy-service waits and one token refresh are separate from quota exhaustion. Never use a manual repeated run to bypass the quota boundary.
+The budget keeps 2,800 project-hour tokens, 8,000 property-hour tokens, 40,000 daily tokens and 24 threshold-sensitive hourly requests in reserve. These are implementation thresholds, not a promise that external quotas will never change. At the reserve or an hourly refusal, collection waits instead of issuing repeated requests. `afterTheHour` schedules continuation an hour and two minutes later. Website collection and follow-on fills share a 22-hour run window (`RUN_DAY_MS`); unfinished work can wait for a later run after that boundary. Busy-service waits and one token refresh are separate from quota exhaustion. Never use a manual repeated run to bypass the quota boundary.
 
 ## Storage, queries and cleanup
 
@@ -86,3 +86,21 @@ The budget keeps 2,800 project-hour tokens, 8,000 property-hour tokens, 40,000 d
 `googleAnalyticsHealth.ts` derives checks from collected data, stores results on the connection and notifies super administrators when a check starts failing. Tracking-health screens only read those saved results. A passing checklist is evidence about implemented checks on retained data, not comprehensive measurement certification or automatic repair.
 
 Relevant verification sources include `googleAnalyticsConnect.test.ts` for permissions, shared sign-in, event/address choices and disconnect cleanup; `googleAnalyticsFills.test.ts` for continuation and old-history work; `googleAnalyticsHealth.test.ts` for check behavior; and the overview, page-series, product, conversion, load and look tests in the same feature family. These tests were inspected selectively, not executed in this run. Any future code change still needs the repository's normal gates, suitable fixed clocks and quota-safe mocks; documentation review authorizes none of the live collection operations.
+
+## November screen, counting and custom-date implementation
+
+The section now shares seven named periods from `utils/calendarPeriods.ts`: the four week/month choices and rolling `last3Months`, `last6Months`, `last12Months`. `periodSpan` anchors rolling spans to the newest held source day. `spanBefore` uses the previous block of months; `customSpans` uses the same number of immediately preceding days. Chart defaults are day for week/month, week for three/six months and month for twelve. `useCalendarPeriod.ts` holds the opening-period context and URL parsing; obsolete quarter bookmarks fall back to the opening selection. `useAnalytics.ts` preserves `period`, `from`, `to`, country, device and step across routes.
+
+`googleAnalyticsLive.prepareAnalyticsCustom` is an explicitly provider-reading tenant action, unlike the ordinary saved screen queries. It resolves the active company's owned connection through `customTarget`, uses a `custom_from_to` key and requests NOW/BEFORE lists through `collectPeriod`. A recently held total slot suppresses rebuilding for the custom-list lifetime. A busy/refused request returns its problem, possibly after some lists have landed; this is not an atomic all-lists success marker. Custom cleanup and the roughly one-day reuse window should not be confused with the longer retention of ordinary daily/history rows. Do not claim every historical page opening is provider-free.
+
+The daily collector and older-history fill now use `RUN_DAY_MS` of 22 hours in `googleAnalyticsBudget.ts`; allowance reserves and the hour-plus-two-minute continuation remain. `googleAnalyticsQuotaActions.readAllowance` is itself a provider-reading operator action. Inspecting its source is safe documentation work; executing it would be a live operation requiring separate task authority. Nothing in this review measures external quotas or certifies a completed collection.
+
+`googleAnalyticsConversionsMap.ts` builds map groups, cells and page drilldown from the same counted events and hold scope. `googleAnalyticsRows.ts`, list packing and schema fields distinguish event occurrences from event-performing visits. Newer rows carry those visit counts, while helpers can fall back to older event counts. Preserve that compatibility distinction when interpreting historical rates; absence of a new field is not proof a rebuild occurred. `googleAnalyticsLandingKinds.ts` and `googleAnalyticsPageKindViews.ts` provide Classification-based reporting. `googleAnalyticsOnward.ts` reads retained landingOnward rows and leaves missing data distinct from an observed no-onward result.
+
+`googleAnalyticsShopSteps.saveShopSteps` uses `adminMutation` plus `requireMySite`, requires a shop connection, de-duplicates up to eight steps, rejects a sale also named as a step, excludes automatic events and caps event-name length at 100 characters. It persists `shopSteps`/`shopSale` on the private connection and writes `GOOGLE_ANALYTICS_SHOP_STEPS_CHANGED`. The helper's recorded-event defaults are distinct from a promise that every submitted custom name was observed. This setting changes report interpretation; the documentation pass did not save it.
+
+`googleAnalyticsPageBoxes` supplies product quantities and entry-visit outcome boxes separately from `analyticsPage`. Page detail reads its story/boxes in separate parts, also exposed through `analyticsPartsOf` to Assistant tools. Product matching and item counts live in `googleAnalyticsProductReads`; Visits uses `googleAnalyticsVisitorReads`. All pages adds website totals and full-list extreme movers with `ALL_PAGES_ORDERS`, independently of its visible table page. Its map remains a bounded presentation. Consult the actual query's caps before claiming an export or top list is exhaustive.
+
+The shared eye receives query answers plus child panel parts, rather than making Google requests. Its Live comparison is calculated by `googleAnalyticsLiveUsual.ts` from retained last-month figures. The active screen contracts in `utils/sees/screenEntries/googleAnalytics.ts` prohibit money claims and specify each screen's parts; these are not substitutes for the queries. See [What Hakken Sees](./what-hakken-sees-guide.md) for run/credit/checker details.
+
+Relevant changed tests include `googleAnalyticsConversionsMap.test.ts`, `googleAnalyticsProductPage.test.ts`, `googleAnalyticsProducts.test.ts`, `googleAnalyticsReads.test.ts` and `googleAnalyticsRows.test.ts`, plus period/own-findings fixtures. They provide local test contracts, not executed results in this pass. Retention and disconnection caveats above remain; the new UI does not confer cross-company access or prove external live acceptance.

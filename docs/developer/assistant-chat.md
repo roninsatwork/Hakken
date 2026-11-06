@@ -5,14 +5,14 @@ feature_area: Ask Hakken assistant conversations
 audience: developers
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/assistant-chat.md
-last_reviewed: '2026-10-26T08:48:31+00:00'
+last_reviewed: '2026-11-05T08:45:39+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Assistant Chat Developer Guide
 
 > **Product:** Hakken · **Document type:** developer guide · **Feature area:** Ask Hakken assistant conversations
-> **Reviewed:** 26 October 2026, 08:48:31 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:45:39 GMT (Europe/London)
 > **Source path:** `docs/developer/assistant-chat.md` · **Status:** Current
 
 ## Purpose and Product Surface
@@ -63,7 +63,7 @@ Asked to be told when an AI engine stops recommending them, or when they drop ou
 
 Asked to send something regularly ("every Monday, the five pages that lost the most visitors"), the Assistant proposes a weekly report (`propose_report`, the same `assistant-tasks` connector), written out with "Yes, send it" and what this week's would hold; The Stat Report Agent sends it on its day (`convex/hakkenStatReporter.ts`). A tool a built-in connector gains after it was installed reaches the Assistant when it is next set up (`aiTools.addNewBuiltInTools`); one an administrator switched off stays off.
 
-When someone asks how a website or page did over time, the Assistant can draw a chart under its answer (`show_chart`, `convex/assistantChartHandlers.ts`, in its own `assistant-charts` connector so it reaches an Assistant already installed; hakken-tasks-plan.md, item 2.1): visitors or impressions each day, for a calendar month or the newest 7, 30 or 90 days, against as many days before, dashed and grey. The figures are Search Console's own (stored days for a website, a free live ask for a page), never the model's. The chart is kept on the reply as `messages.chart` — read with the "Looked up" line and any proposal in one pass over the run's tool calls (`assistantReplyExtras.runExtrasInternal`) — and drawn by `AnswerChart.tsx` with the Sites line chart, where the answer writes `{{chart}}`, or after its words; the mark is never shown, and is dropped from a reply with no chart.
+When someone asks for a chart, `show_chart` dispatches through `assistantChartHandlers.ts` to source-specific readers. It supports time series and supported group charts from the connected reporting sections. `show_page_chart` uses captured charts from the originating page. The result is retained on `messages.chart`, extracted through `assistantReplyExtras` and rendered by `AnswerChart.tsx`; `{{chart}}` places it within the reply. The detailed current source and limits are described below. These tool reads are not all provider-free: the existing Search Console page-detail chart path can make a live request.
 
 Each answer writes one `Answer timing {…}` line to the server log when its run ends (`convex/utils/answerTiming.ts`; the plan's speed S1): the milliseconds from the message being saved to each step it reached — the first worker, the hand-off, the run's worker, the safety check, the instructions, the search key, the documents, the wiki, Helpful content, the model asked, its first words, the answer saved. `sendMessage` passes `receivedAt`; the first worker's steps ride to the run as `timing`. Nothing is stored or shown. Read it with `npx convex logs`.
 
@@ -162,3 +162,15 @@ and is reported without changing application behavior. Relevant tests include
 calls were not run; local source review does not establish deployed provider
 acceptance, real-time voice operation or completion of the larger product
 vision.
+
+## November chart paths and captured page data
+
+`assistantChartHandlers.ts` recognizes `search_console`, `google_analytics`, `bing`, `clarity` and `visibility`. `utils/assistantGroupCharts.ts` defines bars, stacked, pie, scatter and grid shapes and the supported group/measure unions. `assistantGroupChartReads.ts` resolves company-held sources before building these payloads. Analytics chart reads distinguish event occurrences from event visits; `mainConversionAt` prefers purchase with observations, otherwise the most-used counted event, so a rate is not the sum of every event divided by visits. Visibility lines dispatch to `assistantVisibilityReads.visibilityLineInternal`, including optional rival comparison over saved checks. Do not silently use a group source's newest snapshot as a daily series.
+
+`ChartCard` CSV registration and the store's `seesCharts` supply captured charts when `SeesChat` creates a thread with `startedOn.charts`. `utils/assistantPageCharts.ts` parses those CSV columns/rows, neutralizes stored formula-prefix quoting for display and bounds payloads through `keptCharts`: twelve charts, two hundred rows and ten columns each. Strings/titles have additional length caps. The source data is client supplied context, not an independent server verification of the original provider report.
+
+`assistantPageChartHandlers.ts` obtains the snapshot through `assistantPageCharts.pageChartsOfRunInternal`. The internal query resolves the run's thread and compares `thread.companyId` with the runtime company; a model-supplied company does not establish authority. `pageChartFrom` chooses numeric/name columns, rejects unsupported column names and keeps day/line order. Non-time groups sort largest first. Output caps are twenty groups, forty map boxes or two hundred points; captured charts support bars, pie, line, stacked and map, a different union from group charts. Missing captured data returns an explicit problem and suggests the ordinary chart tool.
+
+`chartFromToolCalls` recognizes ordinary, proposed-report and page-chart handler mappings and keeps the last successful valid chart. The chat reply does not represent an unlimited gallery of every tool call. `splitAtChart` suppresses the placement marker, including a partial marker while streaming. Built-in tool definitions are reconciled by the synchronization path; an existing disabled tool should not be re-enabled merely to refresh its schema. Inspect `builtInToolSync.ts` before altering installation behaviour.
+
+Verification sources include `assistantPageChartHandlers.test.ts`, `utils/assistantPageCharts.test.ts`, `utils/assistantGroupCharts.test.ts`, `assistantChartHandlers.test.ts` and chart look tests. None was run during this documentation task. The source/default price map now charges two credits for an Assistant reply, with actual saved settings resolved by the credit service; the separate eye writing default is eight. [What Hakken Sees](./what-hakken-sees-guide.md) covers that path. Scheduled delivery remains a distinct confirmed-task workflow documented in [Hakken Tasks](./hakken-tasks.md).

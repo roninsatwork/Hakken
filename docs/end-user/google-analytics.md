@@ -5,21 +5,21 @@ feature_area: Google Analytics
 audience: company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/google-analytics.md
-last_reviewed: '2026-10-26T08:30:17+00:00'
+last_reviewed: '2026-11-05T08:42:20+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Google Analytics
 
 > **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Google Analytics
-> **Reviewed:** 26 October 2026, 08:30:17 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:42:20 GMT (Europe/London)
 > **Source path:** `docs/end-user/google-analytics.md` · **Status:** Current
 
 ## What this section does
 
 Google Analytics brings a company's own website traffic and conversion figures into Hakken. Use it to understand where visits came from, which pages people reached, what they did, and which actions your company counts as useful results. It complements Search Console: Search Console describes Google search exposure and clicks, while Analytics describes activity measured on the website. They measure different stages, so their numbers should not be expected to match exactly.
 
-This guide describes local implementation reviewed on 26 October 2026. It does not establish that a particular deployment has connected Google successfully or collected a complete history. [PRODUCT.md](../../PRODUCT.md) still contains an older GA4-unbuilt statement; that discrepancy is recorded in the [documentation inventory](../index.md#documentation-coverage-inventory). The broader product vision, including a complete asset profit-and-loss record, must not be inferred from the existence of this section.
+This guide describes local implementation reviewed on 5 November 2026. It does not establish that a particular deployment has connected Google successfully or collected a complete history. [PRODUCT.md](../../PRODUCT.md) still contains an older GA4-unbuilt statement; that discrepancy is recorded in the [documentation inventory](../index.md#documentation-coverage-inventory). The broader product vision, including a complete asset profit-and-loss record, must not be inferred from the existence of this section.
 
 ## Who can read and change it
 
@@ -51,19 +51,19 @@ Conversion choices affect reporting history. Changing a tick or a local value ca
 
 Begin with **Overview** for a summary, then use **Channels** to understand sources and **Campaigns** for tagged links. A channel detail can lead to the pages reached from that source. **Landing pages** examines where visits began and what happened next. **All pages** includes pages viewed beyond the first page of a visit. Those are different questions: a page can be widely viewed without commonly being the entry point.
 
-**Conversions** brings together the actions counted as results and the events behind them. Follow an event or page into its detail view when you need context rather than relying on an aggregate count. **Visitors** describes audience groups recorded by Analytics. **Products** appears for a website identified as a shop; it is not a universal menu item. Use these views to locate a question worth investigating, rather than treating every difference as a recommended change.
+**Conversions** brings together the actions counted as results and the events behind them. Follow an event or page into its detail view when you need context rather than relying on an aggregate count. **Visits** describes visits and audience groups recorded by Analytics; older Visitors links forward to Visits. **Products** appears for a website identified as a shop; it is not a universal menu item. Use these views to locate a question worth investigating, rather than treating every difference as a recommended change.
 
-The period menu offers This week, Last week, This month, Last month, This quarter, Last quarter and This year. It opens on Last month. Weeks run Monday to Sunday, and comparisons distinguish whole periods from periods still in progress. An incomplete period is compared with corresponding days rather than automatically with the entire preceding period. Check the dates actually shown, especially at the start of a month or when collection has not caught up.
+The period menu offers This week, Last week, This month, Last month, Last 3 months, Last 6 months and Last 12 months, plus custom dates. It opens on Last month. Weeks run Monday to Sunday, and comparisons distinguish whole periods from periods still in progress. An incomplete period is compared with corresponding days rather than automatically with the entire preceding period. Check the dates actually shown, especially at the start of a month or when collection has not caught up.
 
 Device and home-country choices refine the stored figures where supported. Choices travel in the address between section pages, making Back and shared links more useful. A different device, country or date range can explain why two people see different totals. Check those choices before escalating an apparent discrepancy. Small samples also matter: the implementation marks conversion rates based on fewer than 100 visits as having few visits. A large percentage movement from a very small base is a weak basis for a business decision.
 
 ## Freshness, history and live activity
 
-Most screens read figures already saved by collection. Opening them does not request a fresh full report from Google. The Connection page shows collection timing and how far retained figures reach. New connections begin collection immediately, while scheduled collection continues through the collector agent. A large property can take time to fill; a partially populated history is not evidence that earlier traffic was zero.
+Ready-made historical screens read figures already saved by collection. Custom date lists are an exception: choosing them can request reports from Google when no recent matching lists are held. The Connection page shows collection timing and how far retained figures reach. New connections begin collection immediately, while scheduled collection continues through the collector agent. A large property can take time to fill; a partially populated history is not evidence that earlier traffic was zero.
 
 The current storage rules retain 92 days at daily detail, older history by week out to approximately a year, and monthly history out to two years. Longer history is filled separately from the initial recent collection. Older charts therefore have coarser detail, and the existence of a two-year retention window does not prove that every newly connected website already has two years available.
 
-Collection respects Google's allowances and can wait for them to recover. Waiting work continues automatically within its nightly budget; later work can resume on another night. Reconnecting repeatedly is not a useful way to accelerate a healthy collection. Check the recorded connection problem, freshness and progress first.
+Collection respects Google's allowances and can wait for them to recover. Waiting work continues automatically within its daily run budget of up to 22 hours; later work can resume on another night. Reconnecting repeatedly is not a useful way to accelerate a healthy collection. Check the recorded connection problem, freshness and progress first.
 
 **Live** is an exception to stored reporting. It requests Google's recent activity while the page is open and visible, at most once a minute. It pauses after 30 minutes without interaction, and hidden or closed pages do not keep polling. It includes all countries and describes the recent 30-minute window, so it should not be compared directly with a home-country historical total. Live responses are not retained as a historical log.
 
@@ -74,3 +74,21 @@ Collection respects Google's allowances and can wait for them to recover. Waitin
 Disconnecting requires administrator access and a confirmation. It stops future Analytics collection and records the disconnect time; it does not immediately erase collected figures or delete the Google property. Search Console can remain connected. Google access is released only when no remaining connection needs the shared grant. Removing the company's website relationship is a different operation: the backend schedules removal of that relationship's Analytics data as part of cleanup.
 
 For access questions, see [Login, Access, And Authentication](./login-access-and-authentication.md). Operators and engineers should use the [developer guide](../developer/google-analytics.md) for module boundaries, setup variable names, collection behavior and tests. Report a connection problem with the website, the affected screen, the displayed dates and the visible error; never include access tokens or client secrets.
+
+## The rebuilt screens and their units
+
+The menu's Funnel page retains the `/funnel` address and examines where visits start, leave and go next. It is distinct from the All pages view of every page seen during a visit. Newer collection stores onward counts and the most common next page for each landing page. Missing onward data is not the same as a measured zero. The separate Insights conversion-review funnel is another workflow; do not infer that a plan for changing one has changed the other.
+
+All pages now opens with a map of the busiest pages, a trend chart and a table. Its default leaves out the shop's own search, basket and account pages. Use Classification and movement choices to narrow the table, and tick pages to add their series to the website line. The map is bounded, so it does not show every page on a large website. Its largest-mover interpretation also considers separate reads of gains and losses across the full list rather than assuming the first visible table page contains them all. A tracking-change warning can explain a broad view-count shift without claiming every page's performance changed.
+
+A page's own detail has four headline boxes and charts about views, entry visits, sources and who looks at it. A product page uses item additions and purchases in its boxes, while another page can show entry visits that reached the chosen outcome and bottom-of-page scrolling. These measures have different denominators. Views can repeat within a visit; an item quantity can exceed the number of visits; a conversion event's occurrences are not always the visits that performed it. Read the label before comparing two boxes.
+
+Products is about items and the shop's steps, not a revenue report. Administrators can choose the events representing those steps and the sale for the company's website. The defaults use recorded standard basket, checkout and purchase events when available. A saved choice affects everyone's view. Selling more, selling less and products left in baskets help locate questions, but they do not certify an abandoned order or its financial value. Clicking an identified product can lead to its matching website page rather than a separate commerce system.
+
+Visits replaces the former Visitors destination at `/visits`. It compares new and returning visits, the classifications viewed and selected audience groups. One person can be new and returning in the same reporting span; do not add those people as a distinct-person total. Demographic availability depends on what Google supplied. A missing age, gender or interest breakdown is not proof that nobody in that group visited.
+
+The Conversions map can group conversions by Classification, channel, device or country. Check whether a square shows visits, rate or event occurrences. Its detail lists pages behind that conversion/group intersection. The conversion's own page also includes patterns by hour and weekday. These views do not imply monetary attribution or prove a causal journey through every square.
+
+Custom date lists are built for the selected span and its preceding span and can be reused for about a day. Google can refuse or delay that build; selecting dates does not guarantee immediate availability. Repeatedly reconnecting cannot fix a quota refusal. Ready-made periods remain the simplest starting point when investigating whether the connection itself is healthy.
+
+The eye on supported website data pages opens [What Hakken Sees](./what-hakken-sees.md). It can explain the selected figures and start a conversation about them. Analytics Live also supports an interpretation of its current snapshot, marked with the writing time. Its estimate of a usual half hour comes from last month's stored audience spread evenly over half hours, not a forecast for that weekday and time. Neither the eye nor these local implementation notes proves a live integration has passed acceptance.

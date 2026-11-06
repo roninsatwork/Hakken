@@ -5,14 +5,14 @@ feature_area: data collection operations
 audience: platform operators and developers
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/collection-operations.md
-last_reviewed: '2026-10-26T09:02:17+00:00'
+last_reviewed: '2026-11-05T08:46:36+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Data Collection Operations
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Data collection operations
-> **Reviewed:** 26 October 2026, 09:02:17 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:46:36 GMT (Europe/London)
 > **Source path:** `docs/developer/collection-operations.md` · **Status:** Current
 
 ## Separate planning, buying and filing
@@ -165,7 +165,7 @@ A scheduled retry, exhausted allowance, provider refusal, submitted task,
 failed filing and stale summary require different responses.
 
 Keep provider-specific policies separate. Analytics persists quota
-observations and can wait within its nightly budget; Search Console's first
+observations and can wait within its 22-hour run budget; Search Console's first
 history fill has paced requests and bounded busy waits; Bing collects weekly
 lists and cached live details. Their guides describe those modules. The
 shared role-run layer does not replace each provider's source limits,

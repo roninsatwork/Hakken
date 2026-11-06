@@ -5,14 +5,14 @@ feature_area: Hakken tasks
 audience: company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/hakken-tasks.md
-last_reviewed: '2026-10-26T09:16:33+00:00'
+last_reviewed: '2026-11-05T08:45:39+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Hakken Tasks
 
 > **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Hakken tasks
-> **Reviewed:** 26 October 2026, 09:16:33 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:45:39 GMT (Europe/London)
 > **Source path:** `docs/end-user/hakken-tasks.md` · **Status:** Current
 
 ## Work you ask Hakken to keep doing
@@ -169,3 +169,15 @@ person's private task conversation. The [developer guide](../developer/hakken-ta
 explains ownership, proposal confirmation, worker roles and retained states.
 No task was created, resumed, checked or deleted during this documentation
 review.
+
+## Send a chart once or weekly
+
+Besides the original gained/lost-page reports, Ask Hakken can propose a supported chart report for a particular day or every week. Ask for the website, measure, period and delivery time. A proposal shows today's chart as a preview, with “Yes, send it” and “Not now.” Nothing is scheduled until you confirm. The delivered chart reads saved source figures as of its sending day, so it can differ from the preview. It does not request Google to refill missing history at delivery time.
+
+A one-time request can use today, tomorrow or an explicit supported date up to about a year ahead. A weekly request uses the selected weekday. Check the task's timezone and time instead of assuming they are your computer's current timezone. A one-time chart becomes paused after successful processing and remains visible in Hakken tasks. That state is a history of the task, not proof that a human received or opened its email.
+
+Supported reports include Analytics daily lines and supported group charts from Analytics, Search Console, Bing, Clarity and Visibility. Source combinations remain restricted: a chart captured from an arbitrary page conversation is not automatically a durable scheduled report definition. If the proposal cannot match your request, read the explanation rather than confirming a nearby but different measure. A conversion removed from the website's counted definitions can make an existing conversion report no longer valid.
+
+Chart email includes an image and group labels/figures so the chart is readable outside the app. Bell notifications link back to the source view where that channel is selected. The chart reporter does not have a Telegram dispatch path merely because other Hakken tasks support Telegram. Email first enters the Outbox and remains subject to preferences, suppression and sender delivery; creating the task does not bypass those controls.
+
+Missing saved figures can leave the report waiting rather than produce a false zero. A successful send-day is accounted once for that task's local date at the configured task-report credit price. The email is queued with a matching day-specific key to avoid a second queue entry on a repeated attempt. For a missing chart, report the task, website, selected period, timezone, due date and whether the email is queued or delivered. Do not repeatedly recreate the task before checking those distinctions.

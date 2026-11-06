@@ -5,14 +5,14 @@ feature_area: Bing Webmaster
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/bing-webmaster.md
-last_reviewed: '2026-10-26T08:55:34+00:00'
+last_reviewed: '2026-11-05T08:44:16+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Bing Webmaster
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Bing Webmaster
-> **Reviewed:** 26 October 2026, 08:55:34 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:44:16 GMT (Europe/London)
 > **Source path:** `docs/developer/bing-webmaster.md` · **Status:** Current
 
 ## Entry points and reviewed scope
@@ -190,3 +190,11 @@ inspected selected implementations and test declarations, but ran none of
 those tests and contacted no live Bing account. Live consent, callback
 registration, provider coverage and deployed data freshness need their own
 explicitly authorized verification.
+
+## November date and eye integration — scoped review
+
+`bingWebmasterCollect.prepareBingCustom` is a tenant action that resolves `customTarget` for the active company and builds query/page NOW and BEFORE lists from retained weekly parts. It uses `bingCustomKey`, a 24-hour build reuse check, `weeksOf`, `writeListPeriod` and `dropCustomBuild`. The action reconstructs from the database; its name is not evidence that it calls Bing for exact custom-day rows. It validates ordered date strings, and source bounds remain those of the weeks selected.
+
+`bingWebmasterReads.daysOfPeriod` clips custom performance dates at the connection's newest day. `daysBefore` requires the retained oldest day to reach the requested prior span's start. This guards against representing unavailable history as a complete comparison. `bingListPage` can expose `preparing` while custom lists are absent. Keep preparation state distinct from a completed empty list. `calendarPeriods.ts` supplies rolling/month/week arithmetic and `customSpans` supplies the equally long preceding range.
+
+Tests in `bingWebmasterCollect.test.ts` cover first custom build and reuse; `bingWebmasterReads.test.ts` covers changed comparison/read behaviour. They were inspected, not executed. For a page's supplied-data interpretation and conversation see [the eye implementation](./what-hakken-sees-guide.md). Recent list and scale changes beyond these date contracts are still queued for deeper review; this timestamp is not a blanket re-audit of every Bing module.

@@ -5,14 +5,14 @@ feature_area: developer documentation directory
 audience: developer
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/index.md
-last_reviewed: '2026-10-26T15:21:11+00:00'
+last_reviewed: '2026-11-05T08:52:48+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Developer Documentation
 
 > **Product:** Hakken · **Document type:** audience index · **Feature area:** developer documentation directory
-> **Reviewed:** 26 October 2026, 15:21:11 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:52:48 GMT (Europe/London)
 > **Source path:** `docs/developer/index.md` · **Status:** Current
 
 Developer docs are for coding agents and engineers working on Hakken. They cover setup, architecture, implementation boundaries, quality gates, and future-agent handoff context.
@@ -49,6 +49,8 @@ The current cross-cutting implementation notes cover provider-neutral assistant 
 - [Operational Scripts Reference](./operational-scripts-reference.md)
 
 ## Product Areas
+
+- [What Hakken Sees](./what-hakken-sees-guide.md) — data provenance, checks, saved writing and historical design lessons
 
 - [Data Collection Operations](./collection-operations.md)
 - [Google Analytics](./google-analytics.md)
@@ -184,10 +186,10 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 ## Coverage Status
 
 The [central documentation inventory](../index.md#documentation-coverage-inventory)
-records actual source review times, evidence, scope and the current queue. The known
-89-unit documentation inventory was completed on 26 October 2026; this is not live
-integration acceptance or an exhaustive guarantee about every behavior in the repository.
-New source changes can create new work. Older documentation audits and plans are dated
+records actual source review times, evidence, scope and the current queue. The 89-unit baseline was reviewed on 26 October 2026. The 5 November change review has
+remaining work recorded in that central queue; the earlier completion is historical, not
+a claim that the present library is fully current. Static source review is not live
+integration acceptance or an exhaustive guarantee about every behavior in the repository. Older documentation audits and plans are dated
 records and do not override that current coverage record.
 
 For command/dependency verification, use [Operational scripts](./operational-scripts-reference.md),

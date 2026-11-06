@@ -5,14 +5,14 @@ feature_area: Ask Hakken assistant conversations
 audience: signed-in company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/assistant-chat.md
-last_reviewed: '2026-10-26T08:48:31+00:00'
+last_reviewed: '2026-11-05T08:45:39+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Assistant Chat User Guide
 
 > **Product:** Hakken · **Document type:** end-user guide · **Feature area:** Ask Hakken assistant conversations
-> **Reviewed:** 26 October 2026, 08:48:31 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:45:39 GMT (Europe/London)
 > **Source path:** `docs/end-user/assistant-chat.md` · **Status:** Current
 
 ## What Assistant Chat Is
@@ -172,3 +172,15 @@ file, feedback record or long transcript. For a formal data-removal request,
 use your organization's data-handling process and the platform's retention or
 subject-rights workflow rather than assuming a history-list delete completes
 that request.
+
+## Charts from saved sections and the page you are reading
+
+Ask Hakken can draw more than a line over time. Supported group requests include bars, stacked bars, pies, scatters and grids. Available combinations depend on the source and measure: Analytics can compare channels, classifications, devices and other supported groups; Search Console supplies search, page, country and device breakdowns; Bing supplies search/page groups; Clarity supplies behaviour groups; Visibility supplies saved website estimates and ranking groups. These are not interchangeable measures. An estimated visitor in Visibility is not a recorded Analytics visit.
+
+Name the website, source, measure and period. For example, ask for last month's visits by device or a chart of Search Console clicks by search. A chart can include a comparison only when that source path supplies it. The Assistant should return an explanation when the requested combination is unsupported or the needed data is missing, rather than draw invented values. A blank answer is not evidence that the website had no traffic. Use the chart's source link and displayed dates to inspect the underlying view.
+
+A conversation started from the eye can also redraw a registered chart from that page's supplied data. Ask for bars, a pie, a line, stacked bars or a map, specify the column you mean, or ask for the largest few groups. This path uses a captured page chart, so it can only compare with a prior-period column if the snapshot contains that column. It cannot recover hidden supplier data or automatically track later changes to the original screen.
+
+Page context is bounded: at most twelve charts, two hundred rows and ten columns per chart are retained. A redrawn categorical chart normally keeps twenty groups, a map forty boxes and a line up to two hundred points. A top list therefore need not represent every row of the original source. Check whether the chart is a supplied-page redraw or a fresh supported read before sharing it as a comprehensive report. Source-backed group charts have their own limits and sometimes collect small groups into an “every other” category.
+
+The ordinary Assistant reply currently starts at two credits per question in the default price map; saved operator pricing can override that. Opening the eye's new specialist interpretation is a separate credit kind with an eight-credit default. Reuse and failures follow their respective backend rules. A chart proposal does not itself schedule delivery. Use its confirmation control after checking the schedule; see [Hakken Tasks](./hakken-tasks.md) and [What Hakken Sees](./what-hakken-sees.md).

@@ -5,14 +5,14 @@ feature_area: company credits and Usage
 audience: workspace users, company admins and support
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/credits-and-usage.md
-last_reviewed: '2026-10-26T10:55:35+00:00'
+last_reviewed: '2026-11-05T08:48:34+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Credits And Usage
 
 > **Product:** Hakken · **Document type:** User guide · **Feature area:** company credits and Usage
-> **Reviewed:** 26 October 2026, 10:55:35 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:48:34 GMT (Europe/London)
 > **Source path:** `docs/end-user/credits-and-usage.md` · **Status:** Current
 
 Usage explains how the active company's work is recorded in credits: what the month has used, what is still being counted, which websites and work types account for it, and what future recurring checks are estimated to use. Open `/app/usage` from the customer sidebar. This is a company view, so it can include activity started by different people in that company. It is not a personal-only task list or a payment receipt.
@@ -29,7 +29,7 @@ Months and days follow Europe/London time. Monthly plan credits begin at UK midn
 
 ## What Is Counted
 
-The implemented kinds are rankings, AI answers, keyword research, site audit, backlinks, assistant answers, task alerts, task reports and task research. A credit is a usage unit determined by the saved price for that kind. It is not automatically one model token, one supplier request, one pound, one dollar or one company subscription seat.
+The implemented kinds are rankings, AI answers, keyword research, site audit, backlinks, assistant answers, task alerts, task reports, task research and new writing from the screen eye. A credit is a usage unit determined by the saved price for that kind. It is not automatically one model token, one supplier request, one pound, one dollar or one company subscription seat.
 
 For collection work, a statement charge groups a collection's website and kind of work. Several supplier requests can contribute to that one charge. List and crawl work normally counts returned rows/pages, capped by the requested amount when a cap is present, rather than always charging the largest requested size. An ordinary single AI answer counts as one unit. Older records whose returned-row count was never saved can fall back to the original requested units, so historical comparisons need care.
 
@@ -41,7 +41,7 @@ Ask Hakken's eligible company replies contribute an assistant charge keyed to th
 
 A monthly plan batch is created when credit charging first needs it. The allowance comes from the company's assigned plan when that plan specifies monthly credits; otherwise it uses the platform default. The code's current fallback is ten thousand credits a month, but an actual saved plan or platform setting can differ. Before a batch exists, a display can show the expected allowance; seeing that figure is not evidence that a payment or grant mutation just ran.
 
-Unused plan credits expire at the end of their month. The ledger keeps an ending line for the amount written off. It consumes open batches in soonest-expiring order and records any amount they cannot cover as owed. The owed figure is accounting state inside Hakken, not a Stripe invoice or automatic authorization to bill a card. The inspected implementation does not implement a credit-balance refusal gate or decide how that debt will be paid.
+Unused plan credits expire at the end of their month. The ledger keeps an ending line for the amount written off. It consumes open batches in soonest-expiring order and records any amount they cannot cover as owed. The owed figure is accounting state inside Hakken, not a Stripe invoice or automatic authorization to bill a card. The general ledger can record owed work rather than refuse it, but the screen eye now checks available credits before commissioning new writing. This is a feature-specific gate, not a universal balance refusal rule or a decision about how debt will be paid.
 
 The data model and screens can represent bought top-up batches and their expiry. However, no current customer top-up purchase flow or production batch-creation path was found in the reviewed routes and backend. Do not tell a customer to use a Buy credits button or assume a displayed bought-credit field proves a completed payment. A separate commercial and implementation decision is needed before promising that workflow.
 
@@ -70,3 +70,13 @@ For a discrepancy, record the selected month, company, relevant website/work kin
 ## Retained Accounting History
 
 Credit batches, statement lines and derived credit totals are declared retained accounting history in the current retention manifest. Ordinary operational-log expiry is not a promise that these records disappear on the same schedule. Pausing a check, removing a tracked search or resetting a browser conversation does not itself erase the related statement line. A separate personal-data request follows its own manifest and retained exceptions rather than the Usage screen acting as a delete-history tool.
+
+## New eye charges and current default prices
+
+The screen eye's newly written interpretation now has its own usage kind, separate from an ordinary Ask Hakken answer. The current code defaults are eight credits for a successful new eye piece and two for a normal eligible Assistant reply. Saved operator prices take precedence. Earlier October descriptions of a one-credit Assistant reply or a two-credit eye piece are dated pricing observations, not today's fallback settings. A failed eye piece or an interpretation reused within its valid window does not take another successful-writing charge.
+
+Unlike the general ledger's ability to record debt, the eye checks whether the company has enough credits at the start. It can create the current month's plan allowance first so a new month does not wrongly appear empty. Below the configured cost it declines new writing and links to Billing. A super administrator's diagnostic refresh is explicitly uncharged to the company, although it still incurs internal model cost. This exception does not mean other scheduled work universally stops at zero or that a balance has been reserved for every concurrent request.
+
+The platform price editor can suggest prices using recorded cost per unit and a chosen margin. It first uses the selected month's cost evidence, or the preceding month's when the selected month has no units for that work. No cost evidence means no suggestion. These suggestions are internal decision support: they do not change a price automatically, charge a card, or determine an invoice. The default suggestion margin is eighty percent and the saved margin is bounded at ninety-five percent. Company Usage does not expose the operator's underlying supplier cost audit.
+
+A suggestion describes a cost-based price, not realized profit. Cost recording can be incomplete and shared observations complicate cost attribution; reused-value accounting and covered users are different from revenue. Keep the [billing workflow](./platform-plans-and-quotas.md) separate. No prices, allowances, subscriptions or balances were changed during this documentation review.

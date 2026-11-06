@@ -5,14 +5,14 @@ feature_area: Microsoft Clarity
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/microsoft-clarity.md
-last_reviewed: '2026-10-26T15:16:13+00:00'
+last_reviewed: '2026-11-05T08:44:16+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Microsoft Clarity
 
 > **Product:** Hakken · **Document type:** developer guide · **Feature area:** Microsoft Clarity
-> **Reviewed:** 26 October 2026, 15:16:13 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:44:16 GMT (Europe/London)
 > **Source path:** `docs/developer/microsoft-clarity.md` · **Status:** Current
 
 
@@ -177,3 +177,11 @@ retry button.
 ## Retention and removal handoff
 
 A disconnect, a collection failure and removal of a website holding are different events. Disconnect retains already collected figures; the source search did not establish a complete holding-removal cascade for Clarity. Before promising erasure, trace both connection ownership and retained report rows in a separately authorized implementation task. Do not use a missing token or an empty current-period screen as evidence that all older private data has been deleted.
+
+## November date and eye integration — scoped review
+
+`clarity.prepareCustomSpan` uses `tenantMutation` and `requireMySite`. It validates ordered date strings, derives a clipped span with `claritySpanOf`, and schedules `buildSpan` for the overall report and each `SPLIT_KINDS` breakdown, plus PERIOD_BEFORE. Custom records use `custom|from|to` keys and a 24-hour reuse window. `tidyFigures` removes aged custom records in bounded batches. These are local aggregation writes; opening the preparation path does not call Clarity's export API.
+
+`clarityScreens.ts` accepts a named period or a custom object through `clarityPeriodArgValidator`; it reports preparation separately from empty saved data. `clarityBeforeOf` uses `spanBefore` for named choices and `customSpans` for custom dates. The menu no longer includes quarters or This year. A twelve-month label does not guarantee detailed source/browser rows survive that far, and old monthly aggregate retention is not proof of every day's presence.
+
+Read `clarity.test.ts`, `clarityScreens.test.ts` and `clarityScale.test.ts` for custom build, screen projection and scale contracts. The shared eye is fed the page's current projection, with screen-specific findings tests in `convex/utils/sees/`; see [the eye guide](./what-hakken-sees-guide.md). No project calls, aggregate builds or tests were executed. This scoped update leaves the earlier unresolved full holding-removal erasure question open and queues other changed projection details for follow-up.

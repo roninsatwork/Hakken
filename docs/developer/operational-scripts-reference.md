@@ -5,14 +5,14 @@ feature_area: package commands and operational boundaries
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/operational-scripts-reference.md
-last_reviewed: '2026-10-26T15:14:20+00:00'
+last_reviewed: '2026-11-05T08:46:36+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Operational Scripts Reference
 
 > **Product:** Hakken · **Document type:** developer reference · **Feature area:** package commands and operational boundaries
-> **Reviewed:** 26 October 2026, 15:14:20 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:46:36 GMT (Europe/London)
 > **Source path:** `docs/developer/operational-scripts-reference.md` · **Status:** Current
 
 
@@ -62,7 +62,7 @@ Each row is a package key and its actual configured command. Arguments after `--
 | `npm run template:build` | `node scripts/strip-verticals.mjs` |
 | `npm run verify:env` | `node scripts/verify-local-environment.mjs` |
 | `npm run verify:deployment` | `node scripts/verify-deployment-environment.mjs` |
-| `npm run typecheck` | `node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit` |
+| `npm run typecheck` | `node ./node_modules/typescript-7/bin/tsc --noEmit` |
 | `npm run typecheck:cold` | `node -e "require('fs').rmSync('tsconfig.tsbuildinfo',{force:true})" && npm run typecheck` |
 | `npm run check` | `npm run verify:env && npm run check:guards && npm run check:theme && npm run lint && npm run typecheck:cold && npm run test:run` |
 | `npm run gate` | `npm run check:guards && npm run lint && npm run typecheck:cold && npm run test:run && npm run test:e2e && npm run test:coverage && npm run coverage:check` |
@@ -117,3 +117,11 @@ The previous version of this reference listed many movement capture, replay, pro
 When a command appears in an old guide, compare the current package key, target script and applicable operator runbook. A missing package key is not a valid current command just because its old documentation exists. Conversely a script still present on disk may have no supported package alias. Record that distinction and ask for a product decision before restoring or retiring functionality.
 
 For maintenance actions inside the application, use [Maintenance Scripts](./maintenance-scripts.md). That registry is a typed backend allowlist with its own actor, history and migration scheduling. It is separate from package commands on a developer machine. Neither registry should be expanded with arbitrary command execution to work around an operational problem. Current documentation validation checks paths, links, metadata and whitespace; full application gates, live environment inspection, authentication saves and migrations remain unrun in this pass.
+
+## November compiler and test-run distinctions
+
+`typecheck` now invokes `node ./node_modules/typescript-7/bin/tsc --noEmit`. The separately installed TypeScript 6 package remains for lint and scripts; do not remove it merely because the application type check uses 7. `typecheck:cold` still removes the local build-info file before calling that command. The Docker build's heap configuration is separate from this command and should not be inferred from an older shared memory limit.
+
+The committed CI workflow sets `HAKKEN_SKIP_ARCADE_TESTS=1` only for a direct push to dev. Pull requests, production deployment checks and ordinary local checks retain Arcade tests. Do not copy the skip flag into a pre-push local gate. The normal smoke subset and the full browser job on main-targeting PRs retain their distinct scopes. The smoke server runs on port 3100 using `.next-e2e`; the signed-in development app remains `http://hakken.localhost:3000`.
+
+The test environment keeps transformed modules between local runs through `fsModuleCache` and uses a central 90-second local / 180-second GitHub time limit. `src/test/convexTestTables.ts` applies test-database shortcuts checked by `convex/testDatabaseShortcuts.test.ts`. These are local verification mechanics, not application database indexes or performance guarantees for production. A dependency upgrade must preserve shortcut equivalence and be measured, not bypass a failing guard. This documentation review ran no application gate and did not alter the pre-existing Vitest or drift-test edits in the working tree.

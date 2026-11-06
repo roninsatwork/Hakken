@@ -5,14 +5,14 @@ feature_area: Search Console
 audience: company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/search-console.md
-last_reviewed: '2026-10-26T08:52:19+00:00'
+last_reviewed: '2026-11-05T08:44:16+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Search Console
 
 > **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Search Console
-> **Reviewed:** 26 October 2026, 08:52:19 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:44:16 GMT (Europe/London)
 > **Source path:** `docs/end-user/search-console.md` · **Status:** Current
 
 ## Purpose and access
@@ -189,3 +189,13 @@ result kind and displayed error. Never share Google tokens or client secrets.
 The [developer guide](../developer/search-console.md) explains the collection,
 read and cleanup boundaries. No live Google call or deployment acceptance was
 performed in this documentation review.
+
+## Rolling periods, custom dates and the eye
+
+The shared Dates menu now offers This week, Last week, This month, Last month, Last 3 months, Last 6 months and Last 12 months. Quarters and This year are no longer current choices. Weeks start on Monday. The rolling choices run back by whole months from the source's newest day; they are not financial quarters. The comparison is the block before, while an incomplete calendar week or month uses the corresponding portion of the preceding period. Read the actual bounds rather than treating the menu label as proof that every date has data.
+
+Where custom dates are supported, the comparison covers the same number of days immediately before the chosen span. Choosing dates does not create missing source history. A new connection may open on This month if it has nothing for Last month. Dates and chart step travel in the address, so check the link's filters when comparing two screens. An older quarter bookmark falls back to the section's opening choice.
+
+Supported website data pages also have [What Hakken Sees](./what-hakken-sees.md) in the top-bar eye. Its findings and conversation use the page context; a setup page is not evidence of collected figures. New checked writing uses the configured company credits, while reused writing and a follow-up Assistant answer follow separate rules. This update reviews date and eye integration only; the earlier connection and retention sections retain their original source-review scope. It does not certify every later report change or a live deployment.
+
+Search Console's lists can distinguish a ready-made period from dates requiring a Google request. A custom range or a detail/country not kept ready can therefore load differently from a prepared list. Wait for the page's response and read any refusal instead of assuming a spinner means there were no searches. The date picker does not change Google's privacy filtering or reporting-day basis. A website's totals and the sum of named search rows can still differ.

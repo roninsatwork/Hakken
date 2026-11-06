@@ -5,14 +5,14 @@ feature_area: website holdings and Visibility navigation
 audience: company members and platform administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/websites-and-visibility.md
-last_reviewed: '2026-10-26T08:59:02+00:00'
+last_reviewed: '2026-11-05T08:44:16+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Websites And Visibility
 
 > **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Website holdings and Visibility navigation
-> **Reviewed:** 26 October 2026, 08:59:02 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:44:16 GMT (Europe/London)
 > **Source path:** `docs/end-user/websites-and-visibility.md` · **Status:** Current
 
 ## The website is the starting point
@@ -180,3 +180,13 @@ the operator enough context to inspect the right relationship without
 starting another paid collection. The [developer guide](../developer/websites-and-visibility.md)
 explains identity, authorization and cleanup. This documentation review
 changed no holdings, started no collection and checked no live integration.
+
+## Rolling periods, custom dates and the eye
+
+The shared Dates menu now offers This week, Last week, This month, Last month, Last 3 months, Last 6 months and Last 12 months. Quarters and This year are no longer current choices. Weeks start on Monday. The rolling choices run back by whole months from the source's newest day; they are not financial quarters. The comparison is the block before, while an incomplete calendar week or month uses the corresponding portion of the preceding period. Read the actual bounds rather than treating the menu label as proof that every date has data.
+
+Where custom dates are supported, the comparison covers the same number of days immediately before the chosen span. Choosing dates does not create missing source history. A new connection may open on This month if it has nothing for Last month. Dates and chart step travel in the address, so check the link's filters when comparing two screens. An older quarter bookmark falls back to the section's opening choice.
+
+Supported website data pages also have [What Hakken Sees](./what-hakken-sees.md) in the top-bar eye. Its findings and conversation use the page context; a setup page is not evidence of collected figures. New checked writing uses the configured company credits, while reused writing and a follow-up Assistant answer follow separate rules. This update reviews date and eye integration only; the earlier connection and retention sections retain their original source-review scope. It does not certify every later report change or a live deployment.
+
+Visibility dates describe saved checks and estimates, not private Analytics visits or sales. Some panels remain latest-snapshot views even beside a dated chart. A newly selected span cannot make a supplier estimate into measured traffic or add a check for every day. Read the observation date and source on the panel itself. When comparing a rival, keep the location and saved-check coverage aligned.

@@ -5,14 +5,14 @@ feature_area: Local development and verification
 audience: developers
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/getting-started.md
-last_reviewed: '2026-10-26T14:51:32+00:00'
+last_reviewed: '2026-11-05T08:46:36+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Getting Started
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Local development and verification
-> **Reviewed:** 26 October 2026, 14:51:32 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:46:36 GMT (Europe/London)
 > **Source path:** `docs/developer/getting-started.md` · **Status:** Current
 
 Follow these steps to set up the Hakken development environment on your local machine.
@@ -85,7 +85,7 @@ For deterministic local E2E sessions, use the local test-auth helpers only in an
 LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_ENVIRONMENT=local LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run convex:dev
 LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_ENVIRONMENT=local LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth npm run auth:local:seed
 LOCAL_TEST_AUTH_ENABLED=1 LOCAL_TEST_AUTH_ENVIRONMENT=local npm run dev
-LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://localhost:3000 npm run auth:local:state
+LOCAL_TEST_AUTH_SECRET=hakken-local-test-auth LOCAL_TEST_AUTH_BASE_URL=http://hakken.localhost:3000 npm run auth:local:state
 ```
 
 The `/local-test-auth` route also needs `LOCAL_TEST_AUTH_ENABLED=1` and `LOCAL_TEST_AUTH_ENVIRONMENT=local` in the Next.js process; the backend provider and seed/authorize functions need both settings in the Convex process. The generated storage states live under `e2e/.auth/` and should not be committed. For details, read [Local Test Auth Runbook](../operator/local-test-auth-runbook.md).
@@ -156,3 +156,9 @@ Use the shared screen kit, hooks, backend service helpers and existing feature g
 The approved theme is recorded in `hakken.theme.json` and saved platform settings; use the drawing/screen-kit procedures rather than copying a color from a historical design. User-entered content is written in English and translated through the existing content flow, while interface dictionaries maintain parity. A new form, table, or modal must follow current AGENTS/UI conventions rather than an older setup screenshot.
 
 Keep PRODUCT.md, dated research and verification records distinct from current implementation guides. New website and Insights code can disagree with older product-status prose; report that discrepancy rather than declaring the whole planned product delivered. The [documentation index](../index.md) is the front door and persistent review queue. This guide was refreshed from local scripts/configuration without installing dependencies, starting services, changing environment values, running gates or deploying anything.
+
+## Current verification paths
+
+Application type checking uses the separately pinned TypeScript 7 alias; lint and scripts retain TypeScript 6. Read `package.json` and [Operational Scripts](./operational-scripts-reference.md) rather than invoking an older heap-limited compiler command from memory. The smoke suite starts its own server on port 3100 and builds in `.next-e2e`, so it can coexist with the signed-in development app at `http://hakken.localhost:3000`. That test server's own loopback address is not the normal Google sign-in destination.
+
+A dev push can omit Arcade tests in CI, but local `npm run check`, PRs and deploy gates still include them. Local application verification must also cover coverage/thresholds, the smoke suite and build as specified in AGENTS.md; documentation-only validation does not need to install dependencies or start these services. A static documentation result is not a successful application verification result.

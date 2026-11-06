@@ -23,7 +23,8 @@ const coverageThresholds = JSON.parse(
  * the coverage figures with them, or it would count as untested.
  */
 const SKIP_ARCADE_TESTS = process.env.HAKKEN_SKIP_ARCADE_TESTS === '1'
-const ARCADE_CODE = 'src/app/(dashboard)/app/arcade/**'
+// `*` for the `(dashboard)` folder: in a pattern, brackets are pattern syntax and never match the folder's real name.
+const ARCADE_CODE = 'src/app/*/app/arcade/**'
 
 type HakkenCoverageConfig = {
   provider: 'v8'

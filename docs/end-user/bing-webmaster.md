@@ -5,14 +5,14 @@ feature_area: Bing Webmaster
 audience: company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/bing-webmaster.md
-last_reviewed: '2026-10-26T08:55:34+00:00'
+last_reviewed: '2026-11-05T08:44:16+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Bing Webmaster
 
 > **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Bing Webmaster
-> **Reviewed:** 26 October 2026, 08:55:34 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:44:16 GMT (Europe/London)
 > **Source path:** `docs/end-user/bing-webmaster.md` · **Status:** Current
 
 ## What Bing Webmaster adds
@@ -90,7 +90,7 @@ question through to the relevant page and, where available, downstream
 [Google Analytics](./google-analytics.md) figures.
 
 The date control uses the shared calendar periods: This week, Last week, This
-month, Last month, This quarter, Last quarter and This year. A period still
+month, Last month, Last 3 months, Last 6 months and Last 12 months, with custom dates on supporting screens. A period still
 in progress should be read alongside the corresponding portion before it.
 The chart step can be day, week or month where supported. Choices travel in
 the URL as you move through the section, so inspect them when two screens
@@ -182,3 +182,13 @@ or operator to act; repeating a busy request indefinitely is not a solution.
 The [developer guide](../developer/bing-webmaster.md) explains the authorization,
 collection and cleanup boundaries. This documentation review made no Bing
 calls and verified no deployed connection.
+
+## Rolling periods, custom dates and the eye
+
+The shared Dates menu now offers This week, Last week, This month, Last month, Last 3 months, Last 6 months and Last 12 months. Quarters and This year are no longer current choices. Weeks start on Monday. The rolling choices run back by whole months from the source's newest day; they are not financial quarters. The comparison is the block before, while an incomplete calendar week or month uses the corresponding portion of the preceding period. Read the actual bounds rather than treating the menu label as proof that every date has data.
+
+Where custom dates are supported, the comparison covers the same number of days immediately before the chosen span. Choosing dates does not create missing source history. A new connection may open on This month if it has nothing for Last month. Dates and chart step travel in the address, so check the link's filters when comparing two screens. An older quarter bookmark falls back to the section's opening choice.
+
+Supported website data pages also have [What Hakken Sees](./what-hakken-sees.md) in the top-bar eye. Its findings and conversation use the page context; a setup page is not evidence of collected figures. New checked writing uses the configured company credits, while reused writing and a follow-up Assistant answer follow separate rules. This update reviews date and eye integration only; the earlier connection and retention sections retain their original source-review scope. It does not certify every later report change or a live deployment.
+
+For custom dates, Bing builds search and page lists from the whole weeks already held; it does not fetch a new exact-day list from Bing. The daily performance span and a weekly detail list can therefore have different actual bounds. Inspect both before comparing them with Google or exporting a report. A missing prior span is unavailable evidence, not a measured zero or an infinite gain.

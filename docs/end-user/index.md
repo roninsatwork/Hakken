@@ -5,14 +5,14 @@ feature_area: end-user documentation directory
 audience: end-user
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/index.md
-last_reviewed: '2026-10-26T15:21:11+00:00'
+last_reviewed: '2026-11-05T08:52:48+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # End User Documentation
 
 > **Product:** Hakken · **Document type:** audience index · **Feature area:** end-user documentation directory
-> **Reviewed:** 26 October 2026, 15:21:11 GMT (Europe/London)
+> **Reviewed:** 5 November 2026, 08:52:48 GMT (Europe/London)
 > **Source path:** `docs/end-user/index.md` · **Status:** Current
 
 End-user docs are customer-friendly explanations of the Hakken platform, its features, and how people use it. Keep these docs plain-English, product-focused, and free of implementation details unless a customer genuinely needs them.
@@ -34,6 +34,8 @@ Current implementation alignment includes multi-provider assistant streaming and
 - [Public Website](./public-website.md)
 
 ## Product Guides
+
+- [What Hakken Sees](./what-hakken-sees.md) — page findings, writing credits and conversations
 
 - [Google Analytics](./google-analytics.md)
 - [Search Console](./search-console.md)
@@ -125,8 +127,8 @@ Current implementation alignment includes multi-provider assistant streaming and
 ## Coverage Status
 
 The [central documentation inventory](../index.md#documentation-coverage-inventory)
-records actual source review times, evidence, scope and the current queue. The known
-89-unit documentation inventory was completed on 26 October 2026; this is not live
-integration acceptance or an exhaustive guarantee about every behavior in the repository.
-New source changes can create new work. Older documentation audits and plans are dated
+records actual source review times, evidence, scope and the current queue. The 89-unit baseline was reviewed on 26 October 2026. The 5 November change review has
+remaining work recorded in that central queue; the earlier completion is historical, not
+a claim that the present library is fully current. Static source review is not live
+integration acceptance or an exhaustive guarantee about every behavior in the repository. Older documentation audits and plans are dated
 records and do not override that current coverage record.

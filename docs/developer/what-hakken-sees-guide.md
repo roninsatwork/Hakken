@@ -1,13 +1,29 @@
+---
+product: Hakken
+documentation_type: developer guide
+feature_area: screen eye implementation and historical design lessons
+audience: developers
+source_repository: roninsatwork/Hakken
+source_path: docs/developer/what-hakken-sees-guide.md
+last_reviewed: '2026-11-05T08:41:05+00:00'
+reviewed_against: current implementation
+status: Current
+---
 # What Hakken sees: getting the bubble right on every screen
+
+> **Product:** Hakken · **Document type:** developer guide · **Feature area:** screen eye implementation and historical design lessons
+> **Reviewed:** 5 November 2026, 08:41:05 GMT (Europe/London)
+> **Source path:** `docs/developer/what-hakken-sees-guide.md` · **Status:** Current
+
 
 Read this before you give any screen's eye a bubble written by the Insights
 team. It records what it took to make the Conversions page's bubble worth
 reading (Anthony, 30 October 2026), so the next screen starts where this one
 ended, not where it began.
 
-## How it works now (since 31 October 2026)
+## How it works now — reviewed 5 November 2026
 
-The eye in the top bar opens a panel on every page of Google Analytics, Search
+The eye in the top bar opens a panel on website data pages of Google Analytics, Search
 Console, Bing Webmaster, Clarity, Visibility and Insights
 (`docs/plans/active/sees-every-page-plan-2026-10-31.md`). On each page:
 
@@ -23,12 +39,12 @@ Console, Bing Webmaster, Clarity, Visibility and Insights
    average. Only figures named in `convex/utils/sees/measures.ts` are spoken of,
    in the reader's words; a row named by a code is never a finding's name. The
    Conversions screens keep their own rules (`findings.ts`).
-3. **Pressing writes the words** (about 5p, 2 credits; nothing at zero credits):
+3. **Pressing writes the words** (configured price; eight credits by default on 5 November; no new writing below that balance):
    the page's specialist, named in the screen list (`convex/utils/sees/screens.ts`)
    — no model chooses — writes from the page's figures and the findings, covering
    the first four. The Editor's code checks every word and number; what fails
    goes back once, with why. Words stand three hours while the figures do.
-   Insights' weekly boxes, the Summary and Live write nothing new.
+   Insights' weekly boxes and Summary write nothing new. Live now writes from the supplied snapshot and shows its written time (4 November implementation).
 4. **Ask about this page** starts an Ask Hakken conversation told the page,
    its dates, its findings, its words and its figures.
 
@@ -64,7 +80,7 @@ other things that I have not spotted, that's the whole point of this."
 - **It is plain.** Short sentences, everyday words: the plain-words rule binds
   every agent (`PLAIN_WORDS` in `convex/utils/insightTeam.ts`).
 
-## How it went wrong, round by round
+## Historical Conversions rounds — 30 October 2026
 
 Each round below was a real bubble on morehandles.co.uk that Anthony rejected,
 and the rule that came from it. Every rule is now in the code.
@@ -124,9 +140,9 @@ and the rule that came from it. Every rule is now in the code.
 ## The rules for every screen
 
 **Data**
-- The agent reads saved data only, through the very function the screen reads,
+- The specialist uses the page's supplied figures and, where offered, saved reads through the very function the screen reads,
   so a figure it names is the figure on the screen (`convex/insightsTools.ts`,
-  `convex/agentReads.ts`). Never Google, never a fetch: Live is never offered.
+  `convex/agentReads.ts`). The eye performs no provider fetch. Live is supported from the page's already obtained snapshot; it is not an additional realtime tool read.
 - The screen's own data is read for the agent before it starts (`firstReadsFor`
   in `convex/seesAskActions.ts`): every part the screen draws. On Conversions
   that is the screen, its map by kind of page and by channel, and a shop's
@@ -172,7 +188,7 @@ and the rule that came from it. Every rule is now in the code.
 time and cost a sixth of a press. Jev's checks (a guess stated as fact, a step
 that would fit any website) stand in, through the Decisions engine.
 
-## Bringing it to a new screen
+## Bringing it to a new screen — original workflow
 
 1. Say the screen's intent in one sentence and agree it with Anthony.
 2. Pass the page's own figures to its eye piece (`data`, or `page` on an inline
@@ -190,7 +206,7 @@ that would fit any website) stand in, through the Decisions engine.
    against the set (`gradeSeesEvalNow` / `gradeSeesEvalInternal`). The notes are
    never put in the brief.
 
-## Cost and time
+## Historical cost and time — 31 October 2026
 
 - A press makes one model call for the words, two when the Editor sends them
   back; code finds, and Jev's checks are cheap. About 5p on the flagship model
@@ -198,3 +214,19 @@ that would fit any website) stand in, through the Decisions engine.
   written. Kept three hours while the figures stand, so a page pays once.
 - At zero credits the eye writes nothing and says so, with the way to Billing.
 - "Hakken is researching…" shows meanwhile: 40 to 70 seconds on morehandles.co.uk.
+
+## Current storage, charging and conversation boundaries
+
+The active header path is `HakkenSeesEye` → `SeesPanel`, built on `SidePanel`; `SeesBubble` remains a component but is not the current header presentation. `HakkenSees` publishes a page to `hakkenSeesStore`. `useSeesPart` adds independently queried tables and charts. `pageDataFor`, `pageFacts` and `pageFindings` constrain and key the supplied data; the registered screen entries choose writer, parts and forbidden subjects. Section fallback entries are not evidence of complete screen-specific rules. `SeesStandIn` publishes a chat context for an otherwise empty page, except excluded connection/unconnected states.
+
+`seesAsk.askSees` is a `tenantMutation` with `requireMySite`; `refreshSees` uses `superAdminMutation`. The hold/key index on `seesAnswers` scopes saved writing. `stillStands` accepts WRITTEN answers for three hours and RESEARCHING work for ten minutes. Reuse compares keyed facts with `sameFigures`; it does not compare every byte of arbitrary page data. An in-progress answer is reused even if figures changed while it was writing. Failed answers can restart on a later request. Expiry does not delete a row on a timer: `keepRules.ts` describes replacement in place on a subsequent press. Eval pages are retained separately, with hold/company indexes and bounded grading queries.
+
+The normal start checks the configured `sees` credit price after ensuring the month's plan batch. New successful writing calls `creditSeesPress` with an answer/asked-time run key and requester attribution. The starter price is eight credits, not a hardcoded price in the mutation. Charging uses the shared quiet credit hook, so a caught ledger failure is not proof that every completed piece was recorded. Forced super-admin refresh sets `notCharged`, bypasses the company's balance check, and retains internal run costs. It reuses active research rather than starting concurrent writing. No Stripe operation occurs in this path.
+
+`writeSeesAnswer` schedules the specialist, records progress and saves WRITTEN or FAILED. `noteSeesStage` checks the current run before updating progress. Ordinary-page findings come from supplied page data; Conversions can use `seesFindingsInternal` over saved data. `writeBubble` offers Analytics tools only when the scope is readable, and skips those tools when findings already suffice. `seesFrom` checks keys, wording and finding coverage. One rewrite may be followed by sentence salvage or relaxed coverage, recorded in the run. `judgeLeftOff` may remove a guess or generic step while retaining surviving sentences. A successful status therefore does not prove every ranked finding was explained. Do not restore the earlier Head rewrite described in the historical rounds merely because an old note mentions it.
+
+`SeesChat.tsx` lazily creates a normal thread when a question is sent. `chat.createThread` retains `startedOn`; page charts come from registered CSV data and are bounded by `keptCharts`. The client store forgets the active thread association on a new eye opening; it does not delete the old thread. The panel uses the normal chat message renderer and task confirmation controls. `assistantPageCharts.pageChartsOfRunInternal` checks the thread company before returning captured charts. Reusing writing does not reuse every conversation. Tenant wrappers and website access remain the authority, rather than model-supplied company IDs.
+
+Live now has `writes: true` through its registered screen entry and receives a saved-data estimate of a usual half hour from `googleAnalyticsLiveUsual.ts`. Its panel displays `writtenAt`. This is an interpretation of a browser-supplied realtime snapshot, not authorization for Insights to fetch from Google. Connection pages and non-website data pages are exceptions to the broad every-page slogan. The desired sections-only Insights boundary remains in AGENTS.md; the dated audit/plan is not proof it has been implemented everywhere.
+
+Verification sources include `seesAsk.test.ts`, `HakkenSees.test.tsx`, the `pageFindingsPeriods`, `googleAnalyticsPeriods`, Clarity and Bing findings tests, and the shared checker tests under `convex/utils/sees/`. Read fixtures through the repository helper. Use `findSaid` for revealed panel sentences and the fixed-day helpers for date-bound screen fixtures. The required product gates include all offered date periods, saved-query scale checks and reviewed real presses, but this documentation pass performed none of those live or paid actions. No credentials, new configuration or provider installation was needed to document this code. The current review is static; historical costs and durations above remain dated observations, not a current service-level promise.
