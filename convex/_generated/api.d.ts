@@ -257,6 +257,7 @@ import type * as googleAnalyticsConversionReads from "../googleAnalyticsConversi
 import type * as googleAnalyticsConversionsMap from "../googleAnalyticsConversionsMap.js";
 import type * as googleAnalyticsCountries from "../googleAnalyticsCountries.js";
 import type * as googleAnalyticsCoverage from "../googleAnalyticsCoverage.js";
+import type * as googleAnalyticsEventNames from "../googleAnalyticsEventNames.js";
 import type * as googleAnalyticsEventReads from "../googleAnalyticsEventReads.js";
 import type * as googleAnalyticsFillAfter from "../googleAnalyticsFillAfter.js";
 import type * as googleAnalyticsFlowFill from "../googleAnalyticsFlowFill.js";
@@ -1292,6 +1293,7 @@ declare const fullApi: ApiFromModules<{
   googleAnalyticsConversionsMap: typeof googleAnalyticsConversionsMap;
   googleAnalyticsCountries: typeof googleAnalyticsCountries;
   googleAnalyticsCoverage: typeof googleAnalyticsCoverage;
+  googleAnalyticsEventNames: typeof googleAnalyticsEventNames;
   googleAnalyticsEventReads: typeof googleAnalyticsEventReads;
   googleAnalyticsFillAfter: typeof googleAnalyticsFillAfter;
   googleAnalyticsFlowFill: typeof googleAnalyticsFlowFill;

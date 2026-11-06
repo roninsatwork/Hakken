@@ -461,6 +461,8 @@ export const writeWhatCounts = internalMutation({
           lastThirtyDays: event.lastThirtyDays,
           keyEvent: event.keyEvent,
           perVisit: event.perVisit,
+          ...(held?.plainName ? { plainName: held.plainName } : {}),
+          ...(held?.firstStep !== undefined ? { firstStep: held.firstStep } : {}),
         };
       }),
       eventsReadAt: Date.now(),

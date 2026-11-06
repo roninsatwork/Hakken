@@ -1,3 +1,4 @@
+import { eventsToNameOf } from "./googleAnalyticsEventNames";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -48,6 +49,7 @@ const hostOf = async (ctx: { db: QueryCtx["db"] }, hold: Doc<"companyWebsites">)
  * how much room its lists have, and the rivals it is compared with — or, once
  * those are done, the next rivals to name.
  */
+export { writeEventNames } from "./googleAnalyticsEventNames";
 export const stepWork = internalQuery({
   args: { companyId: v.id("companies"), runId: v.id("agentRuns") },
   handler: async (ctx, args) => {
@@ -108,6 +110,12 @@ export const stepWork = internalQuery({
         skipOwn: null,
         rivals: [],
       };
+    }
+
+    // Last, once the websites and rivals are done: an everyday name for each event a website counts.
+    if (state.rivalsLeft.length === 0) {
+      const eventsToName = await eventsToNameOf(ctx, args.companyId, args.runId);
+      if (eventsToName) return { ...base, own: null, skipOwn: null, rivals: [], eventsToName };
     }
 
     const batch = [];

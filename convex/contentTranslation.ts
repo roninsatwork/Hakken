@@ -77,6 +77,11 @@ export function sourceFields(owner: TranslatedOwner, row: Doc<TranslatedOwner>):
       const type = row as Doc<"classificationTypes">;
       return type.builtIn && type.nameEn === shippedType(type.key)?.names.en ? null : { name: type.nameEn };
     }
+    case "googleAnalyticsConnections": {
+      // The everyday names Auto Setup wrote for a website's events, each under the event's own name.
+      const named = ((row as Doc<"googleAnalyticsConnections">).events ?? []).flatMap((event) => (event.plainName ? [[event.eventName, event.plainName] as const] : []));
+      return named.length > 0 ? Object.fromEntries(named) : null;
+    }
   }
 }
 

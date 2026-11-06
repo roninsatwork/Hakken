@@ -7,7 +7,7 @@ import type { AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { pathOfAddress } from "./utils/sees/analytics";
 import { bestFor, biggestChange } from "./utils/channelPicks";
-import { isShop, squaresOutOf } from "./utils/conversionSteps";
+import { isFirstStep, isShop, squaresOutOf } from "./utils/conversionSteps";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { overviewFigures, type OverviewSplitAnswer, type OverviewSplitName } from "./utils/sees/overviewFigures";
@@ -50,11 +50,13 @@ export async function overviewForAssistant(ctx: SiteReader, common: Common, ask:
   const connection = await connectionOf(ctx, site.hold._id);
   const overview = await readOverview(ctx, common);
   const shop = isShop(connection?.shop, overview.now?.purchases, overview.before?.purchases);
+  const plain = new Map((connection?.events ?? []).map((event) => [event.eventName, event]));
   const out = { ...base, kind: shop ? "shop" : "service", rule: shop ? WORDS.rule : WORDS.ruleService, from: overview.from, to: overview.to, link: ask.linkTo("") };
   if (!overview.now) return out;
   const build = (input: { splits?: Partial<Record<OverviewSplitName, OverviewSplitAnswer>>; chart?: Awaited<ReturnType<typeof readChart>>; daysBefore?: Awaited<ReturnType<typeof readPeriodBeforeChart>>; pages?: Awaited<ReturnType<typeof readListPage>>["rows"]; cells?: number }) => overviewFigures({
     shop, cells: input.cells ?? 100, now: overview.now, before: overview.before, chart: input.chart, daysBefore: input.daysBefore, splits: input.splits ?? {}, pages: input.pages,
-    rowName, eventName: eventWords,
+    rowName, eventName: (name) => plain.get(name)?.plainName ?? eventWords(name),
+    firstStep: (name) => plain.get(name)?.firstStep ?? isFirstStep(name),
   });
 
   if (ask.part === "days") {

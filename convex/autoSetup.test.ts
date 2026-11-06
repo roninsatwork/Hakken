@@ -324,6 +324,35 @@ describe("a whole run, with the page reader, the web and the model stood in for"
     expect(run?.costUsd ?? 0).toBeGreaterThan(0);
   });
 
+  test("it gives a website's counted events everyday names, only once, and a person's page reads them (overview plan, step 4)", async () => {
+    const { t, admin, companyId, own, ownSite } = await setUp();
+    const connectionId = await t.run(async (ctx) => await ctx.db.insert("googleAnalyticsConnections", {
+      companyId, companyWebsiteId: own, websiteId: ownSite, status: "CONNECTED", createdAt: 1, updatedAt: 1,
+      events: [
+        { eventName: "form_submit_prospectus_form", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 25 },
+        { eventName: "click_apply_now", counted: true, analyticsValue: null, hakkenValue: null, lastThirtyDays: 34 },
+        { eventName: "scroll", counted: false, analyticsValue: null, hakkenValue: null, lastThirtyDays: 900 },
+      ],
+    }));
+    generate.mockImplementation(async ({ systemInstruction }: { systemInstruction: string }) => ({
+      text: systemInstruction.startsWith("You give the things")
+        ? JSON.stringify({ events: [{ eventName: "form_submit_prospectus_form", plainName: "Asked for a prospectus", firstStep: false }, { eventName: "click_apply_now", plainName: "Clicked Apply now", firstStep: true }, { eventName: "scroll", plainName: "Scrolled", firstStep: true }] })
+        : JSON.stringify({ names: [], sector: "", market: "", description: "", countries: [], companyLine: "", companyAbout: "", searches: [], questions: [], rivals: [] }),
+      inputTokens: 100,
+      outputTokens: 50,
+    }));
+    await admin.mutation(api.autoSetupStart.startAutoSetup, { companyId });
+    await finishScheduled(t);
+    const events = await t.run(async (ctx) => (await ctx.db.get(connectionId))!.events!);
+    expect(events.map((event) => [event.eventName, event.plainName, event.firstStep])).toEqual([
+      ["form_submit_prospectus_form", "Asked for a prospectus", false],
+      ["click_apply_now", "Clicked Apply now", true],
+      // Only what the website counts.
+      ["scroll", undefined, undefined],
+    ]);
+    expect(await admin.query(api.googleAnalyticsEventNames.analyticsEventNames, { siteId: own, language: "en" })).toEqual({ form_submit_prospectus_form: "Asked for a prospectus", click_apply_now: "Clicked Apply now" });
+  });
+
   test("it stops cleanly at its cap for a run, saying how to carry on", async () => {
     const { t, admin, companyId } = await setUp();
     const agentId = await t.mutation(internal.autoSetupStart.ensureAutoSetupInternal, {});

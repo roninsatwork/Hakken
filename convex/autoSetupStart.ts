@@ -1,3 +1,4 @@
+import { eventsToNameOf } from "./googleAnalyticsEventNames";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -203,7 +204,7 @@ export async function beginCompanyRun(ctx: MutationCtx, companyId: Id<"companies
   const state = await ctx.db.query("autoSetupRuns").withIndex("by_company", (q) => q.eq("companyId", companyId)).first();
   if (state?.status === "WORKING" && now - state.lastStepAt < AUTO_SETUP_STALL_MS) return "GOING";
   const work = await setupWorkOf(ctx, companyId);
-  if (!work.company || (work.ownToDo.length === 0 && work.rivals.length === 0)) return "NOTHING";
+  if (!work.company || (work.ownToDo.length === 0 && work.rivals.length === 0 && !(await eventsToNameOf(ctx, companyId)))) return "NOTHING";
   if (state?.status === "WORKING" && state.agentRunId) {
     await closeRoleRun(ctx, { runId: state.agentRunId, status: "FAILED", summary: "Its last step was lost. A new run carries on from what is still empty." });
   }

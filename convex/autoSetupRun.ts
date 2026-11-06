@@ -567,6 +567,29 @@ const RIVAL_SCHEMA: Record<string, unknown> = {
   required: ["rivals"],
 };
 
+const EVENT_NAMES_INSTRUCTION = [
+  "You give the things a website counts everyday names, for a business owner reading a chart of what visitors did.",
+  "Each name is two to five plain words saying what the person did, in the past tense, for a reading age of 14: \"Asked for a prospectus\", \"Booked a visit\", \"Sent the contact form\", \"Clicked Apply now\", \"Clicked the phone number\".",
+  "Go only on the event's own name and the website. If it doesn't say what the person did, give back its own words tidied up, and never invent one.",
+  "firstStep is true for a click or a chat, a phone number or an email address: a first step towards getting in touch. It's false for the real thing: a form sent, a booking, a signup, a purchase.",
+].join(" ");
+
+const EVENT_NAMES_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    events: { type: "array", items: { type: "object", properties: { eventName: { type: "string" }, plainName: { type: "string" }, firstStep: { type: "boolean" } }, required: ["eventName", "plainName", "firstStep"] } },
+  },
+  required: ["events"],
+};
+
+/** An everyday name for each event a website counts, in English, for the Translator to carry on from. Each website is asked once a press. */
+async function nameEvents(ctx: ActionCtx, work: { connectionId: Id<"googleAnalyticsConnections">; host: string; events: string[] }, model: ResolvedAiModelConfig, run: Run): Promise<"DONE" | "LIMIT"> {
+  const { answer, limit } = await writeWithModel<{ events: Array<{ eventName: string; plainName: string; firstStep: boolean }> }>(ctx, model, run, `Named the events on ${work.host}`, EVENT_NAMES_INSTRUCTION, EVENT_NAMES_SCHEMA, { website: work.host, events: work.events });
+  const named = await ctx.runMutation(internal.autoSetupSteps.writeEventNames, { connectionId: work.connectionId, runId: run.runId, events: answer?.events ?? [] });
+  await ctx.runMutation(internal.autoSetupSteps.noteStep, { companyId: run.companyId, runId: run.runId, heading: `Named the events on ${work.host}`, detail: named > 0 ? `${count(named, "event", "events")} now have an everyday name.` : "None were named, so they keep the names they had.", failed: false });
+  return limit ? "LIMIT" : "DONE";
+}
+
 /** Up to eight rivals named from their home pages. "LIMIT" when a cap stopped it. */
 async function nameRivals(ctx: ActionCtx, job: Job, model: ResolvedAiModelConfig, run: Run): Promise<"DONE" | "LIMIT"> {
   const bar = progressBar(ctx, run, rivalPieces(job.rivals.length));
@@ -661,7 +684,8 @@ export const setupStep = internalAction({
         await next();
         return null;
       }
-      if (!job.own && job.rivals.length === 0) {
+      const eventsToName = "eventsToName" in job ? job.eventsToName : null;
+      if (!job.own && job.rivals.length === 0 && !eventsToName) {
         const forPerson: string[] = await ctx.runQuery(internal.autoSetupSteps.leftForPerson, { companyId });
         await finish("DONE", false, reportOf(job, forPerson.map((code) => FOR_PERSON_WORDS[code] ?? code)));
         return null;
@@ -675,7 +699,7 @@ export const setupStep = internalAction({
         return null;
       }
       const run = { runId, companyId, ...(job.pressedBy ? { pressedBy: job.pressedBy } : {}) };
-      const outcome = job.own ? await setUpOwnWebsite(ctx, job, job.own, model, run) : await nameRivals(ctx, job, model, run);
+      const outcome = job.own ? await setUpOwnWebsite(ctx, job, job.own, model, run) : eventsToName ? await nameEvents(ctx, eventsToName, model, run) : await nameRivals(ctx, job, model, run);
       if (outcome === "LIMIT") {
         await finish("STOPPED", false, capped);
         return null;

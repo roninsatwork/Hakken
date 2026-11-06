@@ -49,6 +49,8 @@ export type OverviewFiguresInput = {
   /** A row's name and an event's, in the reader's words. */
   rowName: (split: OverviewSplitName, row: SplitRow) => string;
   eventName: (name: string) => string;
+  /** Auto Setup's say on a first step over the rule on its name, where it has one. */
+  firstStep?: (name: string) => boolean;
 };
 
 const SHOP_STAGES = ["leftStraightAway", "lookedAround", "addedToBasket", "startedCheckout", "bought"] as const;
@@ -57,10 +59,10 @@ const SERVICE_STAGES = ["leftStraightAway", "lookedAround", "clickedToGetInTouch
 const MOST_EVENTS_A_DAY = 4;
 
 /** A step's figures, from one row's: a shop's fixed steps, or a service website's from the events it counts. */
-function stepsOf(shop: boolean, events: readonly SplitEvent[], figures: { visits: number; stayed: number; did: readonly number[] }): number[] {
+function stepsOf(shop: boolean, events: readonly SplitEvent[], figures: { visits: number; stayed: number; did: readonly number[] }, firstStep?: (name: string) => boolean): number[] {
   if (shop) return shopSteps(figures, events.map((event) => event.name));
   const kept = events.flatMap((event, at) => (event.counted ? [{ name: event.name, did: figures.did[at] ?? 0 }] : []));
-  return serviceSteps({ ...figures, did: kept.map((one) => one.did) }, kept.map((one) => one.name));
+  return serviceSteps({ ...figures, did: kept.map((one) => one.did) }, kept.map((one) => one.name), firstStep);
 }
 
 /** How the visits ended, as the squares draw them: whole squares out of `cells`, by name, and the visits behind each. */
@@ -105,7 +107,7 @@ function dayRow(point: DayPoint, events: readonly string[], named: ReadonlyArray
 }
 
 export function overviewFigures(input: OverviewFiguresInput) {
-  const { shop, cells, now, before, chart, daysBefore, splits, pages, rowName, eventName } = input;
+  const { shop, cells, now, before, chart, daysBefore, splits, pages, rowName, eventName, firstStep } = input;
   const channel = splits.channel ?? null;
   const dayEvents = shop ? ["add_to_cart", "begin_checkout", "purchase"] : busiestEvents(channel);
   const namedEvents = dayEvents.map((name) => ({ name, word: eventName(name) }));
@@ -144,14 +146,14 @@ export function overviewFigures(input: OverviewFiguresInput) {
   // The page's squares for each row, as whole squares out of every 100.
   const squaresBy = (split: OverviewSplitName) => (splits[split]?.rows ?? []).map((row) => {
     const answer = splits[split]!;
-    const squares = squaresOf(shop, 100, stepsOf(shop, answer.events, row));
+    const squares = squaresOf(shop, 100, stepsOf(shop, answer.events, row, firstStep));
     return { key: row.key, name: rowName(split, row), ...Object.fromEntries(Object.entries(squares).map(([stage, value]) => [stage, value.squares])) };
   });
   const sum = (values: (row: SplitRow) => readonly number[] | null) => Array.from({ length: channel?.events.length ?? 0 }, (_, at) => (channel?.rows ?? []).reduce((total, row) => total + (values(row)?.[at] ?? 0), 0));
   const didNow = sum((row) => row.did);
   const didBefore = sum((row) => row.didBefore);
-  const whole = now && channel ? stepsOf(shop, channel.events, { visits: now.visits, stayed: now.engaged ?? 0, did: didNow }) : null;
-  const wholeBefore = before && channel ? stepsOf(shop, channel.events, { visits: before.visits, stayed: before.engaged ?? 0, did: didBefore }) : null;
+  const whole = now && channel ? stepsOf(shop, channel.events, { visits: now.visits, stayed: now.engaged ?? 0, did: didNow }, firstStep) : null;
+  const wholeBefore = before && channel ? stepsOf(shop, channel.events, { visits: before.visits, stayed: before.engaged ?? 0, did: didBefore }, firstStep) : null;
   return {
     kind: shop ? "shop" as const : "service" as const,
     website: now ? {

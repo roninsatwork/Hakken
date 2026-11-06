@@ -63,11 +63,11 @@ export function shopSteps(row: StepFigures, events: readonly string[]): number[]
  * The same on a website that doesn't sell: arrived, stayed, did anything, and did the real thing. A visit doing two things
  * counts in both, so these are close rather than exact, and the plan's limits say so.
  */
-export function serviceSteps(row: StepFigures, events: readonly string[]): number[] {
+export function serviceSteps(row: StepFigures, events: readonly string[], firstStep: (eventName: string) => boolean = isFirstStep): number[] {
   let firsts = 0;
   let real = 0;
   events.forEach((eventName, at) => {
-    if (isFirstStep(eventName)) firsts += row.did[at] ?? 0;
+    if (firstStep(eventName)) firsts += row.did[at] ?? 0;
     else real += row.did[at] ?? 0;
   });
   return [row.visits, row.stayed, Math.min(row.stayed, firsts + real), real];

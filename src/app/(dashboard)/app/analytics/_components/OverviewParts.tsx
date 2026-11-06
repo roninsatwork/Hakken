@@ -8,7 +8,7 @@ import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { bestFor, biggestChange } from "@/convex/utils/channelPicks";
-import { endingsOf, isShop, serviceSteps, shopSteps, squaresOutOf } from "@/convex/utils/conversionSteps";
+import { endingsOf, isFirstStep, isShop, serviceSteps, shopSteps, squaresOutOf } from "@/convex/utils/conversionSteps";
 import { outOfTotal } from "@/convex/utils/outOfTotal";
 import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import { OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
@@ -248,6 +248,12 @@ function busiestOf(split: SplitAnswer | undefined): string[] {
     .map((event) => event.name);
 }
 
+/** Auto Setup's say on a first step, over the rule on its name, where it has one. */
+function firstStepOf(status: AnalyticsStatus) {
+  const said = new Map((status.connection?.events ?? []).map((event) => [event.eventName, event.firstStep]));
+  return (name: string) => said.get(name) ?? isFirstStep(name);
+}
+
 const SHOP_STAGES = [
   { key: "left", colour: CHART_ENGAGEMENT_NONE },
   { key: "looked", colour: CHART_ENGAGEMENT_RAMP[0] },
@@ -316,7 +322,7 @@ export function OverviewSquaresCard({ reads, status }: { reads: OverviewReads; s
   const stepsOf = (figures: Figures, list: SplitAnswer["events"]) => {
     if (shop) return shopSteps(figures, list.map((event) => event.name));
     const kept = list.flatMap((event, at) => (event.counted ? [{ name: event.name, did: figures.did[at] ?? 0 }] : []));
-    return serviceSteps({ ...figures, did: kept.map((one) => one.did) }, kept.map((one) => one.name));
+    return serviceSteps({ ...figures, did: kept.map((one) => one.did) }, kept.map((one) => one.name), firstStepOf(status));
   };
   const stages = shop ? SHOP_STAGES : SERVICE_STAGES;
   const start = shop ? Math.min(Number(startChoice) || 0, stages.length - 2) : 0;
@@ -435,7 +441,7 @@ export function useOverviewEye(reads: OverviewReads, status: AnalyticsStatus) {
     return {
       ...overviewFigures({
         shop, cells, now: overview.now, before: overview.before, chart, daysBefore, splits,
-        pages: pages?.rows, rowName: (split, row) => nameOf(split, row), eventName,
+        pages: pages?.rows, rowName: (split, row) => nameOf(split, row), eventName, firstStep: firstStepOf(status),
       }),
       eventCodes,
       locale,

@@ -69,6 +69,10 @@ export const countedEventValidator = v.object({
   hakkenValue: v.union(v.number(), v.null()),
   /** How many in the last 30 days, when the events were read: shown beside each. */
   lastThirtyDays: v.number(),
+  /** An everyday name, written in English by Auto Setup when it's pressed: "Asked for a prospectus". The Translator does the rest. */
+  plainName: v.optional(v.string()),
+  /** Auto Setup's say on whether this is a first step (a click) or the real thing (a form), over the rule on its name. */
+  firstStep: v.optional(v.boolean()),
   /**
    * Whether Google Analytics marks it as a key event. Absent on events read
    * before 2026-10-13, which were all key events; false for an event listed
@@ -410,6 +414,8 @@ export const googleAnalyticsTables = {
     currency: v.optional(v.string()),
     /** The property's key events and the events that read as enquiries, which count, and what each is worth. */
     events: v.optional(v.array(countedEventValidator)),
+    /** The Auto Setup run that last named its events, so one that couldn't is asked once a press. */
+    eventNamesRun: v.optional(v.id("agentRuns")),
     /** When the key events were last read from Google: absent while they are read. */
     eventsReadAt: v.optional(v.number()),
     /** How the events were last listed (`LISTED_WITH`): with the events that read as enquiries, and the other addresses. */
