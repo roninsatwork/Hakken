@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type MouseEvent } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { useElementWidth } from "@/src/hooks/useElementWidth";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_ROSE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
@@ -46,7 +46,7 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
 }) {
   const [watch, measured] = useElementWidth<HTMLDivElement>();
   const [hover, setHover] = useState<string | null>(null);
-  const [pointer, setPointer] = useState({ x: 0, y: 0 });
+  const tip = useRef<HTMLDivElement>(null);
   const width = measured || UNMEASURED;
   const yTop = HEAD + WORDS;
   const yBand = yTop + STRIP;
@@ -63,9 +63,14 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
   const hovered = hover ? segments.find((segment) => segment.key === hover) : null;
   const dimmed = (key: string) => shown !== null && shown !== key;
   const toggle = (key: string) => onLit(lit === key ? null : key);
+  // The readout follows the pointer without drawing the chart again.
   const onMove = (event: MouseEvent<HTMLDivElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
-    setPointer({ x: event.clientX - box.left, y: event.clientY - box.top });
+    const x = event.clientX - box.left;
+    if (!tip.current) return;
+    tip.current.style.left = `${x}px`;
+    tip.current.style.top = `${event.clientY - box.top}px`;
+    tip.current.style.transform = `translate(${x > width - 260 ? "calc(-100% - 12px)" : "12px"}, 12px)`;
   };
   const inner = Math.max(1, cell - 1).toFixed(1);
   const cells = (y: number, at: number, count: number, colour: string) => (
@@ -77,10 +82,10 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
     const said = room >= (name.length + 3) * 6.6 ? `${name} ${count}` : room >= 16 ? String(count) : null;
     return said ? <text x={at * cell} y={y} fill="currentColor" className="text-foreground" style={{ fontSize: 12 }}>{said}</text> : null;
   };
-  const flip = pointer.x > width - 260;
 
   return (
-    <div ref={watch} data-part="hundred-strips" className="relative flex flex-col gap-3" onMouseMove={onMove}>
+    // Only leaving the whole part lets go: the pointer crossing the gap between two cells must not, or the chart flickers (Anthony, 2026-11-06).
+    <div ref={watch} data-part="hundred-strips" className="relative flex flex-col gap-3" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
       <svg width={width} height={height} role="img" aria-label={`${topLabel}. ${bottomLabel}. ${segments.map((segment) => `${segment.name} ${segment.top} and ${segment.bottom}`).join(", ")}`}>
         <text x={0} y={12} fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{topLabel}</text>
         <text x={0} y={height - 2} fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{bottomLabel}</text>
@@ -91,7 +96,6 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
             className="cursor-pointer"
             opacity={dimmed(segment.key) ? 0.25 : 1}
             onMouseEnter={() => setHover(segment.key)}
-            onMouseLeave={() => setHover(null)}
             onClick={() => toggle(segment.key)}
           >
             <polygon points={`${top * cell},${yBand + 1} ${(top + segment.top) * cell - 1},${yBand + 1} ${(bottom + segment.bottom) * cell - 1},${yBottom - 1} ${bottom * cell},${yBottom - 1}`} fill={segment.colour} fillOpacity={0.24} />
@@ -117,7 +121,6 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
               toggle(segment.key);
             }}
             onMouseEnter={() => setHover(segment.key)}
-            onMouseLeave={() => setHover(null)}
             className="flex cursor-pointer items-center gap-2 text-[13px]"
             style={{ opacity: dimmed(segment.key) ? 0.45 : 1 }}
           >
@@ -127,13 +130,13 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
           </div>
         ))}
       </div>
-      {hovered ? (
-        <div className="pointer-events-none absolute z-10" style={{ left: pointer.x, top: pointer.y, transform: `translate(${flip ? "calc(-100% - 12px)" : "12px"}, 12px)` }}>
+      <div ref={tip} className="pointer-events-none absolute z-10" style={{ visibility: hovered ? "visible" : "hidden" }}>
+        {hovered ? (
           <ChartTooltipSurface heading={hovered.name} wide>
             {hovered.readout.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}
           </ChartTooltipSurface>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

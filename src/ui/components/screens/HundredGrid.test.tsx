@@ -28,12 +28,16 @@ describe("HundredGrid", () => {
 
   it("lights a row on hover and shows its readout, and pressing keeps it lit", () => {
     const { container } = render(<HundredGrid groups={groups} nowLabel="October" wasLabel="September" label="Squares" />);
+    const part = container.querySelector('[data-part="hundred-grid"]') as HTMLElement;
     const row = container.querySelector('[data-key="bought"]') as HTMLElement;
     fireEvent.mouseEnter(row);
     screen.getByText("1,205");
     const other = container.querySelector('[data-square="left"]') as HTMLElement;
     expect(other.style.opacity).toBe("0.25");
-    fireEvent.mouseLeave(row);
+    // Crossing the gap between two squares lets nothing go, or the chart flickers: only leaving the whole part does.
+    fireEvent.mouseLeave(row, { relatedTarget: part });
+    expect(other.style.opacity).toBe("0.25");
+    fireEvent.mouseLeave(part);
     expect(screen.queryByText("1,205")).toBeNull();
     expect(other.style.opacity).toBe("1");
     fireEvent.click(row);
@@ -76,10 +80,20 @@ describe("HundredStrips", () => {
     expect(onLit).toHaveBeenCalledWith(null);
   });
 
-  it("shows a thing's readout on hover", () => {
+  it("shows a thing's readout on hover, and keeps it across the gap between two cells", () => {
     const { container } = render(<HundredStrips segments={segments} topLabel="Top" bottomLabel="Bottom" lit={null} onLit={() => undefined} />);
-    fireEvent.mouseEnter(container.querySelector('[data-segment="Paid Search"]') as Element);
+    const segment = container.querySelector('[data-segment="Paid Search"]') as Element;
+    const other = container.querySelector('[data-segment="Direct"]') as SVGElement;
+    fireEvent.mouseEnter(segment);
     screen.getByText("1,100");
+    expect(other.getAttribute("opacity")).toBe("0.25");
+    const part = container.querySelector('[data-part="hundred-strips"]') as Element;
+    fireEvent.mouseLeave(segment, { relatedTarget: part });
+    screen.getByText("1,100");
+    expect(other.getAttribute("opacity")).toBe("0.25");
+    fireEvent.mouseLeave(part);
+    expect(screen.queryByText("1,100")).toBeNull();
+    expect(other.getAttribute("opacity")).toBe("1");
   });
 
   it("gives the six busiest a colour each, and the rest share grey", () => {

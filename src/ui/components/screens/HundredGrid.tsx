@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { useElementWidth } from "@/src/hooks/useElementWidth";
 import { useReducedMotion } from "@/src/hooks/useReducedMotion";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
@@ -47,7 +47,7 @@ export function HundredGrid({ groups, cells = 100, nowLabel, wasLabel, label }: 
   const still = useReducedMotion();
   const [lit, setLit] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
-  const [pointer, setPointer] = useState({ x: 0, y: 0 });
+  const tip = useRef<HTMLDivElement>(null);
   // The squares fill in once, then stay still, so a change of menu only fades their colours.
   const [filling, setFilling] = useState(true);
   useEffect(() => {
@@ -60,15 +60,20 @@ export function HundredGrid({ groups, cells = 100, nowLabel, wasLabel, label }: 
   const shown = hover ?? lit;
   const hovered = hover ? groups.find((group) => group.key === hover) : null;
   const dimmed = (key: string) => shown !== null && shown !== key;
+  // The readout follows the pointer without drawing the squares again.
   const onMove = (event: MouseEvent<HTMLDivElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
-    setPointer({ x: event.clientX - box.left, y: event.clientY - box.top });
+    const x = event.clientX - box.left;
+    if (!tip.current) return;
+    tip.current.style.left = `${x}px`;
+    tip.current.style.top = `${event.clientY - box.top}px`;
+    tip.current.style.transform = `translate(${width > 0 && x > width - 260 ? "calc(-100% - 12px)" : "12px"}, 12px)`;
   };
   const toggle = (key: string) => setLit((held) => (held === key ? null : key));
-  const flip = width > 0 && pointer.x > width - 260;
 
   return (
-    <div ref={watch} data-part="hundred-grid" className="relative flex flex-col gap-6 md:flex-row md:items-center md:gap-10" onMouseMove={onMove}>
+    // Only leaving the whole part lets go: the pointer crossing the gap between two squares must not, or the chart flickers (Anthony, 2026-11-06).
+    <div ref={watch} data-part="hundred-grid" className="relative flex flex-col gap-6 md:flex-row md:items-center md:gap-10" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
       <div
         role="img"
         aria-label={[label, ...groups.map((group) => `${group.count} ${group.name}`)].join(", ")}
@@ -81,7 +86,6 @@ export function HundredGrid({ groups, cells = 100, nowLabel, wasLabel, label }: 
             data-square={group.key}
             className={still ? "block cursor-pointer" : "block cursor-pointer transition-[opacity,background-color] duration-200 ease-out"}
             onMouseEnter={() => setHover(group.key)}
-            onMouseLeave={() => setHover(null)}
             onClick={() => toggle(group.key)}
             style={{
               backgroundColor: group.colour,
@@ -113,7 +117,6 @@ export function HundredGrid({ groups, cells = 100, nowLabel, wasLabel, label }: 
               toggle(group.key);
             }}
             onMouseEnter={() => setHover(group.key)}
-            onMouseLeave={() => setHover(null)}
             className="grid cursor-pointer items-center border-b border-border-dim/50 py-3 transition-colors last:border-b-0 hover:bg-hover"
             style={{ gridTemplateColumns: KEY_COLUMNS, columnGap: 8, opacity: dimmed(group.key) ? 0.45 : 1 }}
           >
@@ -124,13 +127,13 @@ export function HundredGrid({ groups, cells = 100, nowLabel, wasLabel, label }: 
           </div>
         ))}
       </div>
-      {hovered ? (
-        <div className="pointer-events-none absolute z-10" style={{ left: pointer.x, top: pointer.y, transform: `translate(${flip ? "calc(-100% - 12px)" : "12px"}, 12px)` }}>
+      <div ref={tip} className="pointer-events-none absolute z-10" style={{ visibility: hovered ? "visible" : "hidden" }}>
+        {hovered ? (
           <ChartTooltipSurface heading={hovered.name} wide>
             {hovered.readout.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}
           </ChartTooltipSurface>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }
