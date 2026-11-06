@@ -113,6 +113,7 @@ export function board(page, { name, title, height, width = 1440, kit, links = {}
 <title>${escapeHtml(title)}</title>
 <script src="./support.js"></script>
 <link rel="stylesheet" href="${kit}">
+<!-- copied-from-app: today's words, so check:drawing doesn't judge their reading age -->
 </head>
 <body>
 <x-dc>

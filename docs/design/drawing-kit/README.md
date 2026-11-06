@@ -56,8 +56,8 @@ next drawing.
    Position, CPC, Traffic, Keywords.
 7. **Check every board.** `npm run check:drawing -- <board.dc.html> …` fails
    a class the app does not have, a colour outside the look, a font other
-   than Inter and JetBrains Mono, or a table that would scroll. Fix what it
-   names before publishing.
+   than Inter and JetBrains Mono, a table that would scroll, or a line of words
+   over a reading age of 14. Fix what it names before publishing.
 8. **A part the kit does not have** is new to the screen kit. Tell Anthony by
    name before drawing it (`core-component-set-no-drift`); when it is built,
    add it to `scripts/drawing-kit/parts.tsx`.

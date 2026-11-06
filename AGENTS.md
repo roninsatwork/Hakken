@@ -506,6 +506,18 @@ drifted from the app: "We cannot go through this with every agent").
   narrow column. `ApprovalExpirySection` is the screen to copy.
 
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.
+- **Words a client reads have a reading age of 14, and it's measured** (Anthony,
+  2026-11-06: "i asked for a reading age of 14"). `npm run check:reading`, inside
+  `check:guards`, reads `messages/en.json` and fails a line of 8 words or more
+  over 14 (Flesch-Kincaid, `scripts/reading-age.mjs`). `npm run check:drawing`
+  fails the same on a board, unless it's a copy of today's page from the app. The
+  lines over 14 the day it came in are frozen in
+  `scripts/reading-age-allowlist.json`, which may shrink, never grow. It leaves out
+  the platform's own admin screens and anything under 8 words, and it only
+  measures long words and long sentences, so passing doesn't mean the words are
+  right. How a screen should sound comes from the screens redone with Anthony:
+  short plain lines about people and Google. None of their 238 sentences says
+  Hakken.
 - Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing `HakkenModal` patterns.
 - **A pop-up is only for a yes or a no** (Anthony, 2026-10-01, said before and
   forgotten): confirming a delete, discarding changes, approving. Anything with

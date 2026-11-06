@@ -2,12 +2,13 @@
 //
 // Fails a drawing that strays from the app: a class the app's stylesheet does
 // not have, a colour outside the record of the look and the chart palette, a
-// font the app does not use, or a table that would scroll sideways. Run it on
-// every board before a canvas is published; build the kit first
-// (`npm run drawing-kit`).
+// font the app does not use, a table that would scroll sideways, or a line of
+// words over a reading age of 14. Run it on every board before a canvas is
+// published; build the kit first (`npm run drawing-kit`).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { drawingLines, MOST_READING_AGE, readingAge, tooHard } from "./reading-age.mjs";
 import { ROOT, readThemeRecord } from "./theme-record.mjs";
 
 const KIT_CSS = path.join(ROOT, "docs/design/drawing-kit/build/kit.css");
@@ -105,6 +106,14 @@ export function checkDrawing(html, { kitCss, colours, appSource = "" }) {
   for (const tag of html.matchAll(/<(\/?)(table|sc-for|sc-if)\b/g)) {
     if (tag[2] === "table") tableDepth += tag[1] ? -1 : 1;
     else if (!tag[1] && tableDepth > 0) problems.push(`<${tag[2]}> inside a table — a browser moves it out; write the rows out, with holes for what changes`);
+  }
+
+  // Words a client reads (scripts/reading-age.mjs). A board copied from the app carries `<!-- copied-from-app -->`
+  // and is let through: its words are today's, which is what a redraw is there to fix.
+  if (!/<!--\s*copied-from-app/.test(html)) {
+    for (const line of drawingLines(html)) {
+      if (tooHard(line)) problems.push(`reading age ${readingAge(line).toFixed(1)}, and the most is ${MOST_READING_AGE}. Say it more simply: "${line}"`);
+    }
   }
 
   const counted = new Map();

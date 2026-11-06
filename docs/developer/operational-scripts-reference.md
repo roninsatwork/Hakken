@@ -51,9 +51,10 @@ Each row is a package key and its actual configured command. Arguments after `--
 | `npm run check:encoding` | `node scripts/check-text-source-encoding.mjs` |
 | `npm run check:layering` | `node scripts/check-layering.mjs` |
 | `npm run check:screen-kit` | `node scripts/check-screen-kit.mjs` |
+| `npm run check:reading` | `node scripts/check-reading-age.mjs` |
 | `npm run check:orphans` | `knip --include files,dependencies,unlisted --no-config-hints` |
 | `npm run check:fences` | `node scripts/strip-verticals.mjs --check` |
-| `npm run check:guards` | `npm run check:encoding && npm run check:pagination && npm run check:layering && npm run check:screen-kit && npm run check:messages && npm run check:orphans && npm run check:fences` |
+| `npm run check:guards` | `npm run check:encoding && npm run check:pagination && npm run check:layering && npm run check:screen-kit && npm run check:messages && npm run check:reading && npm run check:orphans && npm run check:fences` |
 | `npm run check:theme` | `node scripts/check-theme-record.mjs` |
 | `npm run theme:pull` | `node scripts/theme-pull.mjs` |
 | `npm run drawing-kit` | `node scripts/drawing-kit.mjs` |
