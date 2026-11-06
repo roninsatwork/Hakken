@@ -6,7 +6,7 @@ notice (info)
 figures
   figure: Booked to #/#/#
   figure: Booked for November # of #
-  figure: Free in November
+  figure: Spare in November
   figure: Scheduled checks
 search: Find a task, website or person…
 filter: Website

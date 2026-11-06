@@ -44,6 +44,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
   const params = useSearchParams();
   const siteId = useAnalyticsSiteId();
   const status = useAnalyticsStatus();
+  const page = pageForPath(usePathname(), siteId);
   // Custom dates' lists are asked of Google when first asked for (googleAnalyticsLive.ts, prepareAnalyticsCustom): once a day.
   const [choice] = useAnalyticsDates();
   const prepare = useAction(api.googleAnalyticsLive.prepareAnalyticsCustom);
@@ -111,7 +112,8 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
               <StatusLabel tone={state === "NEEDS_RECONNECT" ? "warning" : state === "CONNECTED" ? "success" : "neutral"}>{ts(state)}</StatusLabel>
             )
           }
-          action={<AnalyticsFilters />}
+          // Settings pages read no country, device or dates, so their menus would do nothing (overview-new-page-plan-2026-11-06.md, step 17).
+          action={SETTINGS_PAGES.has(page) ? undefined : <AnalyticsFilters />}
         />
 
         <AnalyticsConnectionBanner status={status} siteId={siteId} />
@@ -122,7 +124,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
             <AnalyticsMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
-            <SeesStandIn section="googleAnalytics" siteId={siteId} off={state === "NOT_CONNECTED"} />
+            <SeesStandIn section="googleAnalytics" siteId={siteId} off={state === "NOT_CONNECTED" || page === "trackingHealth"} />
             <PeriodDays siteId={siteId} newestDay={connection?.newestDay ?? null}>{children}</PeriodDays>
           </section>
         </div>
@@ -130,6 +132,9 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
     </OpeningPeriodContext.Provider>
   );
 }
+
+/** The pages about the connection itself. They read none of the top menus, and Tracking health has no eye (Anthony, 2026-11-03). */
+const SETTINGS_PAGES: ReadonlySet<AnalyticsPageId> = new Set(["trackingHealth", "connection"]);
 
 /** The pages that keep days of their own rather than the menu's: the live minutes, tracking health's checks, the connection. */
 const OWN_DAYS: ReadonlySet<AnalyticsPageId> = new Set(["live", "trackingHealth", "connection"]);

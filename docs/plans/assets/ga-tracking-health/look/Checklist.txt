@@ -2,12 +2,16 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Tracking health
+notice (info)
 figures
-  figure: Checks passing
-  figure: Visits Hakken can't credit
-  figure: Conversions that never happen
-  figure: Visits on other addresses
-table: Check | Status | What Hakken found | It affects
+  figure: Visits →
+  figure: Where visitors came from →
+  figure: Events →
+  figure: Pages →
+search: Find a check
+filter: Result
+filter: Changes
+table: Check | Result | What it found | What it affects
   table-bar
     download: Download CSV
   table-footer

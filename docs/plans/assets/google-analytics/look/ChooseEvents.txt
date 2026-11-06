@@ -3,14 +3,13 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Connection
 notice (info)
-checkbox: Contact form sent
-choice: Where its value is set: Set it in Hakken | Set it in Google Analytics
-field: Value of each, in £
-checkbox: Phone number clicked
-choice: Where its value is set: Set it in Hakken | Set it in Google Analytics
-field: Value of each, in £
-checkbox: Email address clicked
-choice: Where its value is set: Set it in Hakken | Set it in Google Analytics
-field: Value of each, in £
-checkbox: Newsletter sign-up
-checkbox: Scrolled to the bottom
+search: Find an event
+filter: Kind
+table: Counts | Event | Kind | Last # days | Value each | Worth knowing
+  table-bar: Your events
+    download: Download CSV
+  table-footer
+search: Find an address
+table: Counts | Address | What it is | Last # days
+  table-bar: Your addresses
+  table-footer

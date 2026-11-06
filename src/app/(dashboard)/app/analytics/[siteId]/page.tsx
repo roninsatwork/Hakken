@@ -380,8 +380,8 @@ function HealthPanel({ status }: { status: AnalyticsStatus }) {
           rowKey={(check) => check.check}
           empty={t("health.empty")}
           columns={[
-            { key: "check", header: t("health.check"), cell: (check) => <StatusLabel tone="warning">{words(check).title}</StatusLabel> },
-            { key: "found", header: t("health.found", { platformName }), cell: (check) => quiet(words(check).short) },
+            { key: "check", header: t("health.check"), cell: (check) => <StatusLabel tone="warning">{words(check).name}</StatusLabel> },
+            { key: "found", header: t("health.found", { platformName }), cell: (check) => quiet(words(check).found) },
           ]}
         />
       )}

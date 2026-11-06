@@ -428,12 +428,12 @@ describe("Google Analytics' approved looks", () => {
     at("/app/analytics/site_1/tracking-health");
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS });
     const { container } = render(<AnalyticsTrackingHealthPage />);
-    await screen.findByText("Every conversion has a value");
+    await screen.findByText("Events with no value");
     // Option 1 of its canvas, "The checklist" (ga-tracking-health-plan.md TH1, chosen 2026-10-15).
     await expectApprovedLook(container, "ga-tracking-health", "Checklist", "Google Analytics → Tracking health");
   });
 
-  it("9 · a tracking health check's own screen: what it found, why, the steps, and the conversions it names (TH2)", async () => {
+  it("9 · a tracking health check's own screen: what it found, why it matters, how it gets fixed, and the events it names", async () => {
     at("/app/analytics/site_1/tracking-health/check", "key=NEVER_HAPPENS");
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({
@@ -442,7 +442,9 @@ describe("Google Analytics' approved looks", () => {
     });
     const { container } = render(<AnalyticsTrackingCheckPage />);
     // No eye since 2026-11-04 (Anthony, 2026-11-03: "We dont need the eye on non website data related pages").
-    await screen.findAllByText("Never happened");
+    await screen.findByText("Why it matters");
+    screen.getByText("How it gets fixed");
+    screen.getByText(/^Try each one yourself, then look for it in Google Analytics\./);
     await expectApprovedLook(container, "ga-tracking-health", "Check", "Google Analytics → a tracking health check");
   });
 
@@ -468,19 +470,19 @@ describe("Google Analytics' approved looks", () => {
       }),
     });
     render(<AnalyticsTrackingHealthPage />);
-    await screen.findByText("Each conversion is what it says");
-    // One line a check, those that need a look first, the costliest first.
+    await screen.findByText("Events that count the wrong thing");
+    // One line a check: those not right first, the costliest first, then what has no effect on the figures.
     expect(screen.getAllByRole("row").slice(1).map((row) => row.querySelector("td")?.textContent)).toEqual([
-      "Each conversion is what it says", "Every enquiry is counted", "Every conversion happens", "Only this website is in the property",
+      "Events that count the wrong thing", "Enquiries not counted", "Events that never happen", "Visits from other websites",
     ]);
-    screen.getByText("Form sent is really Clicked a link to another website.");
-    screen.getByText("Contact isn't counted.");
+    screen.getByText("Form sent matches Clicked a link to another website every day, so it's probably counting that, not enquiries.");
+    screen.getByText("Contact happened 179 times in 12 months, but isn't counted.");
     // Its own screen says how to fix it, with the button to do it: a key event already, so it is only to be chosen.
     cleanup();
     at("/app/analytics/site_1/tracking-health/check", "key=ENQUIRY_UNCOUNTED");
     render(<AnalyticsTrackingCheckPage />);
     await screen.findAllByText("Not counted");
-    expect(screen.getAllByRole("button", { name: "Choose what counts" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Choose your events" })).toHaveLength(1);
   });
 
   it("11 · not connected yet, Search Console connected", async () => {
@@ -514,7 +516,7 @@ describe("Google Analytics' approved looks", () => {
     at("/app/analytics/site_1/connection");
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ status: "COUNTING" }) });
     const { container } = render(<AnalyticsConnectionPage />);
-    await screen.findByText("Choose what counts as a conversion");
+    await screen.findByText("Your events");
     await expectApprovedLook(container, PLAN, "ChooseEvents", "Google Analytics → choose what counts");
   });
 
@@ -530,10 +532,10 @@ describe("Google Analytics' approved looks", () => {
       }),
     });
     render(<AnalyticsConnectionPage />);
-    await screen.findByText(/^Google didn't answer when .* events were read, so they aren't listed yet\.$/);
+    await screen.findByText("Google didn't answer when your events were read, so they aren't listed yet.");
     screen.getByText(/asks again by itself at .*\. There's nothing for you to do\.$/);
     screen.getByText("Google said: BUSY 503: The service is currently unavailable.");
-    expect(screen.queryByText(/^Reading the property's key events/)).toBeNull();
+    expect(screen.queryByText(/^Looking for your events/)).toBeNull();
   });
 
   it("13 · choose what counts: an enquiry that is no key event, and a key event built from it (conversions-back-in-time-plan.md §6)", async () => {
@@ -549,11 +551,11 @@ describe("Google Analytics' approved looks", () => {
       }),
     });
     render(<AnalyticsConnectionPage />);
-    await screen.findByText("Choose what counts as a conversion");
-    screen.getByText("Not a key event in Google Analytics: Hakken counts it from Google's own figures, for the whole year.");
-    // Both ticked: said once, on the second.
-    expect(screen.getAllByText("“Form sent” is a copy of “Contact”: count one of them.".replace(/[“”]/g, ""))).toHaveLength(1);
-    screen.getByText(/^What counts, and a value set in Hakken, apply to all history/);
+    await screen.findByText("Your events");
+    // Said on both, as either could be the one to stop counting.
+    screen.getByText("Same as Contact");
+    screen.getByText("Same as Form sent");
+    screen.getByText(/^When you save, your last 92 days start coming in/);
   });
 
   it("13 · choose what counts: an event that is really link clicks is warned against, ticked or not", async () => {
@@ -570,8 +572,8 @@ describe("Google Analytics' approved looks", () => {
       }),
     });
     render(<AnalyticsConnectionPage />);
-    await screen.findByText("Choose what counts as a conversion");
-    expect(screen.getAllByText("Form sent counts the same as Clicked a link to another website, day for day: it isn't an enquiry, so don't count it.")).toHaveLength(1);
+    await screen.findByText("Your events");
+    expect(screen.getAllByText("Same as Clicked a link to another website, so it isn't an enquiry")).toHaveLength(1);
   });
 
   it("13 · choose what counts: a shop on its own address ticked, its sales beside Purchase; a copy left out (conversion-addresses-plan.md)", async () => {
@@ -594,15 +596,15 @@ describe("Google Analytics' approved looks", () => {
     const save = vi.fn(async () => null);
     vi.mocked(useMutation).mockImplementation((() => save) as never);
     render(<AnalyticsConnectionPage />);
-    await screen.findByText("Where conversions count");
-    screen.getByText("Part of acme-shop.test, on an address of its own, such as a shop.");
-    screen.getByText("A copy of the website: a test or staging site, or Google Translate.");
-    screen.getByText("Also left out, with no conversions or sales: www-acme--shop-test.translate.goog.");
-    // Purchase reads the shop's sales; unticked, the shop's go, and Hakken says it would count it.
-    screen.getByText(/· 210 in the last 30 days$/);
+    await screen.findByText("Your addresses");
+    screen.getByText("Part of your website, on its own address");
+    // The test copy read for its events, and the translated copy with none.
+    expect(screen.getAllByText("A test copy of your website")).toHaveLength(2);
+    screen.getByRole("checkbox", { name: "www-acme--shop-test.translate.goog" });
+    // Purchase reads the shop's sales, beside the shop's own row; unticked, Purchase's go.
+    expect(screen.getAllByText("210")).toHaveLength(2);
     fireEvent.click(screen.getByRole("checkbox", { name: "store.acme-shop.test" }));
-    expect(screen.queryByText(/· 210 in the last 30 days$/)).toBeNull();
-    screen.getByText("Hakken would count it: unticked, its conversions and sales are left out.");
+    expect(screen.getAllByText("210")).toHaveLength(1);
     fireEvent.click(screen.getByRole("checkbox", { name: "store.acme-shop.test" }));
     fireEvent.click(screen.getByRole("button", { name: /^Save/ }));
     await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({
@@ -614,7 +616,12 @@ describe("Google Analytics' approved looks", () => {
     at("/app/analytics/site_1/connection");
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS });
     const { container } = render(<AnalyticsConnectionPage />);
-    await screen.findByText("What counts");
+    await screen.findByText("Your events");
+    screen.getByText(/^Your figures come from Google Analytics every morning\. This is covered by your subscription\.$/);
+    screen.getByRole("button", { name: "Change" });
+    // Ticks stay off until Change is pressed.
+    expect(screen.getAllByRole("checkbox").every((box) => (box as HTMLInputElement).disabled)).toBe(true);
+    expect(screen.queryByRole("button", { name: /^Save/ })).toBeNull();
     await expectApprovedLook(container, PLAN, "Connected", "Google Analytics → Connection");
   });
 
@@ -622,7 +629,7 @@ describe("Google Analytics' approved looks", () => {
     at("/app/analytics/site_1");
     answer({ "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ newestDay: null, historyDone: false, lastCollectedAt: null }) });
     const { container } = render(<AnalyticsOverviewPage />);
-    await screen.findByText("Connected. Collecting the last 92 days now.");
+    await screen.findByText("Connected. Your last 92 days are coming in now.");
     await expectApprovedLook(container, PLAN, "FirstCollect", "Google Analytics → the first 90 days coming in");
   });
 });

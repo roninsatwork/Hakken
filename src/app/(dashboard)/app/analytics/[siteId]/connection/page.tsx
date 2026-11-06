@@ -1,66 +1,67 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "convex/react";
-import { Plug, TriangleAlert } from "lucide-react";
+import { Plug } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { Field } from "@/src/ui/components/screens/Field";
+import { ListTable } from "@/src/ui/components/screens/ListTable";
+import { Meter } from "@/src/ui/components/screens/Meter";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
-import { formatDate, formatDateTime } from "@/src/lib/dates";
-import { NEVER_TICKED } from "@/convex/utils/analyticsEvents";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { formatDateTime, formatLongDate, formatTime } from "@/src/lib/dates";
+import { isCopyAddress } from "@/convex/utils/analyticsAddresses";
+import { NEVER_TICKED, PURCHASE_EVENT } from "@/convex/utils/analyticsEvents";
 import { eventsWithAddresses } from "@/convex/utils/analyticsAddresses";
-import { SiteFacts } from "../../../sites/_components/SiteRecordParts";
-import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
+import { EVENT_KINDS, eventKind, type EventKind } from "@/convex/utils/conversionSteps";
+import { useSitePager } from "../../../sites/_components/useSitePagedTable";
+import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
+import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { formatDay, formatNumber } from "../../../sites/_components/siteFormat";
+import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { AnalyticsConnectCard, useBeginAnalyticsConnect } from "../../_components/AnalyticsNotices";
 import { currencySign, formatMoney } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, type AnalyticsStatus } from "../../_components/useAnalytics";
 
-const PANEL = "rounded-2xl border border-border-dim bg-card/40 p-6";
+type Connection = NonNullable<AnalyticsStatus["connection"]>;
+type HeldEvent = NonNullable<Connection["events"]>[number];
+type HeldAddress = Connection["addressesRead"][number];
 
 /**
- * A website's connection to Google Analytics (§3; §11 boards 11 to 14):
- * where a sign-in comes back to and says how it went; the property, the
- * website's one shown for a yes when only one records it (GA22); what counts
- * as a conversion and what each is worth (GA5, GA3, GA6); and, once
- * connected, the property, address and account, how far the figures go, what
- * counts, and the way to disconnect. The company's admins act here; everyone
- * else reads it.
+ * A website's connection to Google Analytics (overview-new-page-plan-2026-11-06.md,
+ * step 16; his Way 3): where a sign-in comes back to and says how it went; the
+ * property, the website's one shown for a yes when only one records it; then
+ * plain sentences saying how the figures get here, and the website's events and
+ * addresses with their ticks where they are. Pressing Change looks in Google
+ * Analytics for new events and turns the ticks on. The company's admins act here;
+ * everyone else reads it. A connection page has no What Hakken sees of its own.
  */
 export default function AnalyticsConnectionPage() {
   const t = useTranslations("googleAnalytics.connection");
   const status = useAnalyticsStatus();
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Plug className="h-5 w-5 text-brand" />} title={t("title")} description={t("description", { host: status?.host ?? "" })} />
+      <PageHeader icon={<Plug className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       {status ? <ConnectionBody status={status} /> : null}
     </div>
   );
 }
 
-/**
- * What the page shows for the connection's stage: the way to connect (with
- * `AnalyticsConnectCard`'s note on what Search Console's clicks cannot weigh),
- * the property to choose, what counts while choosing it — the ticks as Hakken
- * set them — and, connected, what counts and what it is worth. A connection
- * page carries no What Hakken sees of its own (Anthony, 2026-10-31).
- */
 function ConnectionBody({ status }: { status: AnalyticsStatus }) {
   const siteId = useAnalyticsSiteId();
   const connection = status.connection;
-  const changing = useSearchParams().get("change") === "1";
-  const choosing = connection !== null && (connection.status === "COUNTING" || (changing && status.canManage && connection.status === "CONNECTED"));
   return (
     <>
       {connection?.attempt ? <AttemptNote status={status} /> : null}
@@ -68,10 +69,8 @@ function ConnectionBody({ status }: { status: AnalyticsStatus }) {
         <AnalyticsConnectCard status={status} siteId={siteId} />
       ) : connection.status === "CHOOSING" ? (
         <ChooseProperty status={status} />
-      ) : choosing ? (
-        <ChooseWhatCounts status={status} changing={connection.status === "CONNECTED"} />
       ) : (
-        <ConnectionDetails status={status} />
+        <ConnectedPage status={status} />
       )}
     </>
   );
@@ -80,22 +79,21 @@ function ConnectionBody({ status }: { status: AnalyticsStatus }) {
 /** Why the last sign-in did not connect, with the account it was tried with. */
 function AttemptNote({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.connection");
-  const { platformName } = useSystemSettings();
   const attempt = status.connection?.attempt;
   if (!attempt) return null;
   const account = attempt.account ?? t("someone");
   return (
     <Notice tone="warning">
       <span className="block font-medium text-foreground">{t(`attemptTitle.${attempt.outcome}`, { host: status.host, account })}</span>
-      <span className="block">{t(`attempt.${attempt.outcome}`, { host: status.host, account, platformName })}</span>
+      <span className="block">{t(`attempt.${attempt.outcome}`, { host: status.host, account })}</span>
     </Notice>
   );
 }
 
 /**
- * The property (§3, step 3): when exactly one of the account's properties has
- * a web stream for the website, it is shown for a yes, with "Not this one?
- * See all" (GA22); otherwise every property, the matching ones first.
+ * The property: when exactly one of the account's properties has a web stream
+ * for the website, it is shown for a yes, with a way to see them all; otherwise
+ * every property, the matching ones first.
  */
 function ChooseProperty({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.connection");
@@ -103,53 +101,44 @@ function ChooseProperty({ status }: { status: AnalyticsStatus }) {
   const choose = useMutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty);
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-choose" });
   const { start, busy } = useBeginAnalyticsConnect(siteId);
-  const { platformName } = useSystemSettings();
   const choices = status.connection?.choices ?? [];
   const matching = choices.filter((choice) => choice.stream !== null);
   const [seeAll, setSeeAll] = useState(matching.length !== 1);
   const [picked, setPicked] = useState(matching[0]?.property ?? choices[0]?.property ?? "");
   const account = status.connection?.googleAccount ?? t("someone");
   const use = (property: string) => void run(() => choose({ siteId, property }), { fallbackMessage: t("failed") });
-  const addressLine = (choice: (typeof choices)[number]) => (choice.addresses.length > 0
-    ? choice.others.length > 0
-      ? t("addressesLine", { count: choice.addresses.length + choice.others.length, read: choice.addresses.join(", "), host: status.host, platformName })
-      : t("addressLine", { read: choice.addresses.join(", "), platformName })
-    : null);
+  const numberOf = (property: string) => t("propertyNumber", { id: property.replace(/^properties\//, "") });
+  const records = <StatusLabel tone="success">{t("records", { host: status.host })}</StatusLabel>;
+  const named = (name: string, line: string) => <span className="flex min-w-0 flex-col gap-0.5"><span className="truncate text-[13px] text-foreground">{name}</span><span className="text-[12.5px] text-secondary">{line}</span></span>;
 
   if (!seeAll && matching.length === 1) {
     const only = matching[0];
     return (
-      <div className={`${PANEL} flex flex-col gap-4`}>
-        <div className="flex flex-col gap-1">
-          <h2 className="text-[15px] font-medium text-foreground">{t("oneTitle", { host: status.host })}</h2>
-          <p className="text-[13px] text-secondary">{t("oneDescription", { account, count: choices.length, host: status.host })}</p>
-        </div>
-        <div className="flex items-center gap-4 rounded-xl border border-border-dim px-4 py-3">
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-[13px] text-foreground">{only.displayName}</span>
-            <span className="text-[12px] text-secondary">{t("propertyLine", { id: only.property.replace(/^properties\//, ""), stream: (only.stream ?? "").replace(/^https?:\/\//, "") })}</span>
-          </span>
-          <StatusLabel tone="success">{t("records", { host: status.host })}</StatusLabel>
-        </div>
+      <>
+        <Heading title={t("oneTitle")} description={t("oneDescription", { account, host: status.host })} />
+        <CompactList
+          rows={[only]}
+          rowKey={(choice) => choice.property}
+          empty="–"
+          columns={[
+            { key: "name", cell: (choice) => named(choice.displayName, numberOf(choice.property)) },
+            { key: "records", align: "right", className: "whitespace-nowrap", cell: () => records },
+          ]}
+        />
         {status.canManage ? (
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="brand" disabled={isBusy()} onClick={() => use(only.property)}>{t("useThis")}</Button>
-            <Button variant="ghost" onClick={() => setSeeAll(true)}>{t("notThisOne", { count: choices.length })}</Button>
+            <Button variant="brand" disabled={isBusy()} onClick={() => use(only.property)}>{t("use")}</Button>
+            <Button variant="ghost" onClick={() => setSeeAll(true)}>{t("notThisOne")}</Button>
           </div>
         ) : null}
-        {addressLine(only) ? <p className="text-[12px] text-muted">{addressLine(only)} {t("nextCounts")}</p> : null}
-      </div>
+        <p className="text-[12px] text-muted">{t("nextCounts")}</p>
+      </>
     );
   }
 
   return (
-    <div className={`${PANEL} flex flex-col gap-4`}>
-      <div className="flex flex-col gap-1">
-        <h2 className="text-[15px] font-medium text-foreground">{t("chooseTitle")}</h2>
-        <p className="text-[13px] text-secondary">
-          {matching.length === 0 ? t("noneMatching", { account, host: status.host }) : t("chooseDescription", { account, host: status.host })}
-        </p>
-      </div>
+    <>
+      <Heading title={t("chooseTitle")} description={matching.length === 0 ? t("noneMatching", { account, host: status.host }) : t("chooseDescription", { account, host: status.host })} />
       <fieldset className="flex flex-col divide-y divide-border-dim/50 overflow-hidden rounded-xl border border-border-dim">
         <legend className="sr-only">{t("chooseTitle")}</legend>
         {choices.map((choice) => (
@@ -163,15 +152,8 @@ function ChooseProperty({ status }: { status: AnalyticsStatus }) {
               onChange={() => setPicked(choice.property)}
               className="accent-brand"
             />
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-[13px] text-foreground">{choice.displayName}</span>
-              <span className="text-[12px] text-secondary">
-                {choice.stream
-                  ? t("propertyLine", { id: choice.property.replace(/^properties\//, ""), stream: choice.stream.replace(/^https?:\/\//, "") })
-                  : t("propertyAccount", { id: choice.property.replace(/^properties\//, ""), account: choice.accountName })}
-              </span>
-            </span>
-            {choice.stream ? <StatusLabel tone="success">{t("records", { host: status.host })}</StatusLabel> : null}
+            <span className="min-w-0 flex-1">{named(choice.displayName, choice.stream ? numberOf(choice.property) : t("propertyAccount", { id: choice.property.replace(/^properties\//, ""), account: choice.accountName }))}</span>
+            {choice.stream ? records : null}
           </label>
         ))}
       </fieldset>
@@ -181,35 +163,32 @@ function ChooseProperty({ status }: { status: AnalyticsStatus }) {
           <Button variant="quiet" disabled={busy} onClick={() => void start()}>{t("another")}</Button>
         </div>
       ) : null}
+    </>
+  );
+}
+
+function Heading({ title, description }: { title: string; description: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <h2 className="text-[15px] font-medium text-foreground">{title}</h2>
+      <p className="text-[13px] text-secondary">{description}</p>
     </div>
   );
 }
 
-type Draft = { counted: boolean; where: "HAKKEN" | "ANALYTICS"; value: string };
-
 /**
- * What counts (§3, step 5; §11 board 13): the property's key events, the
- * likely ones ticked, a scroll never; for each ticked one its value from
- * Analytics, or the choice to set it in Hakken or in Google Analytics. Saving
- * connects the website and starts collecting at once (§10, Q15).
+ * A website with a property chosen: choosing its events the first time, or,
+ * once connected, how its figures get here and its events and addresses. The
+ * address's `change=1` is Change pressed, so a check's own screen can open it.
  */
-function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; changing: boolean }) {
+function ConnectedPage({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.counts");
-  const router = useRouter();
   const siteId = useAnalyticsSiteId();
-  const hrefFor = useAnalyticsHref(siteId);
-  const nameOf = useEventName();
-  const save = useMutation(api.googleAnalyticsConnect.saveWhatCounts);
-  const reread = useMutation(api.googleAnalyticsConnect.changeWhatCounts);
-  const { run, isBusy } = useAdminAction({ scope: "google-analytics-counts" });
-  const { platformName } = useSystemSettings();
   const connection = status.connection!;
-  const events = connection.events;
-  const sign = currencySign(connection.currency);
-  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
-  // The other addresses' ticks, before they are saved: whether each one's conversions and sales count.
-  const [ticks, setTicks] = useState<Record<string, boolean>>({});
-  // Changing what counts on a connected website reads the property's key events again, once.
+  const changing = useSearchParams().get("change") === "1" && status.canManage && connection.status === "CONNECTED";
+  const first = connection.status === "COUNTING";
+  const reread = useMutation(api.googleAnalyticsConnect.changeWhatCounts);
+  // Pressing Change looks in Google Analytics for new events, once: about 5 small asks. It's the only time that happens by itself.
   const asked = useRef(false);
   useEffect(() => {
     if (!changing || asked.current) return;
@@ -217,121 +196,237 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
     void reread({ siteId }).catch(() => undefined);
   }, [changing, reread, siteId]);
 
+  return (
+    <>
+      {first ? <Notice>{t("firstNotice")}</Notice> : <HowItWorks status={status} />}
+      <EventsAndAddresses key={changing || first ? "editing" : "reading"} status={status} editing={first || changing} first={first} />
+      {!first && !changing ? <Disconnect status={status} /> : null}
+    </>
+  );
+}
+
+/** How the figures get here, as a person would say it, under one line saying if it's working. */
+function HowItWorks({ status }: { status: AnalyticsStatus }) {
+  const t = useTranslations("googleAnalytics.connection");
+  const connection = status.connection!;
+  const account = connection.googleAccount ?? t("someone");
+  const working = connection.status === "CONNECTED" && !connection.problem;
+  const since = connection.connectedAt ? formatLongDate(connection.connectedAt) : "";
+  const updated = connection.lastCollectedAt && connection.newestDay
+    ? new Date(connection.lastCollectedAt).toDateString() === new Date().toDateString()
+      ? t("lines.lastToday", { time: formatTime(connection.lastCollectedAt, { options: { hour: "2-digit", minute: "2-digit" } }), day: formatDay(connection.newestDay) })
+      : t("lines.lastOn", { when: formatDateTime(connection.lastCollectedAt), day: formatDay(connection.newestDay) })
+    : t("lines.lastNone");
+  const converting = connection.addressesRead.filter((address) => address.counted).map((address) => address.host);
+  const read = [...connection.addresses, ...converting];
+  const leftOut = new Set([...connection.otherAddresses.map((host) => host.toLowerCase()), ...connection.addressesRead.map((address) => address.host)].filter((host) => !converting.includes(host))).size;
+  const lines = [
+    t("lines.source"),
+    updated,
+    ...(connection.oldestDay ? [t("lines.history", { day: formatDay(connection.oldestDay) })] : []),
+    connection.sharedWithSearchConsole ? t("lines.accountShared", { account }) : t("lines.account", { account }),
+    `${t("lines.counted", { read: read.join(" and "), count: read.length })}${leftOut > 0 ? ` ${t("lines.leftOut", { count: leftOut })}` : ""}`,
+  ];
+  return (
+    <>
+      {connection.status === "CONNECTED" && connection.problem ? (
+        <Notice tone="warning">{t(`problem.${connection.problem}`, { account, property: connection.propertyName ?? connection.property ?? "" })}</Notice>
+      ) : null}
+      <div className="flex flex-col gap-1.5">
+        {working ? <StatusLabel tone="success" size="md">{t("status.working", { day: since })}</StatusLabel> : <StatusLabel tone="warning" size="md">{t("status.notUpdating")}</StatusLabel>}
+      </div>
+      <CompactList rows={lines} rowKey={(line) => line} empty="–" columns={[{ key: "line", className: "text-[13px] text-foreground", cell: (line) => line }]} />
+    </>
+  );
+}
+
+type Draft = { counted: boolean; value: string };
+type EventRow = { event: HeldEvent; name: string; kind: EventKind; times: number; note: string | null };
+type AddressRow = { host: string; held: HeldAddress | null; own: boolean; why: "OWN" | "SAME_DOMAIN" | "REACHED" | "NOT_REACHED" | "COPY" | "OTHER"; events: number };
+
+const EVENT_SORTS: SiteSortColumns<EventRow, "name" | "kind" | "times"> = {
+  name: { value: (row) => row.name, first: "asc" },
+  kind: { value: (row) => EVENT_KINDS.indexOf(row.kind), first: "asc" },
+  times: { value: (row) => row.times, first: "desc" },
+};
+
+/** Why an address's events count or not, in the words beside it. */
+function whyOf(address: HeldAddress): AddressRow["why"] {
+  if (address.kind === "OTHER_DOMAIN") return address.reached ? "REACHED" : "NOT_REACHED";
+  return address.kind;
+}
+
+/**
+ * The website's events and addresses, each with its tick. Reading, the ticks are
+ * off and a Change button turns them on. Changing, each event without a value
+ * from Google Analytics has a box for one, and Save and Cancel sit under the
+ * tables. Saving the first time starts collecting, and it applies to all history.
+ */
+function EventsAndAddresses({ status, editing, first }: { status: AnalyticsStatus; editing: boolean; first: boolean }) {
+  const t = useTranslations("googleAnalytics.counts");
+  const router = useRouter();
+  const siteId = useAnalyticsSiteId();
+  const hrefFor = useAnalyticsHref(siteId);
+  const nameOf = useEventName();
+  const save = useMutation(api.googleAnalyticsConnect.saveWhatCounts);
+  const { run, isBusy } = useAdminAction({ scope: "google-analytics-counts" });
+  const connection = status.connection!;
+  const events = connection.events;
+  const sign = currencySign(connection.currency);
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
+  const [kind, setKind] = useSiteParam<EventKind | "all">("kind", "all", ["all", ...EVENT_KINDS]);
+  const [text, setText, term] = useSiteSearch();
+  const [addressText, setAddressText, addressTerm] = useSiteSearch("q", "addresses");
+
+  const held = connection.addressesRead;
+  const tickOf = (address: HeldAddress) => ticks[address.host] ?? address.counted;
+  const draftOf = (event: HeldEvent): Draft => drafts[event.eventName] ?? { counted: event.counted, value: event.hakkenValue === null ? "" : String(event.hakkenValue) };
+  const set = (event: HeldEvent, change: Partial<Draft>) => setDrafts((before) => ({ ...before, [event.eventName]: { ...draftOf(event), ...change } }));
+
+  // Each event's last 30 days on the website's own address and every other address ticked now.
+  const shown = new Map(eventsWithAddresses(events ?? [], held, tickOf).map((event) => [event.eventName, event.lastThirtyDays]));
+  const never = connection.health?.checks.find((check) => check.check === "NEVER_HAPPENS" && !check.passing);
+  const quiet = new Set(never?.names ?? []);
+  const noteOf = (event: HeldEvent): string | null => {
+    const copy = connection.copies.find((pair) => pair.eventName === event.eventName || pair.of === event.eventName);
+    if (copy) {
+      const other = copy.eventName === event.eventName ? copy.of : copy.eventName;
+      return NEVER_TICKED.has(other) ? t("notes.isReally", { other: nameOf(other) }) : t("notes.same", { other: nameOf(other) });
+    }
+    if (quiet.has(event.eventName)) return never?.count === 365 ? t("notes.quietYear") : t("notes.quiet");
+    if (NEVER_TICKED.has(event.eventName) && !draftOf(event).counted) return t("notes.neverTicked");
+    if (event.keyEvent === false) return t("notes.notKeyEvent");
+    return null;
+  };
+  const allRows: EventRow[] = (events ?? []).map((event) => ({
+    event,
+    name: nameOf(event.eventName),
+    kind: eventKind(event.eventName, quiet.has(event.eventName)),
+    times: shown.get(event.eventName) ?? event.lastThirtyDays,
+    note: noteOf(event),
+  }));
+  const search = term.toLowerCase();
+  const chosen = allRows.filter((row) => (kind === "all" || row.kind === kind) && (!search || `${row.name} ${row.event.eventName}`.toLowerCase().includes(search)));
+  const { rows: sorted, tableSort } = useSiteSortedList(chosen, EVENT_SORTS, { opening: "kind", name: (row) => row.name, group: (row) => EVENT_KINDS.indexOf(row.kind) });
+  const pager = useSitePager(sorted, { isLoading: false });
+  const most = allRows.reduce((sum, row) => sum + row.times, 0);
+
+  // The website's own addresses, always counted; those read for events, each with its tick; the rest, with none to count.
+  const listed = new Set(held.map((address) => address.host));
+  const hostEvents = new Map((connection.hostConversions ?? []).map((one) => [one.host, one.conversions]));
+  const addressRows: AddressRow[] = [
+    ...connection.addresses.map((host): AddressRow => ({ host, held: null, own: true, why: "OWN", events: hostEvents.get(host) ?? 0 })),
+    ...held.map((address): AddressRow => ({ host: address.host, held: address, own: false, why: whyOf(address), events: address.events.reduce((sum, event) => sum + event.month, 0) })),
+    ...connection.otherAddresses.filter((host) => !listed.has(host.toLowerCase())).map((host): AddressRow => ({ host, held: null, own: false, why: isCopyAddress(host, status.host) ? "COPY" : "OTHER", events: 0 })),
+  ];
+  const addressSearch = addressTerm.toLowerCase();
+  const addressShown = addressRows.filter((row) => !addressSearch || row.host.toLowerCase().includes(addressSearch));
+  const addressPager = useSitePager(addressShown, { isLoading: false, table: "addresses" });
+
   if (!events) {
-    // Google didn't answer when the events were read: said plainly, with when Hakken asks again by itself (BR1).
+    // Google didn't answer when the events were read: said plainly, with when it's asked again by itself (BR1).
     if (connection.readAgainAt !== null) {
       return (
         <Notice tone="warning">
-          <span className="block font-medium text-foreground">{t("readFailedTitle", { property: connection.propertyName ?? "" })}</span>
-          <span className="block">{t("readFailed", { at: formatDateTime(connection.readAgainAt), platformName })}</span>
+          <span className="block font-medium text-foreground">{t("readFailedTitle")}</span>
+          <span className="block">{t("readFailed", { at: formatDateTime(connection.readAgainAt) })}</span>
           {connection.problemDetail ? <span className="block">{t("googleSaid", { words: connection.problemDetail })}</span> : null}
         </Notice>
       );
     }
     return <Notice>{t("reading")}</Notice>;
   }
-  const draftOf = (eventName: string): Draft => {
-    const held = events.find((event) => event.eventName === eventName)!;
-    return drafts[eventName] ?? { counted: held.counted, where: "HAKKEN", value: held.hakkenValue === null ? "" : String(held.hakkenValue) };
-  };
-  const set = (eventName: string, change: Partial<Draft>) => setDrafts((before) => ({ ...before, [eventName]: { ...draftOf(eventName), ...change } }));
-  const counted = events.filter((event) => draftOf(event.eventName).counted).length;
-  const held = connection.addressesRead;
-  const tickOf = (address: (typeof held)[number]) => ticks[address.host] ?? address.counted;
-  // Each event's last 30 days on the website's own address and every other address ticked now.
-  const shown = new Map(eventsWithAddresses(events, held, tickOf).map((event) => [event.eventName, event.lastThirtyDays]));
-  // Two ticked events that count the same day for day (conversions-back-in-time-plan.md BT5): said on the second in the
-  // list. A key event matching one that is not is very likely built from it in Google Analytics: a copy of it.
-  const copyNote = (eventName: string): string | null => {
-    const pair = connection.copies.find((copy) => copy.of === eventName && draftOf(copy.eventName).counted && draftOf(eventName).counted);
-    if (!pair) return null;
-    const first = events.find((event) => event.eventName === pair.eventName);
-    const second = events.find((event) => event.eventName === eventName);
-    const words = { other: nameOf(pair.eventName), name: nameOf(eventName) };
-    return first?.keyEvent !== false && second?.keyEvent === false ? t("copyOf", words) : t("sameAs", words);
-  };
-  // An event that copies one never an enquiry, day for day (Ronins' "Form sent", its link clicks): said ticked or not,
-  // since ticking it counts the copied clicks as enquiries for the whole year.
-  const lookalikeNote = (eventName: string): string | null => {
-    const lookalike = connection.copies.find((copy) => copy.eventName === eventName && NEVER_TICKED.has(copy.of));
-    return lookalike ? t("isReally", { name: nameOf(eventName), other: nameOf(lookalike.of) }) : null;
-  };
+
   const invalid = events.some((event) => {
-    const draft = draftOf(event.eventName);
+    const draft = draftOf(event);
     return draft.counted && draft.value.trim() !== "" && !(Number(draft.value) >= 0);
   });
-  const others = connection.otherAddresses;
+  const counted = events.filter((event) => draftOf(event).counted).length;
+  const canTick = editing && status.canManage;
+  const download = (
+    <ListDownload
+      label={t("download")}
+      fileName={`${status.host}-events`}
+      rows={sorted ?? []}
+      columns={[
+        { header: t("columns.event"), value: (row) => row.name },
+        { header: t("columns.google"), value: (row) => row.event.eventName },
+        { header: t("columns.kind"), value: (row) => t(`kinds.${row.kind}`) },
+        { header: t("columns.times"), value: (row) => row.times },
+        { header: t("columns.note"), value: (row) => row.note ?? "" },
+      ]}
+    />
+  );
+  const valueOf = (row: EventRow) => {
+    const { event } = row;
+    if (event.analyticsValue !== null) return <span title={t("setInAnalytics")} className="font-mono text-[13px] text-foreground">{formatMoney(Math.round(event.analyticsValue * 100), connection.currency)}</span>;
+    if (canTick && draftOf(event).counted && event.eventName !== PURCHASE_EVENT) {
+      return (
+        <Field
+          label={t("valueLabel", { name: row.name })}
+          labelHidden
+          type="number"
+          min={0}
+          step="any"
+          inputMode="decimal"
+          placeholder={sign}
+          value={draftOf(event).value}
+          onChange={(input) => set(event, { value: input.target.value })}
+          wrapperClassName="ml-auto w-24"
+        />
+      );
+    }
+    return event.hakkenValue !== null ? <span className="font-mono text-[13px] text-foreground">{formatMoney(Math.round(event.hakkenValue * 100), connection.currency)}</span> : <NoFigure />;
+  };
 
   return (
-    <div className="flex flex-col gap-4">
-      {held.length > 0 ? (
-        <WhereConversionsCount status={status} tickOf={tickOf} onTick={(host, checked) => setTicks((before) => ({ ...before, [host]: checked }))} />
-      ) : others.length > 0 ? (
-        <Notice>{t("addresses", { count: connection.addresses.length + others.length, property: connection.propertyName ?? "", host: status.host, read: connection.addresses.join(", "), others: others.join(", "), platformName })}</Notice>
-      ) : null}
-      <div className={`${PANEL} flex flex-col gap-4`}>
-        <div className="flex flex-col gap-1">
-          <h2 className="text-[15px] font-medium text-foreground">{t("title")}</h2>
-          <p className="text-[13px] text-secondary">{t("description", { property: connection.propertyName ?? "", platformName })}</p>
-        </div>
-        {events.length === 0 ? <Notice tone="warning">{t("noKeyEvents")}</Notice> : null}
-        <div className="flex flex-col divide-y divide-border-dim/50 overflow-hidden rounded-xl border border-border-dim">
-          {events.map((event) => {
-            const draft = draftOf(event.eventName);
-            const name = nameOf(event.eventName);
-            return (
-              <div key={event.eventName} className="flex flex-col gap-3 px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <Checkbox label={name} labelHidden checked={draft.counted} disabled={!status.canManage} onChange={(checked) => set(event.eventName, { counted: checked })} />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-[13px] text-foreground">{name}</span>
-                    <span className="text-[12px] text-secondary">
-                      <span className="font-mono">{event.eventName}</span> · {t("lastThirty", { count: formatNumber(shown.get(event.eventName) ?? event.lastThirtyDays) })}
-                    </span>
-                  </span>
-                  <span className="text-[12px] text-secondary">
-                    {event.analyticsValue !== null ? t("inAnalytics", { value: formatMoney(Math.round(event.analyticsValue * 100), connection.currency) }) : t("noValueInAnalytics")}
-                  </span>
-                </div>
-                {NEVER_TICKED.has(event.eventName) && !draft.counted ? <p className="pl-7 text-[12px] text-muted">{t("neverTicked")}</p> : null}
-                {event.keyEvent === false ? <p className="pl-7 text-[12px] text-muted">{t("notKeyEvent", { platformName })}</p> : null}
-                {copyNote(event.eventName) ? <p className="pl-7 text-[12px] text-muted">{copyNote(event.eventName)}</p> : null}
-                {lookalikeNote(event.eventName) ? <p className="pl-7 text-[12px] text-muted">{lookalikeNote(event.eventName)}</p> : null}
-                {draft.counted && event.analyticsValue === null ? (
-                  <div className="flex flex-col items-start gap-3 pl-7">
-                    <SiteViewSwitch
-                      label={t("whereLabel")}
-                      options={[{ value: "HAKKEN" as const, label: t("setInHakken", { platformName }) }, { value: "ANALYTICS" as const, label: t("setInAnalytics") }]}
-                      value={draft.where}
-                      onChange={(where) => set(event.eventName, { where })}
-                    />
-                    {draft.where === "HAKKEN" ? (
-                      <Field
-                        label={t("valueLabel", { sign })}
-                        type="number"
-                        min={0}
-                        step="any"
-                        inputMode="decimal"
-                        placeholder={t("valuePlaceholder")}
-                        value={draft.value}
-                        disabled={!status.canManage}
-                        onChange={(input) => set(event.eventName, { value: input.target.value })}
-                        wrapperClassName="max-w-[220px]"
-                        hint={draft.value.trim() === "" ? t("noValueYet") : t("worth", { name: name.toLowerCase(), value: `${sign}${draft.value}` })}
-                      />
-                    ) : (
-                      <ol className="max-w-2xl list-decimal pl-5 text-[12.5px] text-secondary">
-                        {(["one", "two", "three", "four"] as const).map((step) => <li key={step}>{t(`analyticsSteps.${step}`, { event: event.eventName, platformName })}</li>)}
-                      </ol>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-        <p className="text-[12px] text-muted">{t("appliesToHistory", { platformName })}</p>
-        {status.canManage ? (
+    <>
+      {events.length === 0 ? <Notice tone="warning">{t("noKeyEvents")}</Notice> : null}
+      <ListTable<EventRow>
+        noun="events"
+        title={t("title")}
+        description={first ? t("firstDescription") : editing ? t("changing") : t("reading_")}
+        rows={pager.pageRows}
+        rowKey={(row) => row.event.eventName}
+        actions={<>{!editing && status.canManage && connection.status === "CONNECTED" ? <Button variant="quiet" className="px-3 py-2 text-[12px]" onClick={() => router.push(hrefFor("connection", { change: "1" }))}>{t("change")}</Button> : null}{download}</>}
+        search={{ value: text, onChange: setText, placeholder: t("search") }}
+        filters={(
+          <Select aria-label={t("kindChip")} value={kind} onChange={(next) => setKind(next as EventKind | "all")} chip={{ label: t("kindChip"), choice: kind === "all" ? null : t(`kinds.${kind}`) }}>
+            <option value="all">{t("everyKind")}</option>
+            {EVENT_KINDS.map((one) => <option key={one} value={one}>{t(`kinds.${one}`)}</option>)}
+          </Select>
+        )}
+        sort={tableSort}
+        empty={{ icon: <Plug className="h-8 w-8 text-muted/30" />, label: t("emptyEvents") }}
+        footer={pager.footer}
+        columns={[
+          { key: "tick", header: t("columns.counts"), cell: (row) => <Checkbox label={row.name} labelHidden checked={draftOf(row.event).counted} disabled={!canTick} onChange={(checked) => set(row.event, { counted: checked })} /> },
+          { key: "name", header: t("columns.event"), sortable: true, cell: (row) => <span title={t("inAnalytics", { name: row.event.eventName })} className="whitespace-nowrap text-[13px] text-foreground">{row.name}</span> },
+          { key: "kind", header: t("columns.kind"), sortable: true, cell: (row) => <TagLabel>{t(`kinds.${row.kind}`)}</TagLabel> },
+          { key: "times", header: t("columns.times"), sortable: true, align: "right", cell: (row) => <span className="flex items-center justify-end gap-3"><Meter value={most > 0 ? row.times / most : 0} className="w-24" /><span className="w-12 font-mono text-[13px] text-foreground">{formatNumber(row.times)}</span></span> },
+          { key: "value", header: t("columns.value"), align: "right", cell: valueOf },
+          { key: "note", header: t("columns.note"), cell: (row) => (row.note ? <span className="text-[12.5px] text-secondary">{row.note}</span> : null) },
+        ]}
+      />
+      <ListTable<AddressRow>
+        noun="addresses"
+        title={t("addresses.title")}
+        description={t("addresses.description")}
+        rows={addressPager.pageRows}
+        rowKey={(row) => row.host}
+        search={{ value: addressText, onChange: setAddressText, placeholder: t("addresses.search") }}
+        empty={{ icon: <Plug className="h-8 w-8 text-muted/30" />, label: t("addresses.empty") }}
+        footer={addressPager.footer}
+        columns={[
+          { key: "tick", header: t("columns.counts"), cell: (row) => <Checkbox label={row.host} labelHidden checked={row.own || (row.held ? tickOf(row.held) : false)} disabled={!canTick || row.held === null} onChange={(checked) => setTicks((before) => ({ ...before, [row.host]: checked }))} /> },
+          { key: "host", header: t("addresses.address"), cell: (row) => <span className="break-all text-[13px] text-foreground">{row.host}</span> },
+          { key: "why", header: t("addresses.what"), cell: (row) => <span className="text-[12.5px] text-secondary">{t(`addresses.why.${row.why}`)}</span> },
+          { key: "events", header: t("columns.times"), align: "right", cell: (row) => <span className="font-mono text-[13px] text-foreground">{formatNumber(row.events)}</span> },
+        ]}
+      />
+      {canTick ? (
+        <div className="flex flex-col items-start gap-2">
           <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="brand"
@@ -340,190 +435,54 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
                 const outcome = await run(() => save({
                   siteId,
                   events: events.map((event) => {
-                    const draft = draftOf(event.eventName);
-                    const value = draft.value.trim() === "" ? null : Number(draft.value);
-                    return { eventName: event.eventName, counted: draft.counted, hakkenValue: value };
+                    const draft = draftOf(event);
+                    return { eventName: event.eventName, counted: draft.counted, hakkenValue: draft.value.trim() === "" ? null : Number(draft.value) };
                   }),
                   addresses: held.map((address) => ({ host: address.host, counted: tickOf(address) })),
                 }), { fallbackMessage: t("failed") });
-                if (outcome.ok) router.push(changing ? hrefFor("connection") : hrefFor(""));
+                if (outcome.ok) router.push(first ? hrefFor("") : hrefFor("connection", { change: "0" }));
               }}
             >
               {t("save", { count: counted })}
             </Button>
-            {changing ? <Button variant="ghost" onClick={() => router.push(hrefFor("connection"))}>{t("back")}</Button> : null}
+            {first ? null : <Button variant="ghost" onClick={() => router.push(hrefFor("connection", { change: "0" }))}>{t("cancel")}</Button>}
           </div>
-        ) : null}
-        {!changing ? <p className="text-[12px] text-muted">{t("startsAtOnce")}</p> : null}
-      </div>
-    </div>
+          {first ? <p className="text-[12px] text-muted">{t("startsAtOnce")}</p> : null}
+        </div>
+      ) : null}
+    </>
   );
 }
 
-type HeldAddress = NonNullable<AnalyticsStatus["connection"]>["addressesRead"][number];
-
-/** Why an address's conversions count or not, in the words beside it. */
-function whyOf(address: HeldAddress): "SAME_DOMAIN" | "REACHED" | "NOT_REACHED" | "COPY" {
-  if (address.kind === "OTHER_DOMAIN") return address.reached ? "REACHED" : "NOT_REACHED";
-  return address.kind;
-}
-
-/**
- * Where conversions count (conversion-addresses-plan.md): the property's other
- * addresses, each ticked where its conversions and sales count beside the
- * website's own — a shop, a booking page — as Hakken chose them, for the admin
- * to change. Visits and pages are only ever the website's own.
- */
-function WhereConversionsCount({ status, tickOf, onTick }: {
-  status: AnalyticsStatus;
-  tickOf: (address: HeldAddress) => boolean;
-  onTick: (host: string, checked: boolean) => void;
-}) {
-  const t = useTranslations("googleAnalytics.counts");
-  const { platformName } = useSystemSettings();
-  const connection = status.connection!;
-  const held = connection.addressesRead;
-  const listed = new Set(held.map((address) => address.host));
-  const leftOut = connection.otherAddresses.filter((host) => !listed.has(host.toLowerCase()));
-  return (
-    <div className={`${PANEL} flex flex-col gap-4`}>
-      <div className="flex flex-col gap-1">
-        <h2 className="text-[15px] font-medium text-foreground">{t("whereTitle")}</h2>
-        <p className="text-[13px] text-secondary">{t("whereDescription", { property: connection.propertyName ?? "", read: connection.addresses.join(", "), platformName })}</p>
-      </div>
-      <div className="flex flex-col divide-y divide-border-dim/50 overflow-hidden rounded-xl border border-border-dim">
-        {held.map((address) => {
-          const ticked = tickOf(address);
-          const month = address.events.reduce((sum, event) => sum + event.month, 0);
-          return (
-            <div key={address.host} className="flex flex-col gap-1 px-4 py-3">
-              <div className="flex items-start gap-3">
-                <Checkbox label={address.host} labelHidden checked={ticked} disabled={!status.canManage} onChange={(checked) => onTick(address.host, checked)} />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="break-all font-mono text-[13px] text-foreground">{address.host}</span>
-                  <span className="text-[12px] text-secondary">{t(`whereWhy.${whyOf(address)}`, { host: status.host })}</span>
-                </span>
-                <span className="shrink-0 text-[12px] text-secondary">{t("whereMonth", { count: formatNumber(month) })}</span>
-              </div>
-              {ticked !== address.hakken ? <p className="pl-7 text-[12px] text-muted">{t(address.hakken ? "whereHakkenIn" : "whereHakkenOut", { platformName })}</p> : null}
-            </div>
-          );
-        })}
-      </div>
-      {leftOut.length > 0 ? <p className="text-[12px] text-muted">{t("whereLeftOut", { count: leftOut.length, others: leftOut.join(", ") })}</p> : null}
-    </div>
-  );
-}
-
-/** A website connected once: its property, address and account, how far its figures go, what counts, and the way to disconnect. */
-function ConnectionDetails({ status }: { status: AnalyticsStatus }) {
+/** The way to disconnect, for an admin of a connected website. */
+function Disconnect({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.connection");
-  const router = useRouter();
   const siteId = useAnalyticsSiteId();
-  const hrefFor = useAnalyticsHref(siteId);
-  const nameOf = useEventName();
   const disconnect = useMutation(api.googleAnalyticsConnect.disconnectGoogleAnalytics);
-  const { platformName } = useSystemSettings();
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-disconnect" });
   const [confirming, setConfirming] = useState(false);
-  const connection = status.connection!;
-  const account = connection.googleAccount ?? t("someone");
-  // The other addresses whose conversions and sales count beside the website's own (conversion-addresses-plan.md).
-  const converting = connection.addressesRead.filter((address) => address.counted).map((address) => address.host);
-  const leftOut = new Set([...connection.otherAddresses.map((host) => host.toLowerCase()), ...connection.addressesRead.map((address) => address.host)].filter((host) => !converting.includes(host))).size;
-  const facts = [
-    {
-      key: "property",
-      label: t("property"),
-      value: <span>{connection.propertyName ?? "–"} <span className="font-mono">{(connection.property ?? "").replace(/^properties\//, "")}</span></span>,
-    },
-    {
-      key: "address",
-      label: t("address"),
-      value: (
-        <span>
-          <span className="font-mono">{connection.addresses.join(", ") || "–"}</span>
-          {converting.length > 0 ? <> · {t("alsoConverting")} <span className="font-mono">{converting.join(", ")}</span></> : null}
-          {leftOut > 0 ? ` · ${t("othersLeftOut", { count: leftOut })}` : ""}
-        </span>
-      ),
-    },
-    { key: "account", label: t("account"), value: connection.sharedWithSearchConsole ? t("sameSignIn", { account }) : account },
-    { key: "connected", label: t("connected"), value: connection.connectedAt ? formatDate(connection.connectedAt) : "–" },
-    {
-      key: "updated",
-      label: t("lastUpdated"),
-      value: connection.lastCollectedAt && connection.newestDay
-        ? t("updatedDetail", { when: formatDateTime(connection.lastCollectedAt), day: formatDay(connection.newestDay) })
-        : t("notYet"),
-    },
-    { key: "history", label: t("history"), value: connection.oldestDay ? t("historyKept", { day: formatDay(connection.oldestDay) }) : t("notYet") },
-    { key: "collected", label: t("collected"), value: t("collectedDetail") },
-  ];
-  const counted = (connection.events ?? []).filter((event) => event.counted);
-
+  if (!status.canManage || status.connection?.status !== "CONNECTED") return null;
   return (
-    <div className="flex flex-col gap-4">
-      {connection.status === "CONNECTED" && connection.problem ? (
-        <Notice tone="warning">{t(`problem.${connection.problem}`, { account, property: connection.propertyName ?? connection.property ?? "" })}</Notice>
-      ) : null}
-      <div className={PANEL}>
-        <SiteFacts facts={facts} empty="–" />
+    <>
+      <div className="flex flex-col items-start gap-2">
+        <Button variant="outline" onClick={() => setConfirming(true)}>{t("disconnect")}</Button>
+        <p className="text-[12px] text-muted">{t("disconnectHint")}</p>
       </div>
-      <div className={`${PANEL} flex flex-col gap-3`}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-[15px] font-medium text-foreground">{t("countsTitle")}</h2>
-            <p className="text-[13px] text-secondary">{t("countsDescription", { host: status.host, platformName })}</p>
-          </div>
-          {status.canManage && connection.status === "CONNECTED" ? (
-            <Button variant="quiet" className="px-3 py-2 text-[12px]" onClick={() => router.push(hrefFor("connection", { change: "1" }))}>{t("change")}</Button>
-          ) : null}
-        </div>
-        <CompactList
-          rows={counted}
-          rowKey={(event) => event.eventName}
-          empty={t("nothingCounted")}
-          columns={[
-            { key: "name", header: t("conversion"), cell: (event) => <span className="text-[13px] text-foreground">{nameOf(event.eventName)}</span> },
-            { key: "event", header: t("inAnalyticsHeading"), cell: (event) => <span className="font-mono text-[12px] text-secondary">{event.eventName}</span> },
-            {
-              key: "each",
-              header: t("valueEach"),
-              align: "right",
-              cell: (event) => (event.analyticsValue !== null
-                ? <span className="font-mono text-[12px] text-secondary">{formatMoney(Math.round(event.analyticsValue * 100), connection.currency)}</span>
-                : event.hakkenValue !== null
-                  ? <span className="font-mono text-[12px] text-secondary">{formatMoney(Math.round(event.hakkenValue * 100), connection.currency)}</span>
-                  : <span className="inline-flex items-center gap-1.5 text-[12px] text-secondary"><TriangleAlert className="h-3.5 w-3.5 text-warning" aria-hidden="true" />{t("noValue")}</span>),
-            },
-            { key: "setIn", header: t("setInHeading"), cell: (event) => <span className="text-[12px] text-secondary">{event.analyticsValue !== null ? t("setIn.ANALYTICS") : event.hakkenValue !== null ? t("setIn.HAKKEN", { platformName }) : "–"}</span> },
-          ]}
-        />
-      </div>
-      {status.canManage && connection.status === "CONNECTED" ? (
-        <>
-          <div className="flex flex-col items-start gap-2">
-            <Button variant="outline" onClick={() => setConfirming(true)}>{t("disconnect")}</Button>
-            <p className="text-[12px] text-muted">{t("disconnectHint")}</p>
-          </div>
-          {/* A yes or a no, so the kit's confirmation (AGENTS.md: a pop-up is only for a yes or a no). */}
-          <ConfirmationModal
-            isOpen={confirming}
-            onClose={() => setConfirming(false)}
-            title={t("disconnectTitle")}
-            cancelLabel={t("keep")}
-            confirmLabel={t("confirmDisconnect")}
-            isSubmitting={isBusy()}
-            onConfirm={async () => {
-              const outcome = await run(() => disconnect({ siteId }), { fallbackMessage: t("failed") });
-              if (outcome.ok) setConfirming(false);
-            }}
-          >
-            {t("confirm")}
-          </ConfirmationModal>
-        </>
-      ) : null}
-    </div>
+      {/* A yes or a no, so the kit's confirmation (AGENTS.md: a pop-up is only for a yes or a no). */}
+      <ConfirmationModal
+        isOpen={confirming}
+        onClose={() => setConfirming(false)}
+        title={t("disconnectTitle")}
+        cancelLabel={t("keep")}
+        confirmLabel={t("confirmDisconnect")}
+        isSubmitting={isBusy()}
+        onConfirm={async () => {
+          const outcome = await run(() => disconnect({ siteId }), { fallbackMessage: t("failed") });
+          if (outcome.ok) setConfirming(false);
+        }}
+      >
+        {t("confirm")}
+      </ConfirmationModal>
+    </>
   );
 }

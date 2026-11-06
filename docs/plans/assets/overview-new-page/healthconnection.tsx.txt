@@ -1,0 +1,547 @@
+// Tracking health and Connection, on More Handles' real saved figures: the app's shared parts only.
+import { createRoot } from "react-dom/client";
+import type { ReactNode } from "react";
+import { Activity, Plug } from "lucide-react";
+import { ToastProvider } from "@/src/context/ToastContext";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { ListTable } from "@/src/ui/components/screens/ListTable";
+import { CompactList } from "@/src/ui/components/screens/CompactList";
+import { Select } from "@/src/ui/components/screens/Select";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { Notice } from "@/src/ui/components/screens/Notice";
+import { Button } from "@/src/ui/components/screens/Button";
+import { Checkbox } from "@/src/ui/components/screens/Checkbox";
+import { Meter } from "@/src/ui/components/screens/Meter";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
+import { Field } from "@/src/ui/components/screens/Field";
+import { DownloadButton } from "@/src/ui/components/screens/DownloadButton";
+import { SiteFacts } from "@/src/app/(dashboard)/app/sites/_components/SiteRecordParts";
+import { SiteViewSwitch } from "@/src/app/(dashboard)/app/sites/_components/SiteViewSwitch";
+import { formatNumber } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+
+const noop = () => undefined;
+const footer = (count: number) => ({ mode: "paged" as const, page: 1, totalPages: 1, totalCount: count, pageSize: 25, isLoading: false, onPageChange: noop, numbered: true });
+const download = <DownloadButton label="Download" onClick={noop} />;
+
+type Result = "off" | "none" | "good";
+type Area = "visits" | "came" | "conversions" | "pages";
+type Check = { key: string; name: string; result: Result; area: Area; found: string; changes: string; why: string; fix?: string; named?: string[] };
+
+const RESULT: Record<Result, ReactNode> = {
+  off: <StatusLabel tone="warning">Not right</StatusLabel>,
+  none: <StatusLabel tone="neutral">No effect</StatusLabel>,
+  good: <StatusLabel tone="success">All good</StatusLabel>,
+};
+const RESULT_WORD: Record<Result, string> = { off: "Not right", none: "No effect", good: "All good" };
+const AREA_WORD: Record<Area, string> = { visits: "Visits", came: "Where visitors came from", conversions: "Events", pages: "Pages" };
+
+const CHECKS: Check[] = [
+  { key: "TOO_MUCH_UNKNOWN", name: "Where visitors came from", result: "off", area: "came", changes: "Channels, Funnel",
+    found: "Google doesn't know where 6 in 100 visits came from.",
+    why: "These visits aren't in any channel, so your channels look smaller than they are.",
+    fix: "The links in your ads and emails need to be tagged. The Google Analytics code also has to load before a page sends people somewhere else." },
+  { key: "NEVER_HAPPENS", name: "Events that never happen", result: "off", area: "conversions", changes: "Conversions",
+    found: "6 of your 13 events haven't happened in 90 days.",
+    why: "If one has broken, you're missing the people it should count. If it's an old one, it doesn't matter.",
+    fix: "Try each one yourself, then look for it in Google Analytics. If it doesn't show up, it's broken. If you don't need it any more, you can stop counting it.",
+    named: ["Confirmation", "Order form", "Place an order", "Ua 5 minutes on site", "Ua 6 pages visited", "Basket viewed"] },
+  { key: "COUNTED_AGAIN", name: "Pages counted too often", result: "off", area: "pages", changes: "Pages a visit, Left straight away",
+    found: "760 pages are counted too many times on each visit.",
+    why: "Visits look longer than they really are. It also looks like fewer people leave after one page.",
+    fix: "This is a setting in Google Analytics. Go to Admin, Data streams, your website, then Enhanced measurement. Under Page views, untick Page changes based on browser history events.",
+    named: ["/wishlist/index/index/wishlist_id/24110/", "/catalogsearch/result/index/", "/handles/door-handles-on-rose/polished-chrome-satin-chrome-door-handles-on-rose.html"] },
+  { key: "NO_VALUE", name: "Events with no value", result: "none", area: "conversions", changes: "Nothing on these pages",
+    found: "12 of your 13 events have no value. No Google Analytics page shows value, so this changes nothing here.",
+    why: "You can't see value on any Google Analytics page, so nothing changes here.",
+    fix: "Nothing to fix." },
+  { key: "STRANGERS", name: "Visits from other websites", result: "none", area: "visits", changes: "Nothing you can see",
+    found: "5 visits came from test copies of your website. They aren't in your figures.",
+    why: "These visits only show in Google Analytics' own reports, so your figures are still right.",
+    fix: "Nothing to fix.",
+    named: ["silly-mclean.77-68-13-134.plesk.page", "staging.morehandles.co.uk"] },
+  { key: "TRACKING_STOPPED", name: "Days with no visits", result: "good", area: "visits", changes: "Every figure",
+    found: "Visits were counted every day.",
+    why: "If the tracking code comes off your website, every figure stops. So this looks for a day with no visits." },
+  { key: "SUDDEN_FALL", name: "Sudden drops", result: "good", area: "visits", changes: "Every figure",
+    found: "No week had a sudden drop.",
+    why: "A sudden drop often means the tracking broke, not that people left." },
+  { key: "SELF_REFERRAL", name: "Visits from your own website", result: "good", area: "came", changes: "Channels",
+    found: "Your website isn't sending visitors to itself.",
+    why: "If your website sends people to itself, one visit can count as two." },
+  { key: "PAYMENT_REFERRALS", name: "Payment pages taking the credit", result: "good", area: "came", changes: "Channels, Bought",
+    found: "Sales stay with the channel that brought the shopper.",
+    why: "When a shopper comes back from paying, the payment page can get the credit for the sale." },
+  { key: "NOTHING_COUNTED", name: "Events being counted", result: "good", area: "conversions", changes: "Conversions",
+    found: "13 events are being counted.",
+    why: "Without events, you can't see which pages bring sales or enquiries." },
+  { key: "SOMETHING_ELSE", name: "Events that count the wrong thing", result: "good", area: "conversions", changes: "Conversions",
+    found: "Each event counts what its name says.",
+    why: "If two events match every day, one is probably counting the wrong thing." },
+  { key: "ENQUIRY_UNCOUNTED", name: "Enquiries not counted", result: "good", area: "conversions", changes: "Conversions",
+    found: "Every enquiry is being counted.",
+    why: "This looks for things that look like an enquiry, such as a form being sent." },
+  { key: "CONVERSIONS_ELSEWHERE", name: "Events on other websites", result: "good", area: "conversions", changes: "Conversions",
+    found: "No real events are being missed.",
+    why: "A shop or booking page can sit on its own address. This checks those events are counted." },
+];
+
+const name = (check: Check) => <span data-check={check.key} data-area={check.area} data-result={check.result} className="whitespace-nowrap text-[13px] text-foreground">{check.name}</span>;
+const checkColumns = [
+  { key: "check", header: "Check", cell: name },
+  { key: "result", header: "Result", cell: (check: Check) => RESULT[check.result] },
+  { key: "found", header: "What it found", cell: (check: Check) => <span className="text-[12.5px] text-secondary">{check.found}</span> },
+  { key: "changes", header: "What it affects", cell: (check: Check) => <TagLabel>{check.changes}</TagLabel> },
+];
+const resultChip = <Select aria-label="Result" value="all" onChange={noop} chip={{ label: "Result", choice: null }}><option value="all">Every result</option>{(Object.keys(RESULT_WORD) as Result[]).map((one) => <option key={one} value={one}>{RESULT_WORD[one]}</option>)}</Select>;
+const areaChip = <Select aria-label="Changes" value="all" onChange={noop} chip={{ label: "Changes", choice: null }}><option value="all">Every figure</option>{(Object.keys(AREA_WORD) as Area[]).map((one) => <option key={one} value={one}>{AREA_WORD[one]}</option>)}</Select>;
+
+const healthHeader = <PageHeader icon={<Activity className="h-5 w-5 text-brand" />} title="Tracking health" description="See if your figures are right, and which ones are a bit out. Checked every week, last on Friday 6 November." />;
+const page = (children: ReactNode) => <section className="flex min-w-0 flex-col gap-3"><div className="flex flex-col gap-6">{children}</div></section>;
+const heading = (title: string, description?: string) => <div className="flex flex-col gap-1"><h2 className="text-[15px] font-medium text-foreground">{title}</h2>{description ? <p className="text-[13px] text-secondary">{description}</p> : null}</div>;
+
+// ——— Tracking health, Way 1: each figure you read, and whether you can trust it. ———
+const COUNTED_TWICE: Check = { key: "COUNTED_TWICE", name: "Events counted twice", result: "off", area: "conversions", changes: "Conversions",
+  found: "Contact form sent and Contact us submit are the same form, so each enquiry counts twice.",
+  why: "Your figures look higher than they really are.",
+  fix: "Stop counting one of them on the Connection page." };
+export function HealthNew() {
+  const checks = [CHECKS[0], CHECKS[1], COUNTED_TWICE, ...CHECKS.slice(2)];
+  return <HealthOne checks={checks} notice="Most of your figures are right. 4 things are a bit out, and they're first in the list." />;
+}
+export function HealthOne({ checks = CHECKS, notice = "Most of your figures are right. 3 things are a bit out, and they're first in the list." }: { checks?: Check[]; notice?: string }) {
+  const box = (area: Area, value: string, detail: ReactNode) => <div data-press={area} style={{ display: "contents" }}><Figure label={AREA_WORD[area]} value={value} detail={detail} href="#" /></div>;
+  return page(<>
+    {healthHeader}
+    <Notice>{notice}</Notice>
+    <FigureRow columns={4}>
+      {box("visits", "All good", <StatusLabel tone="success">Counted every day</StatusLabel>)}
+      {box("came", "94 in 100", <StatusLabel tone="warning">Google doesn't know the rest</StatusLabel>)}
+      {box("conversions", "7 of 13", <StatusLabel tone="warning">The other 6 never happen</StatusLabel>)}
+      {box("pages", "760", <StatusLabel tone="warning">Counted too often</StatusLabel>)}
+    </FigureRow>
+    <ListTable<Check>
+      noun="checks"
+      rows={checks}
+      rowKey={(check) => check.key}
+      columns={checkColumns}
+      onRowClick={noop}
+      actions={download}
+      search={{ value: "", onChange: noop, placeholder: "Find a check" }}
+      filters={<>{resultChip}{areaChip}</>}
+      footer={footer(checks.length)}
+    />
+  </>);
+}
+
+// ——— Tracking health, Way 2: what Hakken found, in order of what it means for you. ———
+function CheckRows({ rows }: { rows: Check[] }) {
+  return (
+    <CompactList<Check>
+      rows={rows}
+      rowKey={(check) => check.key}
+      empty="–"
+      rowLink={{ href: () => "#", label: (check) => check.name }}
+      columns={[
+        { key: "words", cell: (check) => <span className="flex flex-col gap-0.5"><span className="text-[13px] text-foreground">{check.name}</span><span className="text-[12.5px] text-secondary">{check.found}</span></span> },
+        { key: "result", className: "w-[110px] whitespace-nowrap", cell: (check) => RESULT[check.result] },
+        { key: "changes", className: "w-[190px] whitespace-nowrap", cell: (check) => <TagLabel>{check.changes}</TagLabel> },
+      ]}
+    />
+  );
+}
+export function HealthTwo() {
+  const of = (result: Result) => CHECKS.filter((check) => check.result === result);
+  return page(<>
+    {healthHeader}
+    <FigureRow columns={3}>
+      <Figure label="All good" value="8" detail={<span className="text-secondary">checks found nothing wrong</span>} />
+      <Figure label="No effect" value="2" detail={<span className="text-secondary">don't affect your figures</span>} />
+      <Figure label="Not right" value="3" detail={<span className="text-secondary">affect some of your figures</span>} />
+    </FigureRow>
+    {heading("3 things that aren't right", "These can only be fixed in Google Analytics or on your website.")}
+    <CheckRows rows={of("off")} />
+    {heading("2 things that don't affect your figures", "They're worth knowing, but your figures are still right.")}
+    <CheckRows rows={of("none")} />
+    {heading("8 checks that are all good", "They'll be checked again next week.")}
+    <CheckRows rows={of("good")} />
+  </>);
+}
+
+// ——— Tracking health, Way 3: one list, and each check opens where it is. ———
+function CheckDetail({ check }: { check: Check }) {
+  const line = (label: string, words: ReactNode) => <div className="flex flex-col gap-0.5"><span className="text-[12px] text-secondary">{label}</span><span className="text-[13px] text-foreground">{words}</span></div>;
+  return (
+    <div className="flex flex-col gap-3 py-1 pl-7">
+      {line(check.result === "good" ? "What it checks" : "Why it matters", check.why)}
+      {check.fix ? line("How it gets fixed", check.fix) : null}
+      {check.named ? line(check.key === "COUNTED_AGAIN" ? "The 3 counted most" : check.key === "STRANGERS" ? "The addresses" : "The events", check.named.join(", ")) : null}
+    </div>
+  );
+}
+export function HealthThree() {
+  return page(<>
+    {healthHeader}
+    <Notice>Most of your figures are right. 8 of the 13 checks are all good, and 2 don't affect your figures. That leaves 3 that aren't right.</Notice>
+    <ListTable<Check>
+      noun="checks"
+      rows={CHECKS}
+      rowKey={(check) => check.key}
+      columns={checkColumns}
+      rowDetail={{ label: (check) => check.name, content: (check) => <CheckDetail check={check} /> }}
+      actions={download}
+      search={{ value: "", onChange: noop, placeholder: "Find a check" }}
+      filters={<>{resultChip}{areaChip}</>}
+      footer={footer(CHECKS.length)}
+    />
+  </>);
+}
+
+// ——— A check's own screen, for Ways 1 and 2. ———
+export function CheckScreen() {
+  const check = CHECKS[1];
+  const said = [
+    { key: "found", label: "What it found", words: check.found },
+    { key: "why", label: "Why it matters", words: check.why },
+    { key: "changes", label: "What it affects", words: check.changes },
+    { key: "fix", label: "How it gets fixed", words: check.fix },
+  ];
+  return page(<>
+    <DetailHeader
+      back={{ label: "Tracking health", href: "#" }}
+      icon={<Activity className="h-5 w-5 text-brand" />}
+      title={check.name}
+      description="Checks that each event still happens. Checked every week, last on Friday 6 November."
+      pills={RESULT[check.result]}
+    />
+    <CompactList
+      rows={said}
+      rowKey={(row) => row.key}
+      empty="–"
+      columns={[
+        { key: "label", className: "w-[200px] whitespace-nowrap align-top text-[13px] text-secondary", cell: (row) => row.label },
+        { key: "words", className: "text-[13px] text-foreground", cell: (row) => row.words },
+      ]}
+    />
+    <ListTable<Event>
+      noun="events"
+      title="Your events"
+      rows={EVENTS}
+      rowKey={(event) => event.google}
+      onRowClick={noop}
+      actions={<><Button variant="quiet" className="px-3 py-2 text-[12px]">Choose your events</Button>{download}</>}
+      search={{ value: "", onChange: noop, placeholder: "Find an event" }}
+      filters={<Select aria-label="Show" value="empty" onChange={noop} chip={{ label: "Show", choice: "Empty" }}><option value="empty">Empty</option><option value="all">All</option></Select>}
+      columns={[
+        { key: "name", header: "Event", cell: (event) => <span data-times={event.times} className="text-[13px] text-foreground">{event.name}</span> },
+        { key: "google", header: "In Google Analytics", cell: (event) => <span className="font-mono text-[12px] text-secondary">{event.google}</span> },
+        { key: "times", header: "Last 30 days", align: "right", cell: (event) => <span className="font-mono text-[13px] text-foreground">{formatNumber(event.times)}</span> },
+      ]}
+      footer={footer(6)}
+    />
+  </>);
+}
+
+// ——— Connection. ———
+type Event = { name: string; google: string; times: number; value?: string; note?: string; kind: "Sales" | "On the way to buying" | "Getting in touch" | "Not happening" };
+const EVENTS: Event[] = [
+  { name: "Added to basket", google: "add_to_cart", times: 17199, kind: "On the way to buying" },
+  { name: "Checkout started", google: "begin_checkout", times: 5890, kind: "On the way to buying" },
+  { name: "Newsletter sign ups", google: "newsletter_sign_ups", times: 1508, kind: "Getting in touch" },
+  { name: "Checkout complete", google: "checkout_complete", times: 1197, kind: "Sales" },
+  { name: "Purchase", google: "purchase", times: 1186, value: "£90", kind: "Sales" },
+  { name: "Contact form sent", google: "contact_us_submit", times: 27, note: "Same form as Contact us submit", kind: "Getting in touch" },
+  { name: "Contact us submit", google: "contact-us-submit", times: 27, note: "Same form as Contact form sent", kind: "Getting in touch" },
+  { name: "Confirmation", google: "confirmation", times: 0, note: "Not once in 90 days", kind: "Not happening" },
+  { name: "Order form", google: "order_form", times: 0, note: "Not once in 90 days", kind: "Not happening" },
+  { name: "Place an order", google: "place_an_order", times: 0, note: "Not once in 90 days", kind: "Not happening" },
+  { name: "Ua 5 minutes on site", google: "ua_5__minutes_on_site", times: 0, note: "Not once in 90 days", kind: "Not happening" },
+  { name: "Ua 6 pages visited", google: "ua_6__pages_visited", times: 0, note: "Not once in 90 days", kind: "Not happening" },
+  { name: "Basket viewed", google: "view_cart", times: 0, note: "Not once in 90 days", kind: "On the way to buying" },
+];
+const MOST = EVENTS.reduce((sum, event) => sum + event.times, 0);
+const timesColumn = { key: "times", header: "Last 30 days", align: "right" as const, cell: (event: Event) => <span className="flex items-center justify-end gap-3"><Meter value={event.times / MOST} className="w-24" /><span className="w-12 font-mono text-[13px] text-foreground">{formatNumber(event.times)}</span></span> };
+const valueColumn = { key: "value", header: "Value each", align: "right" as const, cell: (event: Event) => (event.value ? <span title="Set in Google Analytics" className="font-mono text-[13px] text-foreground">{event.value}</span> : <NoFigure />) };
+const noteColumn = { key: "note", header: "Worth knowing", cell: (event: Event) => (event.note ? <span className="text-[12.5px] text-secondary">{event.note}</span> : null) };
+const nameColumn = { key: "name", header: "Event", cell: (event: Event) => <span title={`In Google Analytics: ${event.google}`} className="whitespace-nowrap text-[13px] text-foreground">{event.name}</span> };
+
+const connectionHeader = <PageHeader icon={<Plug className="h-5 w-5 text-brand" />} title="Connection" description="How your figures get here from Google Analytics." />;
+const disconnect = <div className="flex flex-col items-start gap-2"><Button variant="outline">Disconnect Google Analytics</Button><p className="text-[12px] text-muted">Search Console stays connected, and you keep all your figures so far.</p></div>;
+const changeCounts = <Button variant="quiet" className="px-3 py-2 text-[12px]">Choose your events</Button>;
+const changeAddresses = <Button variant="quiet" className="px-3 py-2 text-[12px]">Choose your addresses</Button>;
+function CountsTable({ withGoogle }: { withGoogle?: boolean }) {
+  return (
+    <ListTable<Event>
+      noun="events"
+      title="Your events"
+      description="What's counted on your website, with the most common at the top."
+      rows={EVENTS}
+      rowKey={(event) => event.google}
+      actions={<>{changeCounts}{download}</>}
+      search={{ value: "", onChange: noop, placeholder: "Find an event" }}
+      columns={[nameColumn, ...(withGoogle ? [{ key: "google", header: "In Google Analytics", cell: (event: Event) => <span className="font-mono text-[12px] text-secondary">{event.google}</span> }] : []), timesColumn, valueColumn, noteColumn]}
+      footer={footer(EVENTS.length)}
+    />
+  );
+}
+const FACTS = [
+  { key: "property", label: "Google Analytics property", value: "https://www.morehandles.co.uk (GA4), number 254846408" },
+  { key: "account", label: "Google account", value: "anthony@ronins.co.uk, the same one as Search Console" },
+  { key: "website", label: "Your website", value: "www.morehandles.co.uk and morehandles.co.uk" },
+  { key: "out", label: "Left out", value: "4 test copies of your website, like staging.morehandles.co.uk" },
+  { key: "new", label: "Updates", value: "Every morning. Covered by your subscription." },
+  { key: "read", label: "Access", value: "It only reads your figures, and never changes anything" },
+];
+
+// Way 1: is it working, then how it's connected, then what counts.
+export function ConnectionOne() {
+  return page(<>
+    {connectionHeader}
+    <FigureRow columns={4}>
+      <Figure label="Connection" value="Working" detail={<StatusLabel tone="success">Connected since 16 October</StatusLabel>} />
+      <Figure label="Last updated" value="Today, 07:39" detail={<span className="text-secondary">With figures up to 5 November</span>} />
+      <Figure label="Daily figures from" value="18 July" detail={<span className="text-secondary">Longer dates update every week</span>} />
+      <Figure label="Events" value="13" detail={<span className="text-secondary">7 of them happened in the last 30 days</span>} />
+    </FigureRow>
+    <CountsTable withGoogle />
+    {heading("How it's connected")}
+    <SiteFacts facts={FACTS} empty="–" />
+    {disconnect}
+  </>);
+}
+
+// Way 2: three short views, one at a time.
+type Address = { host: string; visits: number; conversions: number; counted: boolean; why: string };
+const ADDRESSES: Address[] = [
+  { host: "www.morehandles.co.uk", visits: 43534, conversions: 25912, counted: true, why: "Your website" },
+  { host: "morehandles.co.uk", visits: 0, conversions: 0, counted: true, why: "Your website" },
+  { host: "silly-mclean.77-68-13-134.plesk.page", visits: 3, conversions: 0, counted: false, why: "A test copy of your website" },
+  { host: "staging.morehandles.co.uk", visits: 2, conversions: 1, counted: false, why: "A test copy of your website" },
+  { host: "morehandles.loc", visits: 0, conversions: 0, counted: false, why: "A test copy of your website" },
+  { host: "phg-morehandles.ddev.site", visits: 0, conversions: 0, counted: false, why: "A test copy of your website" },
+];
+const VIEWS = [{ value: "connection" as const, label: "Connection" }, { value: "counts" as const, label: "Events" }, { value: "addresses" as const, label: "Addresses" }];
+export function ConnectionTwo() {
+  const views = { connection: <>
+      <SiteFacts facts={[
+        { key: "status", label: "Connection", value: <span className="inline-flex"><StatusLabel tone="success">Working</StatusLabel></span> },
+        { key: "since", label: "Connected since", value: "16 October 2026" },
+        { key: "updated", label: "Last updated", value: "Today at 07:39, with figures up to 5 November" },
+        { key: "back", label: "Daily figures from", value: "18 July. Longer dates update every week" },
+        ...FACTS.filter((fact) => fact.key !== "out" && fact.key !== "website"),
+      ]} empty="–" />
+      {disconnect}
+    </>,
+    counts: <CountsTable withGoogle />,
+    addresses: <ListTable<Address>
+      noun="addresses"
+      title="Your website's addresses"
+      description="Only your own website is counted, so test copies can't change your figures. These visits are from every country."
+      rows={ADDRESSES}
+      rowKey={(row) => row.host}
+      actions={<>{changeAddresses}{download}</>}
+      search={{ value: "", onChange: noop, placeholder: "Find an address" }}
+      filters={<Select aria-label="In your figures" value="all" onChange={noop} chip={{ label: "In your figures", choice: null }}><option value="all">Everything</option><option value="yes">In your figures</option><option value="no">Left out</option></Select>}
+      columns={[
+        { key: "host", header: "Address", cell: (row) => <span className="text-[13px] text-foreground">{row.host}</span> },
+        { key: "counted", header: "In your figures", cell: (row) => (row.counted ? <StatusLabel tone="success">Counted</StatusLabel> : <StatusLabel tone="neutral">Left out</StatusLabel>) },
+        { key: "why", header: "What it is", cell: (row) => <span className="text-[12.5px] text-secondary">{row.why}</span> },
+        { key: "visits", header: "Visits, last 30 days", align: "right", cell: (row) => <span className="font-mono text-[13px] text-foreground">{formatNumber(row.visits)}</span> },
+        { key: "conversions", header: "Events, last 30 days", align: "right", cell: (row) => <span className="font-mono text-[13px] text-foreground">{formatNumber(row.conversions)}</span> },
+      ]}
+      footer={footer(ADDRESSES.length)}
+    /> };
+  return page(<>
+    {connectionHeader}
+    {VIEWS.map((view, at) => (
+      <div key={view.value} data-tab={view.value} className="flex flex-col gap-6" style={at === 0 ? undefined : { display: "none" }}>
+        <div><SiteViewSwitch label="Connection" options={VIEWS} value={view.value} onChange={noop} /></div>
+        {views[view.value]}
+      </div>
+    ))}
+  </>);
+}
+
+// Way 3: said in plain sentences, and the ticks are right there.
+export function ConnectionThree() {
+  const lines = [
+    "Your figures come from Google Analytics every morning. This is covered by your subscription.",
+    "The last update was today at 07:39, with figures up to 5 November.",
+    "You can see each day back to 18 July. Longer dates update every week.",
+    "It's connected with anthony@ronins.co.uk, the same account as Search Console. It only reads your figures, and never changes anything.",
+    "www.morehandles.co.uk and morehandles.co.uk are counted. 4 test copies of your website are left out.",
+  ];
+  const kinds: Event["kind"][] = ["Sales", "On the way to buying", "Getting in touch", "Not happening"];
+  const rows = kinds.flatMap((kind) => EVENTS.filter((event) => event.kind === kind));
+  return page(<>
+    {connectionHeader}
+    <div className="flex flex-col gap-1.5">
+      <StatusLabel tone="success" size="md">Connected and working since 16 October</StatusLabel>
+    </div>
+    <CompactList rows={lines} rowKey={(line) => line} empty="–" columns={[{ key: "line", className: "text-[13px] text-foreground", cell: (line) => line }]} />
+    <ListTable<Event>
+      noun="events"
+      title="Your events"
+      description="The likely ones are ticked for you, and you can change them. When you save, your past months change too."
+      rows={rows}
+      rowKey={(event) => event.google}
+      actions={download}
+      search={{ value: "", onChange: noop, placeholder: "Find an event" }}
+      filters={<Select aria-label="Kind" value="all" onChange={noop} chip={{ label: "Kind", choice: null }}><option value="all">Every kind</option>{kinds.map((kind) => <option key={kind}>{kind}</option>)}</Select>}
+      columns={[
+        { key: "tick", header: "Counts", cell: (event) => <Checkbox label={event.name} labelHidden checked onChange={noop} /> },
+        nameColumn,
+        { key: "kind", header: "Kind", cell: (event) => <TagLabel>{event.kind}</TagLabel> },
+        timesColumn, valueColumn, noteColumn,
+      ]}
+      footer={footer(EVENTS.length)}
+    />
+    <div className="flex flex-wrap items-center gap-3"><Button variant="brand">Save · 13 counted</Button><Button variant="outline">Disconnect Google Analytics</Button></div>
+    <p className="text-[12px] text-muted">If you disconnect, Search Console stays connected, and you keep all your figures so far.</p>
+  </>);
+}
+
+// The new page so far: Way 3 with a Change button, a box for each value, and the addresses' ticks.
+type HeldAddress = { host: string; events: number; own: boolean; why: string };
+const HELD: HeldAddress[] = [
+  { host: "www.morehandles.co.uk", events: 25912, own: true, why: "Your website" },
+  { host: "morehandles.co.uk", events: 0, own: true, why: "Your website" },
+  { host: "silly-mclean.77-68-13-134.plesk.page", events: 1, own: false, why: "A test copy of your website" },
+  { host: "staging.morehandles.co.uk", events: 0, own: false, why: "A test copy of your website" },
+  { host: "morehandles.loc", events: 0, own: false, why: "A test copy of your website" },
+  { host: "phg-morehandles.ddev.site", events: 0, own: false, why: "A test copy of your website" },
+];
+export function ConnectionNewPage() {
+  const lines = [
+    "Your figures come from Google Analytics every morning. This is covered by your subscription.",
+    "The last update was today at 07:39, with figures up to 5 November.",
+    "You can see each day back to 18 July. Longer dates update every week.",
+    "It's connected with anthony@ronins.co.uk, the same account as Search Console. It only reads your figures, and never changes anything.",
+    "www.morehandles.co.uk and morehandles.co.uk are counted. 4 test copies of your website are left out.",
+  ];
+  const kinds: Event["kind"][] = ["Sales", "On the way to buying", "Getting in touch", "Not happening"];
+  const rows = kinds.flatMap((kind) => EVENTS.filter((event) => event.kind === kind));
+  const tables = (editing: boolean) => <>
+    <ListTable<Event>
+      noun="events"
+      title="Your events"
+      description={editing ? "Google Analytics was checked for new events just now. When you save, your past months change too." : "The likely ones are ticked for you. Press Change to choose your own."}
+      rows={rows}
+      rowKey={(event) => event.google}
+      actions={editing ? download : <><Button variant="quiet" className="px-3 py-2 text-[12px]">Change</Button>{download}</>}
+      search={{ value: "", onChange: noop, placeholder: "Find an event" }}
+      filters={<Select aria-label="Kind" value="all" onChange={noop} chip={{ label: "Kind", choice: null }}><option value="all">Every kind</option>{kinds.map((kind) => <option key={kind}>{kind}</option>)}</Select>}
+      columns={[
+        { key: "tick", header: "Counts", cell: (event) => <Checkbox label={event.name} labelHidden checked disabled={!editing} onChange={noop} /> },
+        nameColumn,
+        { key: "kind", header: "Kind", cell: (event) => <TagLabel>{event.kind}</TagLabel> },
+        timesColumn,
+        { key: "value", header: "Value each", align: "right", cell: (event) => (event.value
+          ? <span title="Set in Google Analytics" className="font-mono text-[13px] text-foreground">{event.value}</span>
+          : editing ? <Field label={`Value of ${event.name}`} labelHidden type="number" placeholder="£" wrapperClassName="ml-auto w-24" /> : <NoFigure />) },
+        noteColumn,
+      ]}
+      footer={footer(EVENTS.length)}
+    />
+    <ListTable<HeldAddress>
+      noun="addresses"
+      title="Your addresses"
+      description="Tick an address if it's part of your website, like a shop on its own address. Its events then count too."
+      rows={HELD}
+      rowKey={(row) => row.host}
+      actions={download}
+      search={{ value: "", onChange: noop, placeholder: "Find an address" }}
+      columns={[
+        { key: "tick", header: "Counts", cell: (row) => <Checkbox label={row.host} labelHidden checked={row.own} disabled={!editing || row.own} onChange={noop} /> },
+        { key: "host", header: "Address", cell: (row) => <span className="text-[13px] text-foreground">{row.host}</span> },
+        { key: "why", header: "What it is", cell: (row) => <span className="text-[12.5px] text-secondary">{row.why}</span> },
+        { key: "events", header: "Last 30 days", align: "right", cell: (row) => <span className="font-mono text-[13px] text-foreground">{formatNumber(row.events)}</span> },
+      ]}
+      footer={footer(HELD.length)}
+    />
+  </>;
+  return page(<>
+    {connectionHeader}
+    <div className="flex flex-col gap-1.5">
+      <StatusLabel tone="success" size="md">Connected and working since 16 October</StatusLabel>
+    </div>
+    <CompactList rows={lines} rowKey={(line) => line} empty="–" columns={[{ key: "line", className: "text-[13px] text-foreground", cell: (line) => line }]} />
+    <div data-edit="off" className="flex flex-col gap-6">{tables(false)}</div>
+    <div data-edit="on" className="flex flex-col gap-6" style={{ display: "none" }}>
+      {tables(true)}
+      <div className="flex flex-wrap items-center gap-3"><Button variant="brand">Save · 13 counted</Button><Button variant="ghost">Cancel</Button></div>
+    </div>
+    {disconnect}
+  </>);
+}
+
+// The states before a website is connected.
+export function ConnectionConnect() {
+  return page(<>
+    {connectionHeader}
+    <Notice tone="warning"><span className="block font-medium text-foreground">The sign-in was cancelled at Google</span><span className="block">Nothing was connected. You can try again when you're ready.</span></Notice>
+    {heading("Add Google Analytics", "See how many people visit morehandles.co.uk, where they came from and what they did. It only reads your figures, and never changes anything.")}
+    <div className="flex flex-col items-start gap-2">
+      <Button variant="brand">Add Google Analytics</Button>
+      <p className="text-[12px] text-muted">You've already connected Search Console, so Google only asks for the extra access.</p>
+    </div>
+  </>);
+}
+export function ConnectionChoose() {
+  return page(<>
+    {connectionHeader}
+    {heading("This is your website's Google Analytics property", "You signed in as anthony@ronins.co.uk. This property records morehandles.co.uk.")}
+    <CompactList
+      rows={[{ name: "https://www.morehandles.co.uk (GA4)", number: "Number 254846408" }]}
+      rowKey={(row) => row.number}
+      empty="–"
+      columns={[
+        { key: "name", cell: (row) => <span className="flex flex-col gap-0.5"><span className="text-[13px] text-foreground">{row.name}</span><span className="text-[12.5px] text-secondary">{row.number}</span></span> },
+        { key: "records", align: "right", className: "whitespace-nowrap", cell: () => <StatusLabel tone="success">Records morehandles.co.uk</StatusLabel> },
+      ]}
+    />
+    <div className="flex flex-wrap items-center gap-3"><Button variant="brand">Use this property</Button><Button variant="ghost">Not this one? See them all</Button></div>
+    <p className="text-[12px] text-muted">Next, you'll choose your events.</p>
+  </>);
+}
+export function ConnectionFirst() {
+  const kinds: Event["kind"][] = ["Sales", "On the way to buying", "Getting in touch", "Not happening"];
+  const rows = kinds.flatMap((kind) => EVENTS.filter((event) => event.kind === kind));
+  return page(<>
+    {connectionHeader}
+    <Notice>Nearly there. Choose your events, and your figures start coming in.</Notice>
+    <ListTable<Event>
+      noun="events"
+      title="Your events"
+      description="The likely ones are ticked for you, and you can change them."
+      rows={rows}
+      rowKey={(event) => event.google}
+      search={{ value: "", onChange: noop, placeholder: "Find an event" }}
+      filters={<Select aria-label="Kind" value="all" onChange={noop} chip={{ label: "Kind", choice: null }}><option value="all">Every kind</option>{kinds.map((kind) => <option key={kind}>{kind}</option>)}</Select>}
+      columns={[
+        { key: "tick", header: "Counts", cell: (event) => <Checkbox label={event.name} labelHidden checked onChange={noop} /> },
+        nameColumn,
+        { key: "kind", header: "Kind", cell: (event) => <TagLabel>{event.kind}</TagLabel> },
+        timesColumn,
+        { key: "value", header: "Value each", align: "right", cell: (event) => (event.value
+          ? <span title="Set in Google Analytics" className="font-mono text-[13px] text-foreground">{event.value}</span>
+          : <Field label={`Value of ${event.name}`} labelHidden type="number" placeholder="£" wrapperClassName="ml-auto w-24" />) },
+        noteColumn,
+      ]}
+      footer={footer(EVENTS.length)}
+    />
+    <div className="flex flex-col items-start gap-2">
+      <Button variant="brand">Save · 13 counted</Button>
+      <p className="text-[12px] text-muted">When you save, your last 92 days start coming in, newest week first.</p>
+    </div>
+  </>);
+}
+
+const SCREENS = { HealthOne, HealthTwo, HealthThree, CheckScreen, ConnectionOne, ConnectionTwo, ConnectionThree, ConnectionNew: ConnectionNewPage, HealthNew, ConnectionConnect, ConnectionChoose, ConnectionFirst };
+export function mount(name: keyof typeof SCREENS, node: Element) {
+  const Screen = SCREENS[name];
+  const root = createRoot(node);
+  root.render(<ToastProvider><Screen /></ToastProvider>);
+  return root;
+}

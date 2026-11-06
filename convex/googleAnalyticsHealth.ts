@@ -17,7 +17,7 @@ import { conversionAddressesOf, isCopyAddress, plainHost } from "./utils/analyti
 
 /**
  * Whether Google Analytics is counting a website properly
- * (docs/plans/active/google-analytics-plan.md §6, GA11, GA12): thirteen checks,
+ * (docs/plans/active/google-analytics-plan.md §6, GA11, GA12): fourteen checks,
  * run when the first collection finishes and with every weekly one, each
  * saying what is wrong, why it matters and how to fix it on the Tracking
  * health page. When a check starts failing the platform's super admins get
@@ -397,6 +397,15 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
     passing: elsewhere.length === 0,
     names: elsewhere.map((entry) => entry.host),
     count: elsewhere.reduce((sum, entry) => sum + entry.conversions, 0),
+  });
+
+  // 14. Two counted events that match day for day: one thing counted twice, a form under two names (Anthony, 2026-11-06).
+  const twice = seriesRows ? copiesAmong(countedNames, series) : [];
+  results.push({
+    check: "COUNTED_TWICE",
+    passing: twice.length === 0,
+    names: twice.map((pair) => pair.eventName),
+    others: twice.map((pair) => pair.of),
   });
 
   return HEALTH_CHECKS.map((check) => results.find((result) => result.check === check)!);

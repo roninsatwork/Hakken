@@ -1,0 +1,222 @@
+// The new parts these drawings need, written as shared parts would be: each is handed plain figures and words, and reads nothing.
+// Nothing here is built into the app. If Anthony picks one, it moves to src/ui/components/screens/ with its tests.
+import type { ReactNode } from "react";
+import { useElementWidth } from "@/src/hooks/useElementWidth";
+import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
+
+const UNMEASURED = 800;
+
+export function Panel({ id, heading, lines, note }: { id: string; heading: string; lines: ReadonlyArray<{ value: string; label: string }>; note?: string }) {
+  return (
+    <div data-readout={id} className="pointer-events-none absolute z-10" style={{ left: "var(--mx, 0px)", top: "var(--my, 0px)", transform: "translate(var(--tx, 0), var(--ty, 0))" }}>
+      <ChartTooltipSurface heading={heading} wide>
+        {lines.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}
+        {note ? <p className="mt-1 whitespace-normal text-[12px] text-secondary">{note}</p> : null}
+      </ChartTooltipSurface>
+    </div>
+  );
+}
+
+// ——— BridgeChart: from one figure to another, through what changed. For any figure on any section. ———
+
+export type BridgeStep = { key: string; name: string; change: number; hoverId?: string };
+export type BridgeEnd = { name: string; value: number; hoverId?: string };
+
+/** Where the bars start: under the lowest point by enough to show its height, on a round number. */
+export function bridgeFloor(from: number, steps: readonly BridgeStep[]): number {
+  let running = from;
+  let low = from, high = from;
+  for (const step of steps) { running += step.change; low = Math.min(low, running); high = Math.max(high, running); }
+  const span = Math.max(1, high - low);
+  const room = low - span * 0.45;
+  const round = 10 ** Math.floor(Math.log10(Math.max(1, span)));
+  return Math.max(0, Math.floor(room / round) * round);
+}
+
+export function BridgeChart({ from, to, steps, format, height = 300 }: {
+  from: BridgeEnd;
+  to: BridgeEnd;
+  steps: readonly BridgeStep[];
+  format: (value: number) => string;
+  height?: number;
+}) {
+  const [watch, measured] = useElementWidth<HTMLDivElement>();
+  const width = measured || UNMEASURED;
+  const TOP = 26;
+  const floor = bridgeFloor(from.value, steps);
+  let running = from.value;
+  const walked = steps.map((step) => { const start = running; running += step.change; return { step, start, end: running }; });
+  const high = Math.max(from.value, to.value, ...walked.flatMap((one) => [one.start, one.end]));
+  const yOf = (value: number) => TOP + ((high - value) / Math.max(1, high - floor)) * (height - TOP);
+  const count = steps.length + 2;
+  const column = width / count;
+  const bar = Math.min(64, column * 0.72);
+  const left = (at: number) => at * column + (column - bar) / 2;
+  const end = (at: number, one: BridgeEnd) => (
+    <g key={one.name} data-h={one.hoverId}>
+      <rect x={at * column} y={0} width={column} height={height} fill="transparent" />
+      <rect x={left(at)} y={yOf(one.value)} width={bar} height={height - yOf(one.value)} rx={3} fill="currentColor" fillOpacity={0.2} className="text-foreground" />
+      {/* The bar is cut: it doesn't start at nought. */}
+      <path d={`M${left(at) - 2} ${height - 12}l${bar + 4} -6M${left(at) - 2} ${height - 7}l${bar + 4} -6`} fill="none" stroke="currentColor" strokeWidth={2} className="text-background" />
+      <text x={left(at) + bar / 2} y={yOf(one.value) - 8} textAnchor="middle" fill="currentColor" className="font-mono text-foreground" style={{ fontSize: 13 }}>{format(one.value)}</text>
+    </g>
+  );
+  return (
+    <div ref={watch} data-part="bridge-chart" className="flex flex-col gap-2">
+      <svg width={width} height={height} role="img" aria-label={`${from.name} ${format(from.value)}, ${to.name} ${format(to.value)}`}>
+        {end(0, from)}
+        {walked.map(({ step, start, end: after }, index) => {
+          const at = index + 1;
+          const up = step.change >= 0;
+          const top = yOf(Math.max(start, after));
+          const bottom = yOf(Math.min(start, after));
+          return (
+            <g key={step.key} data-h={step.hoverId} data-step={step.key}>
+              <rect x={at * column} y={0} width={column} height={height} fill="transparent" />
+              <line x1={left(at - 1) + bar} x2={left(at)} y1={yOf(start)} y2={yOf(start)} stroke="currentColor" strokeOpacity={0.35} className="text-secondary" />
+              <rect data-bar="" x={left(at)} y={top} width={bar} height={Math.max(2, bottom - top)} rx={3} fill={up ? CHART_SERIES_ORANGE : CHART_COMPARATOR_GREY} />
+              <text x={left(at) + bar / 2} y={top - 7} textAnchor="middle" fill="currentColor" className="font-mono text-foreground" style={{ fontSize: 12 }}>{up ? "+" : "−"}{format(Math.abs(step.change))}</text>
+            </g>
+          );
+        })}
+        <line x1={left(count - 2) + bar} x2={left(count - 1)} y1={yOf(running)} y2={yOf(running)} stroke="currentColor" strokeOpacity={0.35} className="text-secondary" />
+        {end(count - 1, to)}
+      </svg>
+      <div className="grid text-center text-[12px] leading-tight text-secondary" style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}>
+        <span className="px-1 font-medium text-foreground">{from.name}</span>
+        {steps.map((step) => <span key={step.key} className="px-1">{step.name}</span>)}
+        <span className="px-1 font-medium text-foreground">{to.name}</span>
+      </div>
+    </div>
+  );
+}
+
+// ——— Sparkline: a figure's shape over time, small enough for a table's row. Any list that holds a figure over time could use it. ———
+
+export function Sparkline({ values, lit = 0, width = 150, height = 32, name }: {
+  values: ReadonlyArray<number | null>;
+  /** How many of the newest points are the dates chosen, drawn in orange. */
+  lit?: number;
+  width?: number;
+  height?: number;
+  name: string;
+}) {
+  const shown = values.filter((value): value is number => value !== null);
+  if (shown.length < 2) return <span className="text-[12px] text-muted">–</span>;
+  const most = Math.max(...shown, 1);
+  const x = (at: number) => 2 + (at / (values.length - 1)) * (width - 6);
+  const y = (value: number) => 3 + (1 - value / most) * (height - 6);
+  const path = (from: number, to: number) => {
+    let moved = false;
+    return values.slice(from, to).map((value, at) => {
+      if (value === null) { moved = false; return ""; }
+      const command = moved ? "L" : "M";
+      moved = true;
+      return `${command}${x(from + at).toFixed(1)} ${y(value).toFixed(1)}`;
+    }).join("");
+  };
+  const last = values[values.length - 1];
+  return (
+    <svg width={width} height={height} role="img" aria-label={name} className="block">
+      <path d={path(0, values.length - lit)} fill="none" stroke={CHART_COMPARATOR_GREY} strokeWidth={1.5} />
+      {lit > 0 ? <path d={path(values.length - lit - 1, values.length)} fill="none" stroke={CHART_SERIES_ORANGE} strokeWidth={2} /> : null}
+      {last !== null ? <circle cx={x(values.length - 1)} cy={y(last)} r={2.5} fill={CHART_SERIES_ORANGE} /> : null}
+    </svg>
+  );
+}
+
+// ——— Out of every 100: a share said as whole things a person can count. For any split of any figure. ———
+
+/** Whole numbers that add up to 100: the biggest leftovers get the spare ones, so nothing rounds past or short of it. */
+export function outOfHundred(values: readonly number[]): number[] {
+  const whole = values.reduce((total, value) => total + value, 0) || 1;
+  const exact = values.map((value) => (100 * value) / whole);
+  const counts = exact.map(Math.floor);
+  let spare = 100 - counts.reduce((total, value) => total + value, 0);
+  const order = exact.map((value, at) => ({ at, left: value - Math.floor(value) })).sort((a, b) => b.left - a.left);
+  for (const { at } of order) { if (spare <= 0) break; counts[at] += 1; spare -= 1; }
+  return counts;
+}
+
+const KEY_COLUMNS = "22px 58px minmax(0, 1fr) 76px";
+
+export type HundredGroup = { key: string; name: string; count: number; colour: string; was: ReactNode; hoverId?: string };
+
+/** Ten rows of ten squares, each one thing in every 100, with what each colour is beside it. */
+export function HundredGrid({ groups, size = 30, gap = 4, wasLabel, columns = 10, cells = 100, nowLabel = "October" }: { groups: readonly HundredGroup[]; size?: number; gap?: number; wasLabel: string; columns?: number; cells?: number; nowLabel?: string }) {
+  const squares = groups.flatMap((group) => Array.from({ length: group.count }, () => group));
+  const across = size * columns + gap * (columns - 1);
+  const down = size * Math.ceil(cells / columns) + gap * (Math.ceil(cells / columns) - 1);
+  return (
+    <div data-part="hundred-grid" className="flex items-center" style={{ gap: 40 }}>
+      <div role="img" aria-label={groups.map((group) => `${group.count} ${group.name}`).join(", ")} className="grid shrink-0" style={{ width: across, height: down, gridTemplateColumns: `repeat(${columns}, ${size}px)`, gridAutoRows: `${size}px`, gap }}>
+        {squares.map((group, at) => <span key={at} data-square={group.key} data-at={at} className="block" style={{ backgroundColor: group.colour, borderRadius: size < 14 ? 2 : 4 }} />)}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="grid items-baseline border-b border-border-dim/50 pb-2 text-[12px] text-muted" style={{ gridTemplateColumns: KEY_COLUMNS, columnGap: 8 }}>
+          <span />
+          <span>{nowLabel}</span>
+          <span />
+          <span data-was-head="" className="text-right">{wasLabel}</span>
+        </div>
+        {groups.map((group) => (
+          <div key={group.key} data-key={group.key} data-h={group.hoverId} className="grid cursor-pointer items-center border-b border-border-dim/50 py-3 transition-colors last:border-b-0 hover:bg-hover" style={{ gridTemplateColumns: KEY_COLUMNS, columnGap: 8 }}>
+            <span className="block h-3.5 w-3.5 rounded-[3px]" style={{ backgroundColor: group.colour }} />
+            <span data-count="" className="font-mono text-[24px] font-semibold tabular-nums text-foreground">{group.count}</span>
+            <span className="text-[14px] text-foreground">{group.name}</span>
+            <span data-was="" className="text-right font-mono text-[13px] text-secondary">{group.was}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export type StripSegment = { key: string; name: string; top: number; bottom: number; colour: string; hoverId?: string };
+
+/**
+ * Two rows of 100 cells, one for each figure, with a band joining each thing's share in one to its share in the other. A band that
+ * gets wider going down does better in the bottom figure than the top. Drawn in real pixels, so it stays the same height on any screen.
+ */
+export function HundredStrips({ segments, topLabel, bottomLabel }: { segments: readonly StripSegment[]; topLabel: string; bottomLabel: string }) {
+  const [watch, measured] = useElementWidth<HTMLDivElement>();
+  const width = measured || UNMEASURED;
+  const STRIP = 30, BAND = 84, HEAD = 18, WORDS = 22;
+  const yTop = HEAD + WORDS, yBand = yTop + STRIP, yBottom = yBand + BAND;
+  const height = yBottom + STRIP + WORDS + HEAD;
+  const cell = width / 100;
+  let topAt = 0, bottomAt = 0;
+  const placed = segments.map((segment) => {
+    const held = { segment, top: topAt, bottom: bottomAt };
+    topAt += segment.top;
+    bottomAt += segment.bottom;
+    return held;
+  });
+  const cells = (y: number, at: number, count: number, colour: string) => <path fill={colour} d={Array.from({ length: count }, (_, index) => `M${((at + index) * cell).toFixed(1)} ${y}h${Math.max(1, cell - 1).toFixed(1)}v${STRIP}h-${Math.max(1, cell - 1).toFixed(1)}z`).join("")} />;
+  // A number whenever it fits, and the name too where there's room: every name and number is in the key under the chart anyway.
+  const word = (y: number, at: number, count: number, name: string) => {
+    const room = count * cell;
+    const said = room >= (name.length + 3) * 6.6 ? `${name} ${count}` : room >= 16 ? String(count) : null;
+    return said ? <text x={at * cell} y={y} fill="currentColor" className="text-foreground" style={{ fontSize: 12 }}>{said}</text> : null;
+  };
+  return (
+    <div ref={watch} data-part="hundred-strips">
+      <svg width={width} height={height} role="img" aria-label={`${topLabel} and ${bottomLabel}`}>
+        <text x={0} y={12} fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{topLabel}</text>
+        <text x={0} y={height - 2} fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{bottomLabel}</text>
+        {placed.map(({ segment, top, bottom }) => (
+          <g key={segment.key} data-h={segment.hoverId} data-segment={segment.key}>
+            <polygon points={`${top * cell},${yBand + 1} ${(top + segment.top) * cell - 1},${yBand + 1} ${(bottom + segment.bottom) * cell - 1},${yBottom - 1} ${bottom * cell},${yBottom - 1}`} fill={segment.colour} fillOpacity={0.24} />
+            {cells(yTop, top, segment.top, segment.colour)}
+            {cells(yBottom, bottom, segment.bottom, segment.colour)}
+            {word(yTop - 7, top, segment.top, segment.name)}
+            {word(yBottom + STRIP + 15, bottom, segment.bottom, segment.name)}
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+export const ORANGE = CHART_SERIES_ORANGE;

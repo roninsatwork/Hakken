@@ -91,7 +91,6 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['insights.findings.overview.biggest', 'placeholders and a colon, the same in every language'],
     ['insights.enquiries.figures.perEnquiryDetail', 'placeholders and «in», the same in Italian'],
     ['googleAnalytics.list.title', "Google's product name"],
-    ['googleAnalytics.connection.setIn.ANALYTICS', "Google's product name"],
     ['admin.agents.details.settings.sections.role.groups.googleAnalytics', "Google's product name"],
     ['admin.limits.topics.searchConsole.title', "Google's product name"],
     ['admin.seoCollection.now.searchConsole', "Google's product name and a website's address"],

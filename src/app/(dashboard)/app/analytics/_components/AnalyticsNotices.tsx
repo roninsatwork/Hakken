@@ -63,24 +63,19 @@ export function AnalyticsConnectCard({ status, siteId }: { status: AnalyticsStat
     <>
       {/* Under the page's title: what Search Console's clicks cannot say (§15, screen 12). */}
       <AnalyticsSees screen="connect" seen={connectSees(status.host, status.searchConsole ?? null)} currency={null} />
-      <div className={PANEL}>
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary/15">
-          <Plug className="h-5 w-5 text-foreground" aria-hidden="true" />
-        </span>
-        <div className="flex max-w-2xl flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <h2 className="text-[15px] font-medium text-foreground">{adding ? t("addTitle") : t("title")}</h2>
-            <p className="text-[13px] text-secondary">{t("body", { host: status.host })}</p>
-          </div>
-          {status.canManage ? (
-            <div className="flex flex-col items-start gap-2">
-              <Button variant="brand" disabled={busy} onClick={() => void start()}>{adding ? t("addButton") : t("button")}</Button>
-              <p className="text-[12px] text-muted">{adding ? t("addHint", { host: status.host }) : t("hint")}</p>
-            </div>
-          ) : (
-            <p className="rounded-xl border border-border-dim px-3 py-2 text-[12.5px] text-secondary">{t("askAdmin")}</p>
-          )}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[15px] font-medium text-foreground">{adding ? t("addTitle") : t("title")}</h2>
+          <p className="text-[13px] text-secondary">{t("body", { host: status.host })}</p>
         </div>
+        {status.canManage ? (
+          <div className="flex flex-col items-start gap-2">
+            <Button variant="brand" disabled={busy} onClick={() => void start()}>{adding ? t("addButton") : t("button")}</Button>
+            <p className="text-[12px] text-muted">{adding ? t("addHint") : t("hint")}</p>
+          </div>
+        ) : (
+          <p className="text-[13px] text-secondary">{t("askAdmin")}</p>
+        )}
       </div>
     </>
   );

@@ -18,6 +18,11 @@ export function formatDate(input: DateInput, config: DateFormatterOptions = {}) 
   return date.toLocaleDateString(config.locale, config.options);
 }
 
+/** A day said in words, as a person would say it: "Friday 6 November". */
+export function formatLongDate(input: DateInput, config: DateFormatterOptions = {}) {
+  return formatDate(input, { ...config, options: { weekday: "long", day: "numeric", month: "long", ...config.options } });
+}
+
 export function formatDateTime(input: DateInput, config: DateFormatterOptions = {}) {
   const date = coerceDate(input);
   if (!date) return config.fallback ?? "N/A";

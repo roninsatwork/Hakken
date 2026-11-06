@@ -182,3 +182,15 @@ describe("what each conversion really is", () => {
     expect(neverHappening(COUNTED, null, null)).toEqual({ names: [], days: 365 });
   });
 });
+
+describe("Events counted twice", () => {
+  test("every run keeps the check, and nothing counted has nothing to count twice", async () => {
+    const t = harness();
+    const { connectionId } = await seeded(t);
+    await t.mutation(internal.googleAnalyticsHealth.runHealthChecks, { connectionId });
+    const connection = await t.run((ctx) => ctx.db.get(connectionId));
+    const check = connection?.health?.checks.find((one) => one.check === "COUNTED_TWICE");
+    expect(check).toMatchObject({ check: "COUNTED_TWICE", passing: true, names: [], others: [] });
+    expect(connection?.health?.checks).toHaveLength(14);
+  });
+});

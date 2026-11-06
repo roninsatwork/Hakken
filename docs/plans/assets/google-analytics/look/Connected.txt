@@ -3,4 +3,13 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Connection
 compact-list
-compact-list: Conversion | In Google Analytics | Value each | Set in
+search: Find an event
+filter: Kind
+table: Counts | Event | Kind | Last # days | Value each | Worth knowing
+  table-bar: Your events
+    download: Download CSV
+  table-footer
+search: Find an address
+table: Counts | Address | What it is | Last # days
+  table-bar: Your addresses
+  table-footer

@@ -354,6 +354,8 @@ export const HEALTH_CHECKS = [
   "NEVER_HAPPENS",
   // Conversions on an address whose conversions don't count: a shop or booking page Hakken didn't pick (conversion-addresses-plan.md).
   "CONVERSIONS_ELSEWHERE",
+  // Two counted events that match day for day, so one thing counts twice: a form under two names (Anthony, 2026-11-06).
+  "COUNTED_TWICE",
 ] as const;
 export type HealthCheck = (typeof HEALTH_CHECKS)[number];
 export const healthCheckValidator = v.union(...HEALTH_CHECKS.map((check) => v.literal(check)));
