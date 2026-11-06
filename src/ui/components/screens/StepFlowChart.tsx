@@ -89,5 +89,5 @@ export function StepFlowChart({ steps, words, format }: { steps: readonly FlowSt
       summary: <>{at === 0 ? words.everyVisit : words.ofAll(percentOf(step.visits, first))}{next ? <><br />{words.stopped(format(Math.max(0, step.visits - next.visits)))}</> : null}</>,
     };
   });
-  return <div data-part="step-flow"><PageFlowChart columns={columns} nodes={nodes} bands={bands} mostHeight={STEP_CHART_HEIGHT} legend={{ left: words.stoppedKey }} figuresOf={(node) => words.visits(format(node.visits))} /></div>;
+  return <div data-part="step-flow"><PageFlowChart columns={columns} nodes={nodes} bands={bands} mostHeight={STEP_CHART_HEIGHT} legend={{ left: words.stoppedKey }} figuresOf={(node) => words.visits(format(node.visits))} numberOf={(node) => format(node.visits)} /></div>;
 }

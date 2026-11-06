@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { StepFlowChart, stepFlowParts, type StepFlowWords } from "./StepFlowChart";
+
+const room = vi.hoisted(() => ({ width: 0 }));
+vi.mock("@/src/hooks/useElementWidth", () => ({ useElementWidth: () => [() => undefined, room.width] }));
 
 const words: StepFlowWords = {
   everyVisit: "Every visit",
@@ -40,6 +43,22 @@ describe("StepFlowChart", () => {
     expect(Number(tallest?.getAttribute("height"))).toBe(120);
     expect(screen.getByText(/62% of all visits/)).toBeInTheDocument();
     expect(screen.getByText("Red shows people who stopped here")).toBeInTheDocument();
+  });
+
+  it("a figure never runs out of its box: its number alone on a narrow one, nothing on one narrower still (Anthony, 2026-11-06)", () => {
+    const figures = () => [...document.querySelectorAll('[data-node="a"] text')].map((text) => text.textContent);
+    room.width = 860;
+    const wide = render(<StepFlowChart steps={steps} words={words} format={format} />);
+    expect(figures()).toContain(`${format(35739)} visits`);
+    wide.unmount();
+    room.width = 677;
+    const narrow = render(<StepFlowChart steps={steps} words={words} format={format} />);
+    expect(figures()).toContain(format(35739));
+    narrow.unmount();
+    room.width = 300;
+    render(<StepFlowChart steps={steps} words={words} format={format} />);
+    expect(figures().join(" ")).not.toContain(format(35739));
+    room.width = 0;
   });
 
   it("rolling over a step shows its figures", () => {

@@ -124,7 +124,7 @@ function lightsOf(id: string, column: number | undefined, bands: readonly PageFl
   return { bands: lit, boxes };
 }
 
-export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compact = false, followOn = false, scale: fixedScale, mostHeight }: {
+export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, numberOf, compact = false, followOn = false, scale: fixedScale, mostHeight }: {
   /** Each column's name and the line under it. */
   columns: ReadonlyArray<{ title: string; summary: ReactNode }>;
   nodes: readonly PageFlowNode[];
@@ -133,6 +133,8 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compac
   legend: { conversions?: string; left: string; uncounted?: string };
   /** A box's figures: its visits, and its conversions when it made any. */
   figuresOf: (node: PageFlowNode) => string;
+  /** The figure alone, for a box too narrow for its words: "35,739" where "35,739 visits" won't fit. */
+  numberOf?: (node: PageFlowNode) => string;
   compact?: boolean;
   followOn?: boolean;
   scale?: number;
@@ -214,13 +216,13 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compac
   return (
     <div ref={areaRef} data-part="page-flow" className="relative flex min-w-0 flex-col gap-3">
       <div className="grid" style={cols}>
-        {columns.flatMap((column, index) => [
-          ...(index > 0 ? [<span key={`gap-${index}`} />] : []),
-          <div key={column.title} className="flex flex-col">
+        {columns.map((column, index) => (
+          // Each heading has its box and the gap after it, and wraps inside them on a narrow screen rather than run into the next (Anthony, 2026-11-06).
+          <div key={column.title} className="flex min-w-0 flex-col pr-1.5" style={{ gridColumn: `${index * 2 + 1} / span ${index === columns.length - 1 ? 1 : 2}` }}>
             <span className="text-[13px] font-medium text-foreground">{column.title}</span>
-            <span className="whitespace-nowrap text-[12px] text-secondary">{column.summary}</span>
-          </div>,
-        ])}
+            <span className="text-[12px] text-secondary">{column.summary}</span>
+          </div>
+        ))}
       </div>
       <svg role="img" aria-label={columns.map((column) => column.title).join(", then ")} viewBox={`0 0 ${W} ${height}`} width={W} height={height} className="block max-w-full">
         {[...ends.entries()].map(([band, [y1, y2]]) => {
@@ -270,9 +272,12 @@ export function PageFlowChart({ columns, nodes, bands, legend, figuresOf, compac
         })}
         {[...placed.values()].map((node) => {
           const going = (node.visits - node.left) * scale;
-          const figures = figuresOf(node);
-          const both = !compact || nodeW >= BOTH_NEED;
-          const room = Math.max(4, Math.floor((nodeW - (compact && both ? 30 + figures.length * DIGIT : 20)) / LETTER));
+          // A figure never runs out of its box (Anthony, 2026-11-06): its number alone on a narrow one, and nothing on one narrower still, where the hover has it.
+          const fits = (words: string) => words.length * DIGIT <= nodeW - 14;
+          const number = numberOf?.(node);
+          const figures = compact || fits(figuresOf(node)) ? figuresOf(node) : number && fits(number) ? number : "";
+          const both = (!compact || nodeW >= BOTH_NEED) && figures !== "";
+          const room = Math.max(4, Math.floor((nodeW - (compact && both ? 30 + figures.length * DIGIT : compact ? 20 : 16)) / LETTER));
           const name = node.label.length > room ? `${node.label.slice(0, room - 1).trimEnd()}…` : node.label;
           const outlined = overBox === node.id || picked === node.id;
           return (

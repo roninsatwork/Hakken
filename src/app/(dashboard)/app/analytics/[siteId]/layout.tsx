@@ -119,8 +119,9 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
         <AnalyticsConnectionBanner status={status} siteId={siteId} />
         {connection?.clearing ? <Notice>{t("clearing")}</Notice> : null}
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className="lg:sticky lg:top-4 lg:self-start">
+        {/* The menu sits beside the page only from 1,280 wide: under that, it left the charts and tables a column too narrow to read. */}
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="xl:sticky xl:top-4 xl:self-start">
             <AnalyticsMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">

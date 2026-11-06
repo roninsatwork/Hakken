@@ -30,6 +30,8 @@ function shapeOf(cells: number, width: number) {
 }
 
 const KEY_COLUMNS = ["22px", "64px", "minmax(0,1fr)", "auto"].join(" ");
+/** The width it takes for the squares and their key to sit side by side. */
+const SIDE_BY_SIDE = 640;
 /** How long the squares take to fill in, whatever their number. */
 const FILL_MS = 1200;
 
@@ -73,7 +75,8 @@ export function HundredGrid({ groups, cells = 100, nowLabel, wasLabel, label }: 
 
   return (
     // Only leaving the whole part lets go: the pointer crossing the gap between two squares must not, or the chart flickers (Anthony, 2026-11-06).
-    <div ref={watch} data-part="hundred-grid" className="relative flex flex-col gap-6 md:flex-row md:items-center md:gap-10" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+    // Side by side only when there's room for both, by the part's own width: a narrow column on a wide window squeezed the key (Anthony, 2026-11-06).
+    <div ref={watch} data-part="hundred-grid" className={width >= SIDE_BY_SIDE ? "relative flex flex-row items-center gap-10" : "relative flex flex-col gap-6"} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
       <div
         role="img"
         aria-label={[label, ...groups.map((group) => `${group.count} ${group.name}`)].join(", ")}
