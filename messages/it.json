@@ -19321,6 +19321,9 @@
         "topPage": "{text} ne ha fatte {a} su {b}.",
         "weakest": "{text} converte meno tra le pagine più visitate: {aRate} delle sue {b} visite.",
         "seeBest": "Vedi {text}, la pagina che converte di più qui."
+      },
+      "channelsPage": {
+        "none": "Nessuna visita in queste date."
       }
     },
     "pageVisitors": {

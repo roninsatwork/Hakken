@@ -254,7 +254,8 @@ describe("Ask Hakken on Channels", () => {
     const { boxes } = await read(t, siteId, { part: "boxes" }) as never as { boxes: Record<string, Record<string, unknown> | null> };
     expect(boxes.mostBought).toBeUndefined();
     expect(boxes.mostEvents).toMatchObject({ channel: "Organic Search", events: 30 });
-    expect(boxes.bestForEvents).toMatchObject({ channel: "Organic Search", eventsPer100Visits: 20 });
+    // The only channel with 100 visits has nothing to beat, so it isn't the best of anything.
+    expect(boxes.bestForEvents).toBeNull();
     expect((await read(t, siteId, { part: "steps" })).steps).toContain("leaves the steps off");
     expect((await read(t, siteId, { order: "sellsBest" })).rows[0]).toMatchObject({ channel: "Organic Search" });
   });

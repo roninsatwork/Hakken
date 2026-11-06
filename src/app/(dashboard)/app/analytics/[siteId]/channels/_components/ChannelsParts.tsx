@@ -20,12 +20,10 @@ import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { formatDay, formatNumber, toCsv } from "../../../../sites/_components/siteFormat";
 import { useSiteParam, useSiteTicks } from "../../../../sites/_components/useSiteParam";
 import { CHANNEL_LINE_COLOURS } from "../../../_components/AnalyticsChart";
-import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { stepKey } from "../../../_components/stepScale";
 import { spansOfList, useSpanInWords, useSpanWords } from "../../../_components/VisitsCharts";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsStatus, useStep } from "../../../_components/useAnalytics";
 import { useThingDone } from "../../../_components/useEventName";
-import { useEyeNames, useWebsiteForEye } from "../../../_components/useEyeFigures";
 import { useKindName } from "./ChannelParts";
 
 /**
@@ -57,10 +55,10 @@ export function useChannels() {
   return { every, overview, sells };
 }
 
-type Channels = ReturnType<typeof useChannels>;
+export type Channels = ReturnType<typeof useChannels>;
 
 /** The list as the boxes' rule weighs it: a channel that stopped altogether can still be the biggest change. */
-function boxRowsOf({ every, sells }: Channels): ChannelBoxRow[] {
+export function boxRowsOf({ every, sells }: Channels): ChannelBoxRow[] {
   return [
     ...(every?.rows ?? []).map((row) => ({ key: row.label, visits: row.visits, visitsBefore: row.visitsBefore ?? null, done: sells ? row.purchases : row.conversions })),
     ...(every?.gone ?? []).map((one) => ({ key: one.key, visits: 0, visitsBefore: one.visitsBefore, done: 0 })),
@@ -478,48 +476,4 @@ export function ChannelStepsCard({ channels }: { channels: Channels }) {
       {figures ? <StepFlowChart steps={flowOf(figures)} words={flowWords} format={formatNumber} /> : null}
     </MapCard>
   );
-}
-
-/**
- * The page's eye: every channel with its boxes' rule's picks, the whole website's own figures and each part's own (`useSeesPart`), whatever
- * the menus show (channels-new-page-plan-2026-11-06.md, step 8). "Do first" may send the reader to where these figures are looked into.
- */
-export function ChannelsSees({ channels }: { channels: Channels }) {
-  const tm = useTranslations("googleAnalytics.menu");
-  const args = useAnalyticsArgs();
-  const status = useAnalyticsStatus();
-  const hrefFor = useAnalyticsHref(args.siteId);
-  const eyeNames = useEyeNames();
-  const website = useWebsiteForEye();
-  const { every, overview, sells } = channels;
-  const data = useMemo(() => {
-    if (!every) return undefined;
-    const now = overview?.now;
-    const boxes = channelBoxes(boxRowsOf(channels), { visits: now?.visits ?? null, done: now ? (sells ? now.purchases : now.conversions) : null });
-    return {
-      names: eyeNames,
-      sells,
-      boxes,
-      rows: every.rows.map((row) => ({
-        name: row.label, visits: row.visits, visitsBefore: row.visitsBefore ?? null,
-        purchases: row.purchases, purchasesBefore: row.purchasesBefore ?? null,
-        conversions: row.conversions, conversionsBefore: row.conversionsBefore,
-        bounceRate: row.bounceRate, engaged: row.engaged ?? null,
-        addedToBasket: row.basketVisits ?? null, startedCheckout: row.checkoutVisits ?? null,
-      })),
-      ...(every.gone && every.gone.length > 0 ? { gone: every.gone.map((one) => ({ name: one.key, visits: 0, visitsBefore: one.visitsBefore, purchases: 0, purchasesBefore: one.purchasesBefore, conversions: 0, conversionsBefore: one.conversionsBefore })) } : {}),
-      ...(website ? { website: { ...website, bought: overview?.now?.purchases ?? 0, boughtBefore: overview?.before?.purchases ?? null } } : {}),
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `channels` is new each draw; these decide.
-  }, [every, overview, sells, eyeNames, website]);
-  const links = useMemo(() => [
-    { label: tm("campaigns"), href: hrefFor("campaigns") },
-    { label: tm("landingPages"), href: hrefFor("funnel") },
-    { label: tm("allPages"), href: hrefFor("all-pages") },
-    { label: tm("conversions"), href: hrefFor("conversions") },
-    { label: tm("trackingHealth"), href: hrefFor("tracking-health") },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- hrefFor is new each draw; the dates, device and country decide.
-  ], [tm, args.period, args.device, args.country]);
-  // No visits in these dates: nothing to write about, and a press would only say so, minutes later.
-  return <AnalyticsSees screen="channelsPage" seen={null} keep={false} currency={status?.connection?.currency ?? null} data={data} links={links} writes={every?.total !== 0} />;
 }
