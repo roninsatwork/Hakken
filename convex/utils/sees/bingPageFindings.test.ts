@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import en from "@/messages/en.json";
 import { crawlingSeen, eyeWords, listSeen, performanceSeen, recordSeen, type BingEyeNames } from "@/src/app/(dashboard)/app/bing-webmaster/_components/bingSeesData";
@@ -177,7 +178,10 @@ function pagesOf(period: CalendarPeriod): Record<string, unknown> {
   };
 }
 
-const said = (screen: string, data: unknown) => pageFindings(screen, pageDataFor(data, screen)).map(findingWords);
+const said = (screen: string, data: unknown) => {
+  expectEyeHolds(screen, data);
+  return pageFindings(screen, pageDataFor(data, screen)).map(findingWords);
+};
 
 /** Each page's headline, as `findingWords` says it. */
 const HEADLINES: Record<string, RegExp> = {

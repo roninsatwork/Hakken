@@ -97,7 +97,9 @@ const valuesOf = (key: string) => linesDrawn().find((line) => line.key === key)?
 const boxesDrawn = () => JSON.parse(screen.getByLabelText("the map").getAttribute("data-boxes")!) as Array<{ name: string; size: number }>;
 const dotsDrawn = () => JSON.parse(screen.getByLabelText("the dots").getAttribute("data-points")!) as Array<{ label: string; x: number; y: number }>;
 /** A box's words: its name, how many services, their visits and events. */
-const boxOf = (name: string) => screen.getAllByText(name).map((one) => one.closest("[data-part='figure']")).find(Boolean)!;
+/** The boxes' headings, by group, as the page opens (visits across, events up). */
+const HEADINGS = { rightHigh: "More visits, more events", rightLow: "More visits, fewer events", leftHigh: "Fewer visits, more events", leftLow: "Fewer visits, fewer events" } as const;
+const boxOf = (heading: string) => screen.getAllByText(heading).map((one) => one.closest("[data-part='figure']")).find(Boolean)!;
 const boxText = (name: string) => boxOf(name).textContent;
 const tableRows = () => within(screen.getByRole("table")).getAllByRole("row").slice(1).map((row) => row.textContent ?? "");
 
@@ -116,23 +118,23 @@ afterEach(() => {
 });
 
 describe("the four boxes", () => {
-  it("name each group by its numbers, with how many services, their visits and their events (Ronins, last 12 months)", () => {
+  // All pages' format (Anthony, 7 November: "heading, number, description"): a short heading, how many services, the group's numbers.
+  it("a heading, how many services, and the group's own numbers under it (Ronins, last 12 months)", () => {
     open();
-    expect(boxText("30 visits or more, and 1.6 or more events for every 100")).toContain("12 services");
-    expect(boxText("30 visits or more, and 1.6 or more events for every 100")).toContain("739 visits and 31 events.");
-    expect(boxText("30 visits or more, and under 1.6 events for every 100")).toContain("1,175 visits and 12 events.");
-    expect(boxText("Under 30 visits, and 1.6 or more events for every 100")).toContain("45 visits and 3 events.");
-    expect(boxText("Under 30 visits, and under 1.6 events for every 100")).toContain("16 services");
+    expect(boxText("More visits, more events")).toBe("More visits, more events1230 visits or more, and 1.6 or more events for every 100.");
+    expect(boxText("More visits, fewer events")).toContain("30 visits or more, and under 1.6 events for every 100.");
+    expect(boxText("Fewer visits, more events")).toContain("Under 30 visits, and 1.6 or more events for every 100.");
+    expect(boxText("Fewer visits, fewer events")).toBe("Fewer visits, fewer events16Under 30 visits, and under 1.6 events for every 100.");
     expect(document.body.textContent).not.toMatch(/busy|quiet/i);
   });
 
   it("pressing one shows just that group, and pressing it again shows them all", () => {
     open();
-    const first = boxOf("30 visits or more, and 1.6 or more events for every 100");
+    const first = boxOf("More visits, more events");
     expect(first.getAttribute("href")).toContain("group=rightHigh");
     cleanup();
     open("group=rightHigh");
-    expect(boxOf("30 visits or more, and 1.6 or more events for every 100").getAttribute("href")).not.toContain("group=");
+    expect(boxOf("More visits, more events").getAttribute("href")).not.toContain("group=");
     expect(boxesDrawn()).toHaveLength(12);
   });
 
@@ -144,11 +146,8 @@ describe("the four boxes", () => {
       const split = openingSplit(answer.services, answer.website);
       for (const group of SERVICE_GROUPS) {
         const list = split.groups[group];
-        const words = boxText(groupNameInEnglish(group, split.split))!;
-        expect(words, `${period} ${group}`).toContain(`${list.length} ${list.length === 1 ? "service" : "services"}`);
-        const visits = list.reduce((sum, service) => sum + service.now.visits, 0);
-        const events = list.reduce((sum, service) => sum + service.now.events, 0);
-        expect(words, `${period} ${group}`).toContain(`${visits.toLocaleString("en-GB")} ${visits === 1 ? "visit" : "visits"} and ${events} ${events === 1 ? "event" : "events"}.`);
+        const words = boxText(HEADINGS[group])!;
+        expect(words, `${period} ${group}`).toBe(`${HEADINGS[group]}${list.length}${groupNameInEnglish(group, split.split)}.`);
       }
       unmount();
     }
@@ -228,7 +227,7 @@ describe("the dots", () => {
   it("Visits from and Events from move the lines, and the boxes follow", () => {
     open("across=twice&up=half");
     expect(JSON.parse(screen.getByLabelText("the dots").getAttribute("data-split")!)).toEqual({ x: 60, y: 0.8 });
-    expect(boxText("60 visits or more, and 0.8 or more events for every 100")).toContain("services");
+    expect(boxText("More visits, more events")).toContain("60 visits or more, and 0.8 or more events for every 100.");
   });
 
   it("Count: page views, and Show: scrolling to the bottom, which aren't split by channel", () => {
@@ -273,9 +272,10 @@ describe("the map and the table", () => {
 });
 
 describe("a website with no service pages", () => {
-  it("says why, and draws nothing else", () => {
+  // Worded as Products' note for a website that doesn't sell (Anthony, 7 November: "put this blocker back").
+  it("says why, as Products does, and draws nothing else", () => {
     open("", { ...YEAR, state: "noServices", services: [], classifications: [] });
-    expect(screen.getByText(/has no service pages yet/)).toBeTruthy();
+    expect(screen.getByText(/^Services shows for a website that sells services\. None of .+'s pages are in a Service Classification, so there's nothing to show here\.$/)).toBeTruthy();
     expect(screen.queryByLabelText("the month chart")).toBeNull();
   });
 });

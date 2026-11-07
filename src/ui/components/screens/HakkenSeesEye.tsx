@@ -37,7 +37,7 @@ import { claimEye, closeSees, forgetSeesThreads, noteAsked, toggleSees, useDraws
  * A page that hands over its figures (`SeesBox.ask`) has them sent to the
  * Insights team when the bubble opens (sees-conversion-specialist-plan-2026-10-30.md
  * S2, S11, S12): the panel shows what the press is doing while the team
- * writes, then the team's words, kept three hours; a team that could not
+ * writes, then the team's words, kept until the page's figures change, a day at most; a team that could not
  * answer leaves the rule's words standing. Every other page shows the
  * rule's words at once.
  *

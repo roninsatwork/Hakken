@@ -130,7 +130,8 @@ describe("Services' read", () => {
     expect(answer.services.map((one) => [one.name, one.now.visits])).toEqual([["Web Design", 7]]);
   });
 
-  test("a website with no Service-type Classification has no services, and the menu leaves Services out", async () => {
+  // As Products does for a website that doesn't sell, the page says why it's empty (Anthony, 7 November: "put this blocker back").
+  test("a website with no Service-type Classification has no services, and the page says why", async () => {
     const t = harness();
     const { siteId, user } = await connected(t, { services: false });
     expect((await user.query(api.googleAnalyticsServiceReads.analyticsServices, { siteId, ...ASK })).state).toBe("noServices");

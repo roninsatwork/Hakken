@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import en from "@/messages/en.json";
 import { errorsSees, overviewSees, pageSees, pagesSees, sourceNameOf, type ClaritySeesWords } from "@/src/app/(dashboard)/app/clarity/_components/claritySees";
@@ -59,6 +60,7 @@ function wordsFor(period: Period): ClaritySeesWords {
 }
 
 function said(screen: string, data: unknown): { findings: Finding[]; words: string[] } {
+  expectEyeHolds(screen, data);
   const findings = pageFindings(screen, pageDataFor(data, screen));
   const words = findings.map(findingWords);
   return { findings, words };

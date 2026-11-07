@@ -16,11 +16,12 @@ import { ANALYTICS_READ } from "./utils/agentTools";
 import { findingWords, type Finding } from "./utils/sees/findings";
 import { judgeFindings, judgeLeftOff, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
 import {
-  JUDGE_FORMAT, MOST_COVERED, SEES_CODE_FIRST_FORMAT, SEES_FINDINGS_FORMAT, firstAnswerStands, judgeFrom, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
+  JUDGE_FORMAT, MOST_COVERED, SEES_FINDINGS_FORMAT, firstAnswerStands, judgeFrom, namesWithNumbersIn, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
-import { CODE_FIRST_BRIEF, CODE_FIRST_ROWS, briefOf, findingNames, findingsBriefOf, pageFacts } from "./utils/sees/pageData";
+import { CODE_FIRST_ROWS, briefOf, findingNames, findingsBriefOf, pageFacts, usesCodeFirstBrief } from "./utils/sees/pageData";
 import { pageFindings } from "./utils/sees/pageFindings";
+import { OWN_FINDINGS } from "./utils/sees/pageOwnFindings";
 import { seesScreenFor } from "./utils/sees/screens";
 import type { SeesStageNote } from "./utils/sees/stages";
 
@@ -65,7 +66,11 @@ const LOOK_LIMIT_MS = 2.5 * 60 * 1000;
  * finds what the figures show, the specialist writes them up, the Editor checks. `note` says each stage as it starts,
  * for the panel to show what the press is doing (`utils/sees/stages.ts`); the eval set has no panel, and no notes.
  */
-async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, note: SeesStageNote = async () => {}): Promise<Written> {
+async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, note: SeesStageNote = async () => {}, options: { codeFirst?: boolean; thinkingLevel?: "MINIMAL" | "LOW" | "MEDIUM" | "HIGH"; briefOnly?: boolean } = {}): Promise<Written> {
+  // The code-first brief (eye-code-first-brief-plan-2026-11-07.md): the page's own switch, or a replay's, which measures both ways.
+  // Only a page with rules of its own: where only the general rules run, code finds little, and the writer still needs the page's
+  // lists to find the rest (Insights' Experiments, 7 November: its main point, conversions up while visits held, went missing).
+  const briefOn = options.codeFirst ?? (usesCodeFirstBrief(page.screen) && OWN_FINDINGS[page.screen] !== undefined);
   const lines: Written["lines"] = [];
   const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, {});
   const member = (role: string): TeamMember | undefined => setup.members.find((entry) => entry.role === role && entry.isActive);
@@ -147,7 +152,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     // page trying the code-first brief, only the rows the findings name and a few for the setting (eye-code-first-brief-plan).
     ...(pageRead ? {
       pageFigures: findings.length === 0 ? pageRead.shown
-        : CODE_FIRST_BRIEF.has(page.screen) ? findingsBriefOf(pageRead.shown, findingNames(findings), CODE_FIRST_ROWS)
+        : briefOn ? findingsBriefOf(pageRead.shown, findingNames(findings), CODE_FIRST_ROWS)
           : briefOf(pageRead.shown, BRIEF_ROWS),
     } : { facts: factLines(facts) }),
     links,
@@ -157,10 +162,14 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   // "how can it be more expensive as we are doing more in code now"). Without findings it still reads for itself.
   const readsScreens = reads && findings.length === 0;
   const never = screen?.never?.length ? `On this page never talk about ${screen.never.join("; ")}.` : "";
-  // A page trying the code-first brief: its first findings in order, and a unit typed after a key taken off, so fewer go back.
-  const codeFirst = CODE_FIRST_BRIEF.has(page.screen) && findings.length > 0;
-  const tidy = (answer: unknown) => (codeFirst ? withoutTypedUnits(answer) : answer);
-  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, pageRead ? SEES_PAGE_FORMAT : "", page.shop && analytics ? SEES_SHOP_FORMAT : "", never, readsScreens ? SEES_READS_FORMAT : "", findings.length > 0 ? SEES_FINDINGS_FORMAT : "", codeFirst ? SEES_CODE_FIRST_FORMAT : ""].filter(Boolean).join("\n\n");
+  // A page on the code-first brief: a "%" typed after a key that brings its own taken off, so fewer go back, and after a rate for
+  // every 100 visits, which is never a percentage ("0% events against 4.3%" on Services, 7 November, read as a percentage).
+  // A replay may try the short brief alone, without what goes with it, to tell which part does what.
+  const codeFirst = briefOn && findings.length > 0 && !options.briefOnly;
+  const tidy = (answer: unknown) => (codeFirst ? withoutTypedUnits(answer, given) : answer);
+  // How long the writer may think: its own setting, unless a replay sets one to measure.
+  const thinkingLevel = options.thinkingLevel;
+  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, pageRead ? SEES_PAGE_FORMAT : "", page.shop && analytics ? SEES_SHOP_FORMAT : "", never, readsScreens ? SEES_READS_FORMAT : "", findings.length > 0 ? SEES_FINDINGS_FORMAT : ""].filter(Boolean).join("\n\n");
   // Jev's check on the words, once the Editor's code has passed them: a guess stated as fact, a step that fits any website.
   const figuresForJev = [...facts, ...findingFacts].slice(0, 60).map((fact) => ({ what: fact.label, value: fact.value }));
   const wordsWhy = (checked: Extract<SeesVerdict, { ok: true }>) => judgeWords(ctx, judgeRun, prepared, page.host, checked.says, checked.steps.map((step) => step.words), figuresForJev);
@@ -172,6 +181,8 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   const beyondPage = reads ? { pageKeys: new Set(held.keys()) } : {};
   // With nothing wrong in tracking health, words about tracking or about what counts go back (both writers).
   const noTracking = { noTrackingTalk: trackingFaults.length === 0, analytics };
+  // The page's own names with numbers in them (Services' groups, named by their numbers): naming one is typing no figure.
+  const pageNames = { namesWithNumbers: [...(pageRead ? namesWithNumbersIn(pageRead.shown) : []), ...[...findingNames(findings)].filter((name) => /\d/.test(name))] };
   const withRead = (found: ReadonlyMap<string, Fact>) => new Map([...found, ...given]);
   const covering = mustCover.length > 0 ? { mustCover } : {};
   let verdict: SeesVerdict;
@@ -186,7 +197,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
       onStage: note,
       check: async (answer, found) => {
         await note("checking");
-        const options = { ...noTracking, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) };
+        const options = { ...noTracking, ...pageNames, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) };
         let checked = seesFrom(tidy(answer), withRead(found), page.links, options);
         // On a page trying the code-first brief, a first answer that still says the first findings, with enough left once its
         // faulty parts are left off, stands rather than go back: the Editor leaves those parts off below, as after a rewrite.
@@ -205,9 +216,9 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     // 3. The Editor's check ran inside the conversation (S5, S7): what failed went back once, with every fault. After
     // that a sentence with a fault is left off and the rest stand, and words that still leave a finding out stand
     // without it, rather than leave the reader the rule's words; the run's log says so.
-    const strict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true });
+    const strict = seesFrom(raw, named, page.links, { ...noTracking, ...pageNames, ...covering, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true });
     verdict = !strict.ok && strict.why.startsWith("It left out a finding")
-      ? seesFrom(raw, named, page.links, { ...noTracking, ...covering, coverIfItCan: true, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true })
+      ? seesFrom(raw, named, page.links, { ...noTracking, ...pageNames, ...covering, coverIfItCan: true, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true })
       : strict;
     if (!strict.ok && verdict.ok) lines.push({ heading: "The Editor", detail: `Kept although ${strict.why.charAt(0).toLowerCase()}${strict.why.slice(1)}` });
     if (codeFirst && written.turns === 1 && strict.ok && strict.left?.length) lines.push({ heading: "The Editor", detail: "Kept the first answer, leaving off what failed, rather than write it again." });
@@ -216,14 +227,14 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   } else {
     const answered = (value: unknown) => value !== null && typeof value === "object" && "says" in value;
     await note("writing");
-    raw = tidy(await ask(ctx, run, writer, who, system, prompt, undefined, answered));
+    raw = tidy(await ask(ctx, run, writer, who, system, prompt, undefined, answered, false, thinkingLevel));
     // 3. The Editor checks every number and every word (S5, S7): what fails goes back once, with why, as it does for a
     // writer that reads (sees-every-page-plan-2026-10-31.md: a page's words were left to the rule's after one slip).
     await note("checking");
-    verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering });
+    verdict = seesFrom(raw, named, page.links, { ...noTracking, ...pageNames, ...covering });
     // The same on a page trying the code-first brief: a first answer that keeps enough stands, its faulty parts left off.
     if (!verdict.ok && codeFirst) {
-      const kept = seesFrom(raw, named, page.links, { ...noTracking, ...covering, salvage: true });
+      const kept = seesFrom(raw, named, page.links, { ...noTracking, ...pageNames, ...covering, salvage: true });
       if (firstAnswerStands(kept)) {
         lines.push({ heading: "The Editor", detail: `Kept the first answer, leaving off what failed: ${verdict.why}`.slice(0, 900) });
         verdict = kept;
@@ -232,12 +243,12 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     if (!verdict.ok) {
       lines.push({ heading: "The Editor", detail: `Sent back once: ${verdict.why}`.slice(0, 900) });
       await note("rewriting");
-      raw = tidy(await ask(ctx, run, writer, who, system, `${prompt}\n\nYour last answer was sent back by the Editor: ${verdict.why} Write it again, keeping every rule.`, undefined, answered));
+      raw = tidy(await ask(ctx, run, writer, who, system, `${prompt}\n\nYour last answer was sent back by the Editor: ${verdict.why} Write it again, keeping every rule.`, undefined, answered, false, thinkingLevel));
       await note("checking");
       // After the rewrite a sentence with a fault is left off and the rest stand; words that still leave a finding out
       // stand without it, rather than leave the reader nothing.
-      verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, salvage: true });
-      if (!verdict.ok && verdict.why.startsWith("It left out a finding")) verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering, coverIfItCan: true, salvage: true });
+      verdict = seesFrom(raw, named, page.links, { ...noTracking, ...pageNames, ...covering, salvage: true });
+      if (!verdict.ok && verdict.why.startsWith("It left out a finding")) verdict = seesFrom(raw, named, page.links, { ...noTracking, ...pageNames, ...covering, coverIfItCan: true, salvage: true });
     }
   }
   if (verdict.ok && verdict.left?.length) lines.push({ heading: "The Editor", detail: `Left off: ${verdict.left.join(" ")}`.slice(0, 900) });
@@ -264,10 +275,10 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     const thin = verdict;
     lines.push({ heading: "The Editor", detail: `Only ${thin.says.length} sentence${thin.says.length === 1 ? "" : "s"} stood, so it went back once more.` });
     await note("rewriting");
-    const again = await ask(ctx, run, writer, who, system, `${prompt}\n\nOnly this stood of your last answer: ${JSON.stringify(thin.says)}.${gone.length > 0 ? ` These were left off, as they said why something happened or would fit any website: ${JSON.stringify(gone)}.` : ""} Write it again. Say the first findings each in a short sentence of its own, the most useful first, with at most two figures in each. Say what the figures show, and never why it happened. Keep every rule.`, undefined, (value: unknown) => value !== null && typeof value === "object" && "says" in value);
+    const again = await ask(ctx, run, writer, who, system, `${prompt}\n\nOnly this stood of your last answer: ${JSON.stringify(thin.says)}.${gone.length > 0 ? ` These were left off, as they said why something happened or would fit any website: ${JSON.stringify(gone)}.` : ""} Write it again. Say the first findings each in a short sentence of its own, the most useful first, with at most two figures in each. Say what the figures show, and never why it happened. Keep every rule.`, undefined, (value: unknown) => value !== null && typeof value === "object" && "says" in value, false, thinkingLevel);
     await note("checking");
-    const strict = seesFrom(tidy(again), named, page.links, { ...noTracking, ...covering, salvage: true });
-    const next = !strict.ok && strict.why.startsWith("It left out a finding") ? seesFrom(tidy(again), named, page.links, { ...noTracking, ...covering, coverIfItCan: true, salvage: true }) : strict;
+    const strict = seesFrom(tidy(again), named, page.links, { ...noTracking, ...pageNames, ...covering, salvage: true });
+    const next = !strict.ok && strict.why.startsWith("It left out a finding") ? seesFrom(tidy(again), named, page.links, { ...noTracking, ...pageNames, ...covering, coverIfItCan: true, salvage: true }) : strict;
     if (next.ok) {
       const after = await leaveOffGuesses(next);
       if (after.kept.says.length > thin.says.length) verdict = after.kept;
@@ -420,5 +431,62 @@ export const runSeesEval = internalAction({
       summary: pages.length === 0 ? "The eval set holds no pages yet." : `${pages.length} page${pages.length === 1 ? "" : "s"} graded: ${passed} passed the Editor; ${Math.round(score * 100)}% of what Anthony would want found was found.`,
     });
     return { graded: pages.length, passed, score };
+  },
+});
+
+/**
+ * Saved answers written again on the very figures their press was handed, the code-first brief on or off, each on a run of its
+ * own so its cost is recorded: how the rollout is measured page by page against the words already saved, without a browser
+ * (eye-code-first-brief-plan-2026-11-07.md). Nothing is saved over the page's answer, and nothing is shown to a client.
+ */
+/** A saved page as a replay is handed it: named here so the action's type never depends on its own module. */
+type ReplayPage = Page & { companyId: Id<"companies">; holdId: Id<"companyWebsites">; says: string[]; steps: string[]; costUsd: number | null; inputTokens: number | null };
+type ReplayRow = {
+  answerId: Id<"seesAnswers">; screen: string; period: string;
+  before: { says: string[]; steps: string[]; costUsd: number | null; inputTokens: number | null };
+  after: { ok: boolean; says: string[]; steps: string[]; why?: string; costUsd: number; inputTokens: number; calls: number };
+};
+
+export const replaySeesAnswers = internalAction({
+  args: {
+    answerIds: v.array(v.id("seesAnswers")),
+    codeFirst: v.optional(v.boolean()),
+    /** How long the writer may think, to measure; the writer's own setting otherwise. */
+    thinkingLevel: v.optional(v.union(v.literal("MINIMAL"), v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))),
+    /** The brief alone, without the findings-in-order line, the tidy, a kept first answer or the writer's limits. */
+    briefOnly: v.optional(v.boolean()),
+  },
+  returns: v.array(v.object({
+    answerId: v.id("seesAnswers"), screen: v.string(), period: v.string(),
+    before: v.object({ says: v.array(v.string()), steps: v.array(v.string()), costUsd: v.union(v.number(), v.null()), inputTokens: v.union(v.number(), v.null()) }),
+    after: v.object({ ok: v.boolean(), says: v.array(v.string()), steps: v.array(v.string()), why: v.optional(v.string()), costUsd: v.number(), inputTokens: v.number(), calls: v.number() }),
+  })),
+  handler: async (ctx, args): Promise<ReplayRow[]> => {
+    const out: ReplayRow[] = [];
+    for (const answerId of args.answerIds.slice(0, 12)) {
+      const page: ReplayPage | null = await ctx.runQuery(internal.seesAsk.replayInputInternal, { answerId });
+      if (!page) continue;
+      const runId: Id<"agentRuns"> | null = await ctx.runMutation(internal.seesAsk.startReplayRunInternal, { companyId: page.companyId, host: page.host, screen: page.screen });
+      if (!runId) continue;
+      await ctx.runMutation(internal.roleRuns.markRunStarted, { runId });
+      const run: InsightsRunArgs = { runId, companyId: page.companyId, host: page.host, holdId: page.holdId, shop: page.shop };
+      let written: Written;
+      try {
+        written = await writeBubble(ctx, run, page, undefined, { ...(args.codeFirst === undefined ? {} : { codeFirst: args.codeFirst }), ...(args.thinkingLevel ? { thinkingLevel: args.thinkingLevel } : {}), ...(args.briefOnly ? { briefOnly: true } : {}) });
+      } catch (error) {
+        written = { verdict: { ok: false, why: failureSummary(error) }, role: "INSIGHTS_CONVERSION", lines: [] };
+      }
+      await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId, status: written.verdict.ok ? "SUCCESS" : "FAILED", summary: `Replayed ${page.screen}: ${written.verdict.ok ? written.verdict.says.join(" ") : written.verdict.why}`.slice(0, 900) });
+      const cost: { costUsd: number; inputTokens: number; calls: number } = await ctx.runQuery(internal.seesAsk.runCostInternal, { runId });
+      out.push({
+        answerId, screen: page.screen, period: page.period,
+        before: { says: page.says, steps: page.steps, costUsd: page.costUsd, inputTokens: page.inputTokens },
+        after: {
+          ok: written.verdict.ok, says: written.verdict.ok ? written.verdict.says : [], steps: written.verdict.ok ? written.verdict.steps.map((step) => step.words) : [],
+          ...(written.verdict.ok ? {} : { why: written.verdict.why }), ...cost,
+        },
+      });
+    }
+    return out;
   },
 });

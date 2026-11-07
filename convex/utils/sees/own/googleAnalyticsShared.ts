@@ -123,6 +123,38 @@ export function headline(list: string, name: string, measure: string, now: unkno
   return moved(list, name, measure, now, before, 1.3 + Math.min(0.5, change), other && otherChange !== null ? { name: other.name, change: otherChange } : undefined);
 }
 
+/** A row must make this share of a move, at least, to be called where it came from: one of many moving a little drove nothing. */
+const CAME_FROM_SHARE = 0.25;
+
+/**
+ * Where a count's move came from (eye-code-first-brief-plan-2026-11-07.md, "Code digs"): of each list given, the row that moved
+ * most the same way, where it made a quarter of the move or more, named in the finding's words for the writer. The writer kept
+ * leaving out what drove the biggest change (October), so code says it. Its name only: with its figures too, the writer put a
+ * third figure in the headline's sentence, which the Editor refuses, and the press was written twice (Services, 7 November). Its
+ * row's figures are in the brief, as a row a finding names. The panel words its findings itself, unchanged.
+ */
+export function withWhereFrom(found: OwnFound, lists: ReadonlyArray<{ what: string; rows: readonly Row[]; least: number }>): OwnFound {
+  const { now, before, measure, name } = found.params;
+  if (!isNumber(now) || !isNumber(before) || now === before || typeof measure !== "string" || MEASURES[measure]?.kind !== "count") return found;
+  const move = now - before;
+  const params: OwnFound["params"] = { ...found.params };
+  let at = 0;
+  for (const list of lists) {
+    const best = list.rows.flatMap((row) => {
+      const rowName = rowNameOf(row);
+      const rowNow = row[measure];
+      const rowBefore = measure === "visits" ? visitsBeforeOf(row) : row[`${measure}Before`];
+      if (!rowName || rowName === name || !isNumber(rowNow) || !isNumber(rowBefore) || Math.max(rowNow, rowBefore) < list.least) return [];
+      const gave = rowNow - rowBefore;
+      return gave * Math.sign(move) > 0 && Math.abs(gave) >= Math.abs(move) * CAME_FROM_SHARE ? [{ rowName, rowNow, rowBefore, gave }] : [];
+    }).sort((left, right) => Math.abs(right.gave) - Math.abs(left.gave))[0];
+    if (!best) continue;
+    at += 1;
+    Object.assign(params, { [`came${at}`]: best.rowName, [`came${at}What`]: list.what });
+  }
+  return at === 0 ? found : { ...found, params };
+}
+
 /**
  * The rows whose visits moved most, the biggest gain and the biggest loss, each set beside its reference's own move (the
  * whole website's, the channel's): a row moving with the whole is no news.

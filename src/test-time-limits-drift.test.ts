@@ -296,6 +296,17 @@ describe('test time limits', () => {
     expect(config.match(/\.\.\.LOGS_GO_STRAIGHT,/g)?.length ?? 0).toBe(projects)
   })
 
+  // 2026-11-07: the eye's first press loaded its code cold under `npm run test:coverage` here and took past the twenty seconds
+  // a wait on real time allowed, where it takes one alone. A coverage run is told to every project, and the waits give it a minute.
+  test('a run measuring coverage is told to every project, and a wait on real time gives it a minute', () => {
+    const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
+    expect(config).toContain("const COVERAGE_TOLD = { env: { HAKKEN_MEASURING_COVERAGE: MEASURING_COVERAGE ? '1' : '' } } as const")
+    const projects = config.match(/\.\.\.STUBS_PUT_BACK,/g)?.length ?? 0
+    expect(config.match(/\.\.\.COVERAGE_TOLD,/g)?.length ?? 0).toBe(projects)
+    const realTime = readFileSync(join(repoRoot, 'src/test/realTime.ts'), 'utf8')
+    expect(realTime).toContain('export const REAL_WAIT_LIMIT_MS = process.env.GITHUB_ACTIONS ? 120_000 : process.env.HAKKEN_MEASURING_COVERAGE === "1" ? 60_000 : 20_000;')
+  })
+
   test("a push to dev really does leave out Arcade's tests", () => {
     const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
     const pattern = /const ARCADE_CODE = '([^']+)'/.exec(config)?.[1] ?? ''

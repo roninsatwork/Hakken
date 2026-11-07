@@ -37,15 +37,17 @@ export const ANALYTICS_PAGES = [
   { id: "allPages", segment: "all-pages", group: "figures" },
   // Every event the website recorded (GA30) is part of Conversions (ga-conversions-visitors-plan.md CV1).
   { id: "conversions", segment: "conversions", group: "figures" },
-  // A shop's products (GA34): listed only for a website that is a shop.
-  { id: "products", segment: "products", group: "figures", shopOnly: true },
-  // A service business's own Products (services-new-page-plan-2026-11-07.md, step 2): listed for a website that doesn't sell and has service pages.
-  { id: "services", segment: "services", group: "figures", serviceOnly: true },
+  // A shop's products (GA34). Every page shows on every website (Anthony, 7 November: "no page should be hidden from any
+  // website"): one that doesn't sell sees the page's notice saying why it's empty.
+  { id: "products", segment: "products", group: "figures" },
+  // A service business's own Products (services-new-page-plan-2026-11-07.md, step 2): on every website (Anthony, 7 November: "Every
+  // website"). A website with no service pages sees a short notice saying why.
+  { id: "services", segment: "services", group: "figures" },
   // Who visited (GA24), called Visits since 2026-11-03 (visits-redo-plan-2026-11-03.md): `/visitors` forwards here.
   { id: "visitors", segment: "visits", group: "figures" },
   { id: "trackingHealth", segment: "tracking-health", group: "settings" },
   { id: "connection", segment: "connection", group: "settings" },
-] as const satisfies readonly { id: string; segment: string; group: AnalyticsGroup; shopOnly?: boolean; serviceOnly?: boolean }[];
+] as const satisfies readonly { id: string; segment: string; group: AnalyticsGroup }[];
 export type AnalyticsPageId = (typeof ANALYTICS_PAGES)[number]["id"];
 
 /** The page a path under the website belongs to: a landing page's own screen keeps Landing pages lit, an event's Conversions. */

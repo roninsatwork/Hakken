@@ -23,9 +23,12 @@ const realClearTimeout = globalThis.clearTimeout;
  * Real time a test may wait on its work, however slowly the work's code loads:
  * well inside the test's own limit (ninety seconds here, three minutes on
  * GitHub, which runs ten times slower), so a genuine hang fails with its own
- * words rather than as a timeout.
+ * words rather than as a timeout. A run measuring coverage here gets a minute:
+ * the eye's first press in `convex/seesAsk.test.ts` loaded its code cold under
+ * `npm run test:coverage` and took past twenty seconds, where it takes one
+ * alone (2026-11-07). The config tells every project (`HAKKEN_MEASURING_COVERAGE`).
  */
-export const REAL_WAIT_LIMIT_MS = process.env.GITHUB_ACTIONS ? 120_000 : 20_000;
+export const REAL_WAIT_LIMIT_MS = process.env.GITHUB_ACTIONS ? 120_000 : process.env.HAKKEN_MEASURING_COVERAGE === "1" ? 60_000 : 20_000;
 
 /**
  * How long a screen test waits for something to appear (`findBy…`,

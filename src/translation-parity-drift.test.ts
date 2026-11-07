@@ -47,6 +47,7 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['ai.assistant.lookedUp.googleAnalytics', 'Product name (Google Analytics), a website and its days: Ask Hakken\'s "Looked up" line'],
     ['admin.workflows.schedules.scheduleShort.utc', 'a time and "UTC", the same in both languages'],
     ['googleAnalytics.pageVisitors.heading', 'two placeholders and a comma: "{name}, {period}", the words come from each language'],
+    ['googleAnalytics.services.boxes.heading', 'two placeholders and a comma: "{across}, {up}", the words come from each language (Services\' boxes)'],
     ['admin.classificationTypes.namePlaceholder', 'an example type name: names are written once, in English (classification-types-plan CT7)'],
     ['sites.businessRecord.views.chatgpt', 'Product name (ChatGPT) and a count'],
     ['googleAnalytics.seesAsk.kind', 'two placeholders: "{name} {period}", the words come from each language (the figures a page hands the Insights team)'],

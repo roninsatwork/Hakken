@@ -10,6 +10,7 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
+import { WebsiteNotFound, useWebsiteWasOpen } from "../../_components/WebsiteNotFound";
 import { formatDateTime } from "@/src/lib/dates";
 import { openingPeriod, ukDay } from "@/convex/utils/calendarPeriods";
 import { SiteDateRange } from "../_components/SiteDateRange";
@@ -40,6 +41,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const search = useSearchParams();
   const siteId = useSiteId();
   const site = useSite();
+  const wasOpen = useWebsiteWasOpen(siteId, Boolean(site));
   const pathname = usePathname();
   // A menu page opened from a link on another page leads back to it; a
   // record's screen draws its own back row in its header.
@@ -65,7 +67,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     return (
       <>
         <Header />
-        <HakkenEmptyState icon={Globe} title={t("notFoundTitle")} description={t("notFoundDescription")} />
+        <WebsiteNotFound siteId={siteId} wasOpen={wasOpen} icon={Globe} title={t("notFoundTitle")} description={t("notFoundDescription")} />
       </>
     );
   }

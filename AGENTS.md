@@ -245,6 +245,13 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   a genuine hang in their own words. Never write a loop that moves the clock,
   never `vi.runAllTimersAsync()` / `vi.advanceTimersToNextTimer…()` and hope,
   never a `setTimeout` sleep of 50ms or more to wait for something.
+- **That real time is one limit, `REAL_WAIT_LIMIT_MS`, and coverage gets
+  longer** (2026-11-07). Twenty seconds here, a minute on a run measuring
+  coverage here, two on GitHub: the eye's first press in
+  `convex/seesAsk.test.ts` took one second alone and past twenty under
+  `npm run test:coverage`, loading its code cold. The config tells every
+  project a coverage run is on (`COVERAGE_TOLD`, `HAKKEN_MEASURING_COVERAGE`);
+  never pass a helper a shorter wait of its own.
 - **Fake timers fake every clock.** Since Vitest 4 a plain `vi.useFakeTimers()`
   replaces `Date`, `performance.now` and `process.hrtime` too (and `Temporal` from
   Vitest 5, checked 2026-10-22), so a deadline

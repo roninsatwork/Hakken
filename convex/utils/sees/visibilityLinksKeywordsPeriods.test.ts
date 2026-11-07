@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import en from "@/messages/en.json";
 import {
@@ -52,6 +53,7 @@ function groupName(breakdown: string, key: string): string {
 
 /** The page's findings as its eye works them out, in the plain English sentences Jev reads. */
 function said(screen: string, data: unknown): { findings: Finding[]; words: string[] } {
+  expectEyeHolds(screen, data);
   const findings = pageFindings(screen, pageDataFor(data, screen));
   return { findings, words: findings.map(findingWords) };
 }

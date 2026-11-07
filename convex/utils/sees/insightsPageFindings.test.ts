@@ -1,4 +1,5 @@
 import { appendFileSync } from "node:fs";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import { describe, expect, test } from "vitest";
 import en from "../../../messages/en.json";
@@ -77,6 +78,7 @@ function periodOf(id: string) {
 }
 
 function found(screen: string, data: unknown) {
+  expectEyeHolds(screen, data);
   const said = pageFindings(screen, pageDataFor(data, screen)).map(findingWords);
   show(screen, said);
   return said;

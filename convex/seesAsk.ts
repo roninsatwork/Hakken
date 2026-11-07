@@ -41,7 +41,7 @@ const answerValidator = v.object({
 /** What a press says back: the key its answer is read by, and how that answer stands. */
 const pressedValidator = v.object({ key: v.string(), status: v.union(v.literal("RESEARCHING"), v.literal("WRITTEN"), v.literal("FAILED"), v.literal("NO_CREDITS")) });
 
-/** Whether a kept answer still stands: written within three hours, or being written within ten minutes. */
+/** Whether a kept answer still stands: written within a day (`SEES_KEPT_MS`), or being written within ten minutes. */
 export function stillStands(row: Pick<Doc<"seesAnswers">, "status" | "askedAt" | "writtenAt">, now: number): boolean {
   if (row.status === "WRITTEN") return now - (row.writtenAt ?? row.askedAt) < SEES_KEPT_MS;
   if (row.status === "RESEARCHING") return now - row.askedAt < SEES_WRITING_MS;
@@ -99,7 +99,7 @@ async function startPress(ctx: TenantMutationCtx, args: ObjectType<typeof seesAs
   const facts = (args.facts.length > 0 ? args.facts : pageFacts(args.screen, data, { ...(args.from ? { from: args.from } : {}), ...(args.to ? { to: args.to } : {}) }).facts.map(({ key: factKey, value, unit, label }) => ({ key: factKey, value, unit, label })))
     .slice(0, MOST_SEES_FACTS);
   const held = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).first();
-  // Kept three hours while nothing on the page changed (S3; Anthony: "dont cache if things change"): new figures, new words.
+  // Kept a day while nothing on the page changed (S3; Anthony: "dont cache if things change"): new figures, new words.
   if (held && stillStands(held, now) && (held.status === "RESEARCHING" || (!refresh && sameFigures(held.facts, facts)))) return { key, status: held.status };
   if (!/^\/app\/[^\s]{1,300}$/.test(args.path)) throw appError("INVALID_INPUT", "The screen's address is not one of the app's.");
   if (facts.length === 0) throw appError("INVALID_INPUT", "The page handed over no figures.");
@@ -158,7 +158,7 @@ export const seesAnswer = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const row = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", site.hold._id).eq("key", args.key)).first();
     if (!row) return null;
-    // An answer past its three hours reads as none: the next press writes afresh.
+    // An answer past its day reads as none: the next press writes afresh.
     if (!stillStands(row, Date.now()) && row.status !== "FAILED") return null;
     return { status: row.status, says: row.says, steps: row.steps, role: row.role ?? null, writtenAt: row.writtenAt ?? null, ...(row.findings ? { findings: row.findings } : {}), ...(row.status === "RESEARCHING" && row.stages ? { stages: row.stages } : {}) };
   },
@@ -204,7 +204,7 @@ export const saveSeesAnswer = internalMutation({
       ...(args.status === "WRITTEN" ? { writtenAt: Date.now(), failedWhy: undefined } : { failedWhy: args.failedWhy ?? "The team gave no answer." }),
     });
     // New words written: the press is charged, once, with what the run cost us. A failed one, or one answered from the
-    // three hours kept, costs nothing (ask-hakken-every-chart-plan-2026-10-31.md, §3).
+    // day kept, costs nothing (ask-hakken-every-chart-plan-2026-10-31.md, §3).
     if (args.status === "WRITTEN" && !row.notCharged) await creditSeesPress(ctx, row);
     return null;
   },
@@ -430,5 +430,82 @@ export const seesEvalResults = superAdminQuery({
       });
     }
     return out;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Replaying a saved answer (eye-code-first-brief-plan-2026-11-07.md: the rollout, measured, and the drift checks)
+// ---------------------------------------------------------------------------
+
+const replayInputValidator = v.object({
+  companyId: v.id("companies"),
+  holdId: v.id("companyWebsites"),
+  host: v.string(),
+  screen: v.string(),
+  about: v.string(),
+  period: v.string(),
+  from: v.optional(v.string()),
+  to: v.optional(v.string()),
+  country: v.string(),
+  device: v.string(),
+  facts: seesAskValidator.facts,
+  links: seesAskValidator.links,
+  shop: v.boolean(),
+  data: v.optional(v.any()),
+  /** The words as the press wrote them, and what that press cost. */
+  says: v.array(v.string()),
+  steps: v.array(v.string()),
+  costUsd: v.union(v.number(), v.null()),
+  inputTokens: v.union(v.number(), v.null()),
+});
+
+/**
+ * A written answer as its press was handed it, to write again on the very same figures: the same page, dates, country,
+ * device and page figures, with the words it wrote and what it cost. Null for one not written, or kept before pages handed
+ * their figures over.
+ */
+export const replayInputInternal = internalQuery({
+  args: { answerId: v.id("seesAnswers") },
+  returns: v.union(v.null(), replayInputValidator),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.answerId);
+    if (!row || row.status !== "WRITTEN" || row.pageData === undefined || row.pageData === null) return null;
+    const hold = await ctx.db.get(row.companyWebsiteId);
+    const website = hold ? await ctx.db.get(hold.websiteId) : null;
+    if (!website) return null;
+    const run = row.runId ? await ctx.db.get(row.runId) : null;
+    const key = fromSeesKey(row.key);
+    return {
+      companyId: row.companyId, holdId: row.companyWebsiteId, host: website.host, screen: row.screen, about: row.about ?? row.screen,
+      period: key.period, ...(key.from ? { from: key.from } : {}), ...(key.to ? { to: key.to } : {}), country: key.country, device: key.device,
+      facts: (row.facts ?? []).map(({ key: factKey, value, unit, label }) => ({ key: factKey, value, unit, label })), links: row.links ?? [], shop: row.shop ?? false, data: row.pageData,
+      says: row.says, steps: row.steps.map((step) => step.words), costUsd: run?.costUsd ?? null, inputTokens: run?.inputTokens ?? null,
+    };
+  },
+});
+
+/** A run of the Head's for one replay, so what it cost is recorded on its own. Never shown to a client. */
+export const startReplayRunInternal = internalMutation({
+  args: { companyId: v.id("companies"), host: v.string(), screen: v.string() },
+  returns: v.union(v.null(), v.id("agentRuns")),
+  handler: async (ctx, args) => {
+    const lead = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", INSIGHTS_LEAD_ROLE)).first();
+    if (!lead) return null;
+    const now = Date.now();
+    return await ctx.db.insert("agentRuns", {
+      agentId: lead._id, triggerType: "EVENT", objective: `The eye replayed on ${args.screen} for ${args.host}: written again on a saved page's figures, to measure.`,
+      title: `The eye replayed: ${args.host}`, status: "QUEUED", companyId: args.companyId, startedAt: now, updatedAt: now,
+    });
+  },
+});
+
+/** What one run cost and how many calls it made to the writer. */
+export const runCostInternal = internalQuery({
+  args: { runId: v.id("agentRuns") },
+  returns: v.object({ costUsd: v.number(), inputTokens: v.number(), calls: v.number() }),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    const steps = await ctx.db.query("agentRunSteps").withIndex("by_run_step", (q) => q.eq("runId", args.runId)).take(200);
+    return { costUsd: run?.costUsd ?? 0, inputTokens: run?.inputTokens ?? 0, calls: steps.filter((step) => step.kind === "MODEL").length };
   },
 });

@@ -200,6 +200,7 @@ export async function readServices(ctx: SiteReader, args: ObjectType<typeof serv
   const connection = await connectionOf(ctx, holdId);
   if (!connection?.newestDay) return { ...NOTHING, state: "notConnected" };
   const kinds = await readPageKinds(ctx, holdId);
+  // A website with no Service Classification sees the page's note saying why it's empty, as Products does for one that doesn't sell.
   const classifications = (kinds?.choices ?? []).filter((choice) => choice.type === SERVICE_TYPE).map((choice) => ({ id: choice.id, name: choice.name }));
   if (!kinds || classifications.length === 0) return { ...NOTHING, state: "noServices" };
   const counted = countedOf(connection);

@@ -124,18 +124,49 @@ export function briefOf(value: unknown, rows: number): unknown {
 
 /**
  * The pages whose writer is handed only what code found (Anthony, 2026-11-07: "Surely we find the key stats in code first then
- * pass the results into the llm to write it up"; "Yes please let's try it on this page"): Services first, as a trial, and every
- * page with the eye once it holds the same quality for less (docs/plans/active/eye-code-first-brief-plan-2026-11-07.md).
+ * pass the results into the llm to write it up"; "Yes please let's try it on this page"; then "Go for it" on the rollout): Services
+ * first, as a trial, then section by section, each joining once it holds the same quality for less
+ * (docs/plans/active/eye-code-first-brief-plan-2026-11-07.md). A section listed brings every page of it.
  */
-export const CODE_FIRST_BRIEF: ReadonlySet<string> = new Set(["googleAnalytics.services"]);
+export const CODE_FIRST_SECTIONS: ReadonlySet<string> = new Set<string>([
+  // 7 November, on six pages' saved figures written both ways: about 45% cheaper (74 cents to 41), the same main points.
+  "googleAnalytics",
+  // 7 November, against their saved answers: Pages 14.4 cents to 2.9, Overview 7.6 to 4.6, the same main points.
+  "clarity",
+  // 7 November, against their saved answers: Competitors 3.6 cents to 2.2, Linking websites the same, the same main points.
+  "visibility",
+  // 7 November, against their saved answers: Performance 6.7 cents to 5.1, Almost there 4.2 to 4.7, the same main points.
+  "searchConsole",
+  // 7 November: This week 5.8 cents to 2.2, with a third finding the old words missed. Only its pages with rules of their own.
+  "insights",
+  // 7 November, on its hand-written test figures, as no website on dev has Bing connected: Keywords 9.7 cents to 6.6, Performance
+  // 3.6, the same main points. Its first real press, once a website connects Bing, is checked by hand.
+  "bing",
+]);
+/** Pages on the brief ahead of their section. */
+export const CODE_FIRST_PAGES: ReadonlySet<string> = new Set(["googleAnalytics.services"]);
+
+/** Whether a page's writer is handed the code-first brief: its section's or its own switch. */
+export function usesCodeFirstBrief(screen: string): boolean {
+  return CODE_FIRST_PAGES.has(screen) || CODE_FIRST_SECTIONS.has(screen.split(".")[0]);
+}
 /** A list's first rows kept beside the rows the findings name, for the setting: the biggest few, as the page opens. */
 export const CODE_FIRST_ROWS = 3;
+/**
+ * The most a page's code-first brief may hold, in characters: about 3,000 tokens. Every test of every period holds each page's
+ * brief to it on its saved figures (`src/test/eyeHolds.ts`), so a new list on a page can't quietly make every press dearer.
+ * Lower it as briefs shrink; never raise it to let one through.
+ */
+export const CODE_FIRST_MOST_CHARS = 12_000;
 
-/** Every name a finding speaks of, its own and the one it's set beside: several joined by commas are each one. */
+/**
+ * Every name a finding speaks of, its own, the one it's set beside, and where its move came from (`came1`, `came2`: the service
+ * and the channel on Services): several joined by commas are each one.
+ */
 export function findingNames(findings: ReadonlyArray<{ params: Record<string, unknown> }>): Set<string> {
   const names = new Set<string>();
   for (const finding of findings) {
-    for (const field of ["name", "other"]) {
+    for (const field of ["name", "other", "came1", "came2"]) {
       const value = finding.params[field];
       if (typeof value === "string") for (const part of value.split(", ")) if (part.trim()) names.add(part.trim().toLowerCase());
     }
@@ -152,23 +183,24 @@ const leadingNumber = (value: unknown): number => (typeof value === "number" ? v
  * said. Everything else on the page stays with the checker, which still knows every figure, but never reaches the writer: the
  * page's lists were most of a press's words (Services, 7 November: about 4,000 of 7,700 tokens in).
  */
-export function findingsBriefOf(value: unknown, named: ReadonlySet<string>, rows: number, top = true): unknown {
-  // The names a page hands its rules ("The whole website", "All your services") are the findings' words, not figures.
-  if (top && value && typeof value === "object" && !Array.isArray(value) && "names" in value) {
-    const { names: _names, ...rest } = value as Record<string, unknown>;
-    return findingsBriefOf(rest, named, rows, false);
-  }
+export function findingsBriefOf(value: unknown, named: ReadonlySet<string>, rows: number): unknown {
+  // The names a page hands over stay: they're its own words for things, such as a league's "Organic traffic", which the writer
+  // must use (left out at first, they lost Insights' Leaderboards three of its findings' names).
   if (Array.isArray(value)) {
-    const mentions = (item: unknown) => item !== null && typeof item === "object" && !Array.isArray(item)
-      && Object.values(item as Record<string, unknown>).some((field) => typeof field === "string" && named.has(field.trim().toLowerCase()));
+    // A row is kept when it, or anything inside it, is named: a group whose rows a finding names comes with them.
+    const mentions = (item: unknown): boolean => {
+      if (typeof item === "string") return named.has(item.trim().toLowerCase());
+      if (Array.isArray(item)) return item.some(mentions);
+      return item !== null && typeof item === "object" && Object.values(item as Record<string, unknown>).some(mentions);
+    };
     const opening = keptRows(value, rows, rows);
     const busiest = isDated(value)
       ? value.reduce<unknown>((best, item) => (sumOf(item) > sumOf(best) ? item : best), value[0])
       : undefined;
     const kept = value.filter((item) => opening.includes(item) || item === busiest || mentions(item));
-    return kept.map((item) => findingsBriefOf(item, named, rows, false));
+    return kept.map((item) => findingsBriefOf(item, named, rows));
   }
-  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([name, inner]) => [name, findingsBriefOf(inner, named, rows, false)]));
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([name, inner]) => [name, findingsBriefOf(inner, named, rows)]));
   return value;
 }
 

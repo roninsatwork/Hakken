@@ -1,4 +1,5 @@
 import { appendFileSync } from "fs";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import { describe, expect, test } from "vitest";
 import en from "@/messages/en.json";
@@ -42,6 +43,7 @@ type Period = (typeof WHOLE)[number] | (typeof BEGUN)[number];
 
 /** A page's figures as the eye reads them, and its findings in plain English. */
 function said(screen: string, data: unknown): { findings: Finding[]; words: string[] } {
+  expectEyeHolds(screen, data);
   const findings = pageFindings(screen, pageDataFor(data, screen));
   return { findings, words: findings.map(findingWords) };
 }
@@ -224,7 +226,7 @@ describe("Campaigns says what a person would miss (More Handles' October; campai
   });
 
   test("a busy campaign that sold nothing, however easy it is to miss in a table of 34", () => {
-    expect(words).toContain("Facebook ad with no name: bought for every 100 visits 0, against 4.2 for All campaign visits.");
+    expect(words).toContain("Facebook ad with no name: 0 bought for every 100 visits, against 4.2 for All campaign visits.");
   });
 
   test("two campaigns account for the whole fall", () => {
@@ -277,17 +279,17 @@ describe("Channels finds what a person scanning the page would miss, on More Han
     expect(all).toContain("Organic Search, Brand: visits up 129.9%, to 2035 from 885 the span before; Organic Search: up 2.8%.");
   });
   test("the channel that sells best, and why", () => {
-    expect(all).toContain("Paid Search: bought for every 100 visits 9.1, against 3.4 for The whole website.");
+    expect(all).toContain("Paid Search: 9.1 bought for every 100 visits, against 3.4 for The whole website.");
     expect(found("rowAbove:squares:bestWhere:shareOfChannelBought:Paid Search, Brand")).toBe(true);
   });
   test("big, but sells less", () => {
     expect(all).toContain("Organic Search: share of everything bought 23.5%, against 36.8% for their share of all visits.");
   });
   test("a Classification people read and don't buy from", () => {
-    expect(all).toContain("Organic Search, Blog: bought for every 100 visits 0.1, against 2.2 for Organic Search.");
+    expect(all).toContain("Organic Search, Blog: 0.1 bought for every 100 visits, against 2.2 for Organic Search.");
   });
   test("busy, and nobody bought: against the whole website, and how many left", () => {
-    expect(all).toContain("Paid Social: bought for every 100 visits 0, against 3.4 for The whole website.");
+    expect(all).toContain("Paid Social: 0 bought for every 100 visits, against 3.4 for The whole website.");
     expect(all).toContain("Paid Social: share of visits that left at once");
   });
   test("a step far from the rest, each visit counted once", () => {

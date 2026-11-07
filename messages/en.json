@@ -18411,15 +18411,36 @@
     "services": {
       "title": "Services",
       "description": "The services people look at, and the ones that get them in touch.",
-      "noServices": "{host} has no service pages yet. Sort your pages into a Classification whose type is Service, and they show here.",
+      "noServices": "Services shows for a website that sells services. None of {host}'s pages are in a Service Classification, so there's nothing to show here.",
       "collecting": "These dates are still being collected. They come with the next collection.",
       "everyDevice": "That device's pages aren't collected yet, so this shows every device.",
       "leftOut": "This shows your {most} busiest services. {count, plural, =1 {One more is} other {# more are}} left out.",
       "boxes": {
-        "value": "{count, plural, =1 {# service} other {# services}}",
-        "detail": {
-          "visits": "{amount, plural, =1 {# visit} other {# visits}} and {events, plural, =1 {# event} other {# events}}.",
-          "views": "{amount, plural, =1 {# page view} other {# page views}} and {events, plural, =1 {# event} other {# events}}."
+        "heading": "{across}, {up}",
+        "description": "{name}.",
+        "across": {
+          "visits": {
+            "more": "More visits",
+            "fewer": "Fewer visits"
+          },
+          "views": {
+            "more": "More page views",
+            "fewer": "Fewer page views"
+          }
+        },
+        "up": {
+          "events": {
+            "more": "more events",
+            "fewer": "fewer events"
+          },
+          "stayed": {
+            "more": "more stay",
+            "fewer": "fewer stay"
+          },
+          "scrolled": {
+            "more": "more scroll down",
+            "fewer": "fewer scroll down"
+          }
         }
       },
       "groups": {
@@ -20993,7 +21014,7 @@
       "taskAlerts": "Each day an alert someone set up looks at your figures.",
       "taskReports": "Each weekly report someone asked for.",
       "taskResearch": "Each time someone said yes to “find out why”.",
-      "sees": "Each press of the eye that wrote new advice. A press within three hours of the last shows the same advice, covered by your subscription."
+      "sees": "Each press of the eye that wrote new advice. Until the page's figures change, a press shows the same advice for up to a day, covered by your subscription."
     },
     "often": {
       "byHand": "When you ask",

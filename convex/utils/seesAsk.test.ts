@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import { factsOf, fromSeesKey, seesFrom, seesKey, seesPath, writerFor, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
+import { factsOf, fromSeesKey, namesWithNumbersIn, seesFrom, seesKey, seesPath, writerFor, withoutNames, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
 /**
@@ -258,11 +258,52 @@ describe("the eval grading (stronger-agents-plan-2026-10-30.md A6)", () => {
   });
 });
 
+describe("a name the page hands over may hold numbers (eye-code-first-brief-plan-2026-11-07.md)", () => {
+  // Services names its groups by their numbers (Anthony): a writer naming one has typed no figure.
+  const group = "30 visits or more, and under 1.6 events for every 100";
+
+  test("the page's names with numbers in them, never a figure's key", () => {
+    expect(namesWithNumbersIn({ groups: [{ name: group, visits: "1,309 [[page.groups.x.visits]]" }], names: { usualHalfHour: "A usual half hour" } })).toEqual([group]);
+  });
+
+  test("taken out however the writer joins its words; a number typed beside it is still found", () => {
+    expect(withoutNames("The group with 30 visits or more and under 1.6 events for every 100 visits", [group])).not.toMatch(/30|1\.6/);
+    expect(withoutNames("About 40 of them sit in 30 visits or more, and under 1.6 events for every 100", [group])).toMatch(/40/);
+  });
+
+  test("the checker passes a sentence naming the group, and still sends back one that types a figure", () => {
+    const facts = factsByKey([{ key: "page.groups.x.visits", value: 1309, unit: "count", source: "analytics", label: "the group's visits" }]);
+    const links = [{ label: "Services", href: "/app/analytics/x/services" }];
+    const answer = (line: string) => ({ says: [line], steps: [{ words: "Look at the pages in that group first.", link: 0 }] });
+    expect(seesFrom(answer("The group with 30 visits or more and under 1.6 events for every 100 visits had [[page.groups.x.visits]] visits."), facts, links, { namesWithNumbers: [group] }).ok).toBe(true);
+    expect(seesFrom(answer("About 40 services had [[page.groups.x.visits]] visits."), facts, links, { namesWithNumbers: [group] }).ok).toBe(false);
+  });
+});
+
 describe("the code-first brief's tidy (eye-code-first-brief-plan-2026-11-07.md)", () => {
-  test("a % typed after a figure's key is taken off, as the key brings its own unit; a typed number still stands to be sent back", () => {
-    const tidied = withoutTypedUnits({ says: ["Services got [[f2.value]]% of all events.", "Up [[f1.change]] %, to 12 visits."], steps: [{ words: "See [[f3.now]]% more", link: 0 }] }) as { says: string[]; steps: Array<{ words: string }> };
-    expect(tidied.says).toEqual(["Services got [[f2.value]] of all events.", "Up [[f1.change]], to 12 visits."]);
+  const figure = (key: string, unit: "count" | "percent" | "score", label: string) => [key, { key, unit, label }] as const;
+  const figures = new Map([
+    figure("f2.value", "percent", "Services: share of all events"),
+    figure("f3.now", "percent", "AI Agency: share of all visits"),
+    figure("f4.value", "score", "AI Agency: events for every 100 visits"),
+    figure("page.servicesDots.services.AI_Agency.forEvery100", "count", "page · servicesDots · services · AI Agency · forEvery100"),
+  ]);
+
+  test("a % typed after a key that brings its own is taken off; after a plain number it stays, as the writer's own", () => {
+    const tidied = withoutTypedUnits({ says: ["Services got [[f2.value]]% of all events.", "People scroll [[page.x.scroll]]% down."], steps: [{ words: "See [[f3.now]] % more", link: 0 }] }, figures) as { says: string[]; steps: Array<{ words: string }> };
+    expect(tidied.says).toEqual(["Services got [[f2.value]] of all events.", "People scroll [[page.x.scroll]]% down."]);
     expect(tidied.steps[0].words).toBe("See [[f3.now]] more");
+  });
+
+  test("a rate for every 100 visits is never a percentage: its % goes before \"for every 100\", and is said as \"in every 100\" elsewhere", () => {
+    const tidied = withoutTypedUnits({ says: [
+      "AI Agency makes only [[f4.value]]% events for every 100 visits.",
+      "However, AI Agency only turns [[page.servicesDots.services.AI_Agency.forEvery100]]% of its visits into events.",
+    ] }, figures) as { says: string[] };
+    expect(tidied.says).toEqual([
+      "AI Agency makes only [[f4.value]] events for every 100 visits.",
+      "However, AI Agency only turns [[page.servicesDots.services.AI_Agency.forEvery100]] in every 100 of its visits into events.",
+    ]);
   });
 });
 

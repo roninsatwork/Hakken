@@ -14,8 +14,13 @@ import { seesScreenFor, sourceOfSection } from "./sees/screens";
  * `convex/seesAskActions.ts` asks.
  */
 
-/** An answer is shown again for this long while nothing on the page changed (S3). */
-export const SEES_KEPT_MS = 3 * 60 * 60 * 1000;
+/**
+ * An answer is shown again for this long while nothing on the page changed (S3): a day, as a page's figures change only with
+ * each night's collection, and new figures still write new words at once (Anthony, 2026-11-07: "cache the answer until midnight
+ * as the data won't change that often"; kept until the figures change instead, so a press never pays twice around midnight;
+ * eye-code-first-brief-plan-2026-11-07.md). A super admin's Refresh writes again whenever it's pressed. Three hours until then.
+ */
+export const SEES_KEPT_MS = 24 * 60 * 60 * 1000;
 /** A write still going this long after it was asked is believed; past it, the next press asks again. */
 export const SEES_WRITING_MS = 10 * 60 * 1000;
 /** Sentences and steps a bubble holds at most (Anthony, 2026-10-30: "im happy for the advice to be twice as much as we show now"). */
@@ -237,13 +242,9 @@ export const MOST_COVERED = 4;
 export const SEES_FINDINGS_FORMAT = [
   "Code has already found the things listed in findings, the most worth saying first, each with its figures' keys. Your words must cover the first four, each by naming at least one of its figures' keys. Then add what your reading explains about them: why, where, what to do.",
   "Never contradict a finding. Where a finding says to check tracking, say tracking may be broken there; where it says behaviour, say it as a gap in how people behave.",
+  // eye-code-first-brief-plan-2026-11-07.md, "The two slips": Services' steps said "visits dropped" when only AI Agency's fell.
+  "Say whose figure each change is, as its finding names it: \"AI Agency's visits fell\", never \"visits fell\" when one row's did.",
 ].join("\n");
-
-/**
- * Said beside it on a page trying the code-first brief (eye-code-first-brief-plan-2026-11-07.md): four of six presses on Services
- * went back once because a first finding was left out, and every rewrite doubles a press's cost.
- */
-export const SEES_CODE_FIRST_FORMAT = "Your first sentences say findings 1 to 4, one each, in that order, each naming one of its figures' keys. Only then add anything else.";
 
 /**
  * What a first answer must still have, its faulty parts left off, to stand without a rewrite on a page trying the code-first
@@ -257,19 +258,66 @@ export function firstAnswerStands(verdict: SeesVerdict): boolean {
   return verdict.ok && verdict.says.length >= FIRST_ANSWER_KEEPS.says && verdict.steps.length >= FIRST_ANSWER_KEEPS.steps;
 }
 
+/** A figure counted for every 100 visits, by its words or its field's name ("forEvery100", "eventsPerHundred"): never a percentage. */
+export function isPerHundred(fact: Pick<Fact, "key" | "label"> | undefined): boolean {
+  return fact !== undefined && /for every 100\b|forEvery100|perHundred/i.test(`${fact.label} ${fact.key}`);
+}
+
 /**
- * A unit typed straight after a figure's key taken off: the key brings its own ("65.7%"), so "[[f2.value]]%" read as a typed
- * number and sent the words back (Services, 7 November: two rewrites of six), when what was meant was plain.
+ * A "%" typed straight after a figure's key, tidied before the words are checked:
+ * - after a key that brings its own ("65.7%") it's taken off: "[[f2.value]]%" read as a typed number and sent the words back
+ *   (Services, 7 November: two rewrites of six), when what was meant was plain;
+ * - after a rate for every 100 visits, which is never a percentage, it's taken off where the words go on "for every 100", and
+ *   otherwise said as "in every 100": "turns [[k]]% of its visits into events" showed "turns 1% of its visits" (Services, 7 November);
+ * - after a plain number ("scroll [[page.x.scroll]]%") the sign is the writer's to give: taking it off left "People scroll 35
+ *   down" on Clarity's pages (7 November).
  */
-export function withoutTypedUnits(answer: unknown): unknown {
+export function withoutTypedUnits(answer: unknown, facts: ReadonlyMap<string, Pick<Fact, "key" | "label" | "unit">>): unknown {
   if (!answer || typeof answer !== "object") return answer;
-  const tidy = (text: unknown) => (typeof text === "string" ? text.replace(/\]\]\s?%/g, "]]") : text);
+  const tidy = (text: unknown) => (typeof text === "string"
+    ? text.replace(/\[\[([^\]]+)\]\]\s?%/g, (whole, key: string, at: number) => {
+      const fact = facts.get(key);
+      if (fact?.unit === "percent") return `[[${key}]]`;
+      if (!isPerHundred(fact)) return whole;
+      return /^[^.;]{0,40}\bevery 100\b/i.test(text.slice(at + whole.length)) ? `[[${key}]]` : `[[${key}]] in every 100`;
+    })
+    : text);
   const raw = answer as { says?: unknown; steps?: unknown };
   return {
     ...raw,
     ...(Array.isArray(raw.says) ? { says: raw.says.map(tidy) } : {}),
     ...(Array.isArray(raw.steps) ? { steps: raw.steps.map((step) => (step && typeof step === "object" ? { ...step, words: tidy((step as { words?: unknown }).words) } : tidy(step))) } : {}),
   };
+}
+
+/**
+ * A sentence with the page's own names taken out, longest first, in any case and whatever stands between their words: a writer
+ * says "30 visits or more and under 1.6" for the group "30 visits or more, and under 1.6". What's left is checked for typed numbers.
+ */
+export function withoutNames(text: string, names: readonly string[]): string {
+  let out = text;
+  for (const name of [...names].sort((one, other) => other.length - one.length)) {
+    const words = name.split(/[^\p{L}\p{N}.]+/u).map((word) => word.replace(/\.+$/, "")).filter(Boolean);
+    if (words.length === 0) continue;
+    const pattern = words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^\\p{L}\\p{N}]+");
+    out = out.replace(new RegExp(`(?<![\\p{L}\\p{N}])${pattern}(?![\\p{L}\\p{N}])`, "giu"), " ");
+  }
+  return out;
+}
+
+/**
+ * The names in a page's figures that carry numbers (a row's name, a group's, the page's own names for things), as a writer may
+ * name them: three letters or more, never a figure's key.
+ */
+export function namesWithNumbersIn(value: unknown, into = new Set<string>()): string[] {
+  if (typeof value === "string") {
+    if (/\d/.test(value) && /[A-Za-z]{3}/.test(value) && !value.includes("[[")) into.add(value.trim());
+  } else if (Array.isArray(value)) {
+    for (const item of value) namesWithNumbersIn(item, into);
+  } else if (value && typeof value === "object") {
+    for (const inner of Object.values(value as Record<string, unknown>)) namesWithNumbersIn(inner, into);
+  }
+  return [...into];
 }
 
 /** Whether two pages' figures are the same, key for key and value for value: a saved answer stands only while they are (S3). */
@@ -326,8 +374,14 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
   coverIfItCan?: boolean;
   /** The words after their rewrite: a sentence or step with a fault is left off, never the whole bubble. */
   salvage?: boolean;
+  /**
+   * Names the page hands over with numbers in them, such as Services' groups, named by their numbers ("30 visits or more, and
+   * under 1.6 events for every 100"): a writer naming one has typed no figure (eye-code-first-brief-plan-2026-11-07.md).
+   */
+  namesWithNumbers?: readonly string[];
 } = {}): SeesVerdict {
   const namedKept: string[] = [];
+  const typed = (text: string) => typedNumbers(withoutNames(text, options.namesWithNumbers ?? []));
   const faults: string[] = [];
   const left: string[] = [];
   const salvage = options.salvage === true;
@@ -359,7 +413,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
       continue;
     }
     lastLeftOff = true;
-    if (typedNumbers(trimmed).length > 0) {
+    if (typed(trimmed).length > 0) {
       fault(`A sentence typed a number: "${trimmed}".`);
       continue;
     }
@@ -416,7 +470,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
       continue;
     }
     const words = step.words.trim();
-    if (typedNumbers(words).length > 0) {
+    if (typed(words).length > 0) {
       fault(`A step typed a number: "${words}".`);
       continue;
     }

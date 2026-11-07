@@ -13,6 +13,7 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
+import { WebsiteNotFound, useWebsiteWasOpen } from "../../_components/WebsiteNotFound";
 import { formatDateTime } from "@/src/lib/dates";
 import { isCalendarPeriod, openingPeriod, periodSpan, ukDay, unitOf } from "@/convex/utils/calendarPeriods";
 import { formatDay } from "../../sites/_components/siteFormat";
@@ -44,6 +45,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
   const params = useSearchParams();
   const siteId = useAnalyticsSiteId();
   const status = useAnalyticsStatus();
+  const wasOpen = useWebsiteWasOpen(siteId, Boolean(status));
   const page = pageForPath(usePathname(), siteId);
   // Custom dates' lists are asked of Google when first asked for (googleAnalyticsLive.ts, prepareAnalyticsCustom): once a day.
   const [choice] = useAnalyticsDates();
@@ -65,7 +67,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
     return (
       <>
         <Header />
-        <HakkenEmptyState icon={Globe} title={t("notFoundTitle")} description={t("notFoundDescription")} />
+        <WebsiteNotFound siteId={siteId} wasOpen={wasOpen} icon={Globe} title={t("notFoundTitle")} description={t("notFoundDescription")} />
       </>
     );
   }

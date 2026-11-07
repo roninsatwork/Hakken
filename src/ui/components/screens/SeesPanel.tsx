@@ -33,7 +33,7 @@ export function SeesPanel({ open, onClose, says, steps, researching, stages = []
   researching: boolean;
   /** What the press has done so far while `researching`, the last being what it is doing now. */
   stages?: readonly SeesStageRow[];
-  /** A super admin's refresh: writes the words again now, kept three hours or not. No button without it. */
+  /** A super admin's refresh: writes the words again now, kept a day or not. No button without it. */
   onRefresh?: () => void;
   /** The company has fewer credits than a press costs: nothing new is written, and it says so (Anthony, 2026-10-31: "stop"). */
   noCredits?: boolean;

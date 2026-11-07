@@ -18411,15 +18411,36 @@
     "services": {
       "title": "Servizi",
       "description": "I servizi che le persone guardano e quelli che le portano a contattarti.",
-      "noServices": "{host} non ha ancora pagine di servizi. Ordina le tue pagine in una classificazione di tipo Servizio e appariranno qui.",
+      "noServices": "Servizi si vede per un sito che vende servizi. Nessuna pagina di {host} è in una classificazione di tipo Servizio, quindi qui non c'è nulla da mostrare.",
       "collecting": "Queste date sono ancora in raccolta. Arrivano con la prossima raccolta.",
       "everyDevice": "Le pagine di quel dispositivo non sono ancora raccolte, quindi qui vedi tutti i dispositivi.",
       "leftOut": "Qui vedi i tuoi {most} servizi più visitati. {count, plural, =1 {Uno è escluso} other {# sono esclusi}}.",
       "boxes": {
-        "value": "{count, plural, =1 {# servizio} other {# servizi}}",
-        "detail": {
-          "visits": "{amount, plural, =1 {# visita} other {# visite}} e {events, plural, =1 {# evento} other {# eventi}}.",
-          "views": "{amount, plural, =1 {# visualizzazione} other {# visualizzazioni}} e {events, plural, =1 {# evento} other {# eventi}}."
+        "heading": "{across}, {up}",
+        "description": "{name}.",
+        "across": {
+          "visits": {
+            "more": "Più visite",
+            "fewer": "Meno visite"
+          },
+          "views": {
+            "more": "Più visualizzazioni",
+            "fewer": "Meno visualizzazioni"
+          }
+        },
+        "up": {
+          "events": {
+            "more": "più eventi",
+            "fewer": "meno eventi"
+          },
+          "stayed": {
+            "more": "più restano",
+            "fewer": "meno restano"
+          },
+          "scrolled": {
+            "more": "più scorrono fino in fondo",
+            "fewer": "meno scorrono fino in fondo"
+          }
         }
       },
       "groups": {
@@ -20993,7 +21014,7 @@
       "taskAlerts": "Ogni giorno in cui un avviso impostato da qualcuno guarda i tuoi dati.",
       "taskReports": "Ogni report settimanale richiesto da qualcuno.",
       "taskResearch": "Ogni volta che qualcuno ha detto sì a “scopri perché”.",
-      "sees": "Ogni pressione dell'occhio che ha scritto nuovi consigli. Una pressione entro tre ore dall'ultima mostra gli stessi consigli, inclusi nel tuo abbonamento."
+      "sees": "Ogni pressione dell'occhio che ha scritto nuovi consigli. Finché i dati della pagina non cambiano, una pressione mostra gli stessi consigli per un giorno al massimo, inclusi nel tuo abbonamento."
     },
     "often": {
       "byHand": "Quando lo chiedi",

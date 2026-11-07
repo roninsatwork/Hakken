@@ -998,6 +998,7 @@ import type * as websiteSiteRows from "../websiteSiteRows.js";
 import type * as websiteSources from "../websiteSources.js";
 import type * as websiteTrackingStats from "../websiteTrackingStats.js";
 import type * as websiteTrackingStatsMigration from "../websiteTrackingStatsMigration.js";
+import type * as websiteWorkspace from "../websiteWorkspace.js";
 import type * as websites from "../websites.js";
 import type * as weeklyDigest from "../weeklyDigest.js";
 import type * as weeklyDigestRun from "../weeklyDigestRun.js";
@@ -2039,6 +2040,7 @@ declare const fullApi: ApiFromModules<{
   websiteSources: typeof websiteSources;
   websiteTrackingStats: typeof websiteTrackingStats;
   websiteTrackingStatsMigration: typeof websiteTrackingStatsMigration;
+  websiteWorkspace: typeof websiteWorkspace;
   websites: typeof websites;
   weeklyDigest: typeof weeklyDigest;
   weeklyDigestRun: typeof weeklyDigestRun;

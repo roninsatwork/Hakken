@@ -81,6 +81,15 @@ describe("every chart page's eye, done only when it is", () => {
     expect(untested, "Test each on a fixture of saved figures for every period its date menu offers (see pageFindingsPeriods.test.ts).").toEqual([]);
   });
 
+  test("every test of every period also holds its pages' eye to its promises", () => {
+    // eye-code-first-brief-plan-2026-11-07.md, "Tests that stop the eye drifting": where a test works out a page's findings on
+    // saved figures, it checks the eye too (`src/test/eyeHolds.ts`), so every page with saved figures is held on every date:
+    // every row its findings name kept in the writer's brief, the brief under its page's most, every figure key the writer is
+    // handed one the checker knows, and no finding saying what its page never talks about.
+    const unchecked = periodTests().filter((one) => one.text.includes("pageFindings(") && !one.text.includes("expectEyeHolds(")).map((one) => one.file);
+    expect(unchecked, "Call expectEyeHolds(screen, data) where the test works out a page's findings.").toEqual([]);
+  });
+
   test("a page that shows no one website's own figures has no eye", () => {
     // The Google Analytics and Visibility ones leave the screen list with their builds (STILL_TO_DO until then).
     const back = NO_EYE.filter((key) => SEES_SCREENS[key] && !STILL_TO_DO.has(key));

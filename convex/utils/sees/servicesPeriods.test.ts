@@ -1,4 +1,5 @@
 import { appendFileSync } from "fs";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { describe, expect, test } from "vitest";
 import en from "@/messages/en.json";
 import { readFixture } from "@/src/test/readFixture";
@@ -22,6 +23,7 @@ const SAVED = readFixture("roninsServices") as Record<(typeof WHOLE)[number] | (
 const NAMES = en.googleAnalytics.eyeNames as Record<string, string>;
 
 function said(period: keyof typeof SAVED) {
+  expectEyeHolds(SCREEN, servicesEyeData(SAVED[period], NAMES));
   const found = pageFindings(SCREEN, pageDataFor(servicesEyeData(SAVED[period], NAMES), SCREEN));
   const words = found.map(findingWords);
   if (process.env.PRINT_FINDINGS) appendFileSync(process.env.PRINT_FINDINGS, `services · ${period}\n  ${words.join("\n  ")}\n`);
@@ -67,6 +69,21 @@ describe("Services' eye says what a person would miss (Ronins, last 12 months)",
 
   test("the busiest service gets fewer of the events than of the visits", () => {
     expect(words).toContain("AI Agency: share of all events 21.7%, against 35.6% for its share of all service visits.");
+  });
+
+  // Code digs (eye-code-first-brief-plan-2026-11-07.md): the headline says where its move came from, so the writer can't skip it.
+  test("the headline says which service and which channel the rise came from", () => {
+    expect(words[0]).toBe("All your services: visits up 31.1%, to 2227 from 1699 the span before; Events: up 53.3%. The service that rose most: AI Agency. The channel that rose most: Organic Search.");
+  });
+
+  test("and a fall's, over the last 3 months", () => {
+    expect(said("last3Months")[0]).toContain("The service that fell most: AI Agency. The channel that fell most: Organic Search.");
+  });
+
+  test("a rate for every 100 visits leads with its number, never read as a percentage", () => {
+    const rates = [...WHOLE, ...BEGUN].flatMap((period) => said(period)).filter((line) => line.includes("for every 100 visits"));
+    expect(rates).toContain("AI Agency: 0 events for every 100 visits, against 5.5 for The whole website.");
+    for (const line of rates) expect(line, line).toMatch(/: [\d.]+ events for every 100 visits, against [\d.]+ /);
   });
 });
 

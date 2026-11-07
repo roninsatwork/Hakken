@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import { findingWords } from "./findings";
 import { pageDataFor } from "./pageData";
@@ -34,6 +35,7 @@ describe("Visits finds the biggest things on every period the date menu offers (
   // and that leave at once, from different lists.
   for (const period of ["lastWeek", "lastMonth", "last3Months", "last6Months", "last12Months"]) {
     test(period, () => {
+      expectEyeHolds("googleAnalytics.visitors", visitsPage(PERIODS[period]));
       const said = pageFindings("googleAnalytics.visitors", visitsPage(PERIODS[period])).map(findingWords);
       expect(said.length, said.join("\n")).toBeGreaterThanOrEqual(4);
       // Its headline: the whole website's visits against the span before.
@@ -47,6 +49,7 @@ describe("Visits finds the biggest things on every period the date menu offers (
   // A period only begun, a day or two of it: still the headline against the same days before.
   for (const period of ["thisWeek", "thisMonth"]) {
     test(period, () => {
+      expectEyeHolds("googleAnalytics.visitors", visitsPage(PERIODS[period]));
       const said = pageFindings("googleAnalytics.visitors", visitsPage(PERIODS[period])).map(findingWords);
       expect(said.length, said.join("\n")).toBeGreaterThanOrEqual(2);
     });

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import { findingWords, type Finding } from "./findings";
 import { pageDataFor } from "./pageData";
@@ -55,6 +56,7 @@ const STEP: Record<Period, string> = { lastWeek: "day", thisMonth: "day", lastMo
 
 const PRINT = process.env.PRINT_SEES === "1";
 function said(screen: string, period: Period, data: Fixture): string[] {
+  expectEyeHolds(screen, { ...data, words: wordsFor(period) });
   const findings: Finding[] = pageFindings(screen, pageDataFor({ ...data, words: wordsFor(period) }, screen));
   const lines = findings.map(findingWords);
   if (PRINT) console.log(`\n${screen} · ${period}\n  ${lines.join("\n  ")}`);

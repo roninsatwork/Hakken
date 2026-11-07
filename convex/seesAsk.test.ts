@@ -6,6 +6,7 @@ import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
+import { stillStands } from "./seesAsk";
 import { ANALYTICS_READ } from "./utils/agentTools";
 
 /**
@@ -13,7 +14,7 @@ import { ANALYTICS_READ } from "./utils/agentTools";
  * a press starts one run of the Head of Strategy's, which picks the
  * specialist, has it read the website's screens for itself and write
  * (stronger-agents-plan-2026-10-30.md A1), has the Editor's code check every
- * number, and saves the bubble; the answer is kept three hours for that page
+ * number, and saves the bubble; the answer is kept a day for that page
  * and its filters while its figures stand; a bubble the Editor sends back is
  * written once more, then leaves the rule's words standing, and the next press
  * asks again. The Head's questions are single asks (`generate`); the
@@ -92,7 +93,7 @@ const answers = (head: unknown, specialist: unknown, judge: unknown = null) => {
 };
 
 describe("the eye asks the Insights team", () => {
-  test("a press starts the Head's run, the specialist writes from the page's figures, the Editor passes it, and it is kept three hours", async () => {
+  test("a press starts the Head's run, the specialist writes from the page's figures, the Editor passes it, and it is kept a day", async () => {
     const t = harness();
     const { siteId, userId } = await seed(t);
     const user = t.withIdentity({ subject: userId });
@@ -123,7 +124,7 @@ describe("the eye asks the Insights team", () => {
     const charges = await t.run(async (ctx) => (await ctx.db.query("creditCharges").collect()).filter((charge) => charge.kind === "sees"));
     expect(charges).toHaveLength(1);
     expect(charges[0]).toMatchObject({ state: "charged", units: 1, creditsOut: 8, userId, how: "byHand", agentRunId: runs[0]._id });
-    // Pressed again within three hours: the same answer, nothing asked.
+    // Pressed again within the day: the same answer, nothing asked.
     const again = await user.mutation(api.seesAsk.askSees, ask(siteId));
     expect(again).toEqual({ key: first.key, status: "WRITTEN" });
     await finishScheduled(t);
@@ -502,7 +503,7 @@ describe("what a press is doing, and a super admin's refresh (Anthony, 2026-11-0
     expect((await t.run(async (ctx) => await ctx.db.get(row._id)))!.stages).toEqual([{ stage: "reading", count: 40 }, { stage: "writing" }]);
   });
 
-  test("a super admin's refresh writes again inside the three hours and charges nothing; nobody else may press it", async () => {
+  test("a super admin's refresh writes again inside the day and charges nothing; nobody else may press it", async () => {
     const t = harness();
     const { companyId, siteId, userId } = await seed(t);
     const adminId = await t.run(async (ctx) => await ctx.db.insert("users", { name: "Admin", email: "admin@hakken.test", role: "SUPER_ADMIN", companyId, createdAt: 1 }));
@@ -525,5 +526,20 @@ describe("what a press is doing, and a super admin's refresh (Anthony, 2026-11-0
     // The client's next press reads the new words, and pays for nothing.
     expect(await user.mutation(api.seesAsk.askSees, ask(siteId))).toEqual({ key: first.key, status: "WRITTEN" });
     expect(await charges()).toBe(1);
+  });
+});
+
+describe("how long an end user's answer is kept (eye-code-first-brief-plan-2026-11-07.md: the cache)", () => {
+  const HOUR = 60 * 60 * 1000;
+  const written = (hoursAgo: number) => ({ status: "WRITTEN" as const, askedAt: 0, writtenAt: 100 * HOUR - hoursAgo * HOUR });
+  test("a written answer stands for a day while the figures stay the same, as they change only with each night's collection", () => {
+    expect(stillStands(written(4), 100 * HOUR)).toBe(true);
+    expect(stillStands(written(23), 100 * HOUR)).toBe(true);
+    expect(stillStands(written(25), 100 * HOUR)).toBe(false);
+  });
+  test("one still being written is believed for ten minutes, and a failed one never stands", () => {
+    expect(stillStands({ status: "RESEARCHING", askedAt: 0 }, 9 * 60 * 1000)).toBe(true);
+    expect(stillStands({ status: "RESEARCHING", askedAt: 0 }, 11 * 60 * 1000)).toBe(false);
+    expect(stillStands({ status: "FAILED", askedAt: 0 }, 1)).toBe(false);
   });
 });

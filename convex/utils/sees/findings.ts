@@ -334,6 +334,9 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
       const unit = MEASURES[String(p.measure)]?.kind === "percent" ? "%" : "";
       // Against its own reference (pageFindings' `apart`): the whole website's, similar pages', or another group's.
       const against = p.against === "website" ? "across the whole website" : p.against === "group" ? "on similar pages" : p.against === "other" ? `for ${p.other}` : "on average across the list";
+      // A rate for every 100 visits leads with its number, as it is said: "0 events for every 100 visits, against 4.3". With the
+      // number after the words the writer wrote "0% events against 4.3%" (Services, 7 November; eye-code-first-brief-plan).
+      if (isPerHundredMeasure(p.measure)) return `${p.name}: ${p.value} ${measureWords(p.measure)}, against ${p.mean} ${against}.`;
       return `${p.name}: ${measureWords(p.measure)} ${p.value}${unit}, against ${p.mean}${unit} ${against}.`;
     }
     case "movedUp":
@@ -341,7 +344,10 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
       // A rate's move in points, never a change of a change, where no other group's change is set beside it.
       const points = MEASURES[String(p.measure)]?.kind === "percent" && p.other === undefined;
       const by = points ? `${Math.round(Math.abs(Number(p.now) - Number(p.before)) * 10) / 10} points, to ${p.now}% from ${p.before}%` : `${p.change}%, to ${p.now} from ${p.before}`;
-      return `${p.name}: ${measureWords(p.measure)} ${finding.kind === "movedUp" ? "up" : "down"} ${by} the span before${p.other !== undefined ? `; ${p.other}: ${p.otherWay} ${p.otherChange}%` : ""}.`;
+      // Where the move came from, where code dug it out (`withWhereFrom`): "The service that rose most: AI Agency."
+      const came = [1, 2].filter((at) => p[`came${at}`] !== undefined)
+        .map((at) => ` The ${p[`came${at}What`]} that ${finding.kind === "movedUp" ? "rose" : "fell"} most: ${p[`came${at}`]}.`).join("");
+      return `${p.name}: ${measureWords(p.measure)} ${finding.kind === "movedUp" ? "up" : "down"} ${by} the span before${p.other !== undefined ? `; ${p.other}: ${p.otherWay} ${p.otherChange}%` : ""}.${came}`;
     }
     case "placeUp":
     case "placeDown":
@@ -370,3 +376,5 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
 }
 
 const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
+/** A measure counted for every 100 visits ("events for every 100 visits"): a rate, never a percentage. */
+export const isPerHundredMeasure = (measure: string | number | undefined): boolean => /\bfor every 100\b/.test(measureWords(measure));

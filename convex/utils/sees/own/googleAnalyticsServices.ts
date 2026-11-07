@@ -1,5 +1,5 @@
 import { isNumber, isRow, moved, partOf, rowsOf, type OwnFound, type Row } from "./shared";
-import { namesOf, nameIn, changeOf, perHundred, trustedRows, beside, headline, visitMovers, perHundredApart } from "./googleAnalyticsShared";
+import { namesOf, nameIn, changeOf, perHundred, trustedRows, beside, headline, visitMovers, perHundredApart, withWhereFrom } from "./googleAnalyticsShared";
 
 // Services ------------------------------------------------------------------
 
@@ -107,7 +107,8 @@ export function servicesFindings(data: Row): OwnFound[] {
   }
 
   const head = headline("whole", allName, "visits", visits, visitsBefore, { name: eventsName, now: events, before: eventsBefore });
-  if (head) found.push(head);
+  // The headline says where its move came from: the service and the channel that gave most of it (eye-code-first-brief-plan, "Code digs").
+  if (head) found.push(withWhereFrom(head, [{ what: "service", rows, least }, { what: "channel", rows: rowsOf(data.channels), least: Math.max(least, MOVE_LEAST) }]));
   // The services against the whole website: their share of its events beside their share of its visits.
   if (siteVisits !== null && siteVisits > 0 && siteEvents !== null && siteEvents > 0) {
     const share = (100 * events) / siteEvents;

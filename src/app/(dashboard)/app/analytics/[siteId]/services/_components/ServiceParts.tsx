@@ -138,29 +138,32 @@ function useHrefWith() {
 }
 
 /**
- * Four boxes, one for each group, each named by its numbers, with how many services, their visits and their events. The numbers are
- * the smaller size (Anthony, 2026-11-07: "its too big"). Pressing one shows just that group on the map and in the table, and pressing
- * it again shows them all.
+ * Four boxes, one for each group, in All pages' format (Anthony, 2026-11-07: "heading, number, description"): a short heading, how
+ * many services as the number, and the group's own numbers under it, as All pages' "Out of 1 pages with 50 visits or more." The
+ * heading says which side of each line the group is on; the numbers stay in the description ("just show the facts in the numbers").
+ * Pressing one shows just that group on the map and in the table, and pressing it again shows them all.
  */
 export function ServiceBoxes({ groups }: { groups: ServiceGroups }) {
   const t = useTranslations("googleAnalytics.services.boxes");
   const hrefWith = useHrefWith();
+  const unit = groups.across === "views" ? "views" : "visits";
   return (
     <FigureRow columns={4}>
       {SERVICE_GROUPS.map((key) => {
         const list = groups.split.groups[key];
-        const amount = list.reduce((sum, service) => sum + groups.xOf(service), 0);
-        const events = list.reduce((sum, service) => sum + groups.through(service).events, 0);
+        const heading = t("heading", {
+          across: t(`across.${unit}.${key === "rightHigh" || key === "rightLow" ? "more" : "fewer"}`),
+          up: t(`up.${groups.doing}.${key === "rightHigh" || key === "leftHigh" ? "more" : "fewer"}`),
+        });
         return (
           <Figure
             key={key}
-            named
             arrow={false}
             href={hrefWith("group", groups.group === key ? null : key)}
             emphasis={groups.group === key}
-            label={groups.names[key]}
-            value={t("value", { count: list.length })}
-            detail={<span className="text-secondary">{t(`detail.${groups.across === "views" ? "views" : "visits"}`, { amount, events })}</span>}
+            label={heading}
+            value={formatNumber(list.length)}
+            detail={<span className="text-secondary">{t("description", { name: groups.names[key] })}</span>}
           />
         );
       })}

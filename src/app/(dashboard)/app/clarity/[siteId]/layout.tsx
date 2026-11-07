@@ -11,7 +11,7 @@ import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
-import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
+import { WebsiteNotFound, useWebsiteWasOpen } from "../../_components/WebsiteNotFound";
 import { openingPeriod, ukDay } from "@/convex/utils/calendarPeriods";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { SectionMenu } from "../../_components/SectionMenu";
@@ -35,6 +35,7 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
   const router = useRouter();
   const siteId = useClaritySiteId();
   const status = useClarityStatus();
+  const wasOpen = useWebsiteWasOpen(siteId, Boolean(status?.owned));
   const pathname = useClarityPath();
   const query = useClarityQuery();
   const deviceName = useDeviceName();
@@ -49,7 +50,7 @@ export default function ClaritySiteLayout({ children }: { children: React.ReactN
   }, [prepare, siteId, custom?.from, custom?.to]); // eslint-disable-line react-hooks/exhaustive-deps
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...CLARITY_DEVICES]);
   if (status === undefined) return <><Header /><div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
-  if (status === null || !status.owned) return <><Header /><HakkenEmptyState icon={MousePointerClick} title={t("site.notFoundTitle")} description={t("site.notFoundDescription")} /></>;
+  if (status === null || !status.owned) return <><Header /><WebsiteNotFound siteId={siteId} wasOpen={wasOpen} icon={MousePointerClick} title={t("site.notFoundTitle")} description={t("site.notFoundDescription")} /></>;
   const connection = status.connection;
   const state = connection?.status ?? "NOT_CONNECTED";
   const current = clarityPageForPath(pathname, siteId);

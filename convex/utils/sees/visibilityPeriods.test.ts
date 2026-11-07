@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import {
   aboveSeen, aiDemandSeen, aiMentionsSeen, auditSeen, featuresSeen, marketSeen, mentionsRivalsSeen, overviewSeen, paidSeen, radarSeen,
@@ -33,6 +34,7 @@ const UNDATED = HELD.undated as Record<string, never>;
 
 /** Each finding in words, as Jev and the writer read them. */
 function said(screen: string, data: unknown): string[] {
+  expectEyeHolds(screen, data);
   const lines = pageFindings(screen, pageDataFor(data, screen)).map(findingWords);
   // `SHOW_FINDINGS=1 npx vitest run … --silent=false` prints every page's findings, to read them as a shop owner would.
   if (process.env.SHOW_FINDINGS) console.log(`${screen}\n  ${lines.join("\n  ")}`);

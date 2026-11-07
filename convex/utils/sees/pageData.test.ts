@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
+import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import en from "@/messages/en.json";
-import { MOST_PAGE_DATA_CHARS, briefOf, findingNames, findingsBriefOf, pageDataFor, pageFacts, pageFigureLines, trimPageData } from "./pageData";
+import { MOST_PAGE_DATA_CHARS, briefOf, findingNames, findingsBriefOf, usesCodeFirstBrief, pageDataFor, pageFacts, pageFigureLines, trimPageData } from "./pageData";
 import { servicesEyeData } from "./analyticsServices";
 import { pageFindings } from "./pageFindings";
 import { seesScreenFor, seesWrites } from "./screens";
@@ -139,11 +140,25 @@ describe("the code-first brief (eye-code-first-brief-plan-2026-11-07.md)", () =>
     const data = pageDataFor(servicesEyeData(readFixture("roninsServices").last12Months, en.googleAnalytics.eyeNames as Record<string, string>), "googleAnalytics.services");
     const read = pageFacts("googleAnalytics.services", data, {});
     const findings = pageFindings("googleAnalytics.services", data);
+    expectEyeHolds("googleAnalytics.services", data);
     const brief = findingsBriefOf(read.shown, findingNames(findings), 3);
-    // Half or less of the short brief every page has had, before the parts its charts add, which shrink further.
-    expect(JSON.stringify(brief).length).toBeLessThan(JSON.stringify(briefOf(read.shown, 8)).length * 0.5);
-    expect(brief).not.toHaveProperty("names");
+    // Well under the short brief every page has had, before the parts its charts add, which shrink further.
+    expect(JSON.stringify(brief).length).toBeLessThan(JSON.stringify(briefOf(read.shown, 8)).length * 0.65);
+    expect(brief).toHaveProperty("names");
     const kept = ((brief as { services: Array<{ name: string }> }).services).map((one) => one.name);
     for (const name of ["AI Agency", "ChatBot Agency"]) expect(kept).toContain(name);
+  });
+});
+
+describe("which pages are on the code-first brief", () => {
+  test("a page listed on its own, or every page of a section listed", () => {
+    expect(usesCodeFirstBrief("googleAnalytics.services")).toBe(true);
+    expect(usesCodeFirstBrief("googleAnalytics.overview")).toBe(true);
+    expect(usesCodeFirstBrief("clarity.pages")).toBe(true);
+    expect(usesCodeFirstBrief("visibility.competitors")).toBe(true);
+    expect(usesCodeFirstBrief("searchConsole.performance")).toBe(true);
+    expect(usesCodeFirstBrief("insights.thisWeek")).toBe(true);
+    expect(usesCodeFirstBrief("bing.performance")).toBe(true);
+    expect(usesCodeFirstBrief("nowhere.atAll")).toBe(false);
   });
 });

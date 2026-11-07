@@ -10,6 +10,7 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
+import { WebsiteNotFound, useWebsiteWasOpen } from "../../_components/WebsiteNotFound";
 import { formatDateTime } from "@/src/lib/dates";
 import { openingPeriod, ukDay, unitOf } from "@/convex/utils/calendarPeriods";
 import { SiteDateRange } from "../../sites/_components/SiteDateRange";
@@ -48,6 +49,7 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
   const params = useSearchParams();
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
+  const wasOpen = useWebsiteWasOpen(siteId, Boolean(status));
 
   if (status === undefined) {
     return (
@@ -61,7 +63,7 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
     return (
       <>
         <Header />
-        <HakkenEmptyState icon={Globe} title={t("notFoundTitle")} description={t("notFoundDescription")} />
+        <WebsiteNotFound siteId={siteId} wasOpen={wasOpen} icon={Globe} title={t("notFoundTitle")} description={t("notFoundDescription")} />
       </>
     );
   }

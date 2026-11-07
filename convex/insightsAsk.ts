@@ -79,10 +79,10 @@ export async function modelFor(ctx: ActionCtx, args: AskRun, member: TeamMember 
 }
 
 /** Ask the model, record the call and its cost on the run, and give back its JSON (or null). */
-export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | undefined, what: string, system: string, prompt: string, limitMs: number = ASK_LIMIT_MS, accepts?: (answer: unknown) => boolean, cachedOnly = false): Promise<unknown> {
+export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | undefined, what: string, system: string, prompt: string, limitMs: number = ASK_LIMIT_MS, accepts?: (answer: unknown) => boolean, cachedOnly = false, thinkingLevel?: "MINIMAL" | "LOW" | "MEDIUM" | "HIGH", maxOutputTokens?: number): Promise<unknown> {
   const model = await modelFor(ctx, args, member);
   // The system brief and resolved configuration are part of the identity: changed instructions never reuse an old answer.
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(stableStringify({ what, system, prompt, model, temperature: 0.2 })));
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(stableStringify({ what, system, prompt, model, temperature: 0.2, ...(thinkingLevel ? { thinkingLevel } : {}), ...(maxOutputTokens ? { maxOutputTokens } : {}) })));
   const requestKey = Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
   const held = await ctx.runQuery(internal.insightsRunSteps.modelAnswer, { runId: args.runId, companyId: args.companyId, requestKey });
   if (held.answer !== null) {
@@ -102,6 +102,10 @@ export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | und
       systemInstruction: system,
       contents: [{ type: "text", text: prompt }],
       temperature: 0.2,
+      // How long the model may think, where the caller says: left to the model otherwise.
+      ...(thinkingLevel ? { thinkingLevel } : {}),
+      // The most it may write, where the caller says: a model that runs on and on is stopped rather than left to fail.
+      ...(maxOutputTokens ? { maxOutputTokens } : {}),
     }), limitMs);
     text = response.text ?? "";
     tokens = { input: response.inputTokens ?? 0, output: response.outputTokens ?? 0 };

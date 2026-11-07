@@ -122,9 +122,12 @@ const LOGS_GO_STRAIGHT = { disableConsoleIntercept: true } as const
  * times the app's code, and coverage slows it past any target — it took six
  * minutes under `npm run test:coverage` here, against three without
  * (2026-10-05). Coverage runs on GitHub, where it is skipped already, and in
- * `npm run gate`.
+ * `npm run gate`. The waits on real time read it too (`REAL_WAIT_LIMIT_MS`,
+ * `src/test/realTime.ts`): a press's code loaded cold under coverage here took
+ * past their twenty seconds (2026-11-07). Every project is told.
  */
 const MEASURING_COVERAGE = process.argv.includes('--coverage')
+const COVERAGE_TOLD = { env: { HAKKEN_MEASURING_COVERAGE: MEASURING_COVERAGE ? '1' : '' } } as const
 
 export default defineConfig({
   plugins: [reactPlugin],
@@ -164,6 +167,7 @@ export default defineConfig({
           hookTimeout: TEST_TIMEOUT_MS,
           ...STUBS_PUT_BACK,
           ...LOGS_GO_STRAIGHT,
+          ...COVERAGE_TOLD,
         },
       },
       {
@@ -183,7 +187,7 @@ export default defineConfig({
           globals: true,
           environment: 'node',
           server: { deps: { inline: ['convex-test'] } },
-          env: { HAKKEN_MEASURING_COVERAGE: MEASURING_COVERAGE ? '1' : '' },
+          ...COVERAGE_TOLD,
           include: [
             'convex/**/*.test.{ts,tsx}',
             'scripts/**/*.test.{js,mjs,ts,tsx}',

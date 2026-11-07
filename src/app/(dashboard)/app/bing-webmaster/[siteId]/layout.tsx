@@ -11,6 +11,7 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TitleSwitch } from "@/src/ui/components/screens/TitleSwitch";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
+import { WebsiteNotFound, useWebsiteWasOpen } from "../../_components/WebsiteNotFound";
 import { formatDateTime } from "@/src/lib/dates";
 import { useEffect } from "react";
 import { useAction } from "convex/react";
@@ -41,6 +42,7 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
   const params = useSearchParams();
   const siteId = useBingSiteId();
   const status = useBingStatus();
+  const wasOpen = useWebsiteWasOpen(siteId, Boolean(status));
   const setParams = useSetSiteParams();
   // A website whose Bing days begin this month opens on This month until the 1st (agreed 2026-10-20).
   const opening = openingPeriod(status?.connection?.oldestDay, ukDay());
@@ -70,7 +72,7 @@ export default function BingSiteLayout({ children }: { children: React.ReactNode
     return (
       <>
         <Header />
-        <HakkenEmptyState icon={Globe} title={t("notFoundTitle")} description={t("notFoundDescription")} />
+        <WebsiteNotFound siteId={siteId} wasOpen={wasOpen} icon={Globe} title={t("notFoundTitle")} description={t("notFoundDescription")} />
       </>
     );
   }
