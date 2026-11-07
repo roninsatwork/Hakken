@@ -246,6 +246,18 @@ export const SEES_FINDINGS_FORMAT = [
 export const SEES_CODE_FIRST_FORMAT = "Your first sentences say findings 1 to 4, one each, in that order, each naming one of its figures' keys. Only then add anything else.";
 
 /**
+ * What a first answer must still have, its faulty parts left off, to stand without a rewrite on a page trying the code-first
+ * brief (eye-code-first-brief-plan-2026-11-07.md, next step 1; Anthony: "Do it"): every press on Services went back once, for
+ * one long step or one sentence too many figures, and a rewrite doubles a press's cost and time.
+ */
+export const FIRST_ANSWER_KEEPS = { says: 3, steps: 2 } as const;
+
+/** Whether a first answer, checked with its faulty parts left off, keeps enough to stand: the first findings said, and enough left. */
+export function firstAnswerStands(verdict: SeesVerdict): boolean {
+  return verdict.ok && verdict.says.length >= FIRST_ANSWER_KEEPS.says && verdict.steps.length >= FIRST_ANSWER_KEEPS.steps;
+}
+
+/**
  * A unit typed straight after a figure's key taken off: the key brings its own ("65.7%"), so "[[f2.value]]%" read as a typed
  * number and sent the words back (Services, 7 November: two rewrites of six), when what was meant was plain.
  */

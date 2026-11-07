@@ -16,7 +16,7 @@ import { ANALYTICS_READ } from "./utils/agentTools";
 import { findingWords, type Finding } from "./utils/sees/findings";
 import { judgeFindings, judgeLeftOff, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
 import {
-  JUDGE_FORMAT, MOST_COVERED, SEES_CODE_FIRST_FORMAT, SEES_FINDINGS_FORMAT, judgeFrom, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
+  JUDGE_FORMAT, MOST_COVERED, SEES_CODE_FIRST_FORMAT, SEES_FINDINGS_FORMAT, firstAnswerStands, judgeFrom, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
 import { CODE_FIRST_BRIEF, CODE_FIRST_ROWS, briefOf, findingNames, findingsBriefOf, pageFacts } from "./utils/sees/pageData";
@@ -186,7 +186,14 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
       onStage: note,
       check: async (answer, found) => {
         await note("checking");
-        const checked = seesFrom(tidy(answer), withRead(found), page.links, { ...noTracking, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) });
+        const options = { ...noTracking, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) };
+        let checked = seesFrom(tidy(answer), withRead(found), page.links, options);
+        // On a page trying the code-first brief, a first answer that still says the first findings, with enough left once its
+        // faulty parts are left off, stands rather than go back: the Editor leaves those parts off below, as after a rewrite.
+        if (!checked.ok && codeFirst) {
+          const kept = seesFrom(tidy(answer), withRead(found), page.links, { ...options, salvage: true });
+          if (firstAnswerStands(kept)) checked = kept;
+        }
         if (!checked.ok) return checked.why;
         if (prepared.model) await note("guessing");
         return await wordsWhy(checked);
@@ -203,6 +210,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
       ? seesFrom(raw, named, page.links, { ...noTracking, ...covering, coverIfItCan: true, ...(written.found.length > 0 || findings.length > 0 ? beyondPage : {}), salvage: true })
       : strict;
     if (!strict.ok && verdict.ok) lines.push({ heading: "The Editor", detail: `Kept although ${strict.why.charAt(0).toLowerCase()}${strict.why.slice(1)}` });
+    if (codeFirst && written.turns === 1 && strict.ok && strict.left?.length) lines.push({ heading: "The Editor", detail: "Kept the first answer, leaving off what failed, rather than write it again." });
     judged = written.sentBack === null && strict.ok && !strict.left?.length;
     if (written.sentBack && verdict.ok) lines.push({ heading: "Jev", detail: `Kept after one rewrite, though: ${written.sentBack}`.slice(0, 900) });
   } else {
@@ -213,6 +221,14 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     // writer that reads (sees-every-page-plan-2026-10-31.md: a page's words were left to the rule's after one slip).
     await note("checking");
     verdict = seesFrom(raw, named, page.links, { ...noTracking, ...covering });
+    // The same on a page trying the code-first brief: a first answer that keeps enough stands, its faulty parts left off.
+    if (!verdict.ok && codeFirst) {
+      const kept = seesFrom(raw, named, page.links, { ...noTracking, ...covering, salvage: true });
+      if (firstAnswerStands(kept)) {
+        lines.push({ heading: "The Editor", detail: `Kept the first answer, leaving off what failed: ${verdict.why}`.slice(0, 900) });
+        verdict = kept;
+      }
+    }
     if (!verdict.ok) {
       lines.push({ heading: "The Editor", detail: `Sent back once: ${verdict.why}`.slice(0, 900) });
       await note("rewriting");

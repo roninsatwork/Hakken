@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import { factsOf, fromSeesKey, seesFrom, seesKey, seesPath, writerFor, withoutTypedUnits } from "./seesAsk";
+import { factsOf, fromSeesKey, seesFrom, seesKey, seesPath, writerFor, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
 /**
@@ -263,5 +263,15 @@ describe("the code-first brief's tidy (eye-code-first-brief-plan-2026-11-07.md)"
     const tidied = withoutTypedUnits({ says: ["Services got [[f2.value]]% of all events.", "Up [[f1.change]] %, to 12 visits."], steps: [{ words: "See [[f3.now]]% more", link: 0 }] }) as { says: string[]; steps: Array<{ words: string }> };
     expect(tidied.says).toEqual(["Services got [[f2.value]] of all events.", "Up [[f1.change]], to 12 visits."]);
     expect(tidied.steps[0].words).toBe("See [[f3.now]] more");
+  });
+});
+
+describe("a good first answer stands on the code-first brief (eye-code-first-brief-plan-2026-11-07.md)", () => {
+  const step = { words: "See it", link: "Channels", href: "/x" };
+  test("with three sentences and two steps left once its faulty parts are off, it stands; with fewer, or failing, it goes back", () => {
+    expect(firstAnswerStands({ ok: true, says: ["a", "b", "c"], steps: [step, step], left: ["A step ran past 20 words."] })).toBe(true);
+    expect(firstAnswerStands({ ok: true, says: ["a", "b"], steps: [step, step] })).toBe(false);
+    expect(firstAnswerStands({ ok: true, says: ["a", "b", "c"], steps: [step] })).toBe(false);
+    expect(firstAnswerStands({ ok: false, why: "It left out a finding." })).toBe(false);
   });
 });
