@@ -1066,6 +1066,9 @@
         "seeProduct": "Look at the page for {text}: often added to baskets, rarely bought.",
         "whyUnfinished": "Find out why so many checkouts aren't finished: try one yourself, on a phone too."
       },
+      "services": {
+        "none": "Nobody looked at a service page in these dates."
+      },
       "visitors": {
         "none": "No visits in these dates.",
         "visits": "{a} visits. {bRate} of them were from new visitors.",
@@ -2540,6 +2543,9 @@
         "bestSeller": "{text} è il più venduto: {a} comprati.",
         "seeProduct": "Guarda la pagina di {text}: messo spesso nel carrello, comprato di rado.",
         "whyUnfinished": "Scopri perché tanti pagamenti non vengono completati: provane uno tu, anche da telefono."
+      },
+      "services": {
+        "none": "Nessuno ha guardato una pagina di servizio in queste date."
       },
       "visitors": {
         "none": "Nessuna visita in queste date.",

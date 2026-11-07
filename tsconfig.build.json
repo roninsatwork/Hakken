@@ -1,0 +1,25 @@
+{
+  "//": [
+    "What `next build` type-checks (next.config.ts, typescript.tsconfigPath): the app without its tests.",
+    "The build checks with TypeScript 6 inside Node's 4GB, and the whole tree with its tests reached that limit:",
+    "it ran out of memory on 7 November 2026 when Services added about 1% to it. The deploy's Docker build never had",
+    "the tests (.dockerignore leaves them out), so this checks locally what the deploy checks. Tests ship nothing, and",
+    "`npm run typecheck` (TypeScript 7) still checks every file, tests included, on every push and before each deploy.",
+    "Keep `exclude` in step with tsconfig.json's: an extended file's own list replaces it."
+  ],
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    ".next-arcade",
+    ".next-e2e",
+    "playwright-report",
+    "convex/_generated",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "e2e",
+    "src/test",
+    "vitest.config.ts",
+    "vitest.setup.ts",
+    "playwright.config.ts"
+  ]
+}

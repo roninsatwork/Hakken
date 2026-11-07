@@ -180,12 +180,12 @@ const IT_WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì"
 const EN_GROUPS_BY: Record<string, string> = {
   channel: "channel", kind: "classification", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
   source: "source", browser: "browser", website: "website", position: "Google position", product: "product",
-  age: "age", gender: "gender", weekday: "day of the week",
+  age: "age", gender: "gender", weekday: "day of the week", service: "service",
 };
 const IT_GROUPS_BY: Record<string, string> = {
   channel: "canale", kind: "tipo di pagina", device: "dispositivo", country: "paese", page: "pagina di arrivo", hour: "ora", query: "ricerca",
   source: "fonte", browser: "browser", website: "sito", position: "posizione su Google", product: "prodotto",
-  age: "età", gender: "genere", weekday: "giorno della settimana",
+  age: "età", gender: "genere", weekday: "giorno della settimana", service: "servizio",
 };
 /** Clarity's and Visibility's measures in words (ask-hakken-every-chart-plan-2026-10-31.md, the last sources). */
 const EN_MEASURES: Record<string, string> = {
@@ -369,6 +369,7 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           return `${what} by ${of}`;
         }
         if (by === "product") return EN_MEASURES[measure] ?? measure;
+        if (by === "service") return measure === "visits" ? "Visits by service" : measure === "conversions" ? "Events by service" : "Events for every 100 visits, by service";
         const did = event === "purchase" ? "made a purchase" : event === "*" ? "converted" : `did ${(event ?? "").replace(/_/g, " ")}`;
         if (by === "hour") return `When people ${did}, by hour and day`;
         if (kind === "grid") return `Share of visits that did each step, by ${of}`;
@@ -564,6 +565,7 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
           return `${what} per ${of}`;
         }
         if (by === "product") return IT_MEASURES[measure] ?? measure;
+        if (by === "service") return measure === "visits" ? "Visite per servizio" : measure === "conversions" ? "Eventi per servizio" : "Eventi ogni 100 visite, per servizio";
         const did = event === "purchase" ? "hanno fatto un acquisto" : event === "*" ? "hanno convertito" : `hanno fatto ${(event ?? "").replace(/_/g, " ")}`;
         if (by === "hour") return `Quando le persone ${did}, per ora e giorno`;
         if (kind === "grid") return `Quota di visite che hanno fatto ogni passaggio, per ${of}`;

@@ -232,6 +232,8 @@ const SCORES: Record<string, Measure> = {
   // Channels' own (channels-new-page-plan-2026-11-06.md, step 8): a website with nothing bought counts events; what one square holds of its channel; a step's visits that went on.
   eventsPerHundred: { words: "events for every 100 visits", kind: "score" },
   shareOfEvents: { words: "share of all events", kind: "percent" },
+  // Services' own (own/googleAnalyticsServices.ts, services-new-page-plan-2026-11-07.md): the services people looked at, some with no events.
+  servicesLookedAt: { words: "services people looked at", kind: "count" },
   shareOfChannelBought: { words: "of this channel's purchases", kind: "percent" },
   shareOfChannelEvents: { words: "of this channel's events", kind: "percent" },
   wentOnPercent: { words: "went on to the next step", kind: "percent" },

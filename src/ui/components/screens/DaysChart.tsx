@@ -31,6 +31,12 @@ export type DaysLine = {
   under?: boolean;
   /** A step this line has no point in has no figure, rather than none: 31 October against a September with 30 days. */
   gaps?: boolean;
+  /**
+   * A figure for every 100 of something (Services' events for every 100 visits, services-new-page-plan-2026-11-07.md): each
+   * step's points added up, for every 100 of these added up over the same days. A rate is the same whatever the step, so it's
+   * never averaged for a long one, and a step with none of these has no figure.
+   */
+  per?: readonly DaysPoint[];
 };
 
 type Bucket = { first: string; last: string; sum: number };
@@ -50,32 +56,40 @@ function bucketsOf(points: readonly DaysPoint[], step: ExplorerStep): Array<[str
 }
 
 const shown = (bucket: Bucket, step: ExplorerStep) => Math.round(perStep(bucket.sum, bucket.first, bucket.last, step) * 10) / 10;
+/** Some count for every 100 of another, to one place: null with none of the other. */
+const perHundred = (count: number, of: number) => (of > 0 ? Math.round((1000 * count) / of) / 10 : null);
 
 /** A chart's rows: each step's first and last day, and each line's figure. Plain code, so a chart and its tests share one sum. */
 export function daysChartRows(step: ExplorerStep, lines: readonly DaysLine[]): Array<Record<string, unknown>> {
-  const steps = new Map<string, { first: string; last: string; sums: Map<string, number> }>();
+  const steps = new Map<string, { first: string; last: string; sums: Map<string, number>; pers: Map<string, number> }>();
   for (const line of lines.filter((one) => !one.under)) {
     for (const point of line.points) {
       const key = stepKey(step, point.day, point.lastDay);
-      const held = steps.get(key) ?? { first: point.day, last: point.day, sums: new Map<string, number>() };
+      const held = steps.get(key) ?? { first: point.day, last: point.day, sums: new Map<string, number>(), pers: new Map<string, number>() };
       if (point.day < held.first) held.first = point.day;
       const last = point.lastDay ?? point.day;
       if (last > held.last) held.last = last;
       held.sums.set(line.key, (held.sums.get(line.key) ?? 0) + point.value);
       steps.set(key, held);
     }
+    for (const point of line.per ?? []) {
+      const held = steps.get(stepKey(step, point.day, point.lastDay));
+      if (held) held.pers.set(line.key, (held.pers.get(line.key) ?? 0) + point.value);
+    }
   }
-  const underneath = lines.filter((one) => one.under).map((line) => ({ key: line.key, buckets: bucketsOf(line.points, step) }));
+  const underneath = lines.filter((one) => one.under).map((line) => ({ key: line.key, buckets: bucketsOf(line.points, step), pers: line.per ? bucketsOf(line.per, step) : null }));
   return [...steps.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, held], at) => {
     const values: Record<string, unknown> = {};
     for (const line of lines) {
       if (line.under) continue;
       const sum = held.sums.get(line.key);
-      values[line.key] = sum === undefined && line.gaps ? null : Math.round(perStep(sum ?? 0, held.first, held.last, step) * 10) / 10;
+      if (line.per) values[line.key] = perHundred(sum ?? 0, held.pers.get(line.key) ?? 0);
+      else values[line.key] = sum === undefined && line.gaps ? null : Math.round(perStep(sum ?? 0, held.first, held.last, step) * 10) / 10;
     }
     for (const line of underneath) {
       const bucket = line.buckets[at]?.[1];
-      values[line.key] = bucket ? shown(bucket, step) : null;
+      const per = line.pers?.[at]?.[1];
+      values[line.key] = !bucket ? null : line.pers ? perHundred(bucket.sum, per?.sum ?? 0) : shown(bucket, step);
     }
     if (coarserThanStep(held.first, held.last, step)) values.coarse = true;
     return datedRow(
@@ -101,7 +115,7 @@ export function daysScores(step: ExplorerStep, lines: readonly DaysScoreLine[]):
   ));
 }
 
-export function DaysChart({ title, hint, exportName, csvDay, host, step, waiting, controls, nothingTicked = null, lines, figure, plain = false, anything, empty, height, scored }: {
+export function DaysChart({ title, hint, exportName, csvDay, host, step, waiting, controls, nothingTicked = null, lines, figure, plain = false, anything, empty, height, scored, format = formatNumber }: {
   title: string;
   /** What the chart shows. Given as a function, told whether a step stands for more than the step drawn, for the words that say so. */
   hint: ReactNode | ((coarse: boolean) => ReactNode);
@@ -126,6 +140,8 @@ export function DaysChart({ title, hint, exportName, csvDay, host, step, waiting
   height?: number;
   /** Up or down, under the chart. Its step can be longer than the chart's: a day against the day before says little. */
   scored?: { step: ExplorerStep; lines: readonly DaysScoreLine[]; fewerIsBetter?: boolean; withYear?: boolean };
+  /** How the hover writes a figure: whole numbers, unless the lines are a figure for every 100 ("1.6"). */
+  format?: (value: number) => string;
 }) {
   const data = daysChartRows(step, lines);
   const series: SiteSeries[] = lines.map((line) => ({ key: line.key, name: line.name, colour: line.colour, ...(line.dashed ? { dashed: true } : {}) }));
@@ -136,8 +152,8 @@ export function DaysChart({ title, hint, exportName, csvDay, host, step, waiting
     rows: lines.map((line) => {
       const value = row[line.key];
       const cell = plain
-        ? { text: formatNumber(typeof value === "number" ? value : 0), quiet: !value }
-        : typeof value === "number" ? { text: formatNumber(value) } : { text: "–", quiet: true };
+        ? { text: format(typeof value === "number" ? value : 0), quiet: !value }
+        : typeof value === "number" ? { text: format(value) } : { text: "–", quiet: true };
       return { key: line.key, name: line.name, colour: line.colour, cells: { figure: cell } };
     }),
   });

@@ -133,6 +133,8 @@ export function useGroupsChartTitle() {
     }
     // A shop's products, as Products' chart names each view (products-screen-4-plan-2026-11-02.md).
     if (chart.by === "product") return tg(`products.${chart.measure as "itemsBought"}`);
+    // A service business's services, as Services names its figures (services-new-page-plan-2026-11-07.md, step 7).
+    if (chart.by === "service") return tg(`services.${chart.measure === "conversions" ? "events" : chart.measure === "conversionRate" ? "rate" : "visits"}`);
     if (chart.by === "hour") return tg("hours", { did });
     if (chart.kind === "grid") return tg("grid", { by });
     if (chart.kind === "scatter") return tg("scatter", { did, by });

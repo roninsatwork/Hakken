@@ -51,6 +51,8 @@ export type TableNoun =
   | "browsers" | "systems" | "ageGroups" | "interests"
   // A shop's products (§18.2 board 25).
   | "products"
+  // A service business's services (services-new-page-plan-2026-11-07.md).
+  | "services"
   // Products' table by category (products-screen-4-plan-2026-11-02.md).
   | "categories"
   // Admin → Content → News (content-people-knowledge-plan.md, board 4): it pages by cursor, so "so far" until the last page is in.

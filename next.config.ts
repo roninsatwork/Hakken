@@ -20,6 +20,10 @@ if (process.env.E2E_AUTH_ENABLED === '1' && !e2eAuthEnabled && process.env.NODE_
 }
 
 const nextConfig: NextConfig = {
+  // The build's type check leaves the tests out (tsconfig.build.json), as the deploy's Docker build always has
+  // (.dockerignore): with them it ran out of Node's 4GB on 7 November 2026. `npm run typecheck` still checks
+  // every file, tests included, on every push and before a deploy.
+  typescript: { tsconfigPath: 'tsconfig.build.json' },
   // The optional local Arcade check must not replace the running app's cache.
   ...(process.env.HAKKEN_ARCADE_CHECK === '1'
     ? { distDir: '.next-arcade', typescript: { tsconfigPath: 'tsconfig.arcade.json' } }

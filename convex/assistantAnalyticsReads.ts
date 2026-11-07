@@ -33,6 +33,7 @@ import { viewsCountedDifferently } from "./utils/viewsCounted";
 import { readChannelTop } from "./googleAnalyticsChannelReads";
 import { channelsForAssistant } from "./assistantChannelReads";
 import { overviewForAssistant } from "./assistantOverviewReads";
+import { servicesForAssistant } from "./assistantServiceReads";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
 import { leftWithout } from "./utils/sees/analyticsProducts";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
@@ -524,6 +525,11 @@ export const googleAnalyticsInternal = internalQuery({
     // Channels has no money either, and its boxes, chart, squares, devices and steps are reads of their own (`assistantChannelReads.ts`).
     if (args.screen === "channels") {
       return await channelsForAssistant(site, common, { part: args.part, key: args.key, search: args.search, order: args.order, rows: ROWS, linkTo }, { ok: true, website: host, screen: args.screen, period, figuresTo: connection.newestDay });
+    }
+
+    // Services speaks in events and has no money either; its groups are named by their numbers (`assistantServiceReads.ts`).
+    if (args.screen === "services") {
+      return await servicesForAssistant(site, common, { key: args.key, search: args.search, order: args.order, rows: ROWS, linkTo }, { ok: true, website: host, screen: args.screen, period, figuresTo: connection.newestDay });
     }
 
     const list = LISTS[args.screen];

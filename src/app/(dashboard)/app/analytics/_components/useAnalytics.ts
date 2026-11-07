@@ -39,11 +39,13 @@ export const ANALYTICS_PAGES = [
   { id: "conversions", segment: "conversions", group: "figures" },
   // A shop's products (GA34): listed only for a website that is a shop.
   { id: "products", segment: "products", group: "figures", shopOnly: true },
+  // A service business's own Products (services-new-page-plan-2026-11-07.md, step 2): listed for a website that doesn't sell and has service pages.
+  { id: "services", segment: "services", group: "figures", serviceOnly: true },
   // Who visited (GA24), called Visits since 2026-11-03 (visits-redo-plan-2026-11-03.md): `/visitors` forwards here.
   { id: "visitors", segment: "visits", group: "figures" },
   { id: "trackingHealth", segment: "tracking-health", group: "settings" },
   { id: "connection", segment: "connection", group: "settings" },
-] as const satisfies readonly { id: string; segment: string; group: AnalyticsGroup; shopOnly?: boolean }[];
+] as const satisfies readonly { id: string; segment: string; group: AnalyticsGroup; shopOnly?: boolean; serviceOnly?: boolean }[];
 export type AnalyticsPageId = (typeof ANALYTICS_PAGES)[number]["id"];
 
 /** The page a path under the website belongs to: a landing page's own screen keeps Landing pages lit, an event's Conversions. */

@@ -117,6 +117,25 @@ export const GOOGLE_ANALYTICS_SCREENS: Readonly<Record<string, Partial<SeesScree
       "a step asking the reader to look at one campaign on another screen: Funnel, All pages, Products and Conversions show the whole website and can't be split by campaign. For one campaign, a step says what to check in the ad account, or what to change about its link, and names the screen only for what that screen really shows",
     ],
   },
+  // Services (services-new-page-plan-2026-11-07.md, step 6): a service business's own Products.
+  "googleAnalytics.services": {
+    about: "Services: for a website that sells services, each service page's visits and events against the dates before. A service is a page in a Classification whose type is Service. Events are the times something the website counts happened on that page, such as a contact form or a phone number clicked. A visit that looks at two services counts once on each, and an event counts on the page where it happened, so events on other pages, such as the home page, belong to no service",
+    parts: [
+      "the four boxes: one for each group of services, each named by its numbers, never busy or quiet: the middle service's visits across, and the whole website's events for every 100 visits up. Each says how many services, their visits and their events",
+      "visits, events, events for every 100 visits or page views of each service ticked, each day, week or month, by service, by channel or as one line, against the dates before or the whole website",
+      "the dots: each service by its visits and its events for every 100 visits, with the two lines that make the groups",
+      "a map of the services, each box sized by its visits, orange if it went up and grey if it went down",
+      "the table: each service with its address, visits, up or down and events, with its events for every 100 visits",
+    ],
+    // Not NO_MONEY or CONVERSIONS_AS_TIMES, which say "conversions": a service business says events (Anthony, 2026-11-06), and the
+    // first real press on Ronins (7 November) wrote "65.7% of all website conversions".
+    never: [
+      "money: what anything earned or cost",
+      "conversions, enquiries, sales, bought, baskets or anything sold: this page calls them events. Say events, and events for every 100 visits, never conversions or a conversion rate",
+      "events for every 100 visits as a percentage: an event is counted each time it happens, so one visit can make several",
+      "a group as busy, quiet, working or not working: groups are named by their numbers",
+    ],
+  },
   // Funnel (was Landing pages: its eye key kept).
   "googleAnalytics.landing": {
     about: "Funnel: where people arrive on the website and what they do next. Two figures say leaving. Left straight away is people who stayed under 10 seconds and did nothing. Left in the table is people who saw one page, however long they stayed",

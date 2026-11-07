@@ -6,7 +6,7 @@
  */
 export const ANALYTICS_SCREENS = [
   "overview", "channels", "channel", "campaigns", "adKeywords", "landingPages", "landingPage", "allPages", "page",
-  "events", "event", "conversions", "visitors", "products",
+  "events", "event", "conversions", "visitors", "products", "services",
 ] as const;
 export type AnalyticsScreen = (typeof ANALYTICS_SCREENS)[number];
 
@@ -59,8 +59,22 @@ export const CHANNEL_ORDERS = {
 } as const;
 export type ChannelOrder = keyof typeof CHANNEL_ORDERS;
 export const CHANNEL_ORDER_NAMES = Object.keys(CHANNEL_ORDERS) as ChannelOrder[];
+/**
+ * Services' orders (services-new-page-plan-2026-11-07.md, step 7): the table's own headings, and the two its questions ask most.
+ * Best for events counts only services with the middle service's visits or more, so one visit and one event can't lead it.
+ */
+export const SERVICE_ORDERS = {
+  mostVisits: "visits",
+  mostEvents: "events",
+  gainedMostVisits: "visitsUp",
+  lostMostVisits: "visitsUp",
+  bestForEvents: "events",
+  noEvents: "visits",
+} as const;
+export type ServiceOrder = keyof typeof SERVICE_ORDERS;
+export const SERVICE_ORDER_NAMES = Object.keys(SERVICE_ORDERS) as ServiceOrder[];
 /** Every order Ask Hakken can name, on any list. */
-export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder | CampaignOrder | ChannelOrder>([...ALL_PAGES_ORDER_NAMES, ...FUNNEL_ORDER_NAMES, ...CAMPAIGN_ORDER_NAMES, ...CHANNEL_ORDER_NAMES])];
+export const LIST_ORDER_NAMES = [...new Set<AllPagesOrder | FunnelOrder | CampaignOrder | ChannelOrder | ServiceOrder>([...ALL_PAGES_ORDER_NAMES, ...FUNNEL_ORDER_NAMES, ...CAMPAIGN_ORDER_NAMES, ...CHANNEL_ORDER_NAMES, ...SERVICE_ORDER_NAMES])];
 
 /**
  * The further reads a screen's figures come in, each with Convex's second to itself: overview's page panels

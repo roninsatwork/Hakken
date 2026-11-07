@@ -38,6 +38,7 @@ const ANALYTICS_SCREENS = [
   `${ANALYTICS}/[siteId]/campaigns/page.tsx`, // 17 · Campaigns
   `${ANALYTICS}/[siteId]/visits/page.tsx`, // 15 · Visits (was Visitors: its old address forwards there)
   `${ANALYTICS}/[siteId]/products/page.tsx`, // 25 · Products
+  `${ANALYTICS}/[siteId]/services/page.tsx`, // Services, a service business's own Products (services-new-page-plan-2026-11-07.md)
   `${ANALYTICS}/[siteId]/live/page.tsx`, // 14 · Live
   // 22 · Events is part of Conversions (ga-conversions-visitors-plan.md CV1): its old address forwards there.
   `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, with every event, and 16 · Nothing counted yet

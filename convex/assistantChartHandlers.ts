@@ -197,8 +197,16 @@ const PRODUCT_MEASURE_WORDS: Record<string, string> = {
   sellingLess: "the products whose items bought fell most against the period before, each beside it",
 };
 
+/** Services' chart in words: a service business counts events, never anything bought (services-new-page-plan-2026-11-07.md, step 7). */
+const SERVICE_MEASURE_WORDS: Record<string, string> = {
+  visits: "each service's visits, beside the dates before",
+  conversions: "each service's events, the times something the website counts happened on its page, beside the dates before: say events, never conversions or sales",
+  conversionRate: "each service's events for every 100 visits, among services with at least the middle service's visits: not a percentage",
+};
+
 function groupsMeasureWords(chart: GroupsChart): string {
   if (chart.by === "product") return PRODUCT_MEASURE_WORDS[chart.measure] ?? chart.measure;
+  if (chart.by === "service") return SERVICE_MEASURE_WORDS[chart.measure] ?? chart.measure;
   const event = chart.event === "*" ? "any conversion" : chart.event ? chart.event.replace(/_/g, " ") : null;
   if (chart.look === "searchConsoleGroups" || chart.look === "bingGroups") {
     const engine = chart.look === "bingGroups" ? "Bing" : "Google";

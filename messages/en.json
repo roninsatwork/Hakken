@@ -8345,13 +8345,19 @@
             "product": "product",
             "age": "age",
             "gender": "gender",
-            "weekday": "day of the week"
+            "weekday": "day of the week",
+            "service": "service"
           },
           "products": {
             "itemsBought": "Products sold most",
             "itemsLeft": "Products most often left in baskets",
             "sellingMore": "Products selling more",
             "sellingLess": "Products selling less"
+          },
+          "services": {
+            "visits": "Visits to each service",
+            "events": "Events on each service",
+            "rate": "Events for every 100 visits, by service"
           },
           "did": {
             "purchase": "made a purchase",
@@ -10599,6 +10605,7 @@
       "ageGroups": "{count, plural, =1 {# age group} other {# age groups}}",
       "interests": "{count, plural, =1 {# interest} other {# interests}}",
       "products": "{count, plural, =1 {# product} other {# products}}",
+      "services": "{count, plural, =1 {# service} other {# services}}",
       "categories": "{count, plural, =1 {# category} other {# categories}}",
       "stories": "{count, plural, =1 {# story} other {# stories}}",
       "storiesSoFar": "{count, plural, other {#+ stories}}",
@@ -10918,7 +10925,8 @@
         "eventsLost": "events lost",
         "wentOnPercent": "went on to the next step",
         "timesDone": "times",
-        "addedPerHundred": "added to a basket for every 100 visits"
+        "addedPerHundred": "added to a basket for every 100 visits",
+        "servicesLookedAt": "services people looked at"
       }
     },
     "sidePanel": {
@@ -16373,6 +16381,7 @@
       "events": "Events",
       "conversions": "Conversions",
       "products": "Products",
+      "services": "Services",
       "visitors": "Visits",
       "trackingHealth": "Tracking health",
       "connection": "Connection"
@@ -18399,6 +18408,231 @@
         "eyeOthers": "The other products listed"
       }
     },
+    "services": {
+      "title": "Services",
+      "description": "The services people look at, and the ones that get them in touch.",
+      "noServices": "{host} has no service pages yet. Sort your pages into a Classification whose type is Service, and they show here.",
+      "collecting": "These dates are still being collected. They come with the next collection.",
+      "everyDevice": "That device's pages aren't collected yet, so this shows every device.",
+      "leftOut": "This shows your {most} busiest services. {count, plural, =1 {One more is} other {# more are}} left out.",
+      "boxes": {
+        "value": "{count, plural, =1 {# service} other {# services}}",
+        "detail": {
+          "visits": "{amount, plural, =1 {# visit} other {# visits}} and {events, plural, =1 {# event} other {# events}}.",
+          "views": "{amount, plural, =1 {# page view} other {# page views}} and {events, plural, =1 {# event} other {# events}}."
+        }
+      },
+      "groups": {
+        "name": "{across}, and {up}",
+        "upMore": "{rate} or more {per}",
+        "upFewer": "under {rate} {per}",
+        "units": {
+          "visits": "visits",
+          "started": "visits",
+          "views": "page views"
+        },
+        "per": {
+          "events": "events for every 100",
+          "stayed": "stayed for every 100",
+          "scrolled": "scrolled to the bottom for every 100"
+        },
+        "across": {
+          "visits": {
+            "more": "{count, plural, =1 {# visit} other {# visits}} or more",
+            "fewer": "Under {count, plural, =1 {# visit} other {# visits}}"
+          },
+          "views": {
+            "more": "{count, plural, =1 {# page view} other {# page views}} or more",
+            "fewer": "Under {count, plural, =1 {# page view} other {# page views}}"
+          }
+        }
+      },
+      "months": {
+        "title": {
+          "visits": {
+            "service": "Visits to each service, {each}",
+            "channel": "Visits from each channel, {each}",
+            "one": "Visits to these services, {each}"
+          },
+          "events": {
+            "service": "Events on each service, {each}",
+            "channel": "Events from each channel, {each}",
+            "one": "Events on these services, {each}"
+          },
+          "rate": {
+            "service": "Events for every 100 visits, {each}",
+            "channel": "Events for every 100 visits from each channel, {each}",
+            "one": "Events for every 100 visits, {each}"
+          },
+          "views": {
+            "service": "Page views of each service, {each}",
+            "channel": "Page views of each service, {each}",
+            "one": "Page views of these services, {each}"
+          }
+        },
+        "each": {
+          "day": "each day",
+          "week": "each week",
+          "month": "each month"
+        },
+        "hint": "{now}.",
+        "hintAgainst": "{now} against {before}.",
+        "hintWebsite": "{now} against your whole website.",
+        "arrived": "With a channel picked, it counts people who arrived on the service from it.",
+        "noChannels": "Channels show for every device only.",
+        "leftOut": "It draws your {most} busiest ticked services.",
+        "showLabel": "Show",
+        "show": {
+          "visits": "Visits",
+          "events": "Events",
+          "rate": "Events for every 100 visits",
+          "views": "Page views"
+        },
+        "figure": {
+          "visits": "Visits",
+          "events": "Events",
+          "rate": "Per 100 visits",
+          "views": "Page views"
+        },
+        "services": "Services",
+        "everyService": "Every service",
+        "channels": "Channels",
+        "everyChannel": "Every channel",
+        "linesLabel": "Lines",
+        "lines": {
+          "service": "One for each service",
+          "channel": "One for each channel",
+          "one": "Just one"
+        },
+        "compareWith": "Compare with",
+        "nothing": "No comparison",
+        "website": "Your whole website",
+        "these": "These services",
+        "lineBefore": "{name}, {before}",
+        "nothingServices": "Tick a service in the Services menu to draw it here.",
+        "nothingChannels": "Tick a channel in the Channels menu to draw it here.",
+        "empty": "Nothing to show for these dates.",
+        "collecting": "Still being collected.",
+        "csvDay": "Day"
+      },
+      "dots": {
+        "title": {
+          "events": "Which services get visits, and which get people in touch",
+          "stayed": "Which services get visits, and which keep people there",
+          "scrolled": "Which services get visits, and which people read to the end"
+        },
+        "hint": "Each dot is a service. The further right, the more {unit} it had. The higher up, the more {did} for every 100 visits.",
+        "did": {
+          "events": "people got in touch",
+          "stayed": "people stayed a while",
+          "scrolled": "people scrolled to the bottom"
+        },
+        "none": {
+          "events": "Services with no events sit along the bottom.",
+          "stayed": "Services where nobody stayed sit along the bottom.",
+          "scrolled": "Services nobody read to the end sit along the bottom."
+        },
+        "countLabel": "Count",
+        "count": {
+          "visits": "Visits",
+          "started": "Visits that started here",
+          "views": "Page views"
+        },
+        "showLabel": "Show",
+        "show": {
+          "events": "Getting in touch",
+          "stayed": "Staying a while",
+          "scrolled": "Scrolling to the bottom"
+        },
+        "acrossLabel": {
+          "visits": "Visits from",
+          "started": "Visits from",
+          "views": "Page views from"
+        },
+        "across": {
+          "half": "{count}, half your middle service",
+          "middle": "{count}, your middle service",
+          "twice": "{count}, twice your middle service"
+        },
+        "upLabel": {
+          "events": "Events from",
+          "stayed": "Stayed from",
+          "scrolled": "Scrolled from"
+        },
+        "up": {
+          "half": "{rate}, half your website",
+          "middle": "{rate}, your whole website",
+          "twice": "{rate}, twice your website"
+        },
+        "axis": {
+          "events": "Got in touch, for every 100 visits",
+          "stayed": "Stayed a while, for every 100 visits",
+          "scrolled": "Scrolled to the bottom, for every 100 visits"
+        },
+        "readoutUp": "For every 100 visits",
+        "empty": "No services had visits in these dates."
+      },
+      "map": {
+        "title": "All your services",
+        "hint": {
+          "visits": "Bigger boxes had more visits.",
+          "views": "Bigger boxes had more page views.",
+          "events": "Bigger boxes had more events."
+        },
+        "colourHint": {
+          "visits": "Orange boxes got more visits than {before}, and grey boxes got fewer.",
+          "views": "Orange boxes got more page views than {before}, and grey boxes got fewer.",
+          "events": "Orange boxes got more events than {before}, and grey boxes got fewer."
+        },
+        "count": "Count",
+        "colour": "Colour shows",
+        "show": "Show",
+        "everyService": "Every service",
+        "measure": {
+          "visits": "Visits",
+          "views": "Page views",
+          "events": "Events"
+        },
+        "figure": {
+          "visits": "{count, plural, =1 {# visit} other {# visits}}",
+          "views": "{count, plural, =1 {# page view} other {# page views}}",
+          "events": "{count, plural, =1 {# event} other {# events}}"
+        },
+        "in": {
+          "visits": "Visits in {when}",
+          "events": "Events in {when}"
+        },
+        "leftOut": "This leaves out {count, plural, =1 {one smaller service} other {# smaller services}}. They are in the table.",
+        "empty": "No services to show for these dates.",
+        "upOrDown": "Up or down",
+        "same": "The same"
+      },
+      "table": {
+        "service": "Service",
+        "visits": "Visits",
+        "upOrDown": "Up or down",
+        "events": "Events",
+        "find": "Find a service…",
+        "showLabel": "Show",
+        "classificationLabel": "Classification",
+        "everyClassification": "Every classification",
+        "empty": "No services in these dates.",
+        "noMatch": "Nothing matches that search.",
+        "download": "Download CSV",
+        "downloading": "Downloading…",
+        "csv": {
+          "service": "Service",
+          "address": "Address",
+          "group": "Group",
+          "visits": "Visits",
+          "visitsBefore": "Visits before",
+          "events": "Events",
+          "eventsBefore": "Events before",
+          "per100": "Events for every 100 visits",
+          "started": "Visits that started here"
+        }
+      }
+    },
     "visitors": {
       "title": "Visits",
       "description": "Your visits, new and returning. Who came, what they used and the pages they looked at.",
@@ -18527,7 +18761,12 @@
       "datesBefore": "The dates before",
       "usualDay": "A usual day",
       "visitsThatDidIt": "The visits that did it",
-      "addedToBasket": "Added to basket"
+      "addedToBasket": "Added to basket",
+      "allServices": "All your services",
+      "elsewhere": "Pages that aren't services",
+      "serviceVisitsShare": "its share of all service visits",
+      "noEvents": "Services with no events",
+      "startedOnAService": "Every visit that started on a service"
     },
     "landingPage": {
       "back": "Landing pages",
@@ -19123,6 +19362,9 @@
         "bestSeller": "{text} sold the most: {a} bought.",
         "seeProduct": "Look at the page for {text}: often added to baskets, rarely bought.",
         "whyUnfinished": "Find out why so many checkouts aren't finished: try one yourself, on a phone too."
+      },
+      "services": {
+        "none": "Nobody looked at a service page in these dates."
       },
       "visitors": {
         "none": "No visits in these dates.",

@@ -9,6 +9,7 @@ import { GROUP_LEAST, GROUP_MOVE, RATE_APART, LEFT_APART_POINTS, CONVERSIONS_LEA
 import { campaignsFindings } from "./googleAnalyticsCampaigns";
 import { overviewFindings } from "./googleAnalyticsOverview";
 import { channelsFindings } from "./googleAnalyticsChannels";
+import { servicesFindings } from "./googleAnalyticsServices";
 
 /** Google Analytics' pages with rules of their own (ask-hakken-every-chart-page-plan-2026-11-03.md, section 5). */
 
@@ -692,6 +693,7 @@ export const GOOGLE_ANALYTICS_OWN: Readonly<Record<string, { general: boolean; f
   "googleAnalytics.channelsPage": { general: false, find: fewEach(channelsFindings) },
   "googleAnalytics.channelPage": { general: false, find: fewEach(channelFindings) },
   "googleAnalytics.campaigns": { general: false, find: fewEach(campaignsFindings) },
+  "googleAnalytics.services": { general: false, find: fewEach(servicesFindings) },
   "googleAnalytics.landing": { general: false, find: fewEach(funnelFindings) },
   "googleAnalytics.allPages": { general: false, find: fewEach(allPagesFindings) },
   "googleAnalytics.page": { general: false, find: fewEach(pageFindingsOwn) },

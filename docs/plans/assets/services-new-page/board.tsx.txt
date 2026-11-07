@@ -1,0 +1,1040 @@
+// Four ways to draw Google Analytics → Services, from the app's real parts, on Ronins' real saved figures (last 12 months).
+// Every chart's menus really work: the same code draws the board and runs when it's played. Nothing here is built into the app.
+import { useMemo, useState, type ReactNode } from "react";
+import { BriefcaseBusiness } from "lucide-react";
+import DATA from "./data/services.json";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
+import { ListTable } from "@/src/ui/components/screens/ListTable";
+import { DownloadButton } from "@/src/ui/components/screens/DownloadButton";
+import { Meter } from "@/src/ui/components/screens/Meter";
+import { Select } from "@/src/ui/components/screens/Select";
+import { ExplorerToolbar, type ExplorerControl } from "@/src/ui/components/screens/ChartExplorer";
+import { ChangeBars, type ChangeBar } from "@/src/ui/components/screens/ChangeBars";
+import { PageMap, type PageMapBox } from "@/src/ui/components/screens/PageMap";
+import { DotGroups, dotGroupOf, type DotGroupKey } from "@/src/ui/components/screens/DotGroups";
+import { HundredGrid, type HundredGroup } from "@/src/ui/components/screens/HundredGrid";
+import { HundredStrips, stripColour } from "@/src/ui/components/screens/HundredStrips";
+import { StepFlowChart } from "@/src/ui/components/screens/StepFlowChart";
+import { ConversionsMap, changeWords, type ConversionsMapColumn, type ConversionsMapRow } from "@/src/ui/components/screens/ConversionsMap";
+import { tickColumn, TickActions, TickCount, type TableTicks } from "@/src/ui/components/screens/TableTicks";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { CHART_COMPARATOR_GREY, CHART_ENGAGEMENT_NONE, CHART_ENGAGEMENT_RAMP, CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET, CHART_SERIES_EMERALD, CHART_SERIES_AMBER, CHART_SERIES_SLATE, CHART_SERIES_ROSE } from "@/src/ui/components/charts/chartPalette";
+import { CUT_COLUMN } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
+import { formatNumber } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+import { useSitePager } from "@/src/app/(dashboard)/app/sites/_components/useSitePagedTable";
+import { useSiteParam, useSiteSearch } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
+import { useSiteSort } from "@/src/app/(dashboard)/app/sites/_components/useSiteSort";
+import { FigureCell, UpOrDownCell, formatPer100 } from "@/src/app/(dashboard)/app/analytics/_components/AnalyticsCells";
+import { BeforeLine, PerVisitLine } from "@/src/app/(dashboard)/app/analytics/_components/AnalyticsFigures";
+import { formatPercent } from "@/src/app/(dashboard)/app/analytics/_components/analyticsFormat";
+
+const HOST = "ronins.co.uk";
+const noop = () => undefined;
+const csv = () => "";
+const fmt = formatNumber;
+const inPoints = (value: number) => (value * 100).toFixed(1);
+const pct = (value: number) => `${Math.round(value * 100)}%`;
+
+// ——— The figures ———
+
+type ChannelFigures = { v: number; g: number; e: number; vb: number; gb: number; eb: number; m: [number, number][] };
+type Service = (typeof DATA.services)[number] & { channels: Record<string, ChannelFigures>; eventVisits: Record<string, number>; eventVisitsBefore: Record<string, number>; months: [number, number, number][] };
+const SERVICES = DATA.services as unknown as Service[];
+const CHANNELS = DATA.channels as string[];
+const MONTHS = DATA.months as string[];
+const NOW_AT = MONTHS.map((_, at) => at).slice(12);
+const BEFORE_AT = MONTHS.map((_, at) => at).slice(0, 12);
+const add = (pick: (service: Service) => number, list: readonly Service[] = SERVICES) => list.reduce((sum, service) => sum + pick(service), 0);
+const EVENT_KEYS = ["contact", "phone_number_click", "email_link_click", "live_chat_event"];
+const touched = (s: Service, event = "any") => (event === "any" ? EVENT_KEYS.reduce((sum, key) => sum + (s.eventVisits[key] ?? 0), 0) : s.eventVisits[event] ?? 0);
+const touchedBefore = (s: Service, event = "any") => (event === "any" ? EVENT_KEYS.reduce((sum, key) => sum + (s.eventVisitsBefore[key] ?? 0), 0) : s.eventVisitsBefore[event] ?? 0);
+const T = {
+  visits: add((s) => s.visits), visitsBefore: add((s) => s.visitsBefore), events: add((s) => s.events), eventsBefore: add((s) => s.eventsBefore),
+  engaged: add((s) => s.engaged), scrolled: add((s) => s.scrolled), scrolledBefore: add((s) => s.scrolledBefore),
+  touched: add((s) => touched(s)), touchedBefore: add((s) => touchedBefore(s)),
+  siteRate: DATA.site.events / DATA.site.visits,
+};
+const byVisits = [...SERVICES].sort((a, b) => b.visits - a.visits);
+const none = SERVICES.filter((s) => s.events === 0);
+const noneBefore = SERVICES.filter((s) => s.visitsBefore > 0 && s.eventsBefore === 0);
+const rateOf = (events: number, visits: number) => (visits > 0 ? events / visits : 0);
+const ALL_KEYS = byVisits.map((s) => s.key);
+
+const isEvery = (ticked: readonly string[]) => ticked.length === CHANNELS.length;
+/** A service's figures for the channels ticked. Every channel is the page's own. A narrower pick can only count visits that started on the service. */
+function through(s: Service, ticked: readonly string[]) {
+  if (isEvery(ticked)) return { visits: s.visits, before: s.visitsBefore, engaged: s.engaged, engagedBefore: s.engagedBefore, events: s.events, eventsBefore: s.eventsBefore };
+  const out = { visits: 0, before: 0, engaged: 0, engagedBefore: 0, events: 0, eventsBefore: 0 };
+  for (const channel of ticked) {
+    const c = s.channels[channel];
+    if (!c) continue;
+    out.visits += c.v; out.before += c.vb; out.engaged += c.g; out.engagedBefore += c.gb; out.events += c.e; out.eventsBefore += c.eb;
+  }
+  return out;
+}
+const STARTED = "With a channel picked, this counts visits that started on the service.";
+const withChannelWords = (hint: string, ticked: readonly string[]) => (isEvery(ticked) ? hint : `${hint} ${STARTED}`);
+const channelChoices = CHANNELS.map((name) => ({ key: name, label: name }));
+const serviceChoices = byVisits.map((s) => ({ key: s.key, label: s.name }));
+const serviceOptions = [{ value: "all", label: "Every service" }, ...byVisits.map((s) => ({ value: s.key, label: s.name }))];
+const channelsControl = (ticked: readonly string[], onChange: (next: string[]) => void): ExplorerControl => ({ kind: "ticks", key: "channels", label: "Channels", everyWord: "Every channel", choices: channelChoices, ticked, onChange });
+
+// ——— What every way shares ———
+
+function Page({ description, children }: { description: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader icon={<BriefcaseBusiness className="h-5 w-5 text-brand" />} title="Services" description={description} />
+      <div className="flex flex-col gap-6">{children}</div>
+    </div>
+  );
+}
+
+function ServiceCell({ service }: { service: Service }) {
+  return (
+    <span className="flex min-w-0 flex-col">
+      <span className="block truncate text-[13px] text-foreground" title={service.name}>{service.name}</span>
+      <span className="block truncate text-[12px] text-muted">{service.key}</span>
+    </span>
+  );
+}
+
+function EventsCell({ service }: { service: Service }) {
+  const rate = rateOf(service.events, service.visits);
+  return (
+    <span className="flex flex-col items-end leading-tight">
+      <span className={`font-mono text-[12px] ${service.events > 0 ? "text-foreground" : "text-muted"}`}>{fmt(service.events)}</span>
+      {service.events > 0 ? <span className={`whitespace-nowrap text-right text-[11.5px] ${service.visits < 100 ? "text-muted" : "text-secondary"}`} title={service.visits < 100 ? "Fewer than 100 visits, so this can jump around." : undefined}><span className="font-mono">{formatPer100(rate)}</span> per 100 visits</span> : null}
+    </span>
+  );
+}
+
+const SHOW_WORDS: Record<string, string> = { all: "Every service", events: "With events", none: "No events" };
+const SORT: Record<string, (s: Service) => number | string> = {
+  name: (s) => s.name.toLowerCase(), events: (s) => s.events, share: (s) => s.events, visits: (s) => s.visits, rate: (s) => rateOf(s.events, s.visits),
+  visitsUp: (s) => s.visits - s.visitsBefore, eventsUp: (s) => s.events - s.eventsBefore, left: (s) => Math.max(0, s.visits - s.engaged) / Math.max(1, s.visits), scroll: (s) => s.scrolled / Math.max(1, s.visits),
+};
+
+/** The kit's table on the whole list: its search, Show filter, sorting and pages all work, as on a built screen. */
+function Table({ columns, opening, firsts, actions, filterBy, filters, sortBy }: {
+  columns: Parameters<typeof ListTable<Service>>[0]["columns"];
+  opening: string;
+  firsts: Record<string, "asc" | "desc">;
+  actions?: ReactNode;
+  filterBy?: (s: Service) => boolean;
+  filters?: ReactNode;
+  sortBy?: Record<string, (s: Service) => number | string>;
+}) {
+  const order = useSiteSort(firsts, opening);
+  const [search, setSearch, settled] = useSiteSearch();
+  const [show, setShow] = useSiteParam<string>("show", "all", ["all", "events", "none"]);
+  const term = settled.toLowerCase();
+  const read = { ...SORT, ...(sortBy ?? {}) }[order.key] ?? SORT.visits;
+  const sign = order.direction === "asc" ? 1 : -1;
+  const rows = SERVICES
+    .filter((s) => (!term || s.name.toLowerCase().includes(term) || s.key.includes(term)) && (filterBy ? filterBy(s) : show === "all" || (show === "events") === (s.events > 0)))
+    .sort((a, b) => {
+      const left = read(a), right = read(b);
+      const moved = typeof left === "string" ? left.localeCompare(String(right)) : Number(left) - Number(right);
+      return sign * moved || b.visits - a.visits;
+    });
+  const paged = useSitePager(rows);
+  return (
+    <ListTable
+      rows={paged.pageRows}
+      rowKey={(row) => row.key}
+      noun={"services" as never}
+      summary={<span className="text-[12px] text-secondary">Last 12 months · every device</span>}
+      actions={actions ?? <DownloadButton label="Download CSV" busyLabel="Downloading…" onClick={noop} />}
+      search={{ value: search, onChange: setSearch, placeholder: "Find a service…" }}
+      filters={<div className="flex flex-wrap items-center gap-3">{filters ?? (
+        <Select aria-label="Show" chip={{ label: "Show", choice: show === "all" ? null : SHOW_WORDS[show] }} value={show} onChange={setShow}>
+          {Object.entries(SHOW_WORDS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </Select>
+      )}</div>}
+      sort={order.tableSort}
+      onRowClick={noop}
+      empty={{ icon: <BriefcaseBusiness className="h-8 w-8 text-muted/30" />, label: settled ? "Nothing matches that search." : "No services in these dates." }}
+      footer={paged.footer}
+      columns={columns}
+    />
+  );
+}
+
+// ——— Way 1: as Products does it ———
+
+const EVENT_CHOICES = [
+  { value: "any", label: "Any of your events" },
+  { value: "contact", label: "Contact" },
+  { value: "phone_number_click", label: "Phone number clicked" },
+  { value: "email_link_click", label: "Email address clicked" },
+  { value: "live_chat_event", label: "Live chat started" },
+];
+const STEPS = [
+  { key: "looked", label: "Looked at a service", read: (s: Service) => s.visits },
+  { key: "stayed", label: "Stayed a while", read: (s: Service) => s.engaged },
+  { key: "scroll", label: "Scrolled to the bottom", read: (s: Service) => s.scrolled },
+];
+const VIEWS = [
+  { value: "most", label: "Most events", title: "Services with the most events", hint: "The services that got the most events." },
+  { value: "quiet", label: "Looked but no events", title: "Services people looked at, with no events", hint: "The services with the most visits and no events." },
+  { value: "more", label: "More events", title: "Services with more events than the 12 months before", hint: "The services with the biggest rise in events." },
+  { value: "fewer", label: "Fewer events", title: "Services with fewer events than the 12 months before", hint: "The services with the biggest drop in events." },
+  { value: "visits", label: "Most visits", title: "Services with the most visits", hint: "The services with the most visits." },
+  { value: "best", label: "Best for events", title: "Services with the most events for their visits", hint: "Events for every 100 visits. Services with at least 30 visits." },
+];
+const HOW_MANY = [{ value: "10", label: "Top 10" }, { value: "20", label: "Top 20" }, { value: "all", label: "Every service" }];
+
+function WayOneSteps() {
+  const [steps, setSteps] = useState(STEPS.map((step) => step.key));
+  const [event, setEvent] = useState("any");
+  const [picked, setPicked] = useState(ALL_KEYS);
+  const list = SERVICES.filter((s) => picked.includes(s.key));
+  const got = add((s) => touched(s, event), list);
+  const rows = STEPS.filter((step) => steps.includes(step.key)).map((step) => {
+    const visits = add(step.read, list);
+    return { label: step.label, touched: Math.min(got, visits), left: Math.max(0, visits - got) };
+  });
+  return (
+    <BarsCard
+      title="Got in touch or left"
+      hint="Of the visits at each step you pick, how many got in touch."
+      exportName="services-steps"
+      csvHeading="Steps"
+      host={HOST}
+      waiting={null}
+      controls={[
+        { kind: "ticks", key: "steps", label: "Steps", everyWord: "Every step", choices: STEPS.map((step) => ({ key: step.key, label: step.label })), ticked: steps, onChange: setSteps },
+        { kind: "select", key: "event", label: "The event", value: event, options: EVENT_CHOICES, onChange: setEvent },
+        { kind: "ticks", key: "services", label: "Services", everyWord: "Every service", choices: serviceChoices, ticked: picked, onChange: setPicked },
+      ]}
+      nothingTicked={steps.length === 0 ? "Tick at least one step." : picked.length === 0 ? "Tick at least one service." : null}
+      rows={rows}
+      series={[{ key: "touched", name: "Got in touch", colour: CHART_SERIES_ORANGE }, { key: "left", name: "Left without it", colour: CHART_COMPARATOR_GREY }]}
+      figure="Visits"
+      totalOf={(row) => Number(row.touched ?? 0) + Number(row.left ?? 0)}
+      stacked
+      anything={rows.some((row) => row.touched + row.left > 0)}
+      empty="No visits at these steps."
+    />
+  );
+}
+
+function WayOneChart() {
+  const [view, setView] = useState("most");
+  const [ticked, setTicked] = useState(CHANNELS);
+  const [many, setMany] = useState("10");
+  const shown = VIEWS.find((one) => one.value === view)!;
+  const figures = SERVICES.map((s) => ({ s, f: through(s, ticked) }));
+  const limit = many === "all" ? SERVICES.length : Number(many);
+  const label = (row: (typeof figures)[number]) => row.s.name;
+  let rows: Array<Record<string, unknown> & { label: string }> = [];
+  if (view === "most") rows = figures.filter((r) => r.f.events > 0).sort((a, b) => b.f.events - a.f.events || b.f.visits - a.f.visits).slice(0, limit).map((r) => ({ label: label(r), events: r.f.events }));
+  if (view === "quiet") rows = figures.filter((r) => r.f.events === 0 && r.f.visits > 0).sort((a, b) => b.f.visits - a.f.visits).slice(0, limit).map((r) => ({ label: label(r), visits: r.f.visits }));
+  if (view === "visits") rows = figures.filter((r) => r.f.visits > 0).sort((a, b) => b.f.visits - a.f.visits).slice(0, limit).map((r) => ({ label: label(r), visits: r.f.visits }));
+  if (view === "best") rows = figures.filter((r) => r.f.visits >= 30 && r.f.events > 0).sort((a, b) => rateOf(b.f.events, b.f.visits) - rateOf(a.f.events, a.f.visits)).slice(0, limit).map((r) => ({ label: label(r), rate: Math.round(rateOf(r.f.events, r.f.visits) * 1000) / 10 }));
+  if (view === "more") rows = figures.filter((r) => r.f.events > r.f.eventsBefore).sort((a, b) => (b.f.events - b.f.eventsBefore) - (a.f.events - a.f.eventsBefore) || b.f.visits - a.f.visits).slice(0, limit).map((r) => ({ label: label(r), before: r.f.eventsBefore, events: r.f.events }));
+  if (view === "fewer") rows = figures.filter((r) => r.f.events < r.f.eventsBefore).sort((a, b) => (a.f.events - a.f.eventsBefore) - (b.f.events - b.f.eventsBefore) || b.f.visits - a.f.visits).slice(0, limit).map((r) => ({ label: label(r), before: r.f.eventsBefore, events: r.f.events }));
+  const series = view === "quiet"
+    ? [{ key: "visits", name: "Visits", colour: CHART_COMPARATOR_GREY }]
+    : view === "visits" ? [{ key: "visits", name: "Visits", colour: CHART_SERIES_ORANGE }]
+      : view === "best" ? [{ key: "rate", name: "Events for every 100 visits", colour: CHART_SERIES_ORANGE }]
+        : view === "most" ? [{ key: "events", name: "Events", colour: CHART_SERIES_ORANGE }]
+          : [{ key: "before", name: "The 12 months before", colour: CHART_COMPARATOR_GREY }, { key: "events", name: "Last 12 months", colour: CHART_SERIES_ORANGE }];
+  return (
+    <BarsCard
+      title={shown.title}
+      hint={withChannelWords(shown.hint, ticked)}
+      exportName="services-chart"
+      csvHeading="Service"
+      host={HOST}
+      waiting={null}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: view, options: VIEWS.map((one) => ({ value: one.value, label: one.label })), onChange: setView },
+        channelsControl(ticked, setTicked),
+        { kind: "select", key: "many", label: "How many", value: many, options: HOW_MANY, onChange: setMany },
+      ]}
+      nothingTicked={ticked.length === 0 ? "Tick at least one channel." : null}
+      rows={rows}
+      series={series}
+      figure={view === "best" ? "Per 100 visits" : view === "visits" || view === "quiet" ? "Visits" : "Events"}
+      labels={view === "best" ? (value) => value.toFixed(1) : undefined}
+      anything={rows.length > 0}
+      empty="No services to show for this choice."
+    />
+  );
+}
+
+export function Way1() {
+  const left = T.visits - T.touched;
+  const leftBefore = T.visitsBefore - T.touchedBefore;
+  const leftAfter = T.scrolled - T.touched;
+  const leftAfterBefore = T.scrolledBefore - T.touchedBefore;
+  const most = Math.max(...SERVICES.map((s) => s.events)) / T.events;
+  return (
+    <Page description="Where people leave without getting in touch, and the services they look at most.">
+      <FigureRow columns={4}>
+        <Figure label="Left without an event" value={fmt(left)} detail={<span className="flex flex-col"><span className="text-secondary">{formatPercent(left / T.visits)} of visits to your service pages</span><PerVisitLine now={left / T.visits} before={leftBefore / T.visitsBefore} format={inPoints} points lowerIsBetter /></span>} />
+        <Figure label="Left after scrolling down" value={fmt(leftAfter)} detail={<span className="flex flex-col"><span className="text-secondary">{formatPercent(leftAfter / T.scrolled)} of visits that scrolled to the bottom</span><PerVisitLine now={leftAfter / T.scrolled} before={leftAfterBefore / T.scrolledBefore} format={inPoints} points lowerIsBetter /></span>} />
+        <Figure label="Visits with an event" value={fmt(T.touched)} detail={<span className="flex flex-col"><span className="text-secondary">{formatPercent(T.touched / T.visits)} of visits to your service pages</span><BeforeLine now={T.touched} before={T.touchedBefore} /></span>} />
+        <Figure label="Services with no events" value={`${none.length} services`} detail={<span className="flex flex-col"><span className="text-secondary">{pct(none.length / SERVICES.length)} of the services people looked at</span><BeforeLine now={none.length} before={noneBefore.length} lowerIsBetter /></span>} />
+      </FigureRow>
+      <WayOneSteps />
+      <WayOneChart />
+      <Table
+        opening="events"
+        firsts={{ name: "asc", events: "desc", share: "desc", visits: "desc", rate: "desc" }}
+        columns={[
+          { key: "name", header: "Service", sortable: true, className: CUT_COLUMN.first, cell: (s: Service) => <ServiceCell service={s} /> },
+          { key: "events", header: "Events", align: "right", sortable: true, cell: (s: Service) => <FigureCell value={s.events} /> },
+          { key: "share", header: <span title="This service's share of all the events on your service pages">% of events</span>, align: "right", sortable: true, cell: (s: Service) => (
+            <div className="flex items-center justify-end gap-2">
+              <Meter value={most > 0 ? s.events / T.events / most : 0} className="w-16 shrink-0" />
+              <span className="w-12 shrink-0 text-right font-mono text-[12px] text-secondary">{formatPercent(s.events / T.events)}</span>
+            </div>
+          ) },
+          { key: "visits", header: "Visits", align: "right", sortable: true, cell: (s: Service) => <FigureCell value={s.visits} /> },
+          { key: "rate", header: <span title="Events for every 100 visits to this service">Per 100 visits</span>, align: "right", sortable: true, cell: (s: Service) => <span className={`font-mono text-[12px] ${s.visits < 100 ? "text-muted" : "text-secondary"}`}>{s.events > 0 ? formatPer100(rateOf(s.events, s.visits)) : "0"}</span> },
+        ]}
+      />
+    </Page>
+  );
+}
+
+// ——— Way 2: over time ———
+
+const LINE_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET, CHART_SERIES_EMERALD, CHART_SERIES_AMBER, CHART_SERIES_ROSE, CHART_SERIES_SLATE];
+const colourAt = (at: number) => LINE_COLOURS[at % LINE_COLOURS.length];
+const monthEnd = (month: string) => {
+  const [year, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, m, 0)).toISOString().slice(0, 10);
+};
+type MonthTotals = { v: number; w: number; e: number };
+const SHOW_LABELS: Record<string, { label: string; figure: string; word: string }> = {
+  visits: { label: "Visits", figure: "Visits", word: "Visits" },
+  events: { label: "Events", figure: "Events", word: "Events" },
+  rate: { label: "Events for every 100 visits", figure: "Per 100 visits", word: "Events for every 100 visits" },
+  views: { label: "Page views", figure: "Page views", word: "Page views" },
+};
+function monthOf(list: readonly Service[], ticked: readonly string[], at: number): MonthTotals {
+  const total: MonthTotals = { v: 0, w: 0, e: 0 };
+  for (const s of list) {
+    if (isEvery(ticked)) { total.v += s.months[at][0]; total.w += s.months[at][1]; total.e += s.months[at][2]; continue; }
+    for (const channel of ticked) { const c = s.channels[channel]; if (c) { total.v += c.m[at][0]; total.e += c.m[at][1]; } }
+  }
+  return total;
+}
+function siteMonth(ticked: readonly string[], at: number): MonthTotals {
+  if (isEvery(ticked)) return { v: DATA.site.months[at][0], w: DATA.site.months[at][1], e: DATA.site.months[at][2] };
+  const total: MonthTotals = { v: 0, w: 0, e: 0 };
+  for (const channel of ticked) { const m = (DATA.site.channelMonths as Record<string, number[][]>)[channel]; if (m) { total.v += m[at][0]; total.e += m[at][1]; } }
+  return total;
+}
+const reading = (show: string, m: MonthTotals): number | null => (show === "visits" ? m.v : show === "views" ? m.w : show === "events" ? m.e : m.v > 0 ? Math.round((1000 * m.e) / m.v) / 10 : null);
+const pointsOf = (show: string, at: readonly number[], read: (index: number) => MonthTotals) => at.flatMap((index) => {
+  const value = reading(show, read(index));
+  return value === null ? [] : [{ day: `${MONTHS[index]}-01`, lastDay: monthEnd(MONTHS[index]), value }];
+});
+
+function WayTwoChart({ picked, setPicked, words = "Month by month. Tick services in this menu or in the table.", scores = true }: { picked: string[]; setPicked: (next: string[]) => void; words?: string; scores?: boolean }) {
+  const [show, setShow] = useState("visits");
+  const [ticked, setTicked] = useState(CHANNELS);
+  const [split, setSplit] = useState("service");
+  const [against, setAgainst] = useState("nothing");
+  const noChannels = show === "views";
+  const channels = noChannels ? CHANNELS : ticked;
+  const linesBy = noChannels && split === "channel" ? "service" : split;
+  const list = byVisits.filter((s) => picked.includes(s.key));
+  const groups: Array<{ key: string; name: string; colour: string; now: (at: number) => MonthTotals }> = [];
+  if (linesBy === "service") byVisits.forEach((s, at) => { if (picked.includes(s.key)) groups.push({ key: `s${at}`, name: s.name, colour: colourAt(at), now: (index) => monthOf([s], channels, index) }); });
+  if (linesBy === "channel") CHANNELS.forEach((channel, at) => { if (channels.includes(channel)) groups.push({ key: `c${at}`, name: channel, colour: colourAt(at), now: (index) => monthOf(list, [channel], index) }); });
+  if (linesBy === "one") groups.push({ key: "all", name: "These services", colour: CHART_SERIES_ORANGE, now: (index) => monthOf(list, channels, index) });
+  const mainLines: DaysLine[] = groups.map((group) => ({ key: group.key, name: group.name, colour: group.colour, gaps: show === "rate", points: pointsOf(show, NOW_AT, group.now) }));
+  const under: DaysLine[] = against === "before" ? groups.map((group) => ({ key: `${group.key}b`, name: `${group.name}, the 12 months before`, colour: group.colour, dashed: true, under: true, gaps: true, points: pointsOf(show, BEFORE_AT, group.now) })) : [];
+  const website: DaysLine[] = against === "website" ? [{ key: "site", name: "Your website", colour: CHART_COMPARATOR_GREY, dashed: true, gaps: show === "rate", points: pointsOf(show, NOW_AT, (index) => siteMonth(channels, index)) }] : [];
+  const word = SHOW_LABELS[show];
+  const title = linesBy === "service" ? `${word.word}, by service` : linesBy === "channel" ? `${word.word}, by channel` : `${word.word}, all these services together`;
+  const hint = withChannelWords(words, channels);
+  return (
+    <DaysChart
+      title={title}
+      hint={hint}
+      exportName="services-each-month"
+      csvDay="Month"
+      host={HOST}
+      step="month"
+      waiting={null}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: show, options: Object.entries(SHOW_LABELS).map(([value, one]) => ({ value, label: one.label })), onChange: setShow },
+        { kind: "ticks", key: "services", label: "Services", everyWord: "Every service", choices: serviceChoices, ticked: picked, onChange: setPicked },
+        ...(noChannels ? [] : [channelsControl(ticked, setTicked)]),
+        { kind: "select", key: "lines", label: "Lines", value: linesBy, options: [{ value: "service", label: "A line per service" }, ...(noChannels ? [] : [{ value: "channel", label: "A line per channel" }]), { value: "one", label: "One line" }], onChange: setSplit },
+        { kind: "select", key: "against", label: "Against", value: against, options: [{ value: "nothing", label: "Nothing" }, { value: "before", label: "The 12 months before" }, { value: "website", label: "Your website" }], onChange: setAgainst },
+      ]}
+      nothingTicked={picked.length === 0 ? "Tick at least one service." : channels.length === 0 ? "Tick at least one channel." : null}
+      lines={[...mainLines, ...under, ...website]}
+      figure={word.figure}
+      plain
+      empty="Nothing to show for this choice."
+      height={320}
+      scored={scores ? { step: "month", lines: mainLines.map((line) => ({ key: line.key, name: line.name, now: line.points })) } : undefined}
+    />
+  );
+}
+
+function WayTwoBars() {
+  const [show, setShow] = useState("visits");
+  const [ticked, setTicked] = useState(CHANNELS);
+  const [many, setMany] = useState("7");
+  const noChannels = show === "views";
+  const channels = noChannels ? CHANNELS : ticked;
+  const word = show === "visits" ? "visits" : show === "events" ? "events" : "page views";
+  const moves = SERVICES.map((s) => {
+    const f = through(s, channels);
+    const now = show === "views" ? s.views : show === "events" ? f.events : f.visits;
+    const before = show === "views" ? s.viewsBefore : show === "events" ? f.eventsBefore : f.before;
+    return { s, now, before, change: now - before };
+  }).filter((m) => m.change !== 0);
+  const count = many === "all" ? SERVICES.length : Number(many);
+  const up = moves.filter((m) => m.change > 0).sort((a, b) => b.change - a.change).slice(0, count);
+  const down = moves.filter((m) => m.change < 0).sort((a, b) => a.change - b.change).slice(0, count);
+  const rows: ChangeBar[] = [...up, ...down].map((m) => ({ key: m.s.key, label: m.s.name, detail: `${fmt(m.before)} → ${fmt(m.now)}`, change: m.change, hover: `${fmt(m.before)} ${word} in the 12 months before, ${fmt(m.now)} in the last 12 months`, href: "#" }));
+  return (
+    <MapCard
+      title="What went up and down"
+      hint={withChannelWords("The services that moved most against the 12 months before.", channels)}
+      exportName="services-up-and-down"
+      csv={csv}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: show, options: [{ value: "visits", label: "Visits" }, { value: "events", label: "Events" }, { value: "views", label: "Page views" }], onChange: setShow },
+        ...(noChannels ? [] : [channelsControl(ticked, setTicked)]),
+        { kind: "select", key: "many", label: "How many", value: many, options: [{ value: "7", label: "Top 7 each way" }, { value: "15", label: "Top 15 each way" }, { value: "all", label: "Every service" }], onChange: setMany },
+      ]}
+      message={channels.length === 0 ? "Tick at least one channel." : rows.length === 0 ? "Nothing moved for this choice." : null}
+    >
+      <ChangeBars rows={rows} lostLabel={`Fewer ${word}`} gainedLabel={`More ${word}`} />
+    </MapCard>
+  );
+}
+
+export function Way2() {
+  const [picked, setPicked] = useState(byVisits.slice(0, 5).map((s) => s.key));
+  const growing = [...SERVICES].sort((a, b) => (b.visits - b.visitsBefore) - (a.visits - a.visitsBefore))[0];
+  const falling = [...SERVICES].sort((a, b) => (a.visits - a.visitsBefore) - (b.visits - b.visitsBefore))[0];
+  const ticks: TableTicks = { keys: picked, set: setPicked, most: 10, limit: "You can tick 10 here." };
+  return (
+    <Page description="How each of your services is doing, month by month.">
+      <FigureRow columns={4}>
+        <Figure label="Visits" value={fmt(T.visits)} detail={<span className="flex flex-col"><span className="text-secondary">To your {SERVICES.length} service pages</span><BeforeLine now={T.visits} before={T.visitsBefore} /></span>} />
+        <Figure label="Events" value={fmt(T.events)} detail={<span className="flex flex-col"><span className="text-secondary">{T.events} of the {DATA.site.events} on your website</span><BeforeLine now={T.events} before={T.eventsBefore} /></span>} />
+        <Figure named label="Growing most" value={growing.name} detail={<span className="flex flex-col"><span className="text-secondary">{fmt(growing.visits - growing.visitsBefore)} more visits</span><BeforeLine now={growing.visits} before={growing.visitsBefore} /></span>} />
+        <Figure named label="Falling most" value={falling.name} detail={<span className="flex flex-col"><span className="text-secondary">{fmt(falling.visitsBefore - falling.visits)} fewer visits</span><BeforeLine now={falling.visits} before={falling.visitsBefore} /></span>} />
+      </FigureRow>
+      <WayTwoChart picked={picked} setPicked={setPicked} />
+      <WayTwoBars />
+      <Table
+        opening="visits"
+        firsts={{ name: "asc", visits: "desc", visitsUp: "desc", events: "desc", eventsUp: "desc", rate: "desc" }}
+        actions={<><TickCount ticks={ticks} /><TickActions ticks={ticks} rows={byVisits} rowKey={(s: Service) => s.key} /><DownloadButton label="Download CSV" busyLabel="Downloading…" onClick={noop} /></>}
+        columns={[
+          tickColumn(ticks, { rowKey: (s: Service) => s.key, label: (s: Service) => s.name, heading: "On the chart" } as never),
+          { key: "name", header: "Service", sortable: true, className: CUT_COLUMN.first, cell: (s: Service) => <ServiceCell service={s} /> },
+          { key: "visits", header: "Visits", align: "right", sortable: true, cell: (s: Service) => <FigureCell value={s.visits} /> },
+          { key: "visitsUp", header: <span title="Visits, up or down">Up or down</span>, align: "right", sortable: true, cell: (s: Service) => <UpOrDownCell now={s.visits} before={s.visitsBefore} /> },
+          { key: "events", header: "Events", align: "right", sortable: true, cell: (s: Service) => <FigureCell value={s.events} /> },
+          { key: "eventsUp", header: <span title="Events, up or down">Up or down</span>, align: "right", sortable: true, cell: (s: Service) => <UpOrDownCell now={s.events} before={s.eventsBefore} /> },
+          { key: "rate", header: <span title="Events for every 100 visits to this service">Per 100 visits</span>, align: "right", sortable: true, cell: (s: Service) => <span className={`font-mono text-[12px] ${s.visits < 100 ? "text-muted" : "text-secondary"}`}>{s.events > 0 ? formatPer100(rateOf(s.events, s.visits)) : "0"}</span> },
+        ]}
+      />
+    </Page>
+  );
+}
+
+// ——— Way 3: out of every 1,000 ———
+
+/** Whole numbers that add up to the total: the biggest leftovers get the spare ones. */
+function outOf(values: readonly number[], cells: number) {
+  const whole = values.reduce((total, value) => total + value, 0);
+  if (whole === 0) return values.map(() => 0);
+  const exact = values.map((value) => (cells * value) / whole);
+  const counts = exact.map(Math.floor);
+  let spare = cells - counts.reduce((total, value) => total + value, 0);
+  for (const { at } of exact.map((value, index) => ({ at: index, left: value - Math.floor(value) })).sort((a, b) => b.left - a.left)) { if (spare <= 0) break; counts[at] += 1; spare -= 1; }
+  return counts;
+}
+
+function WayThreeGrid() {
+  const [service, setService] = useState("all");
+  const [ticked, setTicked] = useState(CHANNELS);
+  const [against, setAgainst] = useState("before");
+  const list = service === "all" ? SERVICES : SERVICES.filter((s) => s.key === service);
+  const every = isEvery(ticked);
+  const f = list.map((s) => through(s, ticked));
+  const sum = (pick: (one: (typeof f)[number]) => number) => f.reduce((total, one) => total + pick(one), 0);
+  const parts = every
+    ? [Math.max(0, sum((x) => x.visits) - sum((x) => x.engaged)), Math.max(0, sum((x) => x.engaged) - Math.max(add((s) => s.scrolled, list), add((s) => touched(s), list))), Math.max(0, add((s) => s.scrolled, list) - add((s) => touched(s), list)), add((s) => touched(s), list)]
+    : [Math.max(0, sum((x) => x.visits) - sum((x) => x.engaged)), Math.max(0, sum((x) => x.engaged) - sum((x) => x.events)), sum((x) => x.events)];
+  const partsBefore = every
+    ? [Math.max(0, sum((x) => x.before) - sum((x) => x.engagedBefore)), Math.max(0, sum((x) => x.engagedBefore) - Math.max(add((s) => s.scrolledBefore, list), add((s) => touchedBefore(s), list))), Math.max(0, add((s) => s.scrolledBefore, list) - add((s) => touchedBefore(s), list)), add((s) => touchedBefore(s), list)]
+    : [Math.max(0, sum((x) => x.before) - sum((x) => x.engagedBefore)), Math.max(0, sum((x) => x.engagedBefore) - sum((x) => x.eventsBefore)), sum((x) => x.eventsBefore)];
+  const names = every ? ["Left straight away", "Looked around, then left", "Scrolled to the bottom, then left", "Got in touch"] : ["Left straight away", "Looked around, then left", "Got in touch"];
+  const colours = every ? [CHART_ENGAGEMENT_NONE, CHART_ENGAGEMENT_RAMP[0], CHART_ENGAGEMENT_RAMP[2], CHART_SERIES_ORANGE] : [CHART_ENGAGEMENT_NONE, CHART_ENGAGEMENT_RAMP[0], CHART_SERIES_ORANGE];
+  const counts = outOf(parts, 1000), countsBefore = outOf(partsBefore, 1000);
+  const compared = against === "before";
+  const groups: HundredGroup[] = names.map((name, at) => ({
+    key: `g${at}`, name, count: counts[at], colour: colours[at], was: compared ? <span className="font-mono">{countsBefore[at]}</span> : undefined,
+    readout: [{ value: fmt(parts[at]), label: "Visits" }, { value: `${counts[at]} of 1,000`, label: "Last 12 months" }, ...(compared ? [{ value: `${countsBefore[at]} of 1,000`, label: "The 12 months before" }] : [])],
+  }));
+  const anything = counts.some((count) => count > 0);
+  return (
+    <MapCard
+      title="Out of every 1,000 visits"
+      hint={withChannelWords("What people did on your service pages. Each square is one visit in every 1,000.", ticked)}
+      exportName="services-out-of-1000"
+      csv={csv}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "service", label: "Service", value: service, options: serviceOptions, onChange: setService },
+        channelsControl(ticked, setTicked),
+        { kind: "select", key: "compare", label: "Compare with", value: against, options: [{ value: "before", label: "The 12 months before" }, { value: "nothing", label: "No comparison" }], onChange: setAgainst },
+      ]}
+      message={ticked.length === 0 ? "Tick at least one channel." : anything ? null : "No visits for this choice."}
+    >
+      <HundredGrid groups={groups} cells={1000} nowLabel="12 months" wasLabel={compared ? "The 12 months before" : ""} label="Out of every 1,000 visits" />
+    </MapCard>
+  );
+}
+
+const STRIP_TOP: Record<string, { label: string; read: (s: Service) => number }> = {
+  visits: { label: "Visits", read: (s) => s.visits }, views: { label: "Page views", read: (s) => s.views }, started: { label: "Visits that started here", read: (s) => s.started },
+};
+const STRIP_BOTTOM: Record<string, { label: string; read: (s: Service) => number }> = {
+  events: { label: "Events", read: (s) => s.events }, touched: { label: "Visits with an event", read: (s) => touched(s) }, scrolled: { label: "Scrolled to the bottom", read: (s) => s.scrolled }, views: { label: "Page views", read: (s) => s.views },
+};
+
+function WayThreeStrips() {
+  const [topKey, setTop] = useState("visits");
+  const [bottomKey, setBottom] = useState("events");
+  const [pick, setPick] = useState("top");
+  const [lit, setLit] = useState<string | null>(null);
+  const top = STRIP_TOP[topKey], bottom = STRIP_BOTTOM[bottomKey];
+  const ranked = [...SERVICES].sort((a, b) => (pick === "top" ? top.read(b) - top.read(a) : bottom.read(b) - bottom.read(a)) || b.visits - a.visits);
+  const named = ranked.slice(0, 6);
+  const rest = ranked.slice(6);
+  const topCounts = outOf([...named.map(top.read), add(top.read, rest)], 100);
+  const bottomCounts = outOf([...named.map(bottom.read), add(bottom.read, rest)], 100);
+  const segments = [...named.map((s, at) => ({
+    key: s.key, name: s.name, top: topCounts[at], bottom: bottomCounts[at], colour: stripColour(at),
+    readout: [{ value: fmt(top.read(s)), label: top.label }, { value: `${topCounts[at]} in 100`, label: `Of ${top.label.toLowerCase()}` }, { value: fmt(bottom.read(s)), label: bottom.label }, { value: `${bottomCounts[at]} in 100`, label: `Of ${bottom.label.toLowerCase()}` }],
+  })), {
+    key: "rest", name: `The other ${rest.length} services`, top: topCounts[6], bottom: bottomCounts[6], colour: stripColour(99),
+    readout: [{ value: fmt(add(top.read, rest)), label: top.label }, { value: `${topCounts[6]} in 100`, label: `Of ${top.label.toLowerCase()}` }, { value: fmt(add(bottom.read, rest)), label: bottom.label }, { value: `${bottomCounts[6]} in 100`, label: `Of ${bottom.label.toLowerCase()}` }],
+  }];
+  return (
+    <MapCard
+      title={`${top.label} against ${bottom.label.toLowerCase()}`}
+      hint="Each band joins a service's share of one figure to its share of the other."
+      exportName="services-bands"
+      csv={csv}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "top", label: "Top row", value: topKey, options: Object.entries(STRIP_TOP).map(([value, one]) => ({ value, label: one.label })), onChange: setTop },
+        { kind: "select", key: "bottom", label: "Bottom row", value: bottomKey, options: Object.entries(STRIP_BOTTOM).map(([value, one]) => ({ value, label: one.label })), onChange: setBottom },
+        { kind: "select", key: "pick", label: "Name the six with", value: pick, options: [{ value: "top", label: "The most in the top row" }, { value: "bottom", label: "The most in the bottom row" }], onChange: setPick },
+      ]}
+    >
+      <HundredStrips segments={segments} topLabel={`Out of every 100: ${top.label.toLowerCase()}`} bottomLabel={`Out of every 100: ${bottom.label.toLowerCase()}`} lit={lit} onLit={setLit} />
+    </MapCard>
+  );
+}
+
+const countryName = (code: string) => {
+  if (code === "(other)") return "Others";
+  try { return new Intl.DisplayNames(["en-GB"], { type: "region" }).of(code) ?? code; } catch { return code; }
+};
+const DEVICE_NAMES: Record<string, string> = { desktop: "Desktop", mobile: "Mobile", tablet: "Tablet" };
+const COUNTRY_KEYS = [...(DATA.countries as string[]).slice(0, 6), "(other)"];
+type Square = { visits: number; times: number; visitsBefore: number; timesBefore: number };
+function squareFor(s: Service, across: string, key: string): Square {
+  if (across === "channel") { const c = s.channels[key]; return { visits: c?.v ?? 0, times: c?.e ?? 0, visitsBefore: c?.vb ?? 0, timesBefore: c?.eb ?? 0 }; }
+  if (across === "device") { const d = (s.device as Record<string, { v: number; e: number; vb: number; eb: number }>)[key]; return { visits: d?.v ?? 0, times: d?.e ?? 0, visitsBefore: d?.vb ?? 0, timesBefore: d?.eb ?? 0 }; }
+  const c = (s.countries as unknown as Record<string, { w: number; wb: number }>)[key];
+  return { visits: c?.w ?? 0, times: 0, visitsBefore: c?.wb ?? 0, timesBefore: 0 };
+}
+
+function WayThreeMap() {
+  const [count, setCount] = useState("visits");
+  const [across, setAcross] = useState("channel");
+  const [many, setMany] = useState("8");
+  const [against, setAgainst] = useState("nothing");
+  const inCountry = across === "country";
+  const counting = inCountry ? "views" : count;
+  const keys = across === "channel" ? CHANNELS : across === "device" ? Object.keys(DEVICE_NAMES) : COUNTRY_KEYS;
+  const nameOf = (key: string) => (across === "device" ? DEVICE_NAMES[key] : across === "country" ? countryName(key) : key);
+  const list = many === "all" ? byVisits : byVisits.slice(0, Number(many));
+  const columns: ConversionsMapColumn[] = keys.map((key) => ({ key, name: nameOf(key), visits: add((s) => squareFor(s, across, key).visits, list), visitsBefore: add((s) => squareFor(s, across, key).visitsBefore, list) }));
+  const rows: ConversionsMapRow[] = list.map((s) => ({ eventName: s.key, name: s.name, counted: true, cells: keys.map((key) => squareFor(s, across, key)) }));
+  const valueOf = (cell: Square) => (counting === "events" ? cell.times : counting === "rate" ? rateOf(cell.times, cell.visits) * 100 : cell.visits);
+  const beforeOf = (cell: Square) => (counting === "events" ? cell.timesBefore : counting === "rate" ? rateOf(cell.timesBefore, cell.visitsBefore) * 100 : cell.visitsBefore);
+  const textOf = (value: number) => (counting === "rate" ? value.toFixed(1) : fmt(value));
+  const word = counting === "events" ? "events" : counting === "rate" ? "per 100 visits" : counting === "views" ? "page views" : "visits";
+  const compared = against === "before";
+  const hints: Record<string, string> = {
+    channel: `Visits that started on each service, by channel. Brighter means more of that service's ${counting === "events" ? "events" : "visits"}.`,
+    device: `Visits to each service, by device. Brighter means more of that service's ${counting === "events" ? "events" : "visits"}.`,
+    country: "Page views of each service, by country. Google gives this one in page views only.",
+  };
+  return (
+    <ConversionsMap
+      title={across === "channel" ? "Where each service's visitors come from" : across === "device" ? "What each service's visitors use" : "Where in the world each service is read"}
+      hint={hints[across]}
+      controls={<ExplorerToolbar controls={[
+        { kind: "select", key: "across", label: "Across", value: across, options: [{ value: "channel", label: "Channel" }, { value: "device", label: "Device" }, { value: "country", label: "Country" }], onChange: setAcross },
+        { kind: "select", key: "count", label: "Count", value: counting, options: inCountry ? [{ value: "views", label: "Page views" }] : [{ value: "visits", label: "Visits" }, { value: "events", label: "Events" }, { value: "rate", label: "Events for every 100 visits" }], onChange: setCount },
+        { kind: "select", key: "many", label: "Services", value: many, options: [{ value: "8", label: "Top 8" }, { value: "16", label: "Top 16" }, { value: "all", label: "Every service" }], onChange: setMany },
+        { kind: "select", key: "compare", label: "Compare with", value: against, options: [{ value: "nothing", label: "No comparison" }, { value: "before", label: "The 12 months before" }], onChange: setAgainst },
+      ]} />}
+      columns={columns}
+      rows={rows}
+      count={counting === "events" ? "events" : "visits"}
+      compare={false}
+      newWord="new"
+      words={{
+        rowTotal: (row) => {
+          if (counting === "rate") return `${(rateOf(row.cells.reduce((t, c) => t + c.times, 0), row.cells.reduce((t, c) => t + c.visits, 0)) * 100).toFixed(1)} per 100 visits`;
+          const total = row.cells.reduce((t, c) => t + (counting === "events" ? c.times : c.visits), 0);
+          return `${fmt(total)} ${total === 1 ? word.replace(/s$/, "") : word}`;
+        },
+        hover: (row, column, _value, cell) => `${row.name}, ${column.name}: ${fmt(cell.visits)} ${inCountry ? "page views" : "visits"}${inCountry ? "" : `, ${fmt(cell.times)} events`}`,
+        hoverBefore: () => "",
+        shades: "a smaller to a bigger share of that service's row",
+        empty: "none",
+      }}
+      squareOf={(row, _column, cell) => {
+        const value = valueOf(cell as Square);
+        const whole = counting === "rate" ? Math.max(...row.cells.map((c) => valueOf(c as Square)), 0) : row.cells.reduce((t, c) => t + valueOf(c as Square), 0);
+        const moved = compared ? changeWords(value, beforeOf(cell as Square), "new") : null;
+        const note = compared ? moved ?? undefined : counting === "visits" && cell.times > 0 && !inCountry ? `${cell.times} ${cell.times === 1 ? "event" : "events"}` : undefined;
+        return { text: textOf(value), note, share: whole > 0 ? value / whole : 0 };
+      }}
+      exportName="services-across"
+      csv={csv}
+    />
+  );
+}
+
+export function Way3() {
+  const best = [...SERVICES].filter((s) => s.visits >= 50).sort((a, b) => rateOf(b.events, b.visits) - rateOf(a.events, a.visits))[0];
+  const busiest = byVisits[0];
+  return (
+    <Page description="What people do on your service pages, and where those people come from.">
+      <FigureRow columns={4}>
+        <Figure label="Visits" value={fmt(T.visits)} detail={<span className="flex flex-col"><span className="text-secondary">To your {SERVICES.length} service pages</span><BeforeLine now={T.visits} before={T.visitsBefore} /></span>} />
+        <Figure label="Events" value={fmt(T.events)} detail={<span className="flex flex-col"><span className="text-secondary">{formatPer100(T.events / T.visits)} for every 100 visits.</span><BeforeLine now={T.events} before={T.eventsBefore} /></span>} />
+        <Figure named label="Most visits" value={busiest.name} detail={<span className="flex flex-col"><span className="text-secondary">{Math.round((100 * busiest.visits) / T.visits)} in every 100 visits to your services.</span><span className="text-secondary">{Math.round((100 * busiest.events) / T.events)} in every 100 events.</span></span>} />
+        <Figure named label="Best for events" value={best.name} detail={<span className="flex flex-col"><span className="text-secondary">{formatPer100(rateOf(best.events, best.visits))} events for every 100 visits.</span><span className="text-secondary">Your website gets {formatPer100(T.siteRate)}.</span></span>} />
+      </FigureRow>
+      <WayThreeGrid />
+      <WayThreeStrips />
+      <WayThreeMap />
+      <Table
+        opening="visits"
+        firsts={{ name: "asc", visits: "desc", left: "desc", scroll: "desc", events: "desc" }}
+        columns={[
+          { key: "name", header: "Service", sortable: true, className: CUT_COLUMN.first, cell: (s: Service) => <ServiceCell service={s} /> },
+          { key: "visits", header: "Visits", align: "right", sortable: true, cell: (s: Service) => <FigureCell value={s.visits} /> },
+          { key: "left", header: <span title="Of the visits to this service, how many left straight away">Left straight away</span>, align: "right", sortable: true, cell: (s: Service) => <span className="font-mono text-[12px] text-secondary">{pct(Math.max(0, s.visits - s.engaged) / s.visits)}</span> },
+          { key: "scroll", header: <span title="Of the visits to this service, how many scrolled to the bottom">Scrolled to the bottom</span>, align: "right", sortable: true, cell: (s: Service) => <span className="font-mono text-[12px] text-secondary">{pct(s.scrolled / s.visits)}</span> },
+          { key: "events", header: "Events", align: "right", sortable: true, cell: (s: Service) => <EventsCell service={s} /> },
+        ]}
+      />
+    </Page>
+  );
+}
+
+// ——— Way 4: which services are working ———
+
+const GROUP_NAMES: Record<DotGroupKey, string> = { rightHigh: "Busy and working", rightLow: "Busy, few events", leftHigh: "Small but working", leftLow: "Small and quiet" };
+const GROUP_ORDER: DotGroupKey[] = ["rightHigh", "rightLow", "leftHigh", "leftLow"];
+const SAY: Partial<Record<string, boolean>> = { "/ai-agency/": true, "/venture-studio/": true, "/chatbot-agency/": true, "/ai-consultancy/": true, "/blockchain-development-company/": true, "/web-application-development/": true, "/mobile-app-developers/": true, "/app-developers-london/": true };
+const ACROSS: Record<string, { label: string; busy: number[]; read: (s: Service, ticked: readonly string[]) => number }> = {
+  visits: { label: "Visits", busy: [20, 40, 80, 150], read: (s, ticked) => through(s, ticked).visits },
+  started: { label: "Visits that started here", busy: [20, 40, 80, 150], read: (s, ticked) => (isEvery(ticked) ? s.started : through(s, ticked).visits) },
+  views: { label: "Page views", busy: [100, 200, 400, 800], read: (s) => s.views },
+};
+const UP: Record<string, { label: string; site: number; yes: string; no: string; read: (s: Service, ticked: readonly string[]) => number }> = {
+  events: { label: "Events for every 100 visits", site: T.siteRate * 100, yes: "they get in touch", no: "few get in touch", read: (s, ticked) => { const f = through(s, ticked); return rateOf(f.events, f.visits) * 100; } },
+  stayed: { label: "Stayed for every 100 visits", site: (DATA.site.engaged / DATA.site.visits) * 100, yes: "they stay a while", no: "few stay a while", read: (s, ticked) => { const f = through(s, ticked); return rateOf(f.engaged, f.visits) * 100; } },
+  scrolled: { label: "Scrolled down for every 100 visits", site: (DATA.site.scrolled / DATA.site.visits) * 100, yes: "they scroll down", no: "few scroll down", read: (s) => rateOf(s.scrolled, s.visits) * 100 },
+};
+const WORKING = [{ value: "1", label: "Your website's figure" }, { value: "0.5", label: "Half of that" }, { value: "2", label: "Twice that" }];
+
+const COUNT_READ: Record<string, { label: string; word: string; now: (s: Service) => number; before: (s: Service) => number }> = {
+  visits: { label: "Visits", word: "visits", now: (s) => s.visits, before: (s) => s.visitsBefore },
+  views: { label: "Page views", word: "views", now: (s) => s.views, before: (s) => s.viewsBefore },
+  events: { label: "Events", word: "events", now: (s) => s.events, before: (s) => s.eventsBefore },
+};
+
+function WayFourFlow() {
+  const [service, setService] = useState("all");
+  const [ticked, setTicked] = useState(CHANNELS);
+  const list = service === "all" ? SERVICES : SERVICES.filter((s) => s.key === service);
+  const every = isEvery(ticked);
+  const f = list.map((s) => through(s, ticked));
+  const sum = (pick: (one: (typeof f)[number]) => number) => f.reduce((total, one) => total + pick(one), 0);
+  const steps = every
+    ? [
+      { id: "looked", name: "Looked", visits: sum((x) => x.visits), visitsBefore: sum((x) => x.before) },
+      { id: "stayed", name: "Stayed", visits: sum((x) => x.engaged), visitsBefore: sum((x) => x.engagedBefore) },
+      { id: "scroll", name: "Scrolled down", visits: add((s) => s.scrolled, list), visitsBefore: add((s) => s.scrolledBefore, list) },
+      { id: "touch", name: "Got in touch", visits: add((s) => touched(s), list), visitsBefore: add((s) => touchedBefore(s), list) },
+    ]
+    : [
+      { id: "looked", name: "Started here", visits: sum((x) => x.visits), visitsBefore: sum((x) => x.before) },
+      { id: "stayed", name: "Stayed", visits: sum((x) => x.engaged), visitsBefore: sum((x) => x.engagedBefore) },
+      { id: "touch", name: "Got in touch", visits: Math.min(sum((x) => x.events), sum((x) => x.engaged)), visitsBefore: Math.min(sum((x) => x.eventsBefore), sum((x) => x.engagedBefore)) },
+    ];
+  return (
+    <MapCard
+      title="How far people get"
+      hint={withChannelWords("How many visits reached each step on your service pages.", ticked)}
+      exportName="services-how-far"
+      csv={csv}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "service", label: "Service", value: service, options: serviceOptions, onChange: setService },
+        channelsControl(ticked, setTicked),
+      ]}
+      message={ticked.length === 0 ? "Tick at least one channel." : steps[0].visits === 0 ? "No visits for this choice." : null}
+    >
+      <StepFlowChart
+        steps={steps}
+        words={{
+          everyVisit: "Every visit",
+          ofAll: (percent) => `${percent}% of all visits`,
+          stopped: (visits) => `${visits} stopped here`,
+          visits: (visits) => `${visits} visits`,
+          visitsLabel: "Visits",
+          before: "The 12 months before",
+          ofAllLabel: "Of all visits",
+          stoppedLabel: "Stopped here",
+          ofStepLabel: (name) => `Of visits on ${name}`,
+          route: (from, to) => `${from} to ${to}`,
+          stoppedKey: "Red shows people who stopped here",
+        }}
+        format={(value) => fmt(value)}
+      />
+    </MapCard>
+  );
+}
+
+/** Way 2's chart with its own ticks: the new page's table is Way 4's, which has none. */
+function MonthChart() {
+  const [picked, setPicked] = useState(byVisits.slice(0, 5).map((s) => s.key));
+  return <WayTwoChart picked={picked} setPicked={setPicked} words="Month by month. Tick services in this menu." scores={false} />;
+}
+
+function WayFour({ fresh = false }: { fresh?: boolean }) {
+  const [acrossKey, setAcross] = useState("visits");
+  const [upKey, setUp] = useState("events");
+  const [ticked, setTicked] = useState(CHANNELS);
+  const [busyPick, setBusyPick] = useState("1");
+  const [working, setWorking] = useState("1");
+  const [group, setGroup] = useSiteParam<string>("group", "");
+  const [mapCount, setMapCount] = useState("visits");
+  const [mapColour, setMapColour] = useState("visits");
+  const across = ACROSS[acrossKey], up = UP[upKey];
+  const canChannel = acrossKey !== "views" && upKey !== "scrolled";
+  const channels = canChannel ? ticked : CHANNELS;
+  const busy = across.busy[Number(busyPick)];
+  const split = { x: busy, y: up.site * Number(working) };
+  const xOf = (s: Service) => across.read(s, channels);
+  const yOf = (s: Service) => up.read(s, channels);
+  const groupOf = (s: Service): DotGroupKey => dotGroupOf({ x: xOf(s), y: yOf(s) }, split);
+  const shownServices = SERVICES.filter((s) => xOf(s) > 0);
+  const figures = GROUP_ORDER.map((key) => {
+    const list = shownServices.filter((s) => groupOf(s) === key);
+    return { key, count: list.length, visits: add((s) => xOf(s), list), events: add((s) => through(s, channels).events, list) };
+  });
+  const says: Record<DotGroupKey, string> = {
+    rightHigh: `Plenty of visitors, and ${up.yes}.`,
+    rightLow: `Plenty of visitors, but ${up.no}.`,
+    leftHigh: `Few visitors, but ${up.yes}.`,
+    leftLow: `Few visitors, and ${up.no}.`,
+  };
+  const inGroup = (s: Service) => (!group ? true : GROUP_NAMES[groupOf(s)] === group);
+  const pressed = (name: string) => setGroup(group === name ? "" : name);
+  const count = COUNT_READ[mapCount], colour = COUNT_READ[mapColour];
+  const mapBoxes: PageMapBox[] = SERVICES.filter((s) => count.now(s) > 0 && inGroup(s)).map((s) => ({
+    id: s.key, name: s.name, size: count.now(s), now: colour.now(s), before: colour.before(s), figure: `${fmt(count.now(s))} ${count.word}`,
+    readout: [{ value: fmt(s.visits), label: "Visits" }, { value: fmt(s.visitsBefore), label: "Visits before" }, { value: fmt(s.events), label: "Events" }, { value: fmt(s.eventsBefore), label: "Events before" }],
+  }));
+  return (
+    <Page description={fresh ? "The services people look at, and the ones that get them in touch." : "Which services are working, and which need more people or a better page."}>
+      <FigureRow columns={4}>
+        {figures.map((one) => (
+          <div key={one.key} style={{ display: "contents" }} onClick={(event) => { event.preventDefault(); pressed(GROUP_NAMES[one.key]); }}>
+            <Figure arrow={false} href="#" named={fresh} emphasis={group === GROUP_NAMES[one.key]} label={GROUP_NAMES[one.key]} value={`${one.count} services`} detail={<span className="flex flex-col"><span className="text-secondary">{says[one.key]}</span><span className="font-mono text-[12px] text-secondary">{fmt(one.visits)} {across.label.toLowerCase()} · {fmt(one.events)} events</span></span>} />
+          </div>
+        ))}
+      </FigureRow>
+      {fresh ? <MonthChart /> : null}
+      <MapCard
+        title="Which services are working"
+        hint={withChannelWords("Each dot is a service. Further right is busier. Higher up does better. Along the bottom got none.", channels)}
+        exportName="services-dots"
+        csv={csv}
+        host={HOST}
+        controls={[
+          { kind: "select", key: "across", label: "Across", value: acrossKey, options: Object.entries(ACROSS).map(([value, one]) => ({ value, label: one.label })), onChange: setAcross },
+          { kind: "select", key: "up", label: "Up", value: upKey, options: Object.entries(UP).map(([value, one]) => ({ value, label: one.label })), onChange: setUp },
+          ...(canChannel ? [channelsControl(ticked, setTicked)] : []),
+          { kind: "select", key: "busy", label: "Busy from", value: busyPick, options: across.busy.map((value, at) => ({ value: String(at), label: fmt(value) })), onChange: setBusyPick },
+          { kind: "select", key: "working", label: "Working from", value: working, options: WORKING.map((one) => ({ value: one.value, label: `${one.label} (${(up.site * Number(one.value)).toFixed(1)})` })), onChange: setWorking },
+        ]}
+        message={channels.length === 0 ? "Tick at least one channel." : null}
+      >
+        <DotGroups
+          points={shownServices.map((s) => ({ x: xOf(s), y: yOf(s) > 0 ? Math.round(yOf(s) * 10) / 10 : 0.5, label: s.name, named: Boolean(SAY[s.key]) }))}
+          split={split}
+          names={GROUP_NAMES}
+          xLabel={across.label}
+          yLabel={up.label}
+          readout={{ x: across.label, y: "Per 100 visits" }}
+          height={420}
+        />
+      </MapCard>
+      <MapCard
+        title={group ? `Your services: ${group}` : "All your services"}
+        hint="The bigger the box, the more it had. Orange went up and grey went down."
+        exportName="services-map"
+        csv={csv}
+        host={HOST}
+        controls={[
+          { kind: "select", key: "count", label: "Count", value: mapCount, options: Object.entries(COUNT_READ).map(([value, one]) => ({ value, label: one.label })), onChange: setMapCount },
+          { kind: "select", key: "colour", label: "Colour shows", value: mapColour, options: Object.entries(COUNT_READ).map(([value, one]) => ({ value, label: one.label })), onChange: setMapColour },
+          { kind: "select", key: "group", label: "Group", value: group, options: [{ value: "", label: "Every group" }, ...GROUP_ORDER.map((key) => ({ value: GROUP_NAMES[key], label: GROUP_NAMES[key] }))], onChange: setGroup },
+        ]}
+        message={mapBoxes.length === 0 ? "No services for this choice." : null}
+      >
+        <PageMap boxes={mapBoxes} />
+      </MapCard>
+      {fresh ? null : <WayFourFlow />}
+      <Table
+        opening="visits"
+        firsts={{ name: "asc", group: "asc", visits: "desc", visitsUp: "desc", events: "desc" }}
+        filterBy={inGroup}
+        sortBy={{ group: (s) => GROUP_NAMES[groupOf(s)] }}
+        filters={(
+          <Select aria-label="Group" chip={{ label: "Group", choice: group || null }} value={group} onChange={setGroup}>
+            <option value="">Every group</option>
+            {GROUP_ORDER.map((key) => <option key={key} value={GROUP_NAMES[key]}>{GROUP_NAMES[key]}</option>)}
+          </Select>
+        )}
+        columns={[
+          { key: "name", header: "Service", sortable: true, className: CUT_COLUMN.first, cell: (s: Service) => <ServiceCell service={s} /> },
+          { key: "group", header: "Group", sortable: true, cell: (s: Service) => <TagLabel>{GROUP_NAMES[groupOf(s)]}</TagLabel> },
+          { key: "visits", header: "Visits", align: "right", sortable: true, cell: (s: Service) => <FigureCell value={s.visits} /> },
+          { key: "visitsUp", header: "Up or down", align: "right", sortable: true, cell: (s: Service) => <UpOrDownCell now={s.visits} before={s.visitsBefore} /> },
+          { key: "events", header: "Events", align: "right", sortable: true, cell: (s: Service) => <EventsCell service={s} /> },
+        ]}
+      />
+    </Page>
+  );
+}
+
+export function Way4() { return <WayFour />; }
+
+// ——— The new page so far: Way 4 with Anthony's comments, its words redone in the redone screens' style (7 Nov 2026) ———
+
+const NOUN: Record<string, { each: string; channel: string; one: string }> = {
+  visits: { each: "Visits to each service, each month", channel: "Visits from each channel, each month", one: "Visits to these services, each month" },
+  events: { each: "Events on each service, each month", channel: "Events from each channel, each month", one: "Events on these services, each month" },
+  rate: { each: "Events for every 100 visits, each month", channel: "Events for every 100 visits from each channel", one: "Events for every 100 visits, each month" },
+  views: { each: "Page views of each service, each month", channel: "Page views of each service, each month", one: "Page views of these services, each month" },
+};
+const ARRIVED = "With a channel picked, it counts people who arrived on the service from it.";
+const arrivedWords = (hint: string, ticked: readonly string[]) => (isEvery(ticked) ? hint : `${hint} ${ARRIVED}`);
+
+function NewMonthChart() {
+  const [picked, setPicked] = useState(byVisits.slice(0, 5).map((s) => s.key));
+  const [show, setShow] = useState("visits");
+  const [ticked, setTicked] = useState(CHANNELS);
+  const [split, setSplit] = useState("service");
+  const [against, setAgainst] = useState("nothing");
+  const noChannels = show === "views";
+  const channels = noChannels ? CHANNELS : ticked;
+  const linesBy = noChannels && split === "channel" ? "service" : split;
+  const list = byVisits.filter((s) => picked.includes(s.key));
+  const groups: Array<{ key: string; name: string; colour: string; now: (at: number) => MonthTotals }> = [];
+  if (linesBy === "service") byVisits.forEach((s, at) => { if (picked.includes(s.key)) groups.push({ key: `s${at}`, name: s.name, colour: colourAt(at), now: (index) => monthOf([s], channels, index) }); });
+  if (linesBy === "channel") CHANNELS.forEach((channel, at) => { if (channels.includes(channel)) groups.push({ key: `c${at}`, name: channel, colour: colourAt(at), now: (index) => monthOf(list, [channel], index) }); });
+  if (linesBy === "one") groups.push({ key: "all", name: "These services", colour: CHART_SERIES_ORANGE, now: (index) => monthOf(list, channels, index) });
+  const mainLines: DaysLine[] = groups.map((group) => ({ key: group.key, name: group.name, colour: group.colour, gaps: show === "rate", points: pointsOf(show, NOW_AT, group.now) }));
+  const under: DaysLine[] = against === "before" ? groups.map((group) => ({ key: `${group.key}b`, name: `${group.name}, the 12 months before`, colour: group.colour, dashed: true, under: true, gaps: true, points: pointsOf(show, BEFORE_AT, group.now) })) : [];
+  const website: DaysLine[] = against === "website" ? [{ key: "site", name: "Your whole website", colour: CHART_COMPARATOR_GREY, dashed: true, gaps: show === "rate", points: pointsOf(show, NOW_AT, (index) => siteMonth(channels, index)) }] : [];
+  const title = linesBy === "service" ? NOUN[show].each : linesBy === "channel" ? NOUN[show].channel : NOUN[show].one;
+  const when = against === "before" ? "The last 12 months against the 12 months before." : against === "website" ? "The last 12 months against your whole website." : "The last 12 months, a month at a time.";
+  return (
+    <DaysChart
+      title={title}
+      hint={arrivedWords(when, channels)}
+      exportName="services-each-month"
+      csvDay="Month"
+      host={HOST}
+      step="month"
+      waiting={null}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: show, options: Object.entries(SHOW_LABELS).map(([value, one]) => ({ value, label: one.label })), onChange: setShow },
+        { kind: "ticks", key: "services", label: "Services", everyWord: "Every service", choices: serviceChoices, ticked: picked, onChange: setPicked },
+        ...(noChannels ? [] : [channelsControl(ticked, setTicked)]),
+        { kind: "select", key: "lines", label: "Lines", value: linesBy, options: [{ value: "service", label: "One for each service" }, ...(noChannels ? [] : [{ value: "channel", label: "One for each channel" }]), { value: "one", label: "Just one" }], onChange: setSplit },
+        { kind: "select", key: "against", label: "Compare with", value: against, options: [{ value: "nothing", label: "No comparison" }, { value: "before", label: "The 12 months before" }, { value: "website", label: "Your whole website" }], onChange: setAgainst },
+      ]}
+      nothingTicked={picked.length === 0 ? "Tick a service in the Services menu to draw it here." : channels.length === 0 ? "Tick a channel in the Channels menu to draw it here." : null}
+      lines={[...mainLines, ...under, ...website]}
+      figure={SHOW_LABELS[show].figure}
+      plain
+      empty="Nothing to show for these dates."
+      height={320}
+    />
+  );
+}
+
+const DOING: Record<string, { show: string; title: string; per: string; from: string; did: string; none: string; axis: string }> = {
+  events: { show: "Getting in touch", title: "Which services get visits, and which get people in touch", per: "events for every 100", from: "Events from", did: "people got in touch", none: "Services with no events sit along the bottom.", axis: "Got in touch, for every 100 visits" },
+  stayed: { show: "Staying a while", title: "Which services get visits, and which keep people there", per: "stayed for every 100", from: "Stayed from", did: "people stayed a while", none: "Services where nobody stayed sit along the bottom.", axis: "Stayed a while, for every 100 visits" },
+  scrolled: { show: "Scrolling to the bottom", title: "Which services get visits, and which people read to the end", per: "scrolled to the bottom for every 100", from: "Scrolled from", did: "people scrolled to the bottom", none: "Services nobody read to the end sit along the bottom.", axis: "Scrolled to the bottom, for every 100 visits" },
+};
+/** A figure people can say: whole numbers under 10, then to the nearest 5, then to the nearest 10. */
+const tidy = (value: number) => (value < 10 ? Math.max(1, Math.round(value)) : value < 100 ? Math.max(5, Math.round(value / 5) * 5) : Math.round(value / 10) * 10);
+const middleOf = (values: readonly number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length === 0) return 0;
+  const at = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[at] : (sorted[at - 1] + sorted[at]) / 2;
+};
+const UNIT: Record<string, string> = { visits: "visits", started: "visits", views: "page views" };
+const BOX_WORDS: Record<string, string> = { visits: "visits", views: "page views", events: "events" };
+
+function NewPage() {
+  const [acrossKey, setAcross] = useState("visits");
+  const [upKey, setUp] = useState("events");
+  const [ticked, setTicked] = useState(CHANNELS);
+  const [busyPick, setBusyPick] = useState("1");
+  const [working, setWorking] = useState("1");
+  const [group, setGroup] = useSiteParam<string>("group", "");
+  const [mapCount, setMapCount] = useState("visits");
+  const [mapColour, setMapColour] = useState("visits");
+  const across = ACROSS[acrossKey], up = UP[upKey], doing = DOING[upKey], unit = UNIT[acrossKey];
+  const canChannel = acrossKey !== "views" && upKey !== "scrolled";
+  const channels = canChannel ? ticked : CHANNELS;
+  const xOf = (s: Service) => across.read(s, channels);
+  const yOf = (s: Service) => up.read(s, channels);
+  const shownServices = SERVICES.filter((s) => xOf(s) > 0);
+  // The line across sits at the middle service's figure for these dates, so it means the same on a week as on a year.
+  const middle = tidy(middleOf(shownServices.map(xOf)));
+  const lines = [tidy(middle / 2), middle, tidy(middle * 2)];
+  const busy = lines[Number(busyPick)];
+  const level = up.site * Number(working);
+  const split = { x: busy, y: level };
+  const groupOf = (s: Service): DotGroupKey => dotGroupOf({ x: xOf(s), y: yOf(s) }, split);
+  const level1 = level.toFixed(1);
+  const xWords = (more: boolean) => (more ? `${fmt(busy)} ${unit} or more` : `Under ${fmt(busy)} ${unit}`);
+  const yWords = (more: boolean) => (more ? `${level1} or more ${doing.per}` : `under ${level1} ${doing.per}`);
+  // Named by their figures alone (Anthony, 2026-11-07: "Dont call them busy or quiet jsut show the facts in the numbers").
+  const names: Record<DotGroupKey, string> = {
+    rightHigh: `${xWords(true)}, and ${yWords(true)}`, rightLow: `${xWords(true)}, and ${yWords(false)}`,
+    leftHigh: `${xWords(false)}, and ${yWords(true)}`, leftLow: `${xWords(false)}, and ${yWords(false)}`,
+  };
+  const figures = GROUP_ORDER.map((key) => {
+    const list = shownServices.filter((s) => groupOf(s) === key);
+    return { key, count: list.length, amount: add((s) => xOf(s), list), events: add((s) => through(s, channels).events, list) };
+  });
+  const inGroup = (s: Service) => (!group ? true : groupOf(s) === group);
+  const pressed = (key: string) => setGroup(group === key ? "" : key);
+  const count = COUNT_READ[mapCount], colour = COUNT_READ[mapColour];
+  const mapBoxes: PageMapBox[] = SERVICES.filter((s) => count.now(s) > 0 && inGroup(s)).map((s) => ({
+    id: s.key, name: s.name, size: count.now(s), now: colour.now(s), before: colour.before(s), figure: `${fmt(count.now(s))} ${BOX_WORDS[mapCount]}`,
+    readout: [{ value: fmt(s.visits), label: "Visits" }, { value: fmt(s.visitsBefore), label: "Visits, the 12 months before" }, { value: fmt(s.events), label: "Events" }, { value: fmt(s.eventsBefore), label: "Events, the 12 months before" }],
+  }));
+  const groupOptions = [{ value: "", label: "Every service" }, ...GROUP_ORDER.map((key) => ({ value: key, label: names[key] }))];
+  return (
+    <Page description="The services people look at, and the ones that get them in touch.">
+      <FigureRow columns={4}>
+        {figures.map((one) => (
+          <div key={one.key} style={{ display: "contents" }} onClick={(event) => { event.preventDefault(); pressed(one.key); }}>
+            <Figure arrow={false} href="#" named emphasis={group === one.key} label={names[one.key]} value={`${one.count} ${one.count === 1 ? "service" : "services"}`} detail={<span className="text-secondary">{fmt(one.amount)} {unit} and {fmt(one.events)} events.</span>} />
+          </div>
+        ))}
+      </FigureRow>
+      <NewMonthChart />
+      <MapCard
+        title={doing.title}
+        hint={arrivedWords(`Each dot is a service. The further right, the more ${unit} it had. The higher up, the more ${doing.did} for every 100 visits. ${doing.none}`, channels)}
+        exportName="services-dots"
+        csv={csv}
+        host={HOST}
+        controls={[
+          { kind: "select", key: "across", label: "Count", value: acrossKey, options: Object.entries(ACROSS).map(([value, one]) => ({ value, label: one.label })), onChange: setAcross },
+          { kind: "select", key: "up", label: "Show", value: upKey, options: Object.entries(DOING).map(([value, one]) => ({ value, label: one.show })), onChange: setUp },
+          ...(canChannel ? [channelsControl(ticked, setTicked)] : []),
+          { kind: "select", key: "busy", label: acrossKey === "views" ? "Page views from" : "Visits from", value: busyPick, options: [{ value: "0", label: `${fmt(lines[0])}, half your middle service` }, { value: "1", label: `${fmt(lines[1])}, your middle service` }, { value: "2", label: `${fmt(lines[2])}, twice your middle service` }], onChange: setBusyPick },
+          { kind: "select", key: "working", label: doing.from, value: working, options: [{ value: "1", label: `${up.site.toFixed(1)}, your whole website` }, { value: "0.5", label: `${(up.site / 2).toFixed(1)}, half your website` }, { value: "2", label: `${(up.site * 2).toFixed(1)}, twice your website` }], onChange: setWorking },
+        ]}
+        message={channels.length === 0 ? "Tick a channel in the Channels menu to draw it here." : null}
+      >
+        <DotGroups
+          points={shownServices.map((s) => ({ x: xOf(s), y: yOf(s) > 0 ? Math.round(yOf(s) * 10) / 10 : 0.5, label: s.name, named: Boolean(SAY[s.key]) }))}
+          split={split}
+          names={names}
+          xLabel={across.label}
+          yLabel={doing.axis}
+          readout={{ x: across.label, y: "For every 100 visits" }}
+          height={420}
+        />
+      </MapCard>
+      <MapCard
+        title="All your services"
+        hint={`Bigger boxes had more ${BOX_WORDS[mapCount]}. Orange boxes got more ${BOX_WORDS[mapColour]} than in the 12 months before, and grey boxes got fewer.`}
+        exportName="services-map"
+        csv={csv}
+        host={HOST}
+        controls={[
+          { kind: "select", key: "count", label: "Count", value: mapCount, options: Object.entries(COUNT_READ).map(([value, one]) => ({ value, label: one.label })), onChange: setMapCount },
+          { kind: "select", key: "colour", label: "Colour shows", value: mapColour, options: Object.entries(COUNT_READ).map(([value, one]) => ({ value, label: one.label })), onChange: setMapColour },
+          { kind: "select", key: "group", label: "Show", value: group, options: groupOptions, onChange: setGroup },
+        ]}
+        message={mapBoxes.length === 0 ? "No services to show for these dates." : null}
+      >
+        <PageMap boxes={mapBoxes} />
+      </MapCard>
+      <Table
+        opening="visits"
+        firsts={{ name: "asc", visits: "desc", visitsUp: "desc", events: "desc" }}
+        filterBy={inGroup}
+        filters={(
+          <Select aria-label="Show" chip={{ label: "Show", choice: group ? names[group as DotGroupKey] : null }} value={group} onChange={setGroup}>
+            {groupOptions.map((one) => <option key={one.value} value={one.value}>{one.label}</option>)}
+          </Select>
+        )}
+        columns={[
+          { key: "name", header: "Service", sortable: true, className: CUT_COLUMN.first, cell: (s: Service) => <ServiceCell service={s} /> },
+          { key: "visits", header: "Visits", align: "right", sortable: true, cell: (s: Service) => <FigureCell value={s.visits} /> },
+          { key: "visitsUp", header: "Up or down", align: "right", sortable: true, cell: (s: Service) => <UpOrDownCell now={s.visits} before={s.visitsBefore} /> },
+          { key: "events", header: "Events", align: "right", sortable: true, cell: (s: Service) => <EventsCell service={s} /> },
+        ]}
+      />
+    </Page>
+  );
+}
+
+/** The new page so far: Way 4 with Anthony's comments on it (7 Nov 2026). */
+export function New() { return <NewPage />; }
+
+export const WAYS = { Way1, Way2, Way3, Way4, New };

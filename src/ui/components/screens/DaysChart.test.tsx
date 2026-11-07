@@ -40,6 +40,21 @@ describe("a chart's rows", () => {
   test("a line laid under makes no rows of its own", () => {
     expect(daysChartRows("day", [line("was", [["2026-09-01", 1]], { under: true })])).toEqual([]);
   });
+
+  test("a figure for every 100 adds up both sides of each step, never averaged, and has none where there's nothing to divide by", () => {
+    const per = (points: Array<[string, number, string?]>) => line("x", points).points;
+    const rows = daysChartRows("day", [line("rate", [["2026-10-05", 2, "2026-10-11"], ["2026-10-12", 0]], { per: per([["2026-10-05", 80, "2026-10-11"], ["2026-10-12", 0]]) })]);
+    // The week held whole stays 2.5 for every 100 on a daily chart: a rate isn't a sum to spread over seven days.
+    expect(rows.map((row) => row.rate)).toEqual([2.5, null]);
+    const months = daysChartRows("month", [line("rate", [["2026-10-01", 1], ["2026-10-02", 2]], { per: per([["2026-10-01", 40], ["2026-10-02", 60]]) })]);
+    expect(months[0].rate).toBe(3);
+  });
+
+  test("a figure for every 100 laid under works out its own steps the same way", () => {
+    const per = (points: Array<[string, number]>) => line("x", points).points;
+    const rows = daysChartRows("day", [line("now", [["2026-10-01", 1], ["2026-10-02", 1]]), line("was", [["2026-09-01", 1], ["2026-09-02", 1]], { under: true, per: per([["2026-09-01", 50], ["2026-09-02", 0]]) })]);
+    expect(rows.map((row) => row.was)).toEqual([2, null]);
+  });
 });
 
 describe("Up or down", () => {

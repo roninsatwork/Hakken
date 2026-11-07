@@ -16,6 +16,9 @@ import { beforeClicksOf, readList as readBingList, shownRows as shownBingRows } 
 import { readClarityPeriod, type ClarityPeriodRead } from "./clarity";
 import { classifierFor } from "./googleAnalyticsChannelReads";
 import { productChart } from "./googleAnalyticsProductReads";
+import { readServices } from "./googleAnalyticsServiceReads";
+import { servicesOpeningSplit } from "./assistantServiceReads";
+import { perHundredOf } from "./utils/serviceGroups";
 import { findPage, readPageStoryPart } from "./googleAnalyticsPageReads";
 import { addUpBy, unpackTotals } from "./utils/clarityPacks";
 import { CLARITY_FEW_VISITS, measuresOf, type ClarityTotals, type ClarityTotalsRow } from "./utils/clarityRows";
@@ -100,6 +103,7 @@ export async function groupsChartOf(
   if (ask.by === "weekday") return { ok: false, problem: "The day of the week is drawn for one page: name the page's address." };
   if (ask.by === "age" || ask.by === "gender") return await visitorGroupsChartOf(ctx, hold, ask, site);
   if (ask.by === "product") return await productsChartOf(ctx, hold, ask);
+  if (ask.by === "service") return await servicesChartOf(ctx, companyId, hold, ask);
   const measure: AnalyticsChartMeasure = (ANALYTICS_CHART_MEASURES as readonly string[]).includes(ask.measure) ? ask.measure as AnalyticsChartMeasure : "visits";
   if (ask.by === "query") return { ok: false, problem: "Searches come from Search Console: ask with lookup search_console." };
   if (ask.by === "source" || ask.by === "browser") return { ok: false, problem: "Sources and browsers are Clarity's: ask with lookup clarity." };
@@ -241,6 +245,33 @@ async function productsChartOf(ctx: Reader, hold: Hold, ask: GroupsAsk): Promise
     ok: true,
     chart: { look: "analyticsGroups", kind: "bars", by: "product", measure, website: hold.host, period: ask.period, groups, link: `/app/analytics/${hold._id}/products?period=${ask.period}&chartShow=${view}` },
   };
+}
+
+/** Services a chart names at most, the most first, as a chart of products does. */
+const MOST_SERVICES_CHARTED = 10;
+
+/**
+ * A service business's services, as Services draws them (services-new-page-plan-2026-11-07.md, step 7): each service's visits or
+ * events beside the dates before, or its events for every 100 visits among those with the middle service's visits or more, from the
+ * page's own read (`readServices`), so a chart's figures are the page's. Bars alone; never money, never anything bought.
+ */
+async function servicesChartOf(ctx: Reader, companyId: Id<"companies">, hold: Hold, ask: GroupsAsk): Promise<Built> {
+  if (ask.kind !== "bars") return { ok: false, problem: "A chart of services is drawn as bars." };
+  const answer = await readServices({ db: ctx.db, companyId }, { siteId: hold._id, period: ask.period, device: "" });
+  if (answer.state === "noServices") return { ok: false, problem: `${hold.host} has no service pages: none of its Classifications has the Service type.` };
+  if (answer.state !== "ready") return { ok: false, problem: `${hold.host}'s pages for those dates aren't collected yet.` };
+  const measure: "visits" | "conversions" | "conversionRate" = ask.measure === "conversions" || ask.measure === "conversionRate" ? ask.measure : "visits";
+  const middle = servicesOpeningSplit(answer).split.x;
+  const listed = answer.services.filter((one) => one.now.visits > 0 && (measure !== "conversionRate" || one.now.visits >= middle));
+  const valueOf = (one: (typeof listed)[number]) => (measure === "visits" ? one.now.visits : measure === "conversions" ? one.now.events : perHundredOf(one.now.events, one.now.visits));
+  const groups = [...listed].sort((left, right) => valueOf(right) - valueOf(left) || right.now.visits - left.now.visits).slice(0, MOST_SERVICES_CHARTED).map((one) => ({
+    name: one.name,
+    value: valueOf(one),
+    ...(measure !== "conversionRate" && answer.hasBefore ? { before: measure === "visits" ? one.before.visits : one.before.events } : {}),
+    visits: one.now.visits,
+  }));
+  if (groups.length === 0) return { ok: false, problem: "No service had visits in those dates." };
+  return { ok: true, chart: { look: "analyticsGroups", kind: "bars", by: "service", measure, website: hold.host, period: ask.period, groups, link: `/app/analytics/${hold._id}/services?period=${ask.period}` } };
 }
 
 /** Bing rows a chart names at most, the busiest by clicks and by times shown: every other row is counted, unnamed. */

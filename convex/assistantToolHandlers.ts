@@ -1,7 +1,7 @@
 import type { FunctionArgs } from "convex/server";
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
-import { ANALYTICS_SCREENS, LIST_ORDER_NAMES, analyticsPartsOf, type AllPagesOrder, type CampaignOrder, type ChannelOrder, type FunnelOrder } from "./utils/analyticsScreens";
+import { ANALYTICS_SCREENS, LIST_ORDER_NAMES, analyticsPartsOf, type AllPagesOrder, type CampaignOrder, type ChannelOrder, type FunnelOrder, type ServiceOrder } from "./utils/analyticsScreens";
 import { PAGE_MOVES, type PageMove } from "./utils/pageMoves";
 import { BING_SCREENS } from "./utils/bingScreens";
 import { SEARCH_CONSOLE_SCREENS } from "./utils/searchConsoleAskScreens";
@@ -159,7 +159,7 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       ...(country ? { country: country.toLowerCase() } : {}),
       ...(key ? { key } : {}),
       ...(search ? { search } : {}),
-      ...((LIST_ORDER_NAMES as readonly string[]).includes(order ?? "") ? { order: order as AllPagesOrder | FunnelOrder | CampaignOrder | ChannelOrder } : {}),
+      ...((LIST_ORDER_NAMES as readonly string[]).includes(order ?? "") ? { order: order as AllPagesOrder | FunnelOrder | CampaignOrder | ChannelOrder | ServiceOrder } : {}),
       ...(classification ? { classification } : {}),
       ...((PAGE_MOVES as readonly string[]).includes(move ?? "") ? { move: move as PageMove } : {}),
       ...(input.args.everyPage === true ? { everyPage: true } : {}),

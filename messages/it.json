@@ -8345,13 +8345,19 @@
             "product": "prodotto",
             "age": "età",
             "gender": "genere",
-            "weekday": "giorno della settimana"
+            "weekday": "giorno della settimana",
+            "service": "servizio"
           },
           "products": {
             "itemsBought": "I prodotti più venduti",
             "itemsLeft": "I prodotti lasciati più spesso nel carrello",
             "sellingMore": "Prodotti che vendono di più",
             "sellingLess": "Prodotti che vendono di meno"
+          },
+          "services": {
+            "visits": "Visite a ogni servizio",
+            "events": "Eventi su ogni servizio",
+            "rate": "Eventi ogni 100 visite, per servizio"
           },
           "did": {
             "purchase": "hanno fatto un acquisto",
@@ -10599,6 +10605,7 @@
       "ageGroups": "{count, plural, =1 {# fascia d'età} other {# fasce d'età}}",
       "interests": "{count, plural, =1 {# interesse} other {# interessi}}",
       "products": "{count, plural, =1 {# prodotto} other {# prodotti}}",
+      "services": "{count, plural, =1 {# servizio} other {# servizi}}",
       "categories": "{count, plural, =1 {# categoria} other {# categorie}}",
       "stories": "{count, plural, =1 {# storia} other {# storie}}",
       "storiesSoFar": "{count, plural, other {#+ storie}}",
@@ -10918,7 +10925,8 @@
         "eventsLost": "eventi persi",
         "wentOnPercent": "è andato al passaggio successivo",
         "timesDone": "volte",
-        "addedPerHundred": "aggiunte al carrello ogni 100 visite"
+        "addedPerHundred": "aggiunte al carrello ogni 100 visite",
+        "servicesLookedAt": "servizi che le persone hanno guardato"
       }
     },
     "sidePanel": {
@@ -16373,6 +16381,7 @@
       "events": "Eventi",
       "conversions": "Conversioni",
       "products": "Prodotti",
+      "services": "Servizi",
       "visitors": "Visite",
       "trackingHealth": "Salute del tracciamento",
       "connection": "Connessione"
@@ -18399,6 +18408,231 @@
         "eyeOthers": "Gli altri prodotti in elenco"
       }
     },
+    "services": {
+      "title": "Servizi",
+      "description": "I servizi che le persone guardano e quelli che le portano a contattarti.",
+      "noServices": "{host} non ha ancora pagine di servizi. Ordina le tue pagine in una classificazione di tipo Servizio e appariranno qui.",
+      "collecting": "Queste date sono ancora in raccolta. Arrivano con la prossima raccolta.",
+      "everyDevice": "Le pagine di quel dispositivo non sono ancora raccolte, quindi qui vedi tutti i dispositivi.",
+      "leftOut": "Qui vedi i tuoi {most} servizi più visitati. {count, plural, =1 {Uno è escluso} other {# sono esclusi}}.",
+      "boxes": {
+        "value": "{count, plural, =1 {# servizio} other {# servizi}}",
+        "detail": {
+          "visits": "{amount, plural, =1 {# visita} other {# visite}} e {events, plural, =1 {# evento} other {# eventi}}.",
+          "views": "{amount, plural, =1 {# visualizzazione} other {# visualizzazioni}} e {events, plural, =1 {# evento} other {# eventi}}."
+        }
+      },
+      "groups": {
+        "name": "{across}, e {up}",
+        "upMore": "{rate} o più {per}",
+        "upFewer": "meno di {rate} {per}",
+        "units": {
+          "visits": "visite",
+          "started": "visite",
+          "views": "visualizzazioni"
+        },
+        "per": {
+          "events": "eventi ogni 100",
+          "stayed": "rimasti ogni 100",
+          "scrolled": "arrivati in fondo ogni 100"
+        },
+        "across": {
+          "visits": {
+            "more": "{count, plural, =1 {# visita} other {# visite}} o più",
+            "fewer": "Meno di {count, plural, =1 {# visita} other {# visite}}"
+          },
+          "views": {
+            "more": "{count, plural, =1 {# visualizzazione} other {# visualizzazioni}} o più",
+            "fewer": "Meno di {count, plural, =1 {# visualizzazione} other {# visualizzazioni}}"
+          }
+        }
+      },
+      "months": {
+        "title": {
+          "visits": {
+            "service": "Visite a ogni servizio, {each}",
+            "channel": "Visite da ogni canale, {each}",
+            "one": "Visite a questi servizi, {each}"
+          },
+          "events": {
+            "service": "Eventi su ogni servizio, {each}",
+            "channel": "Eventi da ogni canale, {each}",
+            "one": "Eventi su questi servizi, {each}"
+          },
+          "rate": {
+            "service": "Eventi ogni 100 visite, {each}",
+            "channel": "Eventi ogni 100 visite da ogni canale, {each}",
+            "one": "Eventi ogni 100 visite, {each}"
+          },
+          "views": {
+            "service": "Visualizzazioni di ogni servizio, {each}",
+            "channel": "Visualizzazioni di ogni servizio, {each}",
+            "one": "Visualizzazioni di questi servizi, {each}"
+          }
+        },
+        "each": {
+          "day": "ogni giorno",
+          "week": "ogni settimana",
+          "month": "ogni mese"
+        },
+        "hint": "{now}.",
+        "hintAgainst": "{now} rispetto a {before}.",
+        "hintWebsite": "{now} rispetto a tutto il sito.",
+        "arrived": "Con un canale scelto, conta le persone arrivate sul servizio da quel canale.",
+        "noChannels": "I canali si vedono solo per tutti i dispositivi.",
+        "leftOut": "Mostra i tuoi {most} servizi spuntati più visitati.",
+        "showLabel": "Mostra",
+        "show": {
+          "visits": "Visite",
+          "events": "Eventi",
+          "rate": "Eventi ogni 100 visite",
+          "views": "Visualizzazioni"
+        },
+        "figure": {
+          "visits": "Visite",
+          "events": "Eventi",
+          "rate": "Ogni 100 visite",
+          "views": "Visualizzazioni"
+        },
+        "services": "Servizi",
+        "everyService": "Tutti i servizi",
+        "channels": "Canali",
+        "everyChannel": "Tutti i canali",
+        "linesLabel": "Linee",
+        "lines": {
+          "service": "Una per servizio",
+          "channel": "Una per canale",
+          "one": "Una sola"
+        },
+        "compareWith": "Confronta con",
+        "nothing": "Nessun confronto",
+        "website": "Tutto il sito",
+        "these": "Questi servizi",
+        "lineBefore": "{name}: {before}",
+        "nothingServices": "Spunta un servizio nel menu Servizi per vederlo qui.",
+        "nothingChannels": "Spunta un canale nel menu Canali per vederlo qui.",
+        "empty": "Niente da mostrare per queste date.",
+        "collecting": "Ancora in raccolta.",
+        "csvDay": "Giorno"
+      },
+      "dots": {
+        "title": {
+          "events": "Quali servizi ricevono visite e quali portano a contattarti",
+          "stayed": "Quali servizi ricevono visite e quali trattengono le persone",
+          "scrolled": "Quali servizi ricevono visite e quali vengono letti fino in fondo"
+        },
+        "hint": "Ogni punto è un servizio. Più è a destra, più {unit} ha avuto. Più è in alto, più {did} ogni 100 visite.",
+        "did": {
+          "events": "persone ti hanno contattato",
+          "stayed": "persone sono rimaste un po'",
+          "scrolled": "persone sono arrivate in fondo"
+        },
+        "none": {
+          "events": "I servizi senza eventi stanno in basso.",
+          "stayed": "I servizi dove nessuno è rimasto stanno in basso.",
+          "scrolled": "I servizi che nessuno ha letto fino in fondo stanno in basso."
+        },
+        "countLabel": "Conta",
+        "count": {
+          "visits": "Visite",
+          "started": "Visite iniziate qui",
+          "views": "Visualizzazioni"
+        },
+        "showLabel": "Mostra",
+        "show": {
+          "events": "Contatti",
+          "stayed": "Permanenza",
+          "scrolled": "Lettura fino in fondo"
+        },
+        "acrossLabel": {
+          "visits": "Visite da",
+          "started": "Visite da",
+          "views": "Visualizzazioni da"
+        },
+        "across": {
+          "half": "{count}, metà del servizio di mezzo",
+          "middle": "{count}, il servizio di mezzo",
+          "twice": "{count}, il doppio del servizio di mezzo"
+        },
+        "upLabel": {
+          "events": "Eventi da",
+          "stayed": "Rimasti da",
+          "scrolled": "Arrivati in fondo da"
+        },
+        "up": {
+          "half": "{rate}, metà del sito",
+          "middle": "{rate}, tutto il sito",
+          "twice": "{rate}, il doppio del sito"
+        },
+        "axis": {
+          "events": "Contatti ogni 100 visite",
+          "stayed": "Rimasti ogni 100 visite",
+          "scrolled": "Arrivati in fondo ogni 100 visite"
+        },
+        "readoutUp": "Ogni 100 visite",
+        "empty": "Nessun servizio ha avuto visite in queste date."
+      },
+      "map": {
+        "title": "Tutti i tuoi servizi",
+        "hint": {
+          "visits": "I riquadri più grandi hanno avuto più visite.",
+          "views": "I riquadri più grandi hanno avuto più visualizzazioni.",
+          "events": "I riquadri più grandi hanno avuto più eventi."
+        },
+        "colourHint": {
+          "visits": "I riquadri arancioni hanno avuto più visite rispetto a {before}, quelli grigi meno.",
+          "views": "I riquadri arancioni hanno avuto più visualizzazioni rispetto a {before}, quelli grigi meno.",
+          "events": "I riquadri arancioni hanno avuto più eventi rispetto a {before}, quelli grigi meno."
+        },
+        "count": "Conta",
+        "colour": "Il colore mostra",
+        "show": "Mostra",
+        "everyService": "Tutti i servizi",
+        "measure": {
+          "visits": "Visite",
+          "views": "Visualizzazioni",
+          "events": "Eventi"
+        },
+        "figure": {
+          "visits": "{count, plural, =1 {# visita} other {# visite}}",
+          "views": "{count, plural, =1 {# visualizzazione} other {# visualizzazioni}}",
+          "events": "{count, plural, =1 {# evento} other {# eventi}}"
+        },
+        "in": {
+          "visits": "Visite in {when}",
+          "events": "Eventi in {when}"
+        },
+        "leftOut": "Esclude {count, plural, =1 {un servizio più piccolo} other {# servizi più piccoli}}. Sono nella tabella.",
+        "empty": "Nessun servizio da mostrare per queste date.",
+        "upOrDown": "Su o giù",
+        "same": "Uguale"
+      },
+      "table": {
+        "service": "Servizio",
+        "visits": "Visite",
+        "upOrDown": "Su o giù",
+        "events": "Eventi",
+        "find": "Trova un servizio…",
+        "showLabel": "Mostra",
+        "classificationLabel": "Classificazione",
+        "everyClassification": "Tutte le classificazioni",
+        "empty": "Nessun servizio in queste date.",
+        "noMatch": "Nessun risultato per questa ricerca.",
+        "download": "Scarica CSV",
+        "downloading": "Download in corso…",
+        "csv": {
+          "service": "Servizio",
+          "address": "Indirizzo",
+          "group": "Gruppo",
+          "visits": "Visite",
+          "visitsBefore": "Visite prima",
+          "events": "Eventi",
+          "eventsBefore": "Eventi prima",
+          "per100": "Eventi ogni 100 visite",
+          "started": "Visite iniziate qui"
+        }
+      }
+    },
     "visitors": {
       "title": "Visite",
       "description": "Le tue visite, nuove e di ritorno. Chi è venuto, cosa ha usato e le pagine che ha guardato.",
@@ -18527,7 +18761,12 @@
       "datesBefore": "Le date precedenti",
       "usualDay": "Un giorno normale",
       "visitsThatDidIt": "Le visite che l'hanno fatto",
-      "addedToBasket": "Aggiunto al carrello"
+      "addedToBasket": "Aggiunto al carrello",
+      "allServices": "Tutti i tuoi servizi",
+      "elsewhere": "Pagine che non sono servizi",
+      "serviceVisitsShare": "la sua quota di tutte le visite ai servizi",
+      "noEvents": "Servizi senza eventi",
+      "startedOnAService": "Tutte le visite iniziate su un servizio"
     },
     "landingPage": {
       "back": "Pagine di destinazione",
@@ -19123,6 +19362,9 @@
         "bestSeller": "{text} è il più venduto: {a} comprati.",
         "seeProduct": "Guarda la pagina di {text}: messo spesso nel carrello, comprato di rado.",
         "whyUnfinished": "Scopri perché tanti pagamenti non vengono completati: provane uno tu, anche da telefono."
+      },
+      "services": {
+        "none": "Nessuno ha guardato una pagina di servizio in queste date."
       },
       "visitors": {
         "none": "Nessuna visita in queste date.",

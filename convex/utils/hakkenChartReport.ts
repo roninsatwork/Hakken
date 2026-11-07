@@ -52,7 +52,7 @@ export function chartReportFigures(points: readonly Day[], before: readonly Day[
 const BY_WORDS: Record<GroupChartBy, string> = {
   channel: "channel", kind: "classification", device: "device", country: "country", page: "landing page", hour: "hour", query: "search",
   source: "source", browser: "browser", website: "website", position: "Google position", product: "product",
-  age: "age", gender: "gender", weekday: "day of the week",
+  age: "age", gender: "gender", weekday: "day of the week", service: "service",
 };
 /** Bing's, Clarity's and Visibility's measures in plain words, for the tasks page. */
 const MEASURE_WORDS: Record<string, string> = {
@@ -74,6 +74,7 @@ function groupsWhat(report: Pick<ChartReportSpec, "measure" | "event" | "source"
     return `${report.kind === "pie" ? "a pie" : report.kind === "stacked" ? "stacked bars" : "bars"} of ${what} by ${of}, from ${section}`;
   }
   if (report.by === "product") return `bars of ${MEASURE_WORDS[report.measure] ?? report.measure}, from Google Analytics`;
+  if (report.by === "service") return `bars of each service's ${report.measure === "visits" ? "visits" : report.measure === "conversions" ? "events" : "events for every 100 visits"}, from Google Analytics`;
   const did = report.event === "purchase" ? "made a purchase" : `did ${(report.event ?? "").replace(/_/g, " ")}`;
   if (report.kind === "grid") return `a grid of the share of visits that did each step, by ${of}`;
   if (report.kind === "scatter") return `a scatter of visits against the share that ${did}, by ${of}`;
