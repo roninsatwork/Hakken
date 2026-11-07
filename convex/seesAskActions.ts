@@ -16,10 +16,10 @@ import { ANALYTICS_READ } from "./utils/agentTools";
 import { findingWords, type Finding } from "./utils/sees/findings";
 import { judgeFindings, judgeLeftOff, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
 import {
-  JUDGE_FORMAT, MOST_COVERED, SEES_FINDINGS_FORMAT, judgeFrom, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
+  JUDGE_FORMAT, MOST_COVERED, SEES_CODE_FIRST_FORMAT, SEES_FINDINGS_FORMAT, judgeFrom, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
-import { briefOf, pageFacts } from "./utils/sees/pageData";
+import { CODE_FIRST_BRIEF, CODE_FIRST_ROWS, briefOf, findingNames, findingsBriefOf, pageFacts } from "./utils/sees/pageData";
 import { pageFindings } from "./utils/sees/pageFindings";
 import { seesScreenFor } from "./utils/sees/screens";
 import type { SeesStageNote } from "./utils/sees/stages";
@@ -143,8 +143,13 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   const prompt = JSON.stringify({
     website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period || "as the page shows them", trackingFaults,
     ...(findings.length > 0 ? { findings: findingsForWriter } : {}),
-    // With code's findings, a short brief of the page; without, all it shows (page-screen-redo-plan-2026-11-03.md, step 6).
-    ...(pageRead ? { pageFigures: findings.length > 0 ? briefOf(pageRead.shown, BRIEF_ROWS) : pageRead.shown } : { facts: factLines(facts) }),
+    // With code's findings, a short brief of the page; without, all it shows (page-screen-redo-plan-2026-11-03.md, step 6). On a
+    // page trying the code-first brief, only the rows the findings name and a few for the setting (eye-code-first-brief-plan).
+    ...(pageRead ? {
+      pageFigures: findings.length === 0 ? pageRead.shown
+        : CODE_FIRST_BRIEF.has(page.screen) ? findingsBriefOf(pageRead.shown, findingNames(findings), CODE_FIRST_ROWS)
+          : briefOf(pageRead.shown, BRIEF_ROWS),
+    } : { facts: factLines(facts) }),
     links,
   });
   // With code's findings in hand the writer writes them up from them and the page's own figures, and reads no screen:
@@ -152,7 +157,10 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   // "how can it be more expensive as we are doing more in code now"). Without findings it still reads for itself.
   const readsScreens = reads && findings.length === 0;
   const never = screen?.never?.length ? `On this page never talk about ${screen.never.join("; ")}.` : "";
-  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, pageRead ? SEES_PAGE_FORMAT : "", page.shop && analytics ? SEES_SHOP_FORMAT : "", never, readsScreens ? SEES_READS_FORMAT : "", findings.length > 0 ? SEES_FINDINGS_FORMAT : ""].filter(Boolean).join("\n\n");
+  // A page trying the code-first brief: its first findings in order, and a unit typed after a key taken off, so fewer go back.
+  const codeFirst = CODE_FIRST_BRIEF.has(page.screen) && findings.length > 0;
+  const tidy = (answer: unknown) => (codeFirst ? withoutTypedUnits(answer) : answer);
+  const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, pageRead ? SEES_PAGE_FORMAT : "", page.shop && analytics ? SEES_SHOP_FORMAT : "", never, readsScreens ? SEES_READS_FORMAT : "", findings.length > 0 ? SEES_FINDINGS_FORMAT : "", codeFirst ? SEES_CODE_FIRST_FORMAT : ""].filter(Boolean).join("\n\n");
   // Jev's check on the words, once the Editor's code has passed them: a guess stated as fact, a step that fits any website.
   const figuresForJev = [...facts, ...findingFacts].slice(0, 60).map((fact) => ({ what: fact.label, value: fact.value }));
   const wordsWhy = (checked: Extract<SeesVerdict, { ok: true }>) => judgeWords(ctx, judgeRun, prepared, page.host, checked.says, checked.steps.map((step) => step.words), figuresForJev);
@@ -178,14 +186,14 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
       onStage: note,
       check: async (answer, found) => {
         await note("checking");
-        const checked = seesFrom(answer, withRead(found), page.links, { ...noTracking, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) });
+        const checked = seesFrom(tidy(answer), withRead(found), page.links, { ...noTracking, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) });
         if (!checked.ok) return checked.why;
         if (prepared.model) await note("guessing");
         return await wordsWhy(checked);
       },
     });
     named = withRead(factsByKey(written.found));
-    raw = written.answer;
+    raw = tidy(written.answer);
     for (const read of written.reads) lines.push({ heading: "Read", detail: readLine(read), failed: Boolean(read.problem) });
     // 3. The Editor's check ran inside the conversation (S5, S7): what failed went back once, with every fault. After
     // that a sentence with a fault is left off and the rest stand, and words that still leave a finding out stand
@@ -200,7 +208,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   } else {
     const answered = (value: unknown) => value !== null && typeof value === "object" && "says" in value;
     await note("writing");
-    raw = await ask(ctx, run, writer, who, system, prompt, undefined, answered);
+    raw = tidy(await ask(ctx, run, writer, who, system, prompt, undefined, answered));
     // 3. The Editor checks every number and every word (S5, S7): what fails goes back once, with why, as it does for a
     // writer that reads (sees-every-page-plan-2026-10-31.md: a page's words were left to the rule's after one slip).
     await note("checking");
@@ -208,7 +216,7 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     if (!verdict.ok) {
       lines.push({ heading: "The Editor", detail: `Sent back once: ${verdict.why}`.slice(0, 900) });
       await note("rewriting");
-      raw = await ask(ctx, run, writer, who, system, `${prompt}\n\nYour last answer was sent back by the Editor: ${verdict.why} Write it again, keeping every rule.`, undefined, answered);
+      raw = tidy(await ask(ctx, run, writer, who, system, `${prompt}\n\nYour last answer was sent back by the Editor: ${verdict.why} Write it again, keeping every rule.`, undefined, answered));
       await note("checking");
       // After the rewrite a sentence with a fault is left off and the rest stand; words that still leave a finding out
       // stand without it, rather than leave the reader nothing.
@@ -242,8 +250,8 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     await note("rewriting");
     const again = await ask(ctx, run, writer, who, system, `${prompt}\n\nOnly this stood of your last answer: ${JSON.stringify(thin.says)}.${gone.length > 0 ? ` These were left off, as they said why something happened or would fit any website: ${JSON.stringify(gone)}.` : ""} Write it again. Say the first findings each in a short sentence of its own, the most useful first, with at most two figures in each. Say what the figures show, and never why it happened. Keep every rule.`, undefined, (value: unknown) => value !== null && typeof value === "object" && "says" in value);
     await note("checking");
-    const strict = seesFrom(again, named, page.links, { ...noTracking, ...covering, salvage: true });
-    const next = !strict.ok && strict.why.startsWith("It left out a finding") ? seesFrom(again, named, page.links, { ...noTracking, ...covering, coverIfItCan: true, salvage: true }) : strict;
+    const strict = seesFrom(tidy(again), named, page.links, { ...noTracking, ...covering, salvage: true });
+    const next = !strict.ok && strict.why.startsWith("It left out a finding") ? seesFrom(tidy(again), named, page.links, { ...noTracking, ...covering, coverIfItCan: true, salvage: true }) : strict;
     if (next.ok) {
       const after = await leaveOffGuesses(next);
       if (after.kept.says.length > thin.says.length) verdict = after.kept;

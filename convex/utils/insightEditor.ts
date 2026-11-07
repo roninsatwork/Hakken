@@ -58,6 +58,9 @@ export function typedNumbers(text: string): string[] {
     if (/^[a-z]{2}/.test(after)) continue;
     if (/^(19|20)\d\d$/.test(value)) continue;
     if (/^\s*(day|days|week|weeks|month|months|year|years)\b/.test(after)) continue;
+    // "For every 100 visits" is the measure's own words, which the writer is told to use, never a figure it made up: read as
+    // one, it sent back four of six presses on Services (eye-code-first-brief-plan-2026-11-07.md).
+    if (value === "100" && /\b(every|per|each)\s+$/i.test(bare.slice(Math.max(0, (match.index ?? 0) - 8), match.index ?? 0))) continue;
     found.push(value);
   }
   return found;

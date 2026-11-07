@@ -122,6 +122,61 @@ export function briefOf(value: unknown, rows: number): unknown {
   return cutLists(value, rows, rows);
 }
 
+/**
+ * The pages whose writer is handed only what code found (Anthony, 2026-11-07: "Surely we find the key stats in code first then
+ * pass the results into the llm to write it up"; "Yes please let's try it on this page"): Services first, as a trial, and every
+ * page with the eye once it holds the same quality for less (docs/plans/active/eye-code-first-brief-plan-2026-11-07.md).
+ */
+export const CODE_FIRST_BRIEF: ReadonlySet<string> = new Set(["googleAnalytics.services"]);
+/** A list's first rows kept beside the rows the findings name, for the setting: the biggest few, as the page opens. */
+export const CODE_FIRST_ROWS = 3;
+
+/** Every name a finding speaks of, its own and the one it's set beside: several joined by commas are each one. */
+export function findingNames(findings: ReadonlyArray<{ params: Record<string, unknown> }>): Set<string> {
+  const names = new Set<string>();
+  for (const finding of findings) {
+    for (const field of ["name", "other"]) {
+      const value = finding.params[field];
+      if (typeof value === "string") for (const part of value.split(", ")) if (part.trim()) names.add(part.trim().toLowerCase());
+    }
+  }
+  return names;
+}
+
+/** A figure as the brief shows it, "793 [[page.x]]", read back as its number. */
+const leadingNumber = (value: unknown): number => (typeof value === "number" ? value : typeof value === "string" ? Number(value.replace(/,/g, "").match(/^-?\d+(\.\d+)?/)?.[0] ?? 0) : 0);
+
+/**
+ * The page's figures as the writer needs them once code has found what matters: every row a finding names, the first `rows`
+ * of each list for the setting, and of a dated list its newest `rows` and its busiest step, so "it peaked in March" can still be
+ * said. Everything else on the page stays with the checker, which still knows every figure, but never reaches the writer: the
+ * page's lists were most of a press's words (Services, 7 November: about 4,000 of 7,700 tokens in).
+ */
+export function findingsBriefOf(value: unknown, named: ReadonlySet<string>, rows: number, top = true): unknown {
+  // The names a page hands its rules ("The whole website", "All your services") are the findings' words, not figures.
+  if (top && value && typeof value === "object" && !Array.isArray(value) && "names" in value) {
+    const { names: _names, ...rest } = value as Record<string, unknown>;
+    return findingsBriefOf(rest, named, rows, false);
+  }
+  if (Array.isArray(value)) {
+    const mentions = (item: unknown) => item !== null && typeof item === "object" && !Array.isArray(item)
+      && Object.values(item as Record<string, unknown>).some((field) => typeof field === "string" && named.has(field.trim().toLowerCase()));
+    const opening = keptRows(value, rows, rows);
+    const busiest = isDated(value)
+      ? value.reduce<unknown>((best, item) => (sumOf(item) > sumOf(best) ? item : best), value[0])
+      : undefined;
+    const kept = value.filter((item) => opening.includes(item) || item === busiest || mentions(item));
+    return kept.map((item) => findingsBriefOf(item, named, rows, false));
+  }
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([name, inner]) => [name, findingsBriefOf(inner, named, rows, false)]));
+  return value;
+}
+
+/** A row's figures added up: its weight among a dated list's steps. */
+const sumOf = (item: unknown): number => (item !== null && typeof item === "object" && !Array.isArray(item)
+  ? Object.values(item as Record<string, unknown>).reduce<number>((sum, field) => sum + (typeof field === "string" && /\[\[/.test(field) ? leadingNumber(field) : typeof field === "number" ? field : 0), 0)
+  : 0);
+
 /** Each list to its first `rows`, a dated one to its newest `dated`. */
 function cutLists(value: unknown, rows: number, dated: number): unknown {
   if (Array.isArray(value)) return keptRows(value, rows, dated).map((item) => cutLists(item, rows, dated));

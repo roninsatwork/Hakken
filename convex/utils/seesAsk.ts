@@ -239,6 +239,27 @@ export const SEES_FINDINGS_FORMAT = [
   "Never contradict a finding. Where a finding says to check tracking, say tracking may be broken there; where it says behaviour, say it as a gap in how people behave.",
 ].join("\n");
 
+/**
+ * Said beside it on a page trying the code-first brief (eye-code-first-brief-plan-2026-11-07.md): four of six presses on Services
+ * went back once because a first finding was left out, and every rewrite doubles a press's cost.
+ */
+export const SEES_CODE_FIRST_FORMAT = "Your first sentences say findings 1 to 4, one each, in that order, each naming one of its figures' keys. Only then add anything else.";
+
+/**
+ * A unit typed straight after a figure's key taken off: the key brings its own ("65.7%"), so "[[f2.value]]%" read as a typed
+ * number and sent the words back (Services, 7 November: two rewrites of six), when what was meant was plain.
+ */
+export function withoutTypedUnits(answer: unknown): unknown {
+  if (!answer || typeof answer !== "object") return answer;
+  const tidy = (text: unknown) => (typeof text === "string" ? text.replace(/\]\]\s?%/g, "]]") : text);
+  const raw = answer as { says?: unknown; steps?: unknown };
+  return {
+    ...raw,
+    ...(Array.isArray(raw.says) ? { says: raw.says.map(tidy) } : {}),
+    ...(Array.isArray(raw.steps) ? { steps: raw.steps.map((step) => (step && typeof step === "object" ? { ...step, words: tidy((step as { words?: unknown }).words) } : tidy(step))) } : {}),
+  };
+}
+
 /** Whether two pages' figures are the same, key for key and value for value: a saved answer stands only while they are (S3). */
 export function sameFigures(left: ReadonlyArray<{ key: string; value: number }> | undefined, right: ReadonlyArray<{ key: string; value: number }>): boolean {
   if (!left || left.length !== right.length) return false;

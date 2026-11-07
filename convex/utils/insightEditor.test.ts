@@ -52,6 +52,11 @@ describe("the Editor", () => {
     expect(editFinding(draft({ headline: "Enquiries fell by 41% from [[ga.conversions.30.before]]." }), facts)).toMatchObject({ ok: false });
     expect(typedNumbers("In the last 12 months of 2026, [[ga.x]] rose; check in 90 days.")).toEqual([]);
     expect(typedNumbers("about 70 fewer")).toEqual(["70"]);
+    // The measure's own words are never a typed figure; any other 100 still is (eye-code-first-brief-plan-2026-11-07.md).
+    expect(typedNumbers("AI Agency had [[f3.value]] events for every 100 visits, against [[f3.mean]].")).toEqual([]);
+    expect(typedNumbers("[[f1.value]] per 100 visits, and each 100 more")).toEqual([]);
+    expect(typedNumbers("about 100 visits")).toEqual(["100"]);
+    expect(typedNumbers("every 1000 visits")).toEqual(["1000"]);
     // A name with a digit in it is a name (sees-every-page-plan, 2026-10-31: "handles4doors.co.uk" was sent back as a typed number).
     expect(typedNumbers("[[f1.value]] links come from handles4doors.co.uk; the M4 bolt sells.")).toEqual([]);
     expect(typedNumbers("about 70k more, 3x the rest")).toEqual(["70", "3"]);

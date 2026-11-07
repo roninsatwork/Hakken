@@ -310,7 +310,8 @@ function stepRows(lines: readonly DaysLine[], step: "day" | "week" | "month") {
   for (const line of lines) {
     line.points.forEach((point, at) => {
       const key = step === "day" ? point.day : step === "week" ? weekOf(point.day) : point.day.slice(0, 7);
-      const row = rows.get(key) ?? rows.set(key, { step: key }).get(key)!;
+      // Named by its grain (day, week or month), so the eye reads the list as dates and keeps the newest.
+      const row = rows.get(key) ?? rows.set(key, { [step]: key }).get(key)!;
       row[line.name] = Number(row[line.name] ?? 0) + point.value;
       if (line.per) {
         const held = pers.get(key) ?? pers.set(key, new Map()).get(key)!;

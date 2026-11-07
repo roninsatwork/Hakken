@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import { factsOf, fromSeesKey, seesFrom, seesKey, seesPath, writerFor } from "./seesAsk";
+import { factsOf, fromSeesKey, seesFrom, seesKey, seesPath, writerFor, withoutTypedUnits } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
 /**
@@ -255,5 +255,13 @@ describe("the eval grading (stronger-agents-plan-2026-10-30.md A6)", () => {
     expect(gradeSees(["1,258 purchases, up from 1,091"], ["1,258 purchases."])).toMatchObject({ score: 0.5 });
     expect(gradeSees(["Nothing to worry about this month."], ["28,623 conversions."])).toMatchObject({ score: 1 });
     expect(gradeSees(["Nothing to worry about this month."], [])).toMatchObject({ score: 0 });
+  });
+});
+
+describe("the code-first brief's tidy (eye-code-first-brief-plan-2026-11-07.md)", () => {
+  test("a % typed after a figure's key is taken off, as the key brings its own unit; a typed number still stands to be sent back", () => {
+    const tidied = withoutTypedUnits({ says: ["Services got [[f2.value]]% of all events.", "Up [[f1.change]] %, to 12 visits."], steps: [{ words: "See [[f3.now]]% more", link: 0 }] }) as { says: string[]; steps: Array<{ words: string }> };
+    expect(tidied.says).toEqual(["Services got [[f2.value]] of all events.", "Up [[f1.change]], to 12 visits."]);
+    expect(tidied.steps[0].words).toBe("See [[f3.now]] more");
   });
 });

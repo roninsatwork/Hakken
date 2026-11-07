@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { MOST_PAGE_DATA_CHARS, briefOf, pageDataFor, pageFacts, pageFigureLines, trimPageData } from "./pageData";
+import { readFixture } from "@/src/test/readFixture";
+import en from "@/messages/en.json";
+import { MOST_PAGE_DATA_CHARS, briefOf, findingNames, findingsBriefOf, pageDataFor, pageFacts, pageFigureLines, trimPageData } from "./pageData";
+import { servicesEyeData } from "./analyticsServices";
+import { pageFindings } from "./pageFindings";
 import { seesScreenFor, seesWrites } from "./screens";
 
 /**
@@ -107,5 +111,39 @@ describe("every page's eye, described once", () => {
       expect(seesWrites(key), key).toBe(true);
       expect(seesScreenFor(key)?.parts?.[0], key).toMatch(/^the advice already on the page/);
     }
+  });
+});
+
+describe("the code-first brief (eye-code-first-brief-plan-2026-11-07.md)", () => {
+  const row = (name: string, visits: number) => ({ name, visits: `${visits} [[page.rows.${name}.visits]]` });
+  const step = (month: string, visits: number) => ({ month, visits: `${visits} [[page.steps.${month}.visits]]` });
+
+  test("every row a finding names, and the first few of each list for the setting", () => {
+    const shown = { rows: [row("A", 90), row("B", 80), row("C", 70), row("D", 60), row("E", 50)], total: "350 [[page.total]]" };
+    const brief = findingsBriefOf(shown, new Set(["e"]), 2) as { rows: Array<{ name: string }>; total: string };
+    expect(brief.rows.map((one) => one.name)).toEqual(["A", "B", "E"]);
+    expect(brief.total).toBe("350 [[page.total]]");
+  });
+
+  test("a dated list keeps its newest steps and its busiest, so a peak can still be said", () => {
+    const shown = { steps: [step("2026-01", 10), step("2026-02", 90), step("2026-03", 20), step("2026-04", 30), step("2026-05", 15)] };
+    const brief = findingsBriefOf(shown, new Set(), 2) as { steps: Array<{ month: string }> };
+    expect(brief.steps.map((one) => one.month)).toEqual(["2026-02", "2026-04", "2026-05"]);
+  });
+
+  test("a finding's own name and the one it's set beside, several joined by commas each counted", () => {
+    expect([...findingNames([{ params: { name: "AI Agency, Venture Studio", other: "The whole website" } }, { params: { name: 12 } }])]).toEqual(["ai agency", "venture studio", "the whole website"]);
+  });
+
+  test("on Ronins' Services, a fraction of the page's words, with every row its findings name", () => {
+    const data = pageDataFor(servicesEyeData(readFixture("roninsServices").last12Months, en.googleAnalytics.eyeNames as Record<string, string>), "googleAnalytics.services");
+    const read = pageFacts("googleAnalytics.services", data, {});
+    const findings = pageFindings("googleAnalytics.services", data);
+    const brief = findingsBriefOf(read.shown, findingNames(findings), 3);
+    // Half or less of the short brief every page has had, before the parts its charts add, which shrink further.
+    expect(JSON.stringify(brief).length).toBeLessThan(JSON.stringify(briefOf(read.shown, 8)).length * 0.5);
+    expect(brief).not.toHaveProperty("names");
+    const kept = ((brief as { services: Array<{ name: string }> }).services).map((one) => one.name);
+    for (const name of ["AI Agency", "ChatBot Agency"]) expect(kept).toContain(name);
   });
 });
