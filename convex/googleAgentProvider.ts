@@ -7,6 +7,7 @@ import {
   createVertexPromptCache,
   deleteVertexPromptCache,
   streamVertexContentWithRetry,
+  vertexModelRules,
 } from "./vertexProviderService";
 import { vertexUsage } from "./vertexUsage";
 import type {
@@ -38,7 +39,8 @@ function toGoogleThinkingLevel(effort: AgentReasoningEffort) {
  */
 export function buildGoogleAgentConfig(request: {
   systemInstruction: string;
-  temperature: number;
+  /** Left out for a model that ignores it (`vertexModelRules`). */
+  temperature?: number;
   tools?: Tool[];
   reasoningEffort?: AgentReasoningEffort;
   webSearch?: boolean;
@@ -61,6 +63,7 @@ export function buildGoogleAgentConfig(request: {
   const structured = request.responseJsonSchema
     ? { responseMimeType: "application/json", responseJsonSchema: request.responseJsonSchema }
     : {};
+  const sampling = typeof request.temperature === "number" ? { temperature: request.temperature } : {};
 
   // With a cache in play the prefix lives provider-side, so the instruction and
   // tools come from the cache — repeating them alongside `cachedContent` is
@@ -68,7 +71,7 @@ export function buildGoogleAgentConfig(request: {
   // so it still applies.
   if (request.usingCache) {
     return {
-      temperature: request.temperature,
+      ...sampling,
       cachedContent: request.cacheName,
       ...thinking,
       ...structured,
@@ -76,7 +79,7 @@ export function buildGoogleAgentConfig(request: {
   }
   return {
     systemInstruction: request.systemInstruction,
-    temperature: request.temperature,
+    ...sampling,
     ...(tools.length > 0 ? { tools } : {}),
     ...thinking,
     ...structured,
@@ -103,6 +106,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
     async streamTurn(request: AgentTurnRequest, options: AgentStreamOptions): Promise<AgentTurnResponse> {
       const ai = createVertexGenAIClient();
       const targetModel = getGoogleVertexProviderModelId(request.model, "agent tool runtime");
+      const rules = vertexModelRules(targetModel);
 
       const declarations = request.tools.map((tool) => ({
         name: tool.name,
@@ -120,7 +124,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
 
       const config = buildGoogleAgentConfig({
         systemInstruction: request.systemInstruction,
-        temperature: request.temperature,
+        ...(rules.honoursTemperature ? { temperature: request.temperature } : {}),
         tools: providerTools,
         reasoningEffort: request.reasoningEffort,
         webSearch: request.webSearch,
@@ -139,6 +143,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
       });
 
       const toolCalls = (response.functionCalls ?? []).map((call) => ({
+        ...(call.id ? { callId: call.id } : {}),
         name: call.name ?? "",
         args: (call.args ?? {}) as Record<string, unknown>,
         thoughtSignature: call.thoughtSignature,
@@ -156,6 +161,12 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
     },
 
     async createPromptCache(request: PromptCacheRequest) {
+      const model = getGoogleVertexProviderModelId(request.model, "agent prompt cache");
+      // A model with no explicit cache would only refuse it, a call each turn
+      // for nothing. Undefined is the same answer a failed cache gives: the run
+      // pays full price, and the model's own implicit cache still applies.
+      if (!vertexModelRules(model).takesPromptCache) return undefined;
+
       const declarations = request.tools.map((tool) => ({
         name: tool.name,
         description: tool.description,
@@ -163,7 +174,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
       })) as FunctionDeclaration[];
 
       return await createVertexPromptCache(createVertexGenAIClient(), {
-        model: getGoogleVertexProviderModelId(request.model, "agent prompt cache"),
+        model,
         contents: request.turns as Content[],
         systemInstruction: request.systemInstruction,
         tools: declarations.length > 0 ? [{ functionDeclarations: declarations }] : undefined,

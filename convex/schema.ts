@@ -2034,6 +2034,10 @@ export default defineSchema({
     // a call that parks for approval resumes in a later action and rebuilds the
     // model turn from this row — nothing in memory survives the wait.
     thoughtSignature: v.optional(v.string()),
+    // The call's own id, where the model gave one. Kept for the same reason:
+    // a model that issues one requires the answer to carry it back, and the
+    // answer to a parked call is built from this row.
+    callId: v.optional(v.string()),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     error: v.optional(v.string()),

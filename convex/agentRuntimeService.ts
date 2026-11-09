@@ -378,6 +378,8 @@ export type ExecutedAgentToolCall = {
   responsePayload: unknown;
   /** See `AgentTurnToolCall.thoughtSignature`. Absent for providers that issue none. */
   thoughtSignature?: string;
+  /** See `AgentTurnToolCall.callId`. Absent for providers that issue none. */
+  callId?: string;
 };
 
 /**
@@ -397,6 +399,10 @@ export type ExecutedAgentToolCall = {
  * which is why a thought signature has to be carried on the call and put back on
  * the part. A model that issued one requires it back and fails the whole run
  * without it, and a rebuilt turn is precisely where it goes missing.
+ *
+ * The call's id is carried the same way, and goes on both the call and its
+ * response: a model that issues one requires the response to match it by id
+ * as well as by name.
  */
 export function buildToolInteractionTurns(calls: ExecutedAgentToolCall[]) {
   if (calls.length === 0) return [];
@@ -405,7 +411,7 @@ export function buildToolInteractionTurns(calls: ExecutedAgentToolCall[]) {
     {
       role: "model",
       parts: calls.map((call) => ({
-        functionCall: { name: call.name, args: call.args },
+        functionCall: { ...(call.callId ? { id: call.callId } : {}), name: call.name, args: call.args },
         ...(call.thoughtSignature ? { thoughtSignature: call.thoughtSignature } : {}),
       })),
     },
@@ -413,6 +419,7 @@ export function buildToolInteractionTurns(calls: ExecutedAgentToolCall[]) {
       role: "function",
       parts: calls.map((call) => ({
         functionResponse: {
+          ...(call.callId ? { id: call.callId } : {}),
           name: call.name,
           response: { name: call.name, content: call.responsePayload },
         },

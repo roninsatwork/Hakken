@@ -107,6 +107,50 @@ export function parseVertexModelId(resourceName: string | undefined) {
 }
 
 /**
+ * What a Vertex model will take, worked out from its id.
+ *
+ * Gemini 3.8 Flash and Gemini 4 Argon (Google's guides, read 2026-11-09)
+ * changed what a request may carry:
+ *
+ * - `temperature`, `topP` and `topK` are ignored from Gemini 3 on. Sending one
+ *   asks for something the model will not do.
+ * - `MINIMAL` thinking returns an error on Gemini 3.8 Flash, Gemini 4 and the
+ *   Pro models. Google lists it only for Gemini 3 Flash up to 3.6 and for
+ *   Flash-Lite. 3.7 Flash's own table leaves it out, so it is treated as gone.
+ * - An explicit prompt cache (`caches.create`, `cachedContent`) returns an error
+ *   on Gemini 4. Its implicit cache is on by default instead.
+ *
+ * A rule on the version in the id, not a list of models, so the next release
+ * is covered on the day it ships. An id that is not a Gemini model keeps
+ * today's behaviour: nothing is held back that might have worked.
+ */
+export type VertexModelRules = {
+  honoursTemperature: boolean;
+  takesMinimalThinking: boolean;
+  takesPromptCache: boolean;
+};
+
+// The family is any word: Gemini 4's first model is `gemini-4-argon`, neither
+// Pro nor Flash.
+const VERTEX_GEMINI_ID = /^gemini-(\d+)(?:\.(\d+))?-([a-z]+)(-lite)?/;
+
+export function vertexModelRules(providerModelId: string): VertexModelRules {
+  const match = VERTEX_GEMINI_ID.exec(parseVertexModelId(providerModelId).toLowerCase());
+  if (!match) return { honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true };
+
+  const major = Number(match[1]);
+  const minor = Number(match[2] ?? 0);
+  const flash = match[3] === "flash";
+  const lite = match[4] !== undefined;
+
+  return {
+    honoursTemperature: major < 3,
+    takesMinimalThinking: major < 3 || (major === 3 && flash && (lite || minor < 7)),
+    takesPromptCache: major < 4,
+  };
+}
+
+/**
  * Text generation unless the id says otherwise.
  *
  * This used to be `isUsableVertexModel`, and its `false` meant the model was
@@ -233,8 +277,13 @@ export async function generateVertexContentWithRetry(
  *
  * Carrying it on the call itself keeps one list rather than a list of calls and
  * a parallel list of signatures to be matched up by position.
+ *
+ * `id` is the call's own id, where the model gives one. Gemini 3.8 Flash and
+ * Gemini 4 require the answer to a call to carry the same id and name, so it
+ * travels with the call and goes back on the function response.
  */
 export type VertexFunctionCall = {
+  id?: string;
   name?: string;
   args?: Record<string, unknown>;
   thoughtSignature?: string;
@@ -296,6 +345,7 @@ export async function streamVertexContentWithRetry(
       for (const part of chunk.candidates?.[0]?.content?.parts ?? []) {
         if (!part.functionCall) continue;
         functionCalls.push({
+          ...(part.functionCall.id ? { id: part.functionCall.id } : {}),
           name: part.functionCall.name,
           args: part.functionCall.args as Record<string, unknown> | undefined,
           thoughtSignature: part.thoughtSignature,

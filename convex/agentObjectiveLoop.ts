@@ -654,6 +654,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
                         userId: owner.userId,
                         turnIndex: loopIndex,
                         thoughtSignature: funcCall.thoughtSignature,
+                        callId: funcCall.callId,
                     });
 
                     stepIndex += 1;
@@ -795,6 +796,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     userId: owner.userId,
                     turnIndex: loopIndex,
                     thoughtSignature: funcCall.thoughtSignature,
+                    callId: funcCall.callId,
                     error: toolError,
                 });
 
@@ -838,6 +840,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
                     args: toolCall.args,
                     responsePayload: toolResponsePayload,
                     thoughtSignature: funcCall.thoughtSignature,
+                    callId: funcCall.callId,
                 });
             }
 

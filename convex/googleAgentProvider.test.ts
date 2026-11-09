@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { buildGoogleAgentConfig, createGoogleAgentProvider } from "./googleAgentProvider";
-import { createVertexGenAIClient, streamVertexContentWithRetry } from "./vertexProviderService";
+import { createVertexGenAIClient, createVertexPromptCache, streamVertexContentWithRetry, vertexModelRules } from "./vertexProviderService";
 import type { AgentTurnRequest } from "./agentProviderTypes";
 
 /**
@@ -16,8 +16,15 @@ import type { AgentTurnRequest } from "./agentProviderTypes";
 vi.mock("./vertexProviderService", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./vertexProviderService")>()),
   createVertexGenAIClient: vi.fn(() => ({}) as never),
+  createVertexPromptCache: vi.fn(async () => "caches/prefix_1"),
   streamVertexContentWithRetry: vi.fn(),
+  // What the model takes is decided by its id in `vertexModelRules` (tested in
+  // vertexProviderService.test.ts with real ids). Here it is set per test, so
+  // what is asserted is that the adapter asks it and does what it says.
+  vertexModelRules: vi.fn(() => ({ honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true })),
 }));
+
+const NEWER_MODEL_RULES = { honoursTemperature: false, takesMinimalThinking: false, takesPromptCache: false };
 
 function baseRequest(overrides: Partial<AgentTurnRequest> = {}): AgentTurnRequest {
   return {
@@ -75,6 +82,13 @@ describe("google agent config builder", () => {
     // Repeating these alongside cachedContent is rejected by the API.
     expect(config).not.toHaveProperty("systemInstruction");
     expect(config).not.toHaveProperty("tools");
+  });
+
+  test("sends no temperature when none is given", () => {
+    for (const usingCache of [false, true]) {
+      const config = buildGoogleAgentConfig({ systemInstruction: "You are the workshop assistant.", cacheName: "caches/prefix_1", usingCache });
+      expect(config).not.toHaveProperty("temperature");
+    }
   });
 });
 
@@ -148,7 +162,65 @@ describe("google agent provider", () => {
     expect(response.toolCalls).toEqual([
       { name: "list_bookings", args: { day: "Tuesday" }, thoughtSignature: "sig_1" },
     ]);
+    expect(response.toolCalls[0]).not.toHaveProperty("callId");
     expect(response.outcome).toBe("RUN_TOOLS");
+  });
+
+  test("a call's own id comes back with it, so its answer can carry it", async () => {
+    vi.mocked(streamVertexContentWithRetry).mockResolvedValue({
+      text: "",
+      functionCalls: [{ id: "call-1", name: "list_bookings", args: {}, thoughtSignature: "sig_1" }],
+      usageMetadata: {},
+    } as never);
+
+    const response = await createGoogleAgentProvider().streamTurn(baseRequest(), {});
+
+    expect(response.toolCalls).toEqual([
+      { callId: "call-1", name: "list_bookings", args: {}, thoughtSignature: "sig_1" },
+    ]);
+  });
+
+  test("leaves the temperature off for a model that ignores it", async () => {
+    vi.mocked(streamVertexContentWithRetry).mockResolvedValue({ text: "Done.", functionCalls: [], usageMetadata: {} } as never);
+    vi.mocked(vertexModelRules).mockReturnValueOnce(NEWER_MODEL_RULES);
+
+    await createGoogleAgentProvider().streamTurn(baseRequest({ reasoningEffort: "LOW" }), {});
+
+    expect(vertexModelRules).toHaveBeenLastCalledWith("vertex-test-model-1");
+    const [, sdkRequest] = vi.mocked(streamVertexContentWithRetry).mock.calls.at(-1) ?? [];
+    const config = (sdkRequest as unknown as { config: Record<string, unknown> }).config;
+    expect(config).not.toHaveProperty("temperature");
+    expect(config).toMatchObject({ thinkingConfig: { thinkingLevel: "LOW" } });
+  });
+
+  test("keeps the temperature for a model that honours it", async () => {
+    vi.mocked(streamVertexContentWithRetry).mockResolvedValue({ text: "Done.", functionCalls: [], usageMetadata: {} } as never);
+
+    await createGoogleAgentProvider().streamTurn(baseRequest(), {});
+
+    const [, sdkRequest] = vi.mocked(streamVertexContentWithRetry).mock.calls.at(-1) ?? [];
+    expect((sdkRequest as unknown as { config: Record<string, unknown> }).config).toMatchObject({ temperature: 0.4 });
+  });
+
+  test("makes no prompt cache for a model that has none, and the run carries on without it", async () => {
+    vi.mocked(createVertexPromptCache).mockClear();
+    vi.mocked(vertexModelRules).mockReturnValueOnce(NEWER_MODEL_RULES);
+    const provider = createGoogleAgentProvider();
+    const cacheRequest = {
+      model: baseRequest().model,
+      systemInstruction: "You are the workshop assistant.",
+      tools: baseRequest().tools,
+      turns: baseRequest().turns,
+      ttlSeconds: 300,
+      label: "agent-run-test",
+    };
+
+    await expect(provider.createPromptCache!(cacheRequest)).resolves.toBeUndefined();
+    expect(createVertexPromptCache).not.toHaveBeenCalled();
+
+    // A model that has one still gets it.
+    await expect(provider.createPromptCache!(cacheRequest)).resolves.toBe("caches/prefix_1");
+    expect(createVertexPromptCache).toHaveBeenCalledTimes(1);
   });
 
   test("refuses a model that resolved to a different provider", async () => {

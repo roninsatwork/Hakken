@@ -4,7 +4,13 @@ import { ThinkingLevel } from "@google/genai";
 import type { GenerateContentConfig, Part } from "@google/genai";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter } from "./aiRuntimeTypes";
-import { createVertexGenAIClient, generateVertexContentWithRetry, streamVertexContentWithRetry } from "./vertexProviderService";
+import {
+  createVertexGenAIClient,
+  generateVertexContentWithRetry,
+  streamVertexContentWithRetry,
+  vertexModelRules,
+  type VertexModelRules,
+} from "./vertexProviderService";
 import { vertexUsage } from "./vertexUsage";
 
 function toGoogleParts(contents: AiGenerationRequest["contents"]): Part[] {
@@ -22,10 +28,16 @@ function toGoogleParts(contents: AiGenerationRequest["contents"]): Part[] {
   });
 }
 
-function parseGoogleThinkingLevel(value: string): ThinkingLevel | undefined {
+/**
+ * The thinking level asked for, in the SDK's terms, as this model takes it.
+ *
+ * Minimal becomes Low on a model that rejects Minimal (`vertexModelRules`):
+ * the nearest level it will run, rather than a call that errors.
+ */
+export function parseGoogleThinkingLevel(value: string, rules: Pick<VertexModelRules, "takesMinimalThinking">): ThinkingLevel | undefined {
   switch (value) {
     case "MINIMAL":
-      return ThinkingLevel.MINIMAL;
+      return rules.takesMinimalThinking ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW;
     case "LOW":
       return ThinkingLevel.LOW;
     case "MEDIUM":
@@ -43,12 +55,15 @@ export function createGoogleProviderAdapter(args: { location?: string } = {}): A
     async generateText(request: AiGenerationRequest): Promise<AiGenerationResponse> {
       const ai = createVertexGenAIClient({ location: args.location });
       const config: GenerateContentConfig = {};
+      const rules = vertexModelRules(request.model.providerModelId);
 
       if (request.systemInstruction) config.systemInstruction = request.systemInstruction;
-      if (typeof request.temperature === "number") config.temperature = request.temperature;
+      // Left off where the model ignores it, so a request never asks for more
+      // than the model does.
+      if (typeof request.temperature === "number" && rules.honoursTemperature) config.temperature = request.temperature;
       if (typeof request.maxOutputTokens === "number") config.maxOutputTokens = request.maxOutputTokens;
       if (request.thinkingLevel && request.thinkingLevel !== "NONE") {
-        const thinkingLevel = parseGoogleThinkingLevel(request.thinkingLevel);
+        const thinkingLevel = parseGoogleThinkingLevel(request.thinkingLevel, rules);
         if (thinkingLevel) config.thinkingConfig = { thinkingLevel };
       }
       if (request.jsonSchema) {

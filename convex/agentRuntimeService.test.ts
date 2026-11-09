@@ -243,6 +243,22 @@ describe("agentRuntimeService", () => {
       ]);
     });
 
+    test("puts each call's own id on the call and on its answer", () => {
+      // A model that issues an id requires the answer to match it by id as well
+      // as by name, and this turn is rebuilt, so the id has to be put back here.
+      const turns = buildToolInteractionTurns([
+        { name: "knowledge.search", args: {}, responsePayload: { status: "success" }, callId: "call-1" },
+        { name: "company.overview.read", args: {}, responsePayload: { status: "success" } },
+      ]);
+
+      const [asked, answered] = turns as Array<{ parts: Array<{ functionCall?: object; functionResponse?: object }> }>;
+      expect(asked.parts[0].functionCall).toEqual({ id: "call-1", name: "knowledge.search", args: {} });
+      expect(answered.parts[0].functionResponse).toMatchObject({ id: "call-1", name: "knowledge.search" });
+      // A call with no id gets none: providers that pair by position never see one.
+      expect(asked.parts[1].functionCall).not.toHaveProperty("id");
+      expect(answered.parts[1].functionResponse).not.toHaveProperty("id");
+    });
+
     test("omits the signature entirely for providers that issue none", () => {
       // An explicit `thoughtSignature: undefined` is not the same as an absent
       // key once the turn is serialised into a checkpoint and sent back.

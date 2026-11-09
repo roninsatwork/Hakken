@@ -93,6 +93,12 @@ export type AgentTurnToolCall = {
    * exists to keep out.
    */
   thoughtSignature?: string;
+  /**
+   * The call's own id, where the provider gives one in its own shape. A model
+   * that issues one requires the answer to the call to carry it back, beside
+   * the name. Providers that pair calls by position leave it unset.
+   */
+  callId?: string;
 };
 
 export type AgentTurnResponse = {

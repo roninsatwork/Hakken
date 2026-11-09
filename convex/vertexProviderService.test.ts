@@ -9,6 +9,7 @@ import {
   embedVertexContentWithRetry,
   generateVertexContentWithRetry,
   streamVertexContentWithRetry,
+  vertexModelRules,
 } from "./vertexProviderService";
 
 /** A streaming client yielding the given chunks, shaped as the SDK yields them. */
@@ -222,5 +223,72 @@ describe("vertex provider service", () => {
     expect(response.functionCalls).toBeUndefined();
     expect(response.text).toBe("Here you go.");
     expect(fragments).toEqual(["Here you go."]);
+  });
+
+  test("keeps each streamed function call's own id, and adds none where the model gave none", async () => {
+    // Gemini 3.8 Flash and Gemini 4 require the answer to a call to carry the
+    // call's id. Reading it off the part here is the start of carrying it back.
+    const ai = streamingClient([
+      {
+        candidates: [{
+          content: {
+            parts: [
+              { functionCall: { id: "call-1", name: "read_search_console", args: {} }, thoughtSignature: "signature-one" },
+              { functionCall: { name: "read_site_overview", args: {} } },
+            ],
+          },
+        }],
+      },
+    ]);
+
+    const response = await streamVertexContentWithRetry(ai, { model: "model-test", contents: "Read the figures" });
+
+    expect(response.functionCalls?.[0]).toMatchObject({ id: "call-1", name: "read_search_console", thoughtSignature: "signature-one" });
+    expect(response.functionCalls?.[1]).not.toHaveProperty("id");
+  });
+});
+
+/**
+ * What each Gemini takes, from Google's guides to Gemini 3.8 Flash and Gemini 4
+ * Argon (read 2026-11-09): sampling ignored from 3 on, Minimal thinking refused
+ * on 3.8 Flash, Pro and 4, and no explicit prompt cache on 4.
+ */
+describe("vertex model rules", () => {
+  test("Gemini 2.5 takes everything it took before", () => {
+    expect(vertexModelRules("gemini-2.5-flash")).toEqual({
+      honoursTemperature: true,
+      takesMinimalThinking: true,
+      takesPromptCache: true,
+    });
+  });
+
+  test("Gemini 3 ignores temperature, and keeps Minimal only on Flash before 3.7 and on Flash-Lite", () => {
+    for (const id of ["gemini-3-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview"]) {
+      expect(vertexModelRules(id), id).toEqual({ honoursTemperature: false, takesMinimalThinking: true, takesPromptCache: true });
+    }
+    for (const id of ["gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-pro-preview"]) {
+      expect(vertexModelRules(id), id).toEqual({ honoursTemperature: false, takesMinimalThinking: false, takesPromptCache: true });
+    }
+  });
+
+  test("Gemini 4 takes no temperature, no Minimal thinking and no explicit prompt cache", () => {
+    // `argon` is neither Pro nor Flash: the family is read as any word.
+    expect(vertexModelRules("gemini-4-argon")).toEqual({
+      honoursTemperature: false,
+      takesMinimalThinking: false,
+      takesPromptCache: false,
+    });
+  });
+
+  test("reads the model id out of a full Vertex resource name", () => {
+    expect(vertexModelRules("publishers/google/models/gemini-4-argon").takesPromptCache).toBe(false);
+  });
+
+  test("a model id that is not Gemini keeps today's behaviour", () => {
+    expect(vertexModelRules("vertex-test-model-1")).toEqual({
+      honoursTemperature: true,
+      takesMinimalThinking: true,
+      takesPromptCache: true,
+    });
   });
 });

@@ -1306,6 +1306,8 @@ export const insertToolCallInternal = internalMutation({
     turnIndex: v.optional(v.number()),
     /** Returned to the model with the call when the run resumes. */
     thoughtSignature: v.optional(v.string()),
+    /** The call's own id, returned on the call and its result when the run resumes. */
+    callId: v.optional(v.string()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

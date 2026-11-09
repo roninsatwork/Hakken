@@ -53,8 +53,10 @@ export type RuntimeTurn = {
   role?: string;
   parts?: Array<{
     text?: string;
-    functionCall?: { name?: string; args?: Record<string, unknown> };
-    functionResponse?: { name?: string; response?: unknown };
+    // `id` is the call's own id where the model gave one. Pairing here stays by
+    // position (`buildToolUseId`), so it is carried, never read.
+    functionCall?: { id?: string; name?: string; args?: Record<string, unknown> };
+    functionResponse?: { id?: string; name?: string; response?: unknown };
   }>;
 };
 

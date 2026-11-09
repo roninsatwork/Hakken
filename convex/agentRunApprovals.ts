@@ -517,6 +517,7 @@ export const recordApprovedToolResultInternal = internalMutation({
         argumentsJson: call.argumentsJson,
         resultJson: call.resultJson,
         thoughtSignature: call.thoughtSignature,
+        callId: call.callId,
       })),
     };
   },
@@ -743,6 +744,7 @@ export const getSettlementAfterDecisionInternal = internalQuery({
         argumentsJson: call.argumentsJson,
         resultJson: call.resultJson,
         thoughtSignature: call.thoughtSignature,
+        callId: call.callId,
       })),
     };
   },

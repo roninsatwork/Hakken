@@ -52,6 +52,19 @@ export type ToolAnswer = { answer: unknown; found: Fact[]; reads: AgentRead[]; s
 /** The reads an agent is handed before it starts, as if it had made them: the page's own screen, so it never starts blind. */
 export type FirstRead = { tool: string; args: Record<string, unknown> };
 
+/**
+ * The turns that send an answer back: what the agent wrote, then why it goes back.
+ *
+ * An empty reply is left out. A model turn with no words in it is refused by
+ * the newer models (and by Anthropic's), and there is nothing in it to send back.
+ */
+export function sentBackTurns(reply: string, why: string): RuntimeTurn[] {
+  return [
+    ...(reply.trim() ? [{ role: "model", parts: [{ text: reply }] }] : []),
+    { role: "user", parts: [{ text: `The Editor sent it back: ${why} Write it again, to the same rules, as only the JSON asked for. You may read more first.` }] },
+  ];
+}
+
 export async function askWithTools(
   ctx: ActionCtx,
   run: AskRun,
@@ -168,6 +181,7 @@ export async function askWithTools(
           // The last read says so, inside the read itself: every provider accepts it there.
           responsePayload: lastRead ? { answer: shown, note: "That was your last read. Write your answer now, from what you have read." } : shown,
           ...(call.thoughtSignature ? { thoughtSignature: call.thoughtSignature } : {}),
+          ...(call.callId ? { callId: call.callId } : {}),
         });
       }
       turns.push(...buildToolInteractionTurns(executed));
@@ -180,10 +194,7 @@ export async function askWithTools(
     if (lastWhy === null) return { answer: parsed, found: [...found.values()], reads, sentBack: null, turns: turn + 1 };
     if (sentBackTimes >= MOST_SENT_BACK || turn >= MOST_TURNS - 1) break;
     sentBackTimes += 1;
-    turns.push(
-      { role: "model", parts: [{ text: response.text }] },
-      { role: "user", parts: [{ text: `The Editor sent it back: ${lastWhy} Write it again, to the same rules, as only the JSON asked for. You may read more first.` }] },
-    );
+    turns.push(...sentBackTurns(response.text, lastWhy));
   }
   return { answer: lastAnswer, found: [...found.values()], reads, sentBack: lastWhy ?? "It kept reading and never wrote its answer.", turns: turns.length };
 }

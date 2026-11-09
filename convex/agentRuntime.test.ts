@@ -171,6 +171,9 @@ vi.mock("./vertexProviderService", () => ({
     return response;
   },
   embedVertexContentWithRetry: vi.fn(async () => ({ embeddings: [] })),
+  // A model that takes everything, so these runs send what they always sent:
+  // what each real model takes is tested in vertexProviderService.test.ts.
+  vertexModelRules: () => ({ honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true }),
 }));
 
 /** A model turn that replies with plain text and requests no tools. */

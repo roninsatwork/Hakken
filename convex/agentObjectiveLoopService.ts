@@ -68,7 +68,7 @@ type RuntimeToolMetadata = {
 type BatchSettlement = {
     settled: boolean;
     stepIndex: number;
-    batchCalls: Array<{ name: string; argumentsJson: string; resultJson?: string; thoughtSignature?: string }>;
+    batchCalls: Array<{ name: string; argumentsJson: string; resultJson?: string; thoughtSignature?: string; callId?: string }>;
 };
 
 export async function settleBatchAndContinue(ctx: ActionCtx, args: {
@@ -108,6 +108,7 @@ export async function settleBatchAndContinue(ctx: ActionCtx, args: {
                 args: parseToolArguments(call.argumentsJson),
                 responsePayload: parseToolResult(call.resultJson),
                 thoughtSignature: call.thoughtSignature,
+                callId: call.callId,
             })));
             transcript.push(...batchTurns as Content[]);
 
