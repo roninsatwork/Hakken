@@ -416,7 +416,7 @@ describe("voice transcription", () => {
         expect(text).toBe("hello there");
         expect(createVertexGenAIClientMock).toHaveBeenCalledTimes(1);
         // No location override: the factory's own default (env-configured
-        // region) must decide, exactly as it does for chat.
+        // region) must decide. Chat writes on `VERTEX_TEXT_CLIENT` instead.
         expect(createVertexGenAIClientMock).toHaveBeenCalledWith();
     });
 });

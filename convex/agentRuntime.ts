@@ -23,10 +23,7 @@ import {
   createModelTurnStream,
   guardModelTurn,
 } from "./modelTurnService";
-import {
-  createVertexGenAIClient,
-  generateVertexContentWithRetry,
-} from "./vertexProviderService";
+import { createVertexGenAIClient, generateVertexContentWithRetry, VERTEX_TEXT_CLIENT } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
@@ -1093,7 +1090,7 @@ export const executeAgentNode = internalAction({
     input: v.string(),
   },
   handler: async (ctx, args) => {
-    const ai = createVertexGenAIClient();
+    const ai = createVertexGenAIClient(VERTEX_TEXT_CLIENT);
 
     const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
     if (!agent) throw appError("NOT_FOUND", "Agent not found.");

@@ -8,6 +8,7 @@ import {
   deleteVertexPromptCache,
   streamVertexContentWithRetry,
   vertexModelRules,
+  VERTEX_TEXT_CLIENT,
 } from "./vertexProviderService";
 import { vertexUsage } from "./vertexUsage";
 import type {
@@ -104,7 +105,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
     providerKey: GOOGLE_VERTEX_PROVIDER_KEY,
 
     async streamTurn(request: AgentTurnRequest, options: AgentStreamOptions): Promise<AgentTurnResponse> {
-      const ai = createVertexGenAIClient();
+      const ai = createVertexGenAIClient(VERTEX_TEXT_CLIENT);
       const targetModel = getGoogleVertexProviderModelId(request.model, "agent tool runtime");
       const rules = vertexModelRules(targetModel);
 
@@ -173,7 +174,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
         parametersJsonSchema: tool.parametersJsonSchema,
       })) as FunctionDeclaration[];
 
-      return await createVertexPromptCache(createVertexGenAIClient(), {
+      return await createVertexPromptCache(createVertexGenAIClient(VERTEX_TEXT_CLIENT), {
         model,
         contents: request.turns as Content[],
         systemInstruction: request.systemInstruction,
@@ -184,7 +185,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
     },
 
     async releasePromptCache(name: string) {
-      await deleteVertexPromptCache(createVertexGenAIClient(), name);
+      await deleteVertexPromptCache(createVertexGenAIClient(VERTEX_TEXT_CLIENT), name);
     },
   };
 }

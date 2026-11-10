@@ -132,7 +132,8 @@ export const transcribeAudio = tenantAction({
       maxRequests: TRANSCRIPTION_RATE_LIMIT_PER_MINUTE,
     });
 
-    // The platform's configured region, same as every other generation call.
+    // The platform's configured region, which writing left on 2026-11-10 for
+    // `VERTEX_TEXT_CLIENT` (US, v1); dictation was not part of that trial.
     // This call once pinned us-central1 in the name of "stable multimodal
     // models"; the configured project did not serve the transcription model
     // there, so every dictation failed with a 404 while ordinary chat on the

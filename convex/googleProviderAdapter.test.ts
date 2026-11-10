@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { createGoogleProviderAdapter, parseGoogleThinkingLevel } from "./googleProviderAdapter";
-import { generateVertexContentWithRetry, vertexModelRules } from "./vertexProviderService";
+import { createVertexGenAIClient, generateVertexContentWithRetry, vertexModelRules, VERTEX_TEXT_CLIENT } from "./vertexProviderService";
 import type { AiGenerationRequest } from "./aiRuntimeTypes";
 
 /**
@@ -66,5 +66,13 @@ describe("google provider adapter", () => {
     await createGoogleProviderAdapter().generateText(request({ thinkingLevel: "MINIMAL" }));
 
     expect(lastConfig()).toMatchObject({ temperature: 0.2, thinkingConfig: { thinkingLevel: "MINIMAL" } });
+  });
+
+  test("writes in Google's US region on the v1 address, unless a location is given", async () => {
+    await createGoogleProviderAdapter().generateText(request());
+    expect(createVertexGenAIClient).toHaveBeenLastCalledWith(VERTEX_TEXT_CLIENT);
+
+    await createGoogleProviderAdapter({ location: "europe-west2" }).generateText(request());
+    expect(createVertexGenAIClient).toHaveBeenLastCalledWith({ location: "europe-west2", apiVersion: "v1" });
   });
 });

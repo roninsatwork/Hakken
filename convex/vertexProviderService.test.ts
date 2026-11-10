@@ -3,7 +3,9 @@ import { describe, expect, test, vi } from "vitest";
 import { whileMovingClock } from "@/src/test/realTime";
 import {
   buildVertexProviderConfig,
+  createVertexGenAIClient,
   listVertexModels,
+  VERTEX_TEXT_CLIENT,
   DEFAULT_VERTEX_LOCATION,
   DEFAULT_VERTEX_PROJECT,
   embedVertexContentWithRetry,
@@ -64,6 +66,20 @@ describe("vertex provider service", () => {
     );
 
     expect(models.map((model) => model.modelId)).toEqual(["first-entry", "second-entry"]);
+  });
+
+  test("writing asks Google's US region on the v1 address; anything else keeps the configured location and the library's address", () => {
+    // Read off the client the library builds, so a library upgrade that
+    // changes where a location goes fails here rather than in the field.
+    const env = { GOOGLE_CLOUD_LOCATION: "global", GOOGLE_CLIENT_EMAIL: "probe@example.iam.gserviceaccount.com", GOOGLE_PRIVATE_KEY: "not-a-real-key" };
+    const addressOf = (ai: GoogleGenAI) => {
+      const client = (ai as unknown as { apiClient: { getBaseUrl(): string; getApiVersion(): string } }).apiClient;
+      return `${client.getBaseUrl()}${client.getApiVersion()}`;
+    };
+
+    expect(VERTEX_TEXT_CLIENT).toEqual({ location: "us", apiVersion: "v1" });
+    expect(addressOf(createVertexGenAIClient({ env, ...VERTEX_TEXT_CLIENT }))).toBe("https://aiplatform.us.rep.googleapis.com/v1");
+    expect(addressOf(createVertexGenAIClient({ env }))).toBe("https://aiplatform.googleapis.com/v1beta1");
   });
 
   test("builds Vertex client config from environment values", () => {

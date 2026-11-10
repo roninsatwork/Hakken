@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { buildGoogleAgentConfig, createGoogleAgentProvider } from "./googleAgentProvider";
-import { createVertexGenAIClient, createVertexPromptCache, streamVertexContentWithRetry, vertexModelRules } from "./vertexProviderService";
+import { createVertexGenAIClient, createVertexPromptCache, streamVertexContentWithRetry, vertexModelRules, VERTEX_TEXT_CLIENT } from "./vertexProviderService";
 import type { AgentTurnRequest } from "./agentProviderTypes";
 
 /**
@@ -103,7 +103,7 @@ describe("google agent provider", () => {
     const provider = createGoogleAgentProvider();
     const response = await provider.streamTurn(baseRequest(), {});
 
-    expect(createVertexGenAIClient).toHaveBeenCalled();
+    expect(createVertexGenAIClient).toHaveBeenCalledWith(VERTEX_TEXT_CLIENT);
     const [, sdkRequest] = vi.mocked(streamVertexContentWithRetry).mock.calls.at(-1) ?? [];
     expect(sdkRequest).toMatchObject({
       model: "vertex-test-model-1",

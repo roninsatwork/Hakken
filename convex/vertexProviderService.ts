@@ -30,6 +30,22 @@ export type VertexProviderConfig = {
 export const DEFAULT_VERTEX_PROJECT = "hakken-509309";
 export const DEFAULT_VERTEX_LOCATION = "global";
 
+/**
+ * Where Hakken's writing goes, and which of Google's addresses it calls: every
+ * answer, agent turn and prompt cache asks with `createVertexGenAIClient(VERTEX_TEXT_CLIENT)`.
+ *
+ * On trial on dev from 2026-11-10 (Anthony, "Yes, try it"). Another app on this
+ * library found `global` took up to 117 seconds for a four-word request and `eu`
+ * ran past Google's own deadline, while `us` answered in under three. The library
+ * calls Vertex's older `v1beta1` address unless told otherwise, and 3.0.0 still
+ * does; Google's guide for Gemini 3.8 Flash calls `v1`. Both of Hakken's writing
+ * models, 3.8 Flash and 4 Argon, are offered in `us`.
+ *
+ * The model list and speech stay on the configured location and the library's
+ * own address, and embeddings keep their own region.
+ */
+export const VERTEX_TEXT_CLIENT = { location: "us", apiVersion: "v1" } as const;
+
 export function buildVertexProviderConfig(args: {
   env: VertexProviderEnv;
   location?: string;
@@ -51,7 +67,7 @@ export function buildVertexProviderConfig(args: {
   };
 }
 
-export function createVertexGenAIClient(args: { env?: VertexProviderEnv; location?: string } = {}) {
+export function createVertexGenAIClient(args: { env?: VertexProviderEnv; location?: string; apiVersion?: string } = {}) {
   const env = args.env ?? {
     GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
     GOOGLE_CLOUD_LOCATION: process.env.GOOGLE_CLOUD_LOCATION,
@@ -68,6 +84,8 @@ export function createVertexGenAIClient(args: { env?: VertexProviderEnv; locatio
     project: config.project,
     location: config.location,
     vertexai: true,
+    // Unset, the library calls Vertex's `v1beta1` address.
+    ...(args.apiVersion ? { apiVersion: args.apiVersion } : {}),
     googleAuthOptions: {
       credentials: config.credentials,
     },

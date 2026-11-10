@@ -9,6 +9,7 @@ import {
   generateVertexContentWithRetry,
   streamVertexContentWithRetry,
   vertexModelRules,
+  VERTEX_TEXT_CLIENT,
   type VertexModelRules,
 } from "./vertexProviderService";
 import { vertexUsage } from "./vertexUsage";
@@ -53,7 +54,7 @@ export function createGoogleProviderAdapter(args: { location?: string } = {}): A
   return {
     providerKey: GOOGLE_VERTEX_PROVIDER_KEY,
     async generateText(request: AiGenerationRequest): Promise<AiGenerationResponse> {
-      const ai = createVertexGenAIClient({ location: args.location });
+      const ai = createVertexGenAIClient({ ...VERTEX_TEXT_CLIENT, ...(args.location ? { location: args.location } : {}) });
       const config: GenerateContentConfig = {};
       const rules = vertexModelRules(request.model.providerModelId);
 
