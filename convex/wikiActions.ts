@@ -18,7 +18,8 @@ import {
 
 /**
  * How a question chooses its pages (wiki-replaces-knowledge, stage two):
- * the model reads the index — every page's name and first line — and names
+ * the model reads the index — every page's name and first line, or past
+ * WIKI_SHORTLIST_SIZE pages a shortlist the question's words reach — and names
  * the pages that answer, which are then opened whole with one hop. This is
  * Karpathy's navigation, not similarity search: the chooser sees names and
  * purposes, never fragments. The mechanical word-match is the fallback when
@@ -27,6 +28,51 @@ import {
 /** Global page keys wear this in the combined index and the evidence, so
  * the reader and the answer both show which brain a page came from. */
 const GLOBAL_KEY_PREFIX = "global/";
+
+/**
+ * How long the model may spend choosing pages before the search's best
+ * matches answer instead (Anthony, 2026-11-10, "Yes, bring them over", from
+ * another app on this code). Nothing reaches the reader until the choosing
+ * is done, and there it ran 26, 31, 51 and once 90 seconds. Past this the
+ * question still gets the wiki, found by its words rather than the model.
+ */
+export const WIKI_PICK_TIME_LIMIT_MS = 5_000;
+
+/**
+ * How many pages the chooser reads (the shortlist, 2026-11-10): the pages
+ * the question's words reach, best first, padded with the newest. A shelf
+ * this size or smaller is read whole, exactly as before.
+ */
+export const WIKI_SHORTLIST_SIZE = 15;
+
+/** How many of the search's best matches are opened when the chooser is late. */
+const WIKI_SEARCH_TOP_PICKS = 4;
+
+class WikiPickTimeLimitError extends Error {
+  constructor(limitMs: number) {
+    super(`Choosing wiki pages ran past ${limitMs} ms.`);
+    this.name = "WikiPickTimeLimitError";
+  }
+}
+
+/**
+ * The model's answer, or the time-limit error once the limit is reached. The
+ * abandoned call's own outcome is still observed by the race, so a late
+ * failure cannot surface as an unhandled rejection.
+ */
+async function withinTimeLimit<T>(work: Promise<T>, remainingMs: number, limitMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new WikiPickTimeLimitError(limitMs)), remainingMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 export const selectWikiContextForQuery = internalAction({
   args: {
@@ -40,6 +86,8 @@ export const selectWikiContextForQuery = internalAction({
     agentId: v.optional(v.id("agents")),
     systemKey: v.optional(v.string()),
     userId: v.optional(v.id("users")),
+    /** Overrides WIKI_PICK_TIME_LIMIT_MS; tests use it to reach the limit quickly. */
+    pickTimeLimitMs: v.optional(v.number()),
   },
   handler: async (
     ctx,
@@ -119,6 +167,52 @@ export const selectWikiContextForQuery = internalAction({
       };
     };
 
+    // The shortlist (2026-11-10). The chooser read the whole index, up to 250
+    // entries; now it reads the pages the question's words reach, best first,
+    // padded with the newest so that a question naming nothing (a follow-up's
+    // "he") still has pages to choose from. The search's own best matches are
+    // kept aside for when the chooser is late.
+    let searchTopKeys: string[] = [];
+    const shortlistOf = async (
+      index: Array<{ key: string; title: string; hint: string }>
+    ): Promise<Array<{ key: string; title: string; hint: string }>> => {
+      searchTopKeys = [];
+      if (index.length <= WIKI_SHORTLIST_SIZE) return index;
+      const searchLimit = WIKI_SHORTLIST_SIZE * 3;
+      const [ownKeys, globalKeys] = await Promise.all([
+        args.companyId
+          ? ctx.runQuery(internal.wikiSearch.searchWikiPageKeysInternal, {
+              companyId: args.companyId,
+              query: args.query,
+              limit: searchLimit,
+            })
+          : Promise.resolve<string[]>([]),
+        ctx.runQuery(internal.wikiSearch.searchWikiPageKeysInternal, {
+          query: args.query,
+          limit: searchLimit,
+        }),
+      ]);
+      // Intersected with the index, so the kinds this surface may not see
+      // (and global pages the company's own shelf overrules) stay out.
+      const byKey = new Map(index.map((entry) => [entry.key, entry]));
+      const ranked = [
+        ...new Set([...ownKeys, ...globalKeys.map((key) => `${GLOBAL_KEY_PREFIX}${key}`)]),
+      ].filter((key) => byKey.has(key));
+      searchTopKeys = ranked.slice(0, WIKI_SEARCH_TOP_PICKS);
+      const chosen = ranked.slice(0, WIKI_SHORTLIST_SIZE);
+      for (const entry of index) {
+        if (chosen.length >= WIKI_SHORTLIST_SIZE) break;
+        if (!chosen.includes(entry.key)) chosen.push(entry.key);
+      }
+      return chosen.map((key) => byKey.get(key)!);
+    };
+
+    // One clock for the whole choosing, both passes included: the second pass
+    // gets what the first left, and none left means the search's best
+    // matches, or the word match below.
+    const pickLimitMs = args.pickTimeLimitMs ?? WIKI_PICK_TIME_LIMIT_MS;
+    const pickDeadline = Date.now() + pickLimitMs;
+
     try {
       const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
         useCase: "fast-chat",
@@ -127,8 +221,13 @@ export const selectWikiContextForQuery = internalAction({
         index: Array<{ key: string; title: string; hint: string }>
       ): Promise<string[]> => {
         if (index.length === 0) return [];
-        const response = await generateTextWithResolvedModel({
+        const remainingMs = pickDeadline - Date.now();
+        if (remainingMs <= 0) throw new WikiPickTimeLimitError(pickLimitMs);
+        const response = await withinTimeLimit(generateTextWithResolvedModel({
           model,
+          // "Fast". Picking up to four keys from a list needs no deep thought,
+          // and left unset a model that thinks by default thinks at Medium.
+          thinkingLevel: "NONE",
           systemInstruction:
             'You are the index reader of a company wiki. Given a question and the index, name the pages that would answer it. Keys starting "global/" are the platform\'s shared pages — real answers, used when the company\'s own pages do not cover the question. Keys starting "SOURCE:" are whole documents the company has filed. Reply with strict JSON, nothing else: {"pages": [string]} — up to 4 page keys exactly as written in the index, best first. An empty list means the wiki does not cover it.',
           contents: [
@@ -139,7 +238,7 @@ export const selectWikiContextForQuery = internalAction({
                 index.map((entry) => `${entry.key} — ${entry.hint}`).join("\n"),
             },
           ],
-        });
+        }), remainingMs, pickLimitMs);
         await recordModelSpend(ctx, {
           ...(args.agentId ? { agentId: args.agentId } : {}),
           ...(args.systemKey ? { systemKey: args.systemKey } : {}),
@@ -184,7 +283,8 @@ export const selectWikiContextForQuery = internalAction({
       };
 
       const tended = await buildIndex(false);
-      const tendedKeys = await keepPagesThatAnswer(await chooseFrom(tended), tended);
+      const tendedShortlist = await shortlistOf(tended);
+      const tendedKeys = await keepPagesThatAnswer(await chooseFrom(tendedShortlist), tendedShortlist);
       if (tendedKeys.length > 0) return await openBothShelves(tendedKeys);
 
       // Nothing among the tended pages covers it. Before believing the wiki
@@ -193,12 +293,29 @@ export const selectWikiContextForQuery = internalAction({
       // still a shelf that holds the answer.
       const withSources = await buildIndex(true);
       if (withSources.length === tended.length) return { context: "", pageKeys: [] };
-      const sourceKeys = await keepPagesThatAnswer(await chooseFrom(withSources), withSources);
+      const sourcesShortlist = await shortlistOf(withSources);
+      const sourceKeys = await keepPagesThatAnswer(await chooseFrom(sourcesShortlist), sourcesShortlist);
       if (sourceKeys.length > 0) return await openBothShelves(sourceKeys);
       // Both passes read the index and found nothing: believe it.
       return { context: "", pageKeys: [] };
     } catch (error) {
-      console.error("Wiki index reading failed; falling back to word match", error);
+      if (error instanceof WikiPickTimeLimitError || Date.now() >= pickDeadline) {
+        // Expected now and then, and counted from the logs: how often the
+        // limit is reached says whether it is set right.
+        console.warn("Wiki page choosing reached its time limit; used the search's best matches instead", {
+          limitMs: pickLimitMs,
+          searchMatches: searchTopKeys.length,
+        });
+        if (searchTopKeys.length > 0) {
+          try {
+            return await openBothShelves(searchTopKeys);
+          } catch (openError) {
+            console.error("Opening the search's best matches failed; falling back to word match", openError);
+          }
+        }
+      } else {
+        console.error("Wiki index reading failed; falling back to word match", error);
+      }
       const own = args.companyId
         ? await ctx.runQuery(internal.wikiPages.getWikiAnswerContextInternal, {
             companyId: args.companyId,

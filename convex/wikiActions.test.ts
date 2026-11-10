@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { WIKI_PICK_TIME_LIMIT_MS, WIKI_SHORTLIST_SIZE } from "./wikiActions";
 
 /**
  * The wiki's reading and writing roads (wiki-replaces-knowledge, stage two;
@@ -68,6 +69,9 @@ describe("choosing pages for a question", () => {
     expect(result.pageKeys).toEqual(["POLICY:delivery", "global/POLICY:billing"]);
     expect(result.context).toContain("We deliver on Fridays.");
     expect(result.context).toContain("Billing runs monthly.");
+    // Picking pages runs on "Fast": unset, a model that thinks by default
+    // spent most of the wait on this one pick.
+    expect(generateTextWithResolvedModelMock.mock.calls[0][0].thinkingLevel).toBe("NONE");
     // The company's own shelf opens first and holds first claim on the budget.
     expect(result.context.indexOf("Fridays")).toBeLessThan(result.context.indexOf("monthly"));
   });
@@ -183,6 +187,103 @@ describe("choosing pages for a question", () => {
     expect(result.pageKeys).toContain("global/POLICY:billing");
     expect(result.context).toContain("Fridays");
     expect(result.context).toContain("monthly");
+  });
+
+  test("a model that has not chosen by the time limit is left behind, and the word match answers", async () => {
+    // Elsewhere on this code the choosing alone ran to 90 seconds with nothing on screen.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await seedPage(t, { companyId, kind: "POLICY", subjectKey: "delivery", content: "Delivery goes out on Fridays." });
+
+    generateTextWithResolvedModelMock.mockReturnValue(new Promise(() => {}));
+
+    const result = await t.action(internal.wikiActions.selectWikiContextForQuery, {
+      companyId,
+      query: "when does delivery go out",
+      includeCustomerPages: false,
+      pickTimeLimitMs: 150,
+    });
+
+    // The model never answers, so these pages can only have come from the fallback.
+    expect(result.pageKeys).toEqual(["POLICY:delivery"]);
+    expect(result.context).toContain("Fridays");
+  });
+
+  test("the time limit is five seconds unless a caller says otherwise", () => {
+    expect(WIKI_PICK_TIME_LIMIT_MS).toBe(5_000);
+  });
+});
+
+describe("the shortlist the chooser reads", () => {
+  // Elsewhere on this code a whole index (~250 entries) took the Fast Chat model
+  // 50–104 seconds to read, whatever its thinking setting; a short one takes seconds.
+  async function seedShelf(t: ReturnType<typeof convexTest>, companyId: Id<"companies">) {
+    for (let i = 0; i < WIKI_SHORTLIST_SIZE + 10; i++) {
+      await seedPage(t, { companyId, kind: "POLICY", subjectKey: `routine-${i}`, content: `Routine office procedure number ${i}.` });
+    }
+    await seedPage(t, { companyId, kind: "POLICY", subjectKey: "harbour-moorings", content: "Harbour moorings are booked a week ahead." });
+  }
+
+  const indexLinesShown = () =>
+    (generateTextWithResolvedModelMock.mock.calls[0][0].contents[0].text as string)
+      .split("Index:\n")[1]
+      .split("\n")
+      .filter(Boolean);
+
+  test("a shelf past the shortlist size is narrowed by the question's words, best match first", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await seedShelf(t, companyId);
+
+    generateTextWithResolvedModelMock.mockResolvedValue({
+      text: JSON.stringify({ pages: ["POLICY:harbour-moorings"] }),
+    });
+
+    const result = await t.action(internal.wikiActions.selectWikiContextForQuery, {
+      companyId,
+      query: "how far ahead are harbour moorings booked",
+      includeCustomerPages: false,
+    });
+
+    const lines = indexLinesShown();
+    expect(lines).toHaveLength(WIKI_SHORTLIST_SIZE);
+    expect(lines[0]).toMatch(/^POLICY:harbour-moorings/);
+    expect(result.pageKeys).toEqual(["POLICY:harbour-moorings"]);
+    expect(result.context).toContain("a week ahead");
+  });
+
+  test("a question whose words reach nothing still gets a full shortlist to choose from", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await seedShelf(t, companyId);
+
+    generateTextWithResolvedModelMock.mockResolvedValue({ text: JSON.stringify({ pages: [] }) });
+
+    await t.action(internal.wikiActions.selectWikiContextForQuery, {
+      companyId,
+      query: "zzz qqq",
+      includeCustomerPages: false,
+    });
+
+    expect(indexLinesShown()).toHaveLength(WIKI_SHORTLIST_SIZE);
+  });
+
+  test("when the chooser is late, the search's best matches are opened", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await seedShelf(t, companyId);
+
+    generateTextWithResolvedModelMock.mockReturnValue(new Promise(() => {}));
+
+    const result = await t.action(internal.wikiActions.selectWikiContextForQuery, {
+      companyId,
+      query: "how far ahead are harbour moorings booked",
+      includeCustomerPages: false,
+      pickTimeLimitMs: 150,
+    });
+
+    expect(result.pageKeys[0]).toBe("POLICY:harbour-moorings");
+    expect(result.context).toContain("a week ahead");
   });
 });
 

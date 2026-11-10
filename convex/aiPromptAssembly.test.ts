@@ -7,6 +7,7 @@ import {
   buildUntrustedConversationHistory,
   buildUntrustedKnowledgeContext,
   JUDGED_PASSAGES,
+  KNOWLEDGE_CHUNK_READ_WINDOW,
   rankAssistantKnowledgeMatches,
   selectKnowledgeChunksWithinBudget,
   type KnowledgeMatchTier,
@@ -232,6 +233,42 @@ describe("assistant prompt assembly", () => {
 
     expect(selected.chunkTexts).toEqual(["thread-a text"]);
     expect(selected.chunkIds).toEqual(["thread-a"]);
+  });
+
+  test("pieces are read a window at a time, each at most once, with the same admission", async () => {
+    // One by one, ~85 reads at ~30 ms each held the answer back 2–3 seconds.
+    const globalMatches = Array.from({ length: 30 }, (_, index) => ({ _id: `g-${index}`, _score: 0.9 - index / 100 }));
+    let inFlight = 0;
+    let mostAtOnce = 0;
+    const readCounts = new Map<string, number>();
+
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: rankAssistantKnowledgeMatches({
+        globalMatches,
+        companyMatches: [],
+        threadMatches: [{ _id: "thread-a", _score: 0.1 }],
+      }),
+      maxChars: 1000,
+      threadReserveRatio: 0.3,
+      loadChunk: async (id) => {
+        readCounts.set(id, (readCounts.get(id) ?? 0) + 1);
+        inFlight += 1;
+        mostAtOnce = Math.max(mostAtOnce, inFlight);
+        await Promise.resolve();
+        inFlight -= 1;
+        return { text: `${id}:${"x".repeat(100 - id.length - 1)}` };
+      },
+    });
+
+    // Reads overlap, up to one window.
+    expect(mostAtOnce).toBeGreaterThan(1);
+    expect(mostAtOnce).toBeLessThanOrEqual(KNOWLEDGE_CHUNK_READ_WINDOW);
+    // Nothing is read twice across the two passes.
+    expect([...readCounts.values()].every((count) => count === 1)).toBe(true);
+    // Admission is exactly what one-by-one reading admitted: the reserved
+    // thread piece, then the best global pieces until the budget is full.
+    expect(selected.chunkIds).toEqual(["thread-a", ...globalMatches.slice(0, 9).map((match) => match._id)]);
+    expect(selected.chunkTexts.join("").length).toBeLessThanOrEqual(1000);
   });
 
   test("respects the overall budget even with nothing to reserve", async () => {

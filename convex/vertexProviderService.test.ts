@@ -275,15 +275,16 @@ describe("vertex model rules", () => {
       honoursTemperature: true,
       takesMinimalThinking: true,
       takesPromptCache: true,
+      thinksByDefault: false,
     });
   });
 
   test("Gemini 3 ignores temperature, and keeps Minimal only on Flash before 3.7 and on Flash-Lite", () => {
     for (const id of ["gemini-3-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite-preview"]) {
-      expect(vertexModelRules(id), id).toEqual({ honoursTemperature: false, takesMinimalThinking: true, takesPromptCache: true });
+      expect(vertexModelRules(id), id).toEqual({ honoursTemperature: false, takesMinimalThinking: true, takesPromptCache: true, thinksByDefault: false });
     }
     for (const id of ["gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-pro-preview"]) {
-      expect(vertexModelRules(id), id).toEqual({ honoursTemperature: false, takesMinimalThinking: false, takesPromptCache: true });
+      expect(vertexModelRules(id), id).toEqual({ honoursTemperature: false, takesMinimalThinking: false, takesPromptCache: true, thinksByDefault: true });
     }
   });
 
@@ -293,6 +294,7 @@ describe("vertex model rules", () => {
       honoursTemperature: false,
       takesMinimalThinking: false,
       takesPromptCache: false,
+      thinksByDefault: true,
     });
   });
 
@@ -305,6 +307,7 @@ describe("vertex model rules", () => {
       honoursTemperature: true,
       takesMinimalThinking: true,
       takesPromptCache: true,
+      thinksByDefault: false,
     });
   });
 });

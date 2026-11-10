@@ -15,10 +15,10 @@ vi.mock("./vertexProviderService", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./vertexProviderService")>()),
   createVertexGenAIClient: vi.fn(() => ({}) as never),
   generateVertexContentWithRetry: vi.fn(async () => ({ text: "{}", usageMetadata: {} })),
-  vertexModelRules: vi.fn(() => ({ honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true })),
+  vertexModelRules: vi.fn(() => ({ honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true, thinksByDefault: false })),
 }));
 
-const NEWER_MODEL_RULES = { honoursTemperature: false, takesMinimalThinking: false, takesPromptCache: false };
+const NEWER_MODEL_RULES = { honoursTemperature: false, takesMinimalThinking: false, takesPromptCache: false, thinksByDefault: true };
 
 function request(overrides: Partial<AiGenerationRequest> = {}): AiGenerationRequest {
   return {
@@ -66,6 +66,15 @@ describe("google provider adapter", () => {
     await createGoogleProviderAdapter().generateText(request({ thinkingLevel: "MINIMAL" }));
 
     expect(lastConfig()).toMatchObject({ temperature: 0.2, thinkingConfig: { thinkingLevel: "MINIMAL" } });
+  });
+
+  test("Fast is Low on a model that thinks unless told, and nothing on one that does not", async () => {
+    vi.mocked(vertexModelRules).mockReturnValueOnce(NEWER_MODEL_RULES);
+    await createGoogleProviderAdapter().generateText(request({ thinkingLevel: "NONE" }));
+    expect(lastConfig()).toMatchObject({ thinkingConfig: { thinkingLevel: "LOW" } });
+
+    await createGoogleProviderAdapter().generateText(request({ thinkingLevel: "NONE" }));
+    expect(lastConfig()).not.toHaveProperty("thinkingConfig");
   });
 
   test("writes in Google's US region on the v1 address, unless a location is given", async () => {

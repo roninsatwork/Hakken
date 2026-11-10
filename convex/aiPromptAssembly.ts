@@ -322,6 +322,14 @@ type LoadedChunk = {
 };
 
 /**
+ * How many knowledge pieces are read at once while judging or filling the
+ * budget (2026-11-10, from another app on this code). Each read from an
+ * action is a ~30 ms round trip, and one by one a budget filled from ~85
+ * pieces cost 2–3 seconds before the answer could start.
+ */
+export const KNOWLEDGE_CHUNK_READ_WINDOW = 12;
+
+/**
  * Fill the retrieval character budget from a ranked match list.
  *
  * Runs two passes over the same list: the first admits only thread matches, up
@@ -367,33 +375,46 @@ export async function selectKnowledgeChunksWithinBudget<T extends { _id: string 
   const agentMayRead = (chunk: LoadedChunk) =>
     chunk.agentId === args.agent?.agentId && (!chunk.companyId || chunk.companyId === args.agent?.companyId);
 
-  // Each piece read at most once, whether judged or admitted.
-  const loaded = new Map<string, LoadedChunk | null>();
-  const readable = async (id: T["_id"]): Promise<LoadedChunk | null> => {
-    if (!loaded.has(id)) {
-      const chunk = await args.loadChunk(id);
-      const usable = chunk
-        && (!chunk.agentId || agentMayRead(chunk))
-        && (args.embeddingModelId === undefined || chunk.embeddingModelId === args.embeddingModelId);
-      loaded.set(id, usable ? chunk : null);
+  // Each piece read at most once, whether judged or admitted: the read
+  // itself is kept, so a window's reads overlap and a second pass reuses them.
+  const loaded = new Map<string, Promise<LoadedChunk | null>>();
+  const readable = (id: T["_id"]): Promise<LoadedChunk | null> => {
+    let pending = loaded.get(id);
+    if (!pending) {
+      pending = args.loadChunk(id).then((chunk) => {
+        const usable = chunk
+          && (!chunk.agentId || agentMayRead(chunk))
+          && (args.embeddingModelId === undefined || chunk.embeddingModelId === args.embeddingModelId);
+        return usable ? chunk : null;
+      });
+      loaded.set(id, pending);
     }
-    return loaded.get(id) ?? null;
+    return pending;
   };
+  // A window at a time rather than one by one. Which pieces are taken is
+  // unchanged (same order, same budget, same stop), at the price of reading
+  // at most one window past the stopping point.
+  const readWindow = (entries: RankedKnowledgeMatch<T>[]) =>
+    Promise.all(entries.map((entry) => readable(entry.match._id)));
 
   let leftOut: ReadonlySet<string> = new Set();
   const judged: string[] = [];
   if (args.judge) {
     const passages: Array<{ id: string; text: string; document?: string }> = [];
-    for (const entry of args.ranked) {
-      if (passages.length >= JUDGED_PASSAGES) break;
-      const chunk = await readable(entry.match._id);
-      if (!chunk) continue;
-      passages.push({
-        id: entry.match._id,
-        text: chunk.text,
-        ...(chunk.documentTitle ? { document: chunk.documentTitle } : {}),
-      });
-      judged.push(entry.match._id);
+    for (let start = 0; start < args.ranked.length && passages.length < JUDGED_PASSAGES; start += KNOWLEDGE_CHUNK_READ_WINDOW) {
+      const window = args.ranked.slice(start, start + KNOWLEDGE_CHUNK_READ_WINDOW);
+      const chunks = await readWindow(window);
+      for (const [index, entry] of window.entries()) {
+        if (passages.length >= JUDGED_PASSAGES) break;
+        const chunk = chunks[index];
+        if (!chunk) continue;
+        passages.push({
+          id: entry.match._id,
+          text: chunk.text,
+          ...(chunk.documentTitle ? { document: chunk.documentTitle } : {}),
+        });
+        judged.push(entry.match._id);
+      }
     }
     try {
       if (passages.length > 0) leftOut = await args.judge(passages);
@@ -404,20 +425,27 @@ export async function selectKnowledgeChunksWithinBudget<T extends { _id: string 
   }
 
   const collect = async (entries: RankedKnowledgeMatch<T>[], budget: number) => {
-    for (const entry of entries) {
-      if (used >= budget) break;
+    for (let start = 0; start < entries.length; start += KNOWLEDGE_CHUNK_READ_WINDOW) {
+      if (used >= budget) return;
       // Checked before loading so the second pass never re-reads a chunk the
       // reserved pass already admitted.
-      if (taken.has(entry.match._id) || leftOut.has(entry.match._id)) continue;
+      const window = entries
+        .slice(start, start + KNOWLEDGE_CHUNK_READ_WINDOW)
+        .filter((entry) => !taken.has(entry.match._id) && !leftOut.has(entry.match._id));
+      const chunks = await readWindow(window);
+      for (const [index, entry] of window.entries()) {
+        if (used >= budget) return;
+        // Again here: the same piece can stand twice in one window.
+        if (taken.has(entry.match._id)) continue;
+        const chunk = chunks[index];
+        if (!chunk) continue;
+        if (used + chunk.text.length > budget) return;
 
-      const chunk = await readable(entry.match._id);
-      if (!chunk) continue;
-      if (used + chunk.text.length > budget) break;
-
-      taken.add(entry.match._id);
-      chunkIds.push(entry.match._id);
-      chunkTexts.push(chunk.text);
-      used += chunk.text.length;
+        taken.add(entry.match._id);
+        chunkIds.push(entry.match._id);
+        chunkTexts.push(chunk.text);
+        used += chunk.text.length;
+      }
     }
   };
 

@@ -136,6 +136,10 @@ describe("appError conversion holds and spreads", () => {
       "ProviderRuntimeError",
       "carries provider status and retry metadata for `withProviderRetry` to branch on. It escapes to callers, so its message must stay safe — `safeProviderMessage` is what it is built from — but it is deliberately not a ConvexError: the agent runtime catches it and writes the failure into the run record rather than throwing at a screen.",
     ],
+    [
+      "WikiPickTimeLimitError",
+      "convex/wikiActions.ts throws it inside `selectWikiContextForQuery` when choosing pages runs past its time limit, and the same action's catch turns it into the search's best matches or the word match; it never leaves that action.",
+    ],
   ]);
 
   test("error classes in convex extend ConvexError, or say why they do not", () => {

@@ -137,6 +137,11 @@ export function parseVertexModelId(resourceName: string | undefined) {
  *   Flash-Lite. 3.7 Flash's own table leaves it out, so it is treated as gone.
  * - An explicit prompt cache (`caches.create`, `cachedContent`) returns an error
  *   on Gemini 4. Its implicit cache is on by default instead.
+ * - From Gemini 3.7 on, a request with no thinking level thinks at the model's
+ *   own depth (Medium on 3.8 Flash). Another app on this code measured it on
+ *   2026-11-10: with nothing sent, picking wiki pages took 10–21 seconds and a
+ *   four-word title 4–28; at Low the same calls took 2–5 seconds with the same
+ *   answers. So "Fast" (`NONE`) is sent as Low on these models.
  *
  * A rule on the version in the id, not a list of models, so the next release
  * is covered on the day it ships. An id that is not a Gemini model keeps
@@ -146,6 +151,7 @@ export type VertexModelRules = {
   honoursTemperature: boolean;
   takesMinimalThinking: boolean;
   takesPromptCache: boolean;
+  thinksByDefault: boolean;
 };
 
 // The family is any word: Gemini 4's first model is `gemini-4-argon`, neither
@@ -154,7 +160,7 @@ const VERTEX_GEMINI_ID = /^gemini-(\d+)(?:\.(\d+))?-([a-z]+)(-lite)?/;
 
 export function vertexModelRules(providerModelId: string): VertexModelRules {
   const match = VERTEX_GEMINI_ID.exec(parseVertexModelId(providerModelId).toLowerCase());
-  if (!match) return { honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true };
+  if (!match) return { honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true, thinksByDefault: false };
 
   const major = Number(match[1]);
   const minor = Number(match[2] ?? 0);
@@ -165,6 +171,8 @@ export function vertexModelRules(providerModelId: string): VertexModelRules {
     honoursTemperature: major < 3,
     takesMinimalThinking: major < 3 || (major === 3 && flash && (lite || minor < 7)),
     takesPromptCache: major < 4,
+    // Pro thinks by default whatever its number; Flash from 3.7.
+    thinksByDefault: major > 3 || (major === 3 && (!flash || minor >= 7)),
   };
 }
 

@@ -63,7 +63,11 @@ export function createGoogleProviderAdapter(args: { location?: string } = {}): A
       // than the model does.
       if (typeof request.temperature === "number" && rules.honoursTemperature) config.temperature = request.temperature;
       if (typeof request.maxOutputTokens === "number") config.maxOutputTokens = request.maxOutputTokens;
-      if (request.thinkingLevel && request.thinkingLevel !== "NONE") {
+      if (request.thinkingLevel === "NONE") {
+        // "Fast": nothing is sent, except where nothing would mean Medium —
+        // there it is Low, the quickest the model takes (`thinksByDefault`).
+        if (rules.thinksByDefault) config.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+      } else if (request.thinkingLevel) {
         const thinkingLevel = parseGoogleThinkingLevel(request.thinkingLevel, rules);
         if (thinkingLevel) config.thinkingConfig = { thinkingLevel };
       }

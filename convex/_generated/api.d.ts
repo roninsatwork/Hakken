@@ -1027,6 +1027,7 @@ import type * as wikiReviewActions from "../wikiReviewActions.js";
 import type * as wikiReviews from "../wikiReviews.js";
 import type * as wikiRewriteEval from "../wikiRewriteEval.js";
 import type * as wikiRewriteService from "../wikiRewriteService.js";
+import type * as wikiSearch from "../wikiSearch.js";
 import type * as wikiStaff from "../wikiStaff.js";
 import type * as wikiStaffRunActions from "../wikiStaffRunActions.js";
 import type * as wikiTending from "../wikiTending.js";
@@ -2069,6 +2070,7 @@ declare const fullApi: ApiFromModules<{
   wikiReviews: typeof wikiReviews;
   wikiRewriteEval: typeof wikiRewriteEval;
   wikiRewriteService: typeof wikiRewriteService;
+  wikiSearch: typeof wikiSearch;
   wikiStaff: typeof wikiStaff;
   wikiStaffRunActions: typeof wikiStaffRunActions;
   wikiTending: typeof wikiTending;

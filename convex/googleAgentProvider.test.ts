@@ -21,10 +21,10 @@ vi.mock("./vertexProviderService", async (importOriginal) => ({
   // What the model takes is decided by its id in `vertexModelRules` (tested in
   // vertexProviderService.test.ts with real ids). Here it is set per test, so
   // what is asserted is that the adapter asks it and does what it says.
-  vertexModelRules: vi.fn(() => ({ honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true })),
+  vertexModelRules: vi.fn(() => ({ honoursTemperature: true, takesMinimalThinking: true, takesPromptCache: true, thinksByDefault: false })),
 }));
 
-const NEWER_MODEL_RULES = { honoursTemperature: false, takesMinimalThinking: false, takesPromptCache: false };
+const NEWER_MODEL_RULES = { honoursTemperature: false, takesMinimalThinking: false, takesPromptCache: false, thinksByDefault: true };
 
 function baseRequest(overrides: Partial<AgentTurnRequest> = {}): AgentTurnRequest {
   return {
