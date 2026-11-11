@@ -252,6 +252,17 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   `npm run test:coverage`, loading its code cold. The config tells every
   project a coverage run is on (`COVERAGE_TOLD`, `HAKKEN_MEASURING_COVERAGE`);
   never pass a helper a shorter wait of its own.
+- **A time limit in app code counts only the slow call it guards**
+  (2026-11-11). The wiki's page chooser gives the model five seconds, and its
+  clock started before the index and search reads. A run measuring coverage
+  spent those seconds loading that code cold, so the model was never asked
+  and a test of its pick failed (`convex/wikiActions.ts`). Start a limit's
+  clock at the outside call it is for, a model or a fetch, and count only that
+  call's time: a test whose mock answers at once then never reaches it,
+  however slow the machine. A test with a one-millisecond limit holds the
+  wiki's (`convex/wikiActions.test.ts`). The minutes-long step budgets
+  (`STEP_BUDGET_MS` and the like) are meant to cover a whole step, reads
+  included, and are long enough that no test reaches them.
 - **Fake timers fake every clock.** Since Vitest 4 a plain `vi.useFakeTimers()`
   replaces `Date`, `performance.now` and `process.hrtime` too (and `Temporal` from
   Vitest 5, checked 2026-10-22), so a deadline

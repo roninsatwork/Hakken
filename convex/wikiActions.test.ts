@@ -212,6 +212,30 @@ describe("choosing pages for a question", () => {
   test("the time limit is five seconds unless a caller says otherwise", () => {
     expect(WIKI_PICK_TIME_LIMIT_MS).toBe(5_000);
   });
+
+  test("only the model's time counts against the limit, never the reads before it", async () => {
+    // 2026-11-11: the clock started before the index and search reads, and a
+    // run measuring coverage spent the five seconds loading that code, so the
+    // model was never asked. A millisecond is far less than those reads take
+    // here; a model that answers at once must still be heard.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await seedPage(t, { companyId, kind: "POLICY", subjectKey: "delivery", content: "Delivery goes out on Fridays." });
+    await seedPage(t, { companyId, kind: "POLICY", subjectKey: "returns", content: "Returns are taken within 30 days." });
+
+    generateTextWithResolvedModelMock.mockResolvedValue({ text: JSON.stringify({ pages: ["POLICY:returns"] }) });
+
+    const result = await t.action(internal.wikiActions.selectWikiContextForQuery, {
+      companyId,
+      query: "when does delivery go out",
+      includeCustomerPages: false,
+      pickTimeLimitMs: 1,
+    });
+
+    expect(generateTextWithResolvedModelMock).toHaveBeenCalledTimes(1);
+    // The word match would have opened delivery; returns can only be the model's pick.
+    expect(result.pageKeys).toEqual(["POLICY:returns"]);
+  });
 });
 
 describe("the shortlist the chooser reads", () => {

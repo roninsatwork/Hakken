@@ -207,11 +207,15 @@ export const selectWikiContextForQuery = internalAction({
       return chosen.map((key) => byKey.get(key)!);
     };
 
-    // One clock for the whole choosing, both passes included: the second pass
-    // gets what the first left, and none left means the search's best
-    // matches, or the word match below.
+    // One allowance for the whole choosing, both passes included: the second
+    // pass gets what the first left, and none left means the search's best
+    // matches, or the word match below. Only the model's own time counts
+    // (2026-11-11). The reads before it are the app's: a clock started ahead
+    // of them ran out in a test run measuring coverage, which loads code cold
+    // for seconds, before the model was ever asked.
     const pickLimitMs = args.pickTimeLimitMs ?? WIKI_PICK_TIME_LIMIT_MS;
-    const pickDeadline = Date.now() + pickLimitMs;
+    let modelMsUsed = 0;
+    const pickTimeLeftMs = () => pickLimitMs - modelMsUsed;
 
     try {
       const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
@@ -221,8 +225,9 @@ export const selectWikiContextForQuery = internalAction({
         index: Array<{ key: string; title: string; hint: string }>
       ): Promise<string[]> => {
         if (index.length === 0) return [];
-        const remainingMs = pickDeadline - Date.now();
+        const remainingMs = pickTimeLeftMs();
         if (remainingMs <= 0) throw new WikiPickTimeLimitError(pickLimitMs);
+        const askedAt = Date.now();
         const response = await withinTimeLimit(generateTextWithResolvedModel({
           model,
           // "Fast". Picking up to four keys from a list needs no deep thought,
@@ -238,7 +243,9 @@ export const selectWikiContextForQuery = internalAction({
                 index.map((entry) => `${entry.key} — ${entry.hint}`).join("\n"),
             },
           ],
-        }), remainingMs, pickLimitMs);
+        }), remainingMs, pickLimitMs).finally(() => {
+          modelMsUsed += Date.now() - askedAt;
+        });
         await recordModelSpend(ctx, {
           ...(args.agentId ? { agentId: args.agentId } : {}),
           ...(args.systemKey ? { systemKey: args.systemKey } : {}),
@@ -299,7 +306,7 @@ export const selectWikiContextForQuery = internalAction({
       // Both passes read the index and found nothing: believe it.
       return { context: "", pageKeys: [] };
     } catch (error) {
-      if (error instanceof WikiPickTimeLimitError || Date.now() >= pickDeadline) {
+      if (error instanceof WikiPickTimeLimitError || pickTimeLeftMs() <= 0) {
         // Expected now and then, and counted from the logs: how often the
         // limit is reached says whether it is set right.
         console.warn("Wiki page choosing reached its time limit; used the search's best matches instead", {
