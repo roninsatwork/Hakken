@@ -83,6 +83,11 @@ Start it with `npm run dev` and `npm run convex:dev` (or `.claude/launch.json`'s
 `next-dev`, which opens at that address), and open it in Anthony's Chrome,
 which is signed in there.
 
+**Restart both straight after any install that changes `next` or `convex`**
+(2026-11-17). A running server keeps the old version in memory while the new
+one sits on disk, and every page of the app failed (500) until it was
+restarted. Restart first, then run the checks.
+
 ## Current Branch Rules
 
 - Daily development happens on `dev`.
@@ -414,8 +419,10 @@ omission. The Docker image builds the app itself in its builder stage, so a
 separate build produced output nothing read; `deploy.yml` explains it inline.
 
 `--omit=dev` is deliberate: only runtime dependencies block a release. The dev
-toolchain currently pins an unpatchable transitive advisory, which
-`.github/workflows/security-audit.yml` reports weekly without blocking.
+toolchain has carried transitive advisories it couldn't patch, which
+`.github/workflows/security-audit.yml` reports weekly without blocking. On
+2026-11-17 the full `npm audit` found none, after a `readdir-glob` →
+`minimatch` override in `package.json` (Excel export's zip library).
 
 If the local frontend is running on port 3000, stop it before `npm run build`, then restart both services afterwards and open `http://hakken.localhost:3000`:
 

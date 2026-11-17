@@ -104,7 +104,7 @@ describe("shared setup requirements", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const run = vi.fn(() => { const error = new Error("DO_NOT_PRINT"); error.stderr = "PRIVATE_VALUE"; throw error; });
     expect(deploymentMain([], run)).toBe(1);
-    expect(run.mock.calls[0][1]).toEqual(["--no-install", "convex", "env", "list"]);
+    expect(run.mock.calls[0][1]).toEqual(["--no-install", "convex", "env", "list", "--include-values"]);
     expect(log.mock.calls.flat().join()).not.toMatch(/DO_NOT_PRINT|PRIVATE_VALUE/);
   });
   it("requires Vertex for knowledge even when text generation uses another provider", () => {

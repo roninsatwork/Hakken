@@ -60,7 +60,9 @@ export function deploymentMain(argv = process.argv.slice(2), run = execFileSync)
   const billing = readBilling(frameworkRoot);
   let output;
   try {
-    output = run("npx", ["--no-install", "convex", "env", "list", ...(prod ? ["--prod"] : [])],
+    // Since Convex 1.48 an AI agent running `env list` gets names only, which reads as every
+    // setting blank. Ask for the values explicitly; they are parsed here and never printed.
+    output = run("npx", ["--no-install", "convex", "env", "list", "--include-values", ...(prod ? ["--prod"] : [])],
       { cwd: frameworkRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 30_000 });
   } catch {
     // CLI error output can contain environment values. Never relay it.
