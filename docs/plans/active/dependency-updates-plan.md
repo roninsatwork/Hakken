@@ -180,6 +180,39 @@ the newest Stripe 22), 10 and 11 wait on other tools, and Node 26 waits on Conve
   3D object with its own `dispose`, no hand-set matrices). All 148 of the game's tests pass; the opening view of
   Lantern Courtyard, taken before and after on dev, differs in 0.01% of its pixels (the rain).
 
+### Security and Convex 1.50 batch (2026-11-17)
+
+Next.js's overlay flagged 16.4.2 with a moderate advisory (GHSA-mfr8-8qww-v76h: cached data shown across root params
+when a `'use cache'` function is called through `unstable_cache()`). Hakken uses neither, so it was never exposed. Anthony
+asked what else needed updating and to move to Convex 1.50 at the same time, then said "Go, all of it". One batch:
+
+- **Security:** `next`, `eslint-config-next` and `@next/third-parties` 16.4.6; `@sentry/nextjs` 11.13.0; `npm audit fix`
+  for the `minimatch` / `glob` advisories under the lint tools and Sentry. The last one, `readdir-glob` 3 under
+  `exceljs` → `archiver` 8, is pinned by `archiver`, so `package.json` overrides its `minimatch` to `^11.0.9` (a version
+  already in the tree); its file matching was checked by hand. `npm audit` then found nothing at all.
+- **Convex 1.47 → 1.50.0.** 1.48 fixed two Convex advisories. From 1.48 an agent running `convex env list` gets names
+  only, so `npm run verify:deployment` read every setting as blank: it now passes `--include-values` (the values are
+  read, never printed; `scripts/product-setup.test.mjs` holds it). From 1.50 a scheduled function that cancels itself
+  fails; Hakken's one cancel (`cancelQuietly`, `convex/seoCollectorRun.ts`) only cancels a job still pending, never the
+  one running. `FunctionHandle` and `signJwt`, also changed, aren't used. `convex-test` stays 0.0.64.
+- **Same-major updates:** `@google/genai` 2.32 (no change to how Hakken calls Google; a stream that drops mid-way now
+  always raises, which `streamVertexContentWithRetry` already handles; no live model call was made), `@xyflow/react`
+  12.12.1, `convex-helpers` 0.1.135, `framer-motion` 14.14, `lucide-react` 1.74, `next-intl` 4.15.1, Tailwind 4.3.5,
+  Vitest 5.1, Playwright 1.65 (its own Chromium build, 1255), `@vitejs/plugin-react` 6.3, `axe-core` 4.14.1, `knip` 6.45.
+- **Left as they were:** `intl-messageformat` 12.1.4 and `stripe` 22.6.2 (kept exact on purpose, 8a and 9); `three`
+  0.187 (the game); and every new major — `@convex-dev/auth` 2, `@convex-dev/stripe` 0.2, `@google/genai` 3,
+  `@xyflow/react` 13, `jsdom` 31, `convex-test` 0.0.71 — besides the four that already wait (ESLint 10, TypeScript 7,
+  Stripe 23, Node 26 types). Each is a piece of work of its own.
+- **Fallout:** the dev servers were left running through the install, and every page failed (500) until they were
+  restarted; AGENTS.md now says to restart straight after such an install. The first full check after Vitest 5.1 had
+  nothing prepared, and the eye's first press (`convex/seesAsk.test.ts`) waited 74 seconds on its code, past the twenty
+  a wait was given. The waits and the test limit are now one value everywhere — two minutes and three — with a guard
+  in `src/test-time-limits-drift.test.ts` and the rule in AGENTS.md.
+- **Checked:** `npm run check` (prepared and cold), `npm run test:coverage` and `coverage:check`, the smoke tests and
+  `npm run build` in a copy, `git diff --check`, `npm run verify:deployment` against dev, and the app in Chrome. One
+  test failed throughout, outside this batch: `src/provider-classification-drift.test.ts` on lines 221–228 of
+  `docs/developer/ai-models-providers-and-costs.md`, part of a docs edit already uncommitted before it began.
+
 ## Limits, said plainly
 
 - Convex's own Node is Convex's: this plan can't move it, only check it.

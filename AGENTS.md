@@ -215,10 +215,11 @@ place they run: never push without it. Every other test still runs on GitHub.
 its tests since 2026-09-21 — runs 6, 7, 14, 15 and 18 — failed on a clock, not
 a result):
 
-- **One time limit, set in `vitest.config.ts` and nowhere else**: three minutes
-  on GitHub, where it only catches a test that hangs, and ninety seconds here
-  (thirty failed tests at random on the first run after a package changes, with
-  nothing prepared yet: 2026-11-04).
+- **One time limit, set in `vitest.config.ts` and nowhere else**: three
+  minutes, here and on GitHub, where it only catches a test that hangs. It was
+  ninety seconds here until 2026-11-17: a run here with nothing prepared, the
+  first after a package changes, is as slow as GitHub's (thirty tests failed at
+  random on one, 2026-11-04).
   Never give a test or a hook its own limit (`}, 15_000);`, `{ timeout }`):
   it overrides the config on GitHub too. `src/test-time-limits-drift.test.ts`
   fails one.
@@ -250,13 +251,16 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   a genuine hang in their own words. Never write a loop that moves the clock,
   never `vi.runAllTimersAsync()` / `vi.advanceTimersToNextTimer…()` and hope,
   never a `setTimeout` sleep of 50ms or more to wait for something.
-- **That real time is one limit, `REAL_WAIT_LIMIT_MS`, and coverage gets
-  longer** (2026-11-07). Twenty seconds here, a minute on a run measuring
-  coverage here, two on GitHub: the eye's first press in
-  `convex/seesAsk.test.ts` took one second alone and past twenty under
-  `npm run test:coverage`, loading its code cold. The config tells every
-  project a coverage run is on (`COVERAGE_TOLD`, `HAKKEN_MEASURING_COVERAGE`);
-  never pass a helper a shorter wait of its own.
+- **That real time is one limit, `REAL_WAIT_LIMIT_MS`: two minutes, here and
+  on GitHub** (2026-11-17). The first full run after a package changes has no
+  transformed files kept (`node_modules/.vitest-cache`), and every worker
+  waits on one queue for the app's code. On the run after Vitest 5.0 → 5.1, the
+  eye's first press in `convex/seesAsk.test.ts` took 74 seconds, where it takes
+  under one prepared; the twenty seconds this was here, and the minute a
+  coverage run got (2026-11-07), each failed such a run and passed the next.
+  Never make it shorter here than on GitHub, and never pass a helper a shorter
+  wait of its own. To time a cold run, clear `node_modules/.vitest-cache` and
+  run `npm run check`.
 - **A time limit in app code counts only the slow call it guards**
   (2026-11-11). The wiki's page chooser gives the model five seconds, and its
   clock started before the index and search reads. A run measuring coverage

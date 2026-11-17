@@ -6,8 +6,8 @@ import { repoRoot } from './test/driftUtils'
 /**
  * No test sets its own time limit (AGENTS.md, "Test time limits").
  *
- * There is one, in `vitest.config.ts`: three minutes on GitHub, where it only
- * catches a hang, and ninety seconds here. A limit given to one test overrides
+ * There is one, in `vitest.config.ts`: three minutes, here and on GitHub, where
+ * it only catches a hang. A limit given to one test overrides
  * it on GitHub too — which is how a 15-second limit failed a push on
  * 2026-09-28, the fifth CI run in a week to fail on a clock alone. Speed is
  * judged here instead, test by test on its own (`scripts/check-test-speed.mjs`).
@@ -296,15 +296,28 @@ describe('test time limits', () => {
     expect(config.match(/\.\.\.LOGS_GO_STRAIGHT,/g)?.length ?? 0).toBe(projects)
   })
 
-  // 2026-11-07: the eye's first press loaded its code cold under `npm run test:coverage` here and took past the twenty seconds
-  // a wait on real time allowed, where it takes one alone. A coverage run is told to every project, and the waits give it a minute.
-  test('a run measuring coverage is told to every project, and a wait on real time gives it a minute', () => {
+  // The Sites speed test skips a run measuring coverage, so every project is told whether this one does.
+  test('a run measuring coverage is told to every project', () => {
     const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
     expect(config).toContain("const COVERAGE_TOLD = { env: { HAKKEN_MEASURING_COVERAGE: MEASURING_COVERAGE ? '1' : '' } } as const")
     const projects = config.match(/\.\.\.STUBS_PUT_BACK,/g)?.length ?? 0
     expect(config.match(/\.\.\.COVERAGE_TOLD,/g)?.length ?? 0).toBe(projects)
+  })
+
+  // 2026-11-07, a coverage run, and 2026-11-17, the first run after Vitest 5.1: with nothing prepared, the eye's first press
+  // waited past the twenty seconds and then the minute a wait was given here, and took 74 seconds where it takes one. A run here
+  // with nothing prepared is as slow as GitHub's, so the wait and the test's limit are each one value everywhere, never shorter
+  // here, and the wait leaves the test a minute to say what it was waiting for.
+  test('a wait on real time and a test limit are each one value everywhere, the wait a minute inside the limit', () => {
+    const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
     const realTime = readFileSync(join(repoRoot, 'src/test/realTime.ts'), 'utf8')
-    expect(realTime).toContain('export const REAL_WAIT_LIMIT_MS = process.env.GITHUB_ACTIONS ? 120_000 : process.env.HAKKEN_MEASURING_COVERAGE === "1" ? 60_000 : 20_000;')
+    const limit = /^const TEST_TIMEOUT_MS = ([\d_]+)$/m.exec(config)?.[1]
+    const wait = /^export const REAL_WAIT_LIMIT_MS = ([\d_]+);$/m.exec(realTime)?.[1]
+    expect(limit, 'TEST_TIMEOUT_MS is a plain number in vitest.config.ts, the same on every machine').toBeDefined()
+    expect(wait, 'REAL_WAIT_LIMIT_MS is a plain number in src/test/realTime.ts, the same on every machine').toBeDefined()
+    const ms = (value: string | undefined) => Number((value ?? '').replaceAll('_', ''))
+    expect(ms(wait)).toBeGreaterThanOrEqual(120_000)
+    expect(ms(limit) - ms(wait)).toBeGreaterThanOrEqual(60_000)
   })
 
   test("a push to dev really does leave out Arcade's tests", () => {
@@ -335,7 +348,7 @@ describe('test time limits', () => {
 
   test('the one limit is where it is said to be', () => {
     const config = readFileSync(join(repoRoot, 'vitest.config.ts'), 'utf8')
-    expect(config).toMatch(/const TEST_TIMEOUT_MS = process\.env\.GITHUB_ACTIONS \? 180_000 : 90_000/)
+    expect(config).toMatch(/^const TEST_TIMEOUT_MS = 180_000$/m)
     expect(config.match(/testTimeout: TEST_TIMEOUT_MS/g)).toHaveLength(2)
   })
 })

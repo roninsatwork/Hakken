@@ -70,15 +70,17 @@ const coverageConfig = {
  * laptop — 1.25s became over 15s, 3.4s over 30s, 4s became 45s — and every CI
  * run that failed in its tests from 2026-09-21 to 2026-09-28 (runs 6, 7, 14, 15
  * and 18) failed on a clock alone, each fixed one test at a time until the
- * next. Here it is ninety seconds: thirty failed tests at random on a run with
- * nothing prepared yet, the first after a package changes, when a test that
- * takes one second waits for the app's code to load (2026-11-04). Speed itself
- * is checked by the speed
+ * next. It is three minutes here too (2026-11-17): a run here with nothing
+ * prepared yet, the first after a package changes, is as slow as GitHub's,
+ * because a test that takes one second waits for the app's code to load.
+ * Ninety seconds failed thirty tests at random on such a run (2026-11-04), and
+ * the eye's first press took 74 seconds on the next one, after Vitest 5.1,
+ * where it takes under one prepared. Speed itself is checked by the speed
  * budget `npm run test:run` applies (`scripts/check-test-speed.mjs`): a test
  * over five seconds here fails the local check, which on GitHub is about a
  * minute, well inside three.
  */
-const TEST_TIMEOUT_MS = process.env.GITHUB_ACTIONS ? 180_000 : 90_000
+const TEST_TIMEOUT_MS = 180_000
 
 /*
  * How hard a run here drives the machine (AGENTS.md, "Tests that never
@@ -122,9 +124,10 @@ const LOGS_GO_STRAIGHT = { disableConsoleIntercept: true } as const
  * times the app's code, and coverage slows it past any target — it took six
  * minutes under `npm run test:coverage` here, against three without
  * (2026-10-05). Coverage runs on GitHub, where it is skipped already, and in
- * `npm run gate`. The waits on real time read it too (`REAL_WAIT_LIMIT_MS`,
- * `src/test/realTime.ts`): a press's code loaded cold under coverage here took
- * past their twenty seconds (2026-11-07). Every project is told.
+ * `npm run gate`. Every project is told. (The waits on real time read it too
+ * from 2026-11-07 to 2026-11-17; they are one value everywhere now, as a run
+ * with nothing prepared is slow whether or not it measures coverage —
+ * `REAL_WAIT_LIMIT_MS`, `src/test/realTime.ts`.)
  */
 const MEASURING_COVERAGE = process.argv.includes('--coverage')
 const COVERAGE_TOLD = { env: { HAKKEN_MEASURING_COVERAGE: MEASURING_COVERAGE ? '1' : '' } } as const
@@ -213,8 +216,8 @@ export default defineConfig({
            * test, which then failed instantly on a response it never asked for. One
            * slow test, two red results, neither of them a real defect.
            *
-           * A genuine deadlock still fails, ninety seconds later here and three minutes
-           * on GitHub (`TEST_TIMEOUT_MS` above).
+           * A genuine deadlock still fails, three minutes later, here and on GitHub
+           * (`TEST_TIMEOUT_MS` above).
            */
           testTimeout: TEST_TIMEOUT_MS,
           hookTimeout: TEST_TIMEOUT_MS,
