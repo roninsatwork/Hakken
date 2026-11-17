@@ -3,13 +3,14 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Tracked pages
 choice: Kind of result: Web | Video | News | Discover | Google News
+notice (info)
 figures
   figure: Clicks
   figure: Impressions
   figure: Click-through rate
   figure: Average position
 search: Search tracked pages…
-table: Track | Page | Clicks | Impressions | CTR | Position | Keywords | Top keyword
+table: Track | Page | Clicks | Up or down | Shown | Position
   table-bar
     download: Download all (CSV)
   table-footer

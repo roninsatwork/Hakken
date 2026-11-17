@@ -2,13 +2,13 @@
 
 import { MousePointerClick } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
+import { SearchConsoleEveryCountry } from "../../_components/SearchConsoleEveryCountry";
 import { formatRate } from "../../_components/searchConsoleFormat";
-import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
-import { figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { useRecordHref } from "../../_components/searchConsoleRecords";
+import { figureColumns, pageColumn, useSearchConsoleList, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { lowCtrSees } from "@/convex/utils/sees/searchConsoleScreens";
 import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
@@ -35,12 +35,15 @@ export default function SearchConsoleLowCtrPage() {
       title={t("lowCtr.title")}
       description={t("lowCtr.description")}
       heroes={
-        <FigureRow>
+        <>
+          <SearchConsoleEveryCountry />
+          <FigureRow>
           <Figure label={t("lowCtr.below")} value={summary ? formatNumber(summary.rows) : "…"} detail={<span className="text-secondary">{t("lowCtr.ofShown", { count: formatNumber(summary?.of ?? 0) })}</span>} />
           <Figure label={t("lowCtr.impressions")} value={summary ? formatNumber(summary.impressions) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
           <Figure label={t("lowCtr.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
           <Figure label={t("lowCtr.atUsual")} value={summary ? formatNumber(summary.expected) : "…"} detail={<span className="text-secondary">{t("lowCtr.wouldHave")}</span>} />
-        </FigureRow>
+          </FigureRow>
+        </>
       }
       table={{
         list,
@@ -59,14 +62,9 @@ export default function SearchConsoleLowCtrPage() {
           { header: t("table.expected"), field: "expected" },
         ],
         columns: [
-          {
-            key: "key",
-            header: t("table.page"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row) => <RecordLinkCell cut href={recordHref("pages/page", row.key)}>{pageLabel(row.key, host)}</RecordLinkCell>,
-          },
-          ...figureColumns(t, ["impressions", "position", "ctr"]),
+          // The lean table (AGENTS.md "Tables are lean", 2026-11-17): one line a row, the rest on the row's own screen. Six figures were one over: Position, behind Usual CTR, is on the page's own screen.
+          pageColumn<ListRow>(t("table.page"), host, recordHref),
+          ...figureColumns(t, ["impressions", "ctr"]),
           { key: "usualCtr", header: t("table.usualCtr"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.usualCtr)}</span> },
           ...figureColumns(t, ["clicks"]),
           { key: "expected", header: t("table.expected"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.expected === null ? "–" : formatNumber(row.expected)}</span> },

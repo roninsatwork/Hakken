@@ -4,6 +4,8 @@ import { ANALYTICS_READ } from "./agentTools";
 import { fillFacts, namedFacts, type Fact } from "./insightFacts";
 import { typedNumbers } from "./insightEditor";
 import { seesScreenFor, sourceOfSection } from "./sees/screens";
+import { beforeOf } from "../searchConsoleDays";
+import { isCalendarPeriod } from "./calendarPeriods";
 
 /**
  * What Hakken sees, written by the Insights team when the eye is pressed
@@ -162,7 +164,9 @@ export const SEES_FORMAT = [
   // Anthony, 2026-11-03, on the Visits eye ("this is really poor from the ai"): the writer said visits "held steady on
   // weekdays" with no day on the page, and that people were "likely hitting a dead end".
   "Say only what the figures you were given show. Never guess at a reason, a day, a time or a pattern they do not hold, and never write \"likely\", \"probably\" or \"may be because\": where the figures cannot say why, make finding out a step.",
-  "Each step is one thing a person can do, in plain words, saying where: the device, channel, classification, step or product it is about — never advice that would fit any website. Link it to the place it names, each step to a different page where the links allow. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
+  // Anthony, 17 November 2026, on the Pages eye's first press: a step about linking blog guides to product pages was linked
+  // to Tracked pages, the one link left once each step had to have its own.
+  "Each step is one thing a person can do, in plain words, saying where: the device, channel, classification, step or product it is about — never advice that would fit any website. Link it to the page where that step is done; never to a page that doesn't show what the step is about, even if two steps then share a link. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
   "Never tell them to change what counts as a conversion, or how their tracking is set up: they chose it on purpose. Speak about tracking only when trackingFaults lists a fault.",
   "The most useful thing first: what a client would act on, never what did not happen.",
   // The platform's word (Anthony, GA19, 2026-10-09), though some screens' own figures still say enquiries.
@@ -170,6 +174,8 @@ export const SEES_FORMAT = [
   // Anthony, 2026-11-03: every word a client reads at a reading age of 14 ("we need to remember the reading age for
   // whenever you write text").
   "Write for a reading age of 14, as a helpful person would say it out loud. Never the system's words: no \"list\", \"row\", \"span\", \"share of\", \"the month before\" when the month has a name. Say \"visitors\" or \"people\", and \"more than September\" or \"fewer than September\". Keep Google's own names for channels (Cross-network, Organic Search, Direct).",
+  // Anthony, 17 November 2026: the Pages eye said "down from 9,393 earlier" and "our two main blog guides".
+  "Where you set a figure against the dates before, say them as datesBefore names them (\"in September\"), never \"earlier\" or \"previously\". Speak to the reader about their own website: \"your pages\", \"your blog\", never \"our\" or \"we\".",
 ].join("\n");
 
 /**
@@ -354,6 +360,31 @@ export type SeesVerdict = { ok: true; says: string[]; steps: Array<{ words: stri
  */
 const LEANS_ON_THE_LAST = /^(?:it|it's|its|they|they're|their|them|this|that|these|those|both|also|he|she|his|her)\b/i;
 
+/**
+ * Words as the reader is spoken to (Anthony, 17 November 2026, on the Pages eye's first press: "down from 9,393 earlier",
+ * "our two main blog guides"): the reader's own website is "your", never "our"; and where the dates before have a name, a
+ * figure set "earlier" is set "in September". Mended here, so no slip costs a rewrite.
+ */
+export function spoken<T extends { text: string }>(filled: T, beforeName?: string): T {
+  let text = filled.text.replace(/\bour\b/g, "your").replace(/\bOur\b/g, "Your");
+  if (beforeName) text = text.replace(/\s+(?:earlier|previously)(?=[.,;:!?]|$)/gi, ` in ${beforeName}`);
+  return { ...filled, text };
+}
+
+/**
+ * The dates before a page's dates by their name, where they are one whole month: "September", or "December 2025" in
+ * another year than the dates'. The writer is handed them (`datesBefore`) and `spoken` says them.
+ */
+export function beforeNamed(from: string, to: string, period?: string): { dates: string; name?: string } {
+  const before = beforeOf(from, to, period && isCalendarPeriod(period) ? period : undefined);
+  const dates = `${before.from} to ${before.to}`;
+  if (!before.from.endsWith("-01")) return { dates };
+  const last = new Date(Date.UTC(Number(before.from.slice(0, 4)), Number(before.from.slice(5, 7)), 0)).toISOString().slice(0, 10);
+  if (before.to !== last) return { dates };
+  const month = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(new Date(`${before.from}T00:00:00Z`));
+  return { dates, name: before.from.slice(0, 4) === to.slice(0, 4) ? month : `${month} ${before.from.slice(0, 4)}` };
+}
+
 export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, links: readonly SeesLink[], options: {
   /**
    * The page's own keys, when the team read the website's screens (A1): at least one sentence must then name a figure
@@ -379,6 +410,8 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
    * under 1.6 events for every 100"): a writer naming one has typed no figure (eye-code-first-brief-plan-2026-11-07.md).
    */
   namesWithNumbers?: readonly string[];
+  /** The dates before by their name, where they have one ("September"): a sentence ending "…from 9,393 earlier" says it. */
+  beforeName?: string;
 } = {}): SeesVerdict {
   const namedKept: string[] = [];
   const typed = (text: string) => typedNumbers(withoutNames(text, options.namesWithNumbers ?? []));
@@ -441,7 +474,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
       const carries = salvage && (options.mustCover ?? []).some((finding) => !finding.keys.some((key) => namedKept.includes(key)) && finding.keys.some((key) => named.includes(key)));
       if (!carries) continue;
     }
-    const filled = fillFacts(trimmed, facts);
+    const filled = spoken(fillFacts(trimmed, facts), options.beforeName);
     const why = filled.missing.length > 0 ? `A sentence named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.`
       : filled.text.split(/\s+/).length > MOST_SENTENCE_WORDS ? `A sentence ran past ${MOST_SENTENCE_WORDS} words: "${filled.text}". Split it in two, or say less.`
       : /dataforseo|firecrawl/i.test(filled.text) ? "A sentence named a supplier."
@@ -474,7 +507,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
       fault(`A step typed a number: "${words}".`);
       continue;
     }
-    const filled = fillFacts(words, facts);
+    const filled = spoken(fillFacts(words, facts), options.beforeName);
     const at = typeof step.link === "number" ? step.link : Number(step.link);
     const link = Number.isInteger(at) ? links[at] : undefined;
     const why = filled.missing.length > 0 ? `A step named a figure that was neither on the page nor read: ${filled.missing.join(", ")}.`

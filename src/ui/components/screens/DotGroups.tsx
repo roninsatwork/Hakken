@@ -47,7 +47,7 @@ export function dotGroupsOf(points: readonly DotPoint[], split: { x: number; y: 
   });
 }
 
-export function DotGroups({ points, split, names, xLabel, yLabel, readout, controls = [], height }: {
+export function DotGroups({ points, split, names, xLabel, yLabel, readout, formatY, controls = [], height }: {
   points: readonly DotPoint[];
   /** Where the lines between the groups fall. */
   split: { x: number; y: number };
@@ -57,6 +57,8 @@ export function DotGroups({ points, split, names, xLabel, yLabel, readout, contr
   yLabel: string;
   /** Short names for the two figures in the hover, where an axis's own name is too long. */
   readout?: { x: string; y: string };
+  /** How the hover writes the figure up the side, where a whole number isn't enough (Performance's click-through rates). */
+  formatY?: (value: number) => string;
   /** The menu above the dots, as on a chart with menus. */
   controls?: readonly ExplorerControl[];
   height?: number;
@@ -64,7 +66,7 @@ export function DotGroups({ points, split, names, xLabel, yLabel, readout, contr
   return (
     <div className="flex flex-col gap-5">
       {controls.length > 0 ? <ExplorerToolbar controls={controls} /> : null}
-      <SiteScatterChart groups={dotGroupsOf(points, split, names)} xLabel={xLabel} yLabel={yLabel} readout={readout} height={height} scale="tight" />
+      <SiteScatterChart groups={dotGroupsOf(points, split, names)} xLabel={xLabel} yLabel={yLabel} readout={readout} height={height} scale="tight" {...(formatY ? { formatY } : {})} />
     </div>
   );
 }

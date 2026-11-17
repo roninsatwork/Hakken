@@ -17,7 +17,7 @@ search: Search keywords…
 filter: Position
 filter: Intent
 filter: Device
-table: Keyword | Band | Position | Change | Clicks | Impressions
+table: Keyword | Band | Position | Up or down | Clicks | Shown
   table-bar
     download: Download all (CSV)
   table-footer

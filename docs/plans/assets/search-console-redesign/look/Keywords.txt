@@ -8,12 +8,15 @@ figures
   figure: Impressions
   figure: Click-through rate
   figure: Average position
+chart-card: Clicks each day
+filter: Show
+filter: Your whole website
 search: Search keywords…
 filter: Tracked
 filter: Position
 filter: Intent
 filter: Device
-table: Track | Keyword | Clicks | Impressions | CTR | Position | Pages | Top page
+table: On the chart | Keyword | Clicks | Up or down | Shown | CTR | Position
   table-bar
     download: Download all (CSV)
   table-footer

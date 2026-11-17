@@ -48,6 +48,14 @@ export function formatCompact(value: number | null | undefined): string {
   return new Intl.NumberFormat(siteLocale(), { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
+/**
+ * A log scale's mark: compact, and one under 1 to its single figure — 0.05, 0.02 — so marks under 0.1 never read alike.
+ * Performance's dots reach 0.02 clicks for every 100 impressions, which the compact form wrote "0" (2026-11-17).
+ */
+export function formatLogMark(value: number): string {
+  return value > 0 && value < 1 ? new Intl.NumberFormat(siteLocale(), { maximumSignificantDigits: 1 }).format(value) : formatCompact(value);
+}
+
 /** `2026-09-23` as "23 Sep 2026". */
 export function formatDay(day: string | null | undefined): string {
   if (!day) return "–";

@@ -28,7 +28,9 @@ const STILL_TO_DO = new Set([
   // Google Analytics' older keys and screens outside the plan's nine.
   "googleAnalytics.channels", "googleAnalytics.channel", "googleAnalytics.landingPage",
   // Search Console's list screens outside the plan's ten.
-  "searchConsole.keywords", "searchConsole.pages", "searchConsole.record", "searchConsole.almost", "searchConsole.places",
+  // Keywords left on 17 November 2026 with its redo (search-console-keywords-way-2-plan-2026-11-17.md), and Pages the same
+  // day with its own (search-console-pages-way-1-plan-2026-11-17.md).
+  "searchConsole.record", "searchConsole.almost", "searchConsole.places",
   "searchConsole.indexing", "searchConsole.demand", "searchConsole.competing", "searchConsole.estimates", "searchConsole.appearance",
   "searchConsole.lowCtr", "searchConsole.trackedKeywords", "searchConsole.trackedPages", "searchConsole.types", "searchConsole.moves",
   // Visibility's screens outside the plan's thirty-one.
@@ -37,7 +39,7 @@ const STILL_TO_DO = new Set([
   "insights.trackRecord", "insights.experiments", "insights.findingsSection", "insights.strategyService",
 ]);
 /** The list's size: lower it as pages leave, never raise it. */
-const STILL_TO_DO_MOST = 29;
+const STILL_TO_DO_MOST = 27;
 
 /**
  * Pages that show no one website's own figures, and so carry no eye (Anthony, 2026-11-03: "We dont need the eye on non

@@ -153,7 +153,7 @@ describe("a website not connected", () => {
 });
 
 describe("Performance", () => {
-  it("shows the four figures against the days before, and how many clicks Google names", () => {
+  it("shows the four figures against the days before, the day chart, and out of every 100 clicks the searches Google hides", () => {
     at("/app/search-console/site_1");
     answer({
       "searchConsoleConnect:searchConsoleStatus": status(),
@@ -162,14 +162,26 @@ describe("Performance", () => {
         totals: FIGURES,
         previous: { clicks: 1178, impressions: 59540, ctr: 1178 / 59540, position: 22.6 },
         named: 1041,
+        daysBefore: [{ day: "2026-07-26", clicks: 30, impressions: 1900, ctr: 30 / 1900, position: 22 }],
+      },
+      "searchConsoleTopKeywords:searchConsoleTopKeywords": {
+        rows: [{ key: "door handles", clicks: 40, impressions: 9000, position: 9.1, brand: false }],
+        brand: { now: { brandClicks: 41, nonBrandClicks: 1000, brandImpressions: 900, nonBrandImpressions: 40000 }, before: null },
+        preparing: false, current: true, named: 1041, listed: 1, comparable: false, live: false, from: "2026-08-01", to: "2026-08-31",
       },
     });
     render(<SearchConsolePerformancePage />);
     expect(screen.getByText("1,284")).toBeInTheDocument();
     expect(screen.getByText("61,920")).toBeInTheDocument();
     expect(screen.getByText(/searchConsole\.figures\.up 9\.0% common\.periods\.versus\.lastMonth/)).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.named 1,041 1,284 243")).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.chart.title")).toBeInTheDocument();
+    expect(screen.getByText(/^searchConsole\.performance\.days\.title/)).toBeInTheDocument();
+    // Out of every 100 clicks: brand searches, the others Google names, and the 243 Google hides.
+    expect(screen.getByText("searchConsole.performance.squares.groups.brand")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.performance.squares.groups.named")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.performance.squares.groups.hidden")).toBeInTheDocument();
+    // The dots read the keywords Google showed most, for the dates chosen.
+    const keywords = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsoleTopKeywords")).at(-1)?.[1];
+    expect(keywords).toMatchObject({ searchType: "web", from: "2026-08-01", to: "2026-08-31", period: "lastMonth" });
     // A quick pick ends on Google's newest day, not today.
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsolePerformance")).at(-1)?.[1];
     expect(asked).toMatchObject({ searchType: "web", from: "2026-08-01", to: "2026-08-31", period: "lastMonth" });
@@ -221,7 +233,7 @@ describe("Keywords", () => {
   };
   const TRACKING = { keywords: { count: 1, limit: 200 }, pages: { count: 0, limit: 100 } };
 
-  it("reads the list a page at a time, ordered by the heading pressed, each keyword with its Track tick and top page", () => {
+  it("reads the list a page at a time, ordered by the heading pressed, in the lean table: the keyword and five figures, one line each", () => {
     at("/app/search-console/site_1/keywords");
     answer({
       "searchConsoleConnect:searchConsoleStatus": status(),
@@ -230,10 +242,15 @@ describe("Keywords", () => {
     });
     render(<SearchConsoleSearchesPage />);
     expect(screen.getByText("plumber leeds")).toBeInTheDocument();
-    expect(screen.getAllByText("/plumbers/")).toHaveLength(2);
-    expect(screen.getByRole("checkbox", { name: /searchConsole\.track\.untrackLabel plumber leeds/ })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: /searchConsole\.track\.trackLabel emergency plumber/ })).not.toBeChecked();
-    expect(screen.getByText(/searchConsole\.track\.count 1 200/)).toBeInTheDocument();
+    // The table rule (AGENTS.md "Tables are lean", 2026-11-17): Track, Pages and Top page are on the keyword's own screen.
+    const headings = screen.getAllByRole("columnheader").map((heading) => heading.textContent?.replace(/\s+/g, "") ?? "");
+    expect(headings).toEqual([
+      "searchConsole.keywords.chart.tickHeading", "searchConsole.table.keyword", "searchConsole.table.clicks", "searchConsole.table.change",
+      "searchConsole.table.shown", "searchConsole.table.ctr", "searchConsole.table.position",
+    ]);
+    expect(screen.getByText("searchConsole.table.shown")).toHaveAttribute("title", "searchConsole.table.shownTitle");
+    expect(screen.queryByText("/plumbers/")).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /searchConsole\.track\./ })).toBeNull();
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsoleListPage")).at(-1)?.[1];
     // The last thirty days, ending on Google's newest: a ready-made period, read on the server.
     expect(asked).toMatchObject({ dimension: "query", from: "2026-08-01", to: "2026-08-31", sort: "clicks", direction: "desc", page: 1, rows: 25 });

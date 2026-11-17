@@ -5,7 +5,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { accessTokenFor, siteRunGoing, type ConnectionProblem } from "./searchConsoleConnect";
 import { noteHoldPagesChanged } from "./holdPages";
-import { GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
+import { EVERY_COUNTRY_LISTS, GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
 import {
   COLLECTED_SEARCH_TYPES,
   listValidator,
@@ -45,7 +45,8 @@ import { noteRegister } from "./searchConsoleSeenDays";
  * plus countries, devices and kinds of search appearance. A search's own
  * totals are added up from its pairs, never asked apart. A page is asked
  * apart because Google folds the rare searches it hides into a page's
- * totals.
+ * totals — only when no country is named, so the pages are every
+ * country's (`EVERY_COUNTRY_LISTS`, 2026-11-17).
  *
  * **Kept packed** (§14.3, item 2): one record per website, kind of result,
  * list and day, in parts of 2,000 rows (`utils/searchConsolePacks.ts`). Days
@@ -236,6 +237,8 @@ export const stepState = internalQuery({
       status: connection.status,
       property: connection.property ?? null,
       clearing: connection.clearing === true,
+      /** Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4). */
+      switchedOff: connection.switchedOff === true,
       companyWebsiteId: connection.companyWebsiteId,
       owned: hold !== null && !isTrackedHold(hold),
       oldestDay: held?.oldestDay ?? null,
@@ -340,8 +343,9 @@ export type StepOutcome = {
  * totals for the step's days, then, day by day, each list of each kind that
  * had impressions, kept as one record a day. Every ask carries Google's
  * country filter: the main home country's, held without a country, or a
- * country kept ready beside it. Only the main country keeps a list of every
- * country's totals, asked of Google unfiltered.
+ * country kept ready beside it — but the pages, asked of every country, and
+ * the main country's list of every country's totals, asked of Google
+ * unfiltered (`EVERY_COUNTRY_LISTS`).
  * Says how it ended; the Collector's run goes on from there
  * (`searchConsoleAgentRun.ts`).
  */
@@ -403,11 +407,14 @@ export async function runStep(
     ...country,
   };
   const held = (day: string) => state.oldestDay !== null && state.newestDay !== null && day >= state.oldestDay && day <= state.newestDay;
-  // A home country's figures: every ask filtered to it — but the main country's list of every
-  // country's totals, kept whole so Countries and devices shows where the traffic comes from
-  // (search-console-home-countries-plan.md, decision 4). A country kept beside it has no such list.
+  // A home country's figures: every ask filtered to it — but the lists asked of every country
+  // (`EVERY_COUNTRY_LISTS`): the main country's list of every country's totals, kept whole so Countries
+  // and devices shows where the traffic comes from (search-console-home-countries-plan.md, decision 4),
+  // and the pages, as Google leaves the searches it keeps private out of a page's figures in one
+  // country (2026-11-17). A country kept beside the main one has no country list; its pages are the same
+  // every country's pages.
   const countryFilter = { dimensionFilterGroups: [{ filters: [{ dimension: "country", operator: "equals", expression: asked }] }] };
-  const filterFor = (list: SearchConsoleList | "date") => (list === "country" ? {} : countryFilter);
+  const filterFor = (list: SearchConsoleList | "date") => (list !== "date" && EVERY_COUNTRY_LISTS.has(list) ? {} : countryFilter);
   const listsOf = (type: SearchType) => LISTS_OF[type].filter((list) => args.country === undefined || list !== "country");
   let failure: GoogleFailure | null = null;
 

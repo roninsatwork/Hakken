@@ -2,13 +2,13 @@
 
 import { Split } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { RecordLinkCell } from "../../../sites/_components/SiteCells";
+
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { formatRate } from "../../_components/searchConsoleFormat";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
-import { figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { figureColumns, useSearchConsoleList, type ChipId, keywordColumn } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { competingSees } from "@/convex/utils/sees/searchConsoleScreens";
 import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
@@ -63,14 +63,8 @@ export default function SearchConsoleCompetingPage() {
           { header: `${t("table.share")} (%)`, field: "nextShare" },
         ],
         columns: [
-          {
-            key: "key",
-            header: t("table.keyword"),
-            sortable: true,
-            className: "w-[24%] max-w-0",
-            cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
-          },
-          { key: "count", header: t("table.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.count === null ? "–" : formatNumber(row.count)}</span> },
+          keywordColumn(t("table.keyword"), recordHref, "w-[24%] max-w-0"),
+          // The lean table (AGENTS.md "Tables are lean", 2026-11-17): one line a row, the rest on the row's own screen. How many pages compete is on the keyword's own screen.
           ...figureColumns(t, ["clicks"]),
           { key: "top", header: t("table.topPage"), sortable: true, className: "w-[20%] max-w-0", cell: (row) => page(row.top) },
           { key: "topShare", header: t("record.share"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.topShare)}</span> },

@@ -13,7 +13,7 @@ import { appError } from "./utils/appError";
 import { accessTokenFor } from "./searchConsoleConnect";
 import { queryAnalytics, type AnalyticsRow } from "./searchConsoleApi";
 import { connectionStatusValidator, searchTypeValidator, type SearchType } from "./searchConsoleSchema";
-import { addUp, beforeOf, daysIn, historyLimitDay, isDay } from "./searchConsoleDays";
+import { addUp, beforeOf, daysIn, historyLimitDay, isDay, spanCovered } from "./searchConsoleDays";
 import { OPENING_PERIOD, calendarPeriodValidator, periodSpan as calendarSpan, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
 
@@ -147,6 +147,8 @@ export const searchConsolePerformance = tenantQuery({
      * began on 11 June 2025 while its first day held was 23 April 2026, so Last 6 months set 184 days against 9.
      */
     previousDays: v.optional(v.number()),
+    /** The span before's days, for Performance's chart to lay under the dates (search-console-performance-way-3-plan-2026-11-17.md). */
+    daysBefore: v.optional(v.array(dayValidator)),
     /** A country not kept ready: asked of Google instead. */
     live: v.boolean(),
   }),
@@ -178,15 +180,18 @@ export async function readPerformance(
     daysOf(ctx, site.hold._id, args.searchType, args.from, args.to, country),
     daysOf(ctx, site.hold._id, args.searchType, before.from, before.to, country),
   ]);
-  // The change only when the days before are all held; otherwise it would compare with a part.
-  const previousHeld = Boolean(oldestDay && oldestDay <= before.from);
+  // The change only when the days before are all held; otherwise it would compare with a part. Google keeps none for
+  // some websites' stretches inside its sixteen months, so the days themselves must be there too (`spanCovered`).
+  const previousHeld = Boolean(oldestDay && oldestDay <= before.from) && spanCovered(beforeRows.map((row) => row.day), before.from, before.to);
   const namedKnown = inRange.every((row) => row.clicks === 0 || row.namedClicks !== undefined);
+  const shown = (row: (typeof inRange)[number]) => ({ day: row.day, clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position });
   return {
-    days: inRange.map((row) => ({ day: row.day, clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position })),
+    days: inRange.map(shown),
     totals: addUp(inRange),
     previous: previousHeld ? addUp(beforeRows) : null,
     named: inRange.length > 0 && namedKnown ? inRange.reduce((sum, row) => sum + (row.namedClicks ?? 0), 0) : null,
     previousDays: beforeRows.length,
+    daysBefore: previousHeld ? beforeRows.map(shown) : [],
     live: false,
   };
 }
@@ -210,6 +215,7 @@ export const searchConsoleLiveDays = tenantAction({
       totals: v.union(figuresValidator, v.null()),
       previous: v.union(figuresValidator, v.null()),
       named: v.null(),
+      daysBefore: v.array(dayValidator),
     }),
     v.object({ ok: v.literal(false), problem: problemValidator }),
   ),
@@ -236,7 +242,7 @@ export const searchConsoleLiveDays = tenantAction({
       .sort((left, right) => left.day.localeCompare(right.day));
     const days = all.filter((day) => day.day >= args.from);
     const earlier = all.filter((day) => day.day >= before.from && day.day <= before.to);
-    return { ok: true as const, days, totals: addUp(days), previous: beforeHeld ? addUp(earlier) : null, named: null };
+    return { ok: true as const, days, totals: addUp(days), previous: beforeHeld ? addUp(earlier) : null, named: null, daysBefore: beforeHeld ? earlier : [] };
   },
 });
 
@@ -263,13 +269,21 @@ export const connectionMainCountry = internalQuery({
   handler: async (ctx, args) => (await ctx.db.get(args.connectionId))?.mainCountry ?? null,
 });
 
-/** One ask of Google through a company's own connection, renewing the token once: its rows, or why not. */
+/**
+ * One ask of Google through a company's own connection, renewing the token
+ * once: its rows, or why not. `everyCountry` asks it of no country at all —
+ * a page's figures (`EVERY_COUNTRY_LISTS`) — where every other ask naming no
+ * country is of the main one.
+ */
 export async function askLive(
   ctx: ActionCtx,
   target: { connectionId: Id<"searchConsoleConnections">; property: string },
   ask: LiveAsk,
+  how: { everyCountry?: boolean } = {},
 ): Promise<{ ok: true; rows: AnalyticsRow[] } | { ok: false; problem: "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY" }> {
-  const asked = inMainCountry(ask, await ctx.runQuery(internal.searchConsoleReads.connectionMainCountry, { connectionId: target.connectionId }));
+  const asked = how.everyCountry
+    ? ask
+    : inMainCountry(ask, await ctx.runQuery(internal.searchConsoleReads.connectionMainCountry, { connectionId: target.connectionId }));
   for (const renew of [false, true]) {
     const token = await accessTokenFor(ctx, target.connectionId, renew);
     if (!token.ok) return { ok: false, problem: token.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" : "NOT_CONNECTED" };

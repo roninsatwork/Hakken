@@ -42,3 +42,20 @@ export function pageName(address: string): string {
   const words = last.replace(/\.(html?|php|aspx?)$/, "").replace(/[-_]+/g, " ").trim();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : address;
 }
+
+/** Letters a page's short name keeps (`shortTitle`). */
+export const SHORT_NAME = 28;
+
+/**
+ * A page's title, short, for a chart's key or the eye's words (Anthony on the Search Console Pages canvas, 17 November
+ * 2026: "i dont like long axis lables"): without the website's name after its " | " or " - ", cut to about 28 letters
+ * at a word. "A Guide To Choose The Right Tubular Latch - Our Blog" reads "A Guide To Choose The Right…". Search
+ * Console's Pages chart (`shortPageName`) and its eye's movers say pages so.
+ */
+export function shortTitle(name: string): string {
+  const bare = name.split(/ \| | - /)[0].trim() || name.trim();
+  if (bare.length <= SHORT_NAME) return bare;
+  const cut = bare.slice(0, SHORT_NAME + 1);
+  const at = cut.lastIndexOf(" ");
+  return `${(at > 8 ? cut.slice(0, at) : bare.slice(0, SHORT_NAME)).replace(/[\s,.;:?!-]+$/, "")}…`;
+}

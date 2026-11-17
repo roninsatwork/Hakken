@@ -108,6 +108,11 @@ describe('Provider Classification Drift', () => {
       'src/test/fixtures/moreHandlesInsightsPeriods.json',
       'src/test/fixtures/moreHandlesInsightsWeek.json',
       'src/provider-classification-drift.test.ts',
+      // The guide to the models and their providers: how Google's own models are asked is its subject (2026-11-17).
+      'docs/developer/ai-models-providers-and-costs.md',
+      // Each records a press of the eye and the model that wrote it, as the plans above do (2026-11-17).
+      'docs/plans/active/search-console-performance-way-3-plan-2026-11-17.md',
+      'docs/plans/active/search-console-keyword-screen-way-2-plan-2026-11-17.md',
     ]);
 
     const files = walkRepoFiles(repoRoot, repoTextExtensions);

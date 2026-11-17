@@ -10,7 +10,7 @@ figures
 search: Search keywords…
 filter: Intent
 filter: Position
-table: Keyword | Pages | Clicks | Top page | Share | Next page | Share
+table: Keyword | Clicks | Top page | Share | Next page | Share
   table-bar
     download: Download all (CSV)
   table-footer

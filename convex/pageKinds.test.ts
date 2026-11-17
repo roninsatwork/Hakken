@@ -118,12 +118,30 @@ describe("Search Console's lists of pages", () => {
     const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId: holdId, ...week });
     expect(kindsOf(list.rows)).toEqual({ "/hub/boilers/": "ARTICLE", "/plumbers/": "SERVICE", "/our-new-van/": "ARTICLE", "/contact/": "CONTACT" });
     expect(list.summary?.kinds).toEqual([
-      { kind: "ARTICLE", rows: 2, clicks: 60 },
-      { kind: "SERVICE", rows: 1, clicks: 30 },
-      { kind: "CONTACT", rows: 1, clicks: 10 },
+      { kind: "ARTICLE", rows: 2, clicks: 60, impressions: 600, previousClicks: null },
+      { kind: "SERVICE", rows: 1, clicks: 30, impressions: 300, previousClicks: null },
+      { kind: "CONTACT", rows: 1, clicks: 10, impressions: 100, previousClicks: null },
     ]);
     expect(list.summary?.types).toEqual([]);
     expect(await reader.query(api.pageKinds.pageKindChoices, { siteId: holdId })).toBeNull();
+  });
+
+  test("each kind's times shown, and its clicks the week before where that week is held, for Performance's squares and bands", async () => {
+    const t = harness();
+    const { holdId, userId } = await setUp(t);
+    await pagesPeriod(t, holdId);
+    // The week before: the article about boilers had 25 clicks, the plumbers' page 35; the van and contact pages weren't shown.
+    await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
+      companyWebsiteId: holdId, searchType: "web", list: "page", period: "lastWeek", which: "BEFORE", from: "2026-09-07", to: "2026-09-13", part: 0,
+      keys: [url("/hub/boilers/"), url("/plumbers/")], clicks: [25, 35], impressions: [250, 350], positionSums: [1000, 1400], kinds: ["ARTICLE", "SERVICE"], builtAt: NOW,
+    });
+    const reader = t.withIdentity({ subject: userId });
+    const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId: holdId, ...week, period: "lastWeek" });
+    expect(list.summary?.kinds).toEqual([
+      { kind: "ARTICLE", rows: 2, clicks: 60, impressions: 600, previousClicks: 25 },
+      { kind: "SERVICE", rows: 1, clicks: 30, impressions: 300, previousClicks: 35 },
+      { kind: "CONTACT", rows: 1, clicks: 10, impressions: 100, previousClicks: 0 },
+    ]);
   });
 
   test("with classifications, each page is its classification or Not sorted — never an automatic kind — and the figures add up by type", async () => {
@@ -137,10 +155,10 @@ describe("Search Console's lists of pages", () => {
     // The post is caught by the sitemap file that lists it; the contact page by nothing.
     expect(kindsOf(list.rows)).toEqual({ "/hub/boilers/": own.hub, "/plumbers/": own.services, "/our-new-van/": own.journal, "/contact/": NOT_SORTED_KIND });
     expect(list.summary?.kinds).toEqual(expect.arrayContaining([
-      { kind: own.hub, rows: 1, clicks: 40 },
-      { kind: own.journal, rows: 1, clicks: 20 },
-      { kind: own.services, rows: 1, clicks: 30 },
-      { kind: NOT_SORTED_KIND, rows: 1, clicks: 10 },
+      { kind: own.hub, rows: 1, clicks: 40, impressions: 400, previousClicks: null },
+      { kind: own.journal, rows: 1, clicks: 20, impressions: 200, previousClicks: null },
+      { kind: own.services, rows: 1, clicks: 30, impressions: 300, previousClicks: null },
+      { kind: NOT_SORTED_KIND, rows: 1, clicks: 10, impressions: 100, previousClicks: null },
     ]));
     // The hero figures by type: the company's own names still add up — Content hub and Journal are both informational content.
     expect(list.summary?.types).toEqual([

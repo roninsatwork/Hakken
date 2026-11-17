@@ -2,13 +2,13 @@
 
 import { ArrowUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
+
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { BeforeAfter, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { BeforeAfter, figureColumns, useSearchConsoleList, type ChipId, keywordColumn } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { movesSees } from "@/convex/utils/sees/searchConsoleScreens";
 import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
@@ -58,13 +58,7 @@ export default function SearchConsoleWinsPage() {
           { header: t("table.moved"), field: "positionChange" },
         ],
         columns: [
-          {
-            key: "key",
-            header: t("table.keyword"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
-          },
+          keywordColumn(t("table.keyword"), recordHref),
           { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousClicks ?? 0} now={row.clicks} format={formatNumber} /> },
           ...figureColumns(t, ["change"]),
           { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousPosition} now={row.impressions > 0 ? row.position : null} format={formatPosition} /> },

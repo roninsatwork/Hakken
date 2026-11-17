@@ -2,20 +2,12 @@
 
 import { Target } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
+import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
-import {
-  CountChange,
-  TrackedCount,
-  figureColumns,
-  trackColumn,
-  useSearchConsoleList,
-  useSearchConsoleTracking,
-  type ChipId,
-} from "../../_components/SearchConsoleTables";
+import { CountChange, figureColumns, useSearchConsoleList, useSearchConsoleTracking, type ChipId, keywordColumn } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { almostSees } from "@/convex/utils/sees/searchConsoleScreens";
 
@@ -68,7 +60,6 @@ export default function SearchConsoleAlmostPage() {
         noun: "keywords",
         searchPlaceholder: t("keywords.searchPlaceholder"),
         rowHref: (row) => recordHref("keywords/keyword", row.key),
-        beside: <TrackedCount tracking={tracking} kind="query" />,
         emptyIcon: <Target className="h-8 w-8 text-muted/30" />,
         download: [
           { header: t("table.keyword"), field: "key" },
@@ -80,14 +71,8 @@ export default function SearchConsoleAlmostPage() {
           { header: t("track.column"), field: "tracked" },
         ],
         columns: [
-          trackColumn(t, tracking, "query", (row) => row.key),
-          {
-            key: "key",
-            header: t("table.keyword"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
-          },
+          // The lean table (AGENTS.md "Tables are lean"): Track and the moves are on the keyword's own screen.
+          keywordColumn(t("table.keyword"), recordHref),
           ...figureColumns(t, ["position", "impressions", "clicks"]),
           { key: "volume", header: t("table.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.volume === null ? "–" : formatNumber(row.volume)}</span> },
           {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import { factsOf, fromSeesKey, namesWithNumbersIn, seesFrom, seesKey, seesPath, writerFor, withoutNames, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
+import { beforeNamed, factsOf, fromSeesKey, namesWithNumbersIn, seesFrom, seesKey, seesPath, spoken, writerFor, withoutNames, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
 /**
@@ -314,5 +314,23 @@ describe("a good first answer stands on the code-first brief (eye-code-first-bri
     expect(firstAnswerStands({ ok: true, says: ["a", "b"], steps: [step, step] })).toBe(false);
     expect(firstAnswerStands({ ok: true, says: ["a", "b", "c"], steps: [step] })).toBe(false);
     expect(firstAnswerStands({ ok: false, why: "It left out a finding." })).toBe(false);
+  });
+});
+
+describe("the reader is spoken to (Anthony, 17 November 2026, on the Pages eye's first press)", () => {
+  test("the dates before by their name, where they are a whole month", () => {
+    expect(beforeNamed("2026-10-01", "2026-10-31", "lastMonth")).toEqual({ dates: "2026-09-01 to 2026-09-30", name: "September" });
+    expect(beforeNamed("2026-01-01", "2026-01-31", "lastMonth")).toEqual({ dates: "2025-12-01 to 2025-12-31", name: "December 2025" });
+    expect(beforeNamed("2026-11-09", "2026-11-15", "lastWeek")).toEqual({ dates: "2026-11-02 to 2026-11-08" });
+  });
+
+  test("\"earlier\" at a clause's end is said by the dates' name, and \"our\" is the reader's own", () => {
+    expect(spoken({ text: "All your pages had 8,714 clicks, down from 9,393 earlier." }, "September").text).toBe("All your pages had 8,714 clicks, down from 9,393 in September.");
+    expect(spoken({ text: "Clicks came earlier in the day." }, "September").text).toBe("Clicks came earlier in the day.");
+    expect(spoken({ text: "Our two main blog guides both grew, as our blog did." }).text).toBe("Your two main blog guides both grew, as your blog did.");
+    // Without a name, "earlier" stays: the writer was told to name them.
+    expect(spoken({ text: "Down from 9,393 earlier." }).text).toBe("Down from 9,393 earlier.");
+    const verdict = seesFrom({ says: ["Conversions fell to [[conv.total.now]], from fewer earlier."], steps: [{ words: "Check our funnel.", link: 1 }] }, factsByKey(factsOf(ask)), links, { beforeName: "September" });
+    expect(verdict).toMatchObject({ ok: true, says: ["Conversions fell to 28,623, from fewer in September."], steps: [{ words: "Check your funnel." }] });
   });
 });

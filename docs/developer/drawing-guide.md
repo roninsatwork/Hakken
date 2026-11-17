@@ -60,6 +60,16 @@ agent does it again. The why and the record of what was built:
 - **Tables fit the page.** No minimum width, no sideways scrolling: number
   columns as wide as their headings, text columns share the rest, long text
   wraps. Websites' short headings: Volume, Position, CPC, Traffic, Keywords.
+- **Tables are lean** (Anthony, 2026-11-17: "no cluttered tables ever, and if
+  we need more detail make a click through", then "how we make this a rule so
+  all tables we draw are like this"). Draw every table like the lean Keywords
+  board (`docs/plans/assets/search-console-keywords-lean-table/`): the name and
+  at most five more columns besides a tick box for the chart, the rest on the
+  row's own screen; one line a row, a move its own Up or down column shown
+  alone; headings of ten letters at most with the full term on hover (Shown,
+  Impressions on hover); the name cut to one line with "…", whole on hover, and
+  never under 160 pixels. Look at every board's table in a window about 1,330
+  wide as well as 1,440. `npm run check:drawing` fails a board on each.
 - **The whole screen**, in the app's frame — the menu, the top bar, the
   page — with real-looking rows and working clicks (sorting, filters,
   ticks, links between screens).

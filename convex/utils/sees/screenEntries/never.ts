@@ -41,6 +41,8 @@ export const SEARCH_CONSOLE_NEVER = [
   "visits, conversions or enquiries: those are Google Analytics' figures, never this page's. A click is a visit to the website from Google, not a sale",
   "Bing, Microsoft Clarity or the Visibility estimates: each has its own pages",
   "asking the reader to sort, group or classify pages, or pages not sorted yet: that is done for them",
+  // A page's figures are every country's (2026-11-17, `EVERY_COUNTRY_LISTS`); the website's totals and keywords the home country's.
+  "a page's clicks as a share of the website's home-country clicks, or pages that add up to more than them as an error: a page's figures count every country, so Google keeps in the searches it hides",
 ];
 
 /**

@@ -3,6 +3,7 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Shown but not clicked
 choice: Kind of result: Web | Video | News | Discover | Google News
+notice (info)
 figures
   figure: Pages below your usual click rate
   figure: Impressions they had
@@ -12,7 +13,7 @@ search: Search pages…
 filter: Page type
 filter: Position
 filter: Device
-table: Page | Impressions | Position | CTR | Usual CTR | Clicks | Expected
+table: Page | Shown | CTR | Usual CTR | Clicks | Expected
   table-bar
     download: Download all (CSV)
   table-footer

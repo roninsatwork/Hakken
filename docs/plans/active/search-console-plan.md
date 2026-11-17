@@ -1416,3 +1416,17 @@ title).
   shown as lines on the run (search-console-first-collection-plan.md).
   Adding up now hands itself on, as a chain of jobs per kind of result. Until
   then, kordatackle.com's web job ran past the ten minutes an action has.
+- **2026-11-17** — A page's figures are every country's (Anthony: "Every
+  country's pages", then "Yes, build it"). With the home country's filter,
+  Google left the searches it keeps private out of every page: More
+  Handles' pages held 1,946 of October's 7,124 UK clicks. Asked with no
+  country they hold them all (tested: 317 of 315 on 15 October; split by
+  country, 80). Pages, a page's days and its devices are asked of no
+  country; searches and totals stay the home country's; the page screens
+  say so, and the "not tied to a page" figures (insights-analyst-plan.md §7,
+  S2) are gone. Every kept page list was fetched again once
+  (`searchConsolePageRefetch.ts`). After it, More Handles' 15 October pages
+  held 317 clicks and October's 8,714 (every country's 8,635). A page split
+  by device or country still leaves the private searches out, with no
+  country named: its home page's October was 396 clicks, its devices and
+  countries 255. A page's own screen does not yet say so.

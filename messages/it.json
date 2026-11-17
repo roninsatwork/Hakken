@@ -15557,7 +15557,6 @@
       "beforeTooOld": "Google conserva 16 mesi: i giorni prima non ci sono per il confronto",
       "new": "Nuova in queste date"
     },
-    "named": "{named} dei {total} clic vengono da ricerche che Google nomina. Gli altri {hidden} vengono da ricerche che Google nasconde per la privacy: sono nei totali, mai in un elenco.",
     "historyFilling": "I 16 mesi di Google stanno ancora arrivando: per ora i giorni mostrati iniziano il {day}.",
     "chart": {
       "title": "Clic e impressioni nel tempo",
@@ -15582,7 +15581,126 @@
     },
     "performance": {
       "title": "Rendimento",
-      "description": "Quello che Google stesso ha contato per questo sito: clic e impressioni reali, dove Visibilità mostra stime."
+      "description": "Da dove arrivano i tuoi clic, e quali parole chiave vengono cliccate.",
+      "theseDates": "queste date",
+      "days": {
+        "title": "{name} ogni {step, select, day {giorno} week {settimana} other {mese}}",
+        "hint": "{now}.",
+        "hintAgainst": "{now} e {before}, allineati per data.",
+        "lowerBetter": "Più basso è meglio. 1 è il primo posto su Google.",
+        "showLabel": "Mostra",
+        "compareWith": "Confronta con",
+        "nothing": "Nessun confronto",
+        "figureRate": "Clic ogni 100 impressioni",
+        "empty": "Niente da mostrare per queste date."
+      },
+      "squares": {
+        "title": "Su ogni 100 {noun}",
+        "hint": "Tutti i tuoi {noun} in {when}. Sono {count} {noun}. Ogni quadrato è 1 su 100.",
+        "noun": {
+          "clicks": "clic",
+          "impressions": "impressioni"
+        },
+        "note": {
+          "searches": "Google nasconde le ricerche fatte da poche persone. Contano comunque nei tuoi totali.",
+          "classification": "Le pagine contano i clic da ogni paese, non solo dal tuo paese principale.",
+          "look": "Solo i risultati con dettagli in più, come prezzi o stelle."
+        },
+        "noBefore": "Questa suddivisione non ha dati per {when}.",
+        "showLabel": "Mostra",
+        "splitLabel": "Suddividi per",
+        "compareWith": "Confronta con",
+        "nothing": "Nessun confronto",
+        "split": {
+          "searches": "Ricerche",
+          "device": "Dispositivo",
+          "classification": "Classificazione",
+          "look": "Come ti ha mostrato Google"
+        },
+        "groups": {
+          "brand": "Ricerche del brand",
+          "named": "Altre ricerche che Google nomina",
+          "hidden": "Ricerche che Google nasconde"
+        },
+        "others": "Gli altri {count}",
+        "readout": {
+          "figure": "{noun} di {when}",
+          "inEvery": "{share} su 100"
+        },
+        "empty": "Niente da mostrare per questa scelta.",
+        "failed": "Google non ha risposto. Riprova tra un minuto.",
+        "csvRow": "Riga",
+        "csvSquares": "Quadrati"
+      },
+      "bands": {
+        "title": {
+          "clicks": "Cosa mostra Google, e cosa viene cliccato",
+          "pages": "Cosa mostra Google, e quante pagine ha"
+        },
+        "hint": "La riga in alto è dove sono andate 100 impressioni. Quella in basso fa lo stesso per 100 {noun}.",
+        "press": "Premine uno per tenerlo acceso.",
+        "noun": {
+          "clicks": "clic",
+          "pages": "pagine"
+        },
+        "splitLabel": "Suddividi per",
+        "compareWith": "Confronta con",
+        "against": {
+          "clicks": "Clic",
+          "pages": "Pagine"
+        },
+        "topLabel": "Su ogni 100 impressioni",
+        "bottomLabel": "Su ogni 100 {noun}",
+        "readout": {
+          "impressions": "Impressioni",
+          "ofImpressions": "Sul totale delle impressioni",
+          "ofThose": "Sul totale di {noun}"
+        },
+        "csvName": "Nome"
+      },
+      "dots": {
+        "title": "Quali parole chiave mostra Google, e quali vengono cliccate",
+        "hint": "Ogni punto è una parola chiave. Più a destra ha avuto più {noun}. Più in alto è stata cliccata di più.",
+        "noun": {
+          "impressions": "impressioni",
+          "clicks": "clic"
+        },
+        "countLabel": "Conta",
+        "showLabel": "Mostra",
+        "show": {
+          "other": "Senza ricerche del brand",
+          "all": "Ogni parola chiave"
+        },
+        "acrossLabel": "{noun} da",
+        "across": {
+          "half": "{count}, metà della tua parola chiave di mezzo",
+          "middle": "{count}, la tua parola chiave di mezzo",
+          "twice": "{count}, il doppio della tua parola chiave di mezzo"
+        },
+        "upLabel": "Percentuale di clic da",
+        "up": {
+          "half": "{rate}, metà del tuo sito",
+          "middle": "{rate}, tutto il tuo sito",
+          "twice": "{rate}, il doppio del tuo sito"
+        },
+        "groups": {
+          "name": "{across}, e {up}",
+          "acrossMore": "{count} {noun} o più",
+          "acrossFewer": "Meno di {count} {noun}",
+          "upMore": "{rate} o più clic ogni 100",
+          "upFewer": "meno di {rate} clic ogni 100"
+        },
+        "axis": "Percentuale di clic",
+        "under": "Le tue {count} parole chiave con più impressioni.",
+        "noClicks": "{count, plural, one {# non ha avuto clic, quindi non è disegnata.} other {# non hanno avuto clic, quindi non sono disegnate.}}",
+        "empty": "Nessuna parola chiave da mostrare per queste date.",
+        "failed": "Google non ha risposto. Riprova tra un minuto.",
+        "csvKeyword": "Parola chiave",
+        "csvGroup": "Gruppo"
+      },
+      "eye": {
+        "allPages": "Tutte le tue pagine"
+      }
     },
     "searches": {
       "title": "Ricerche",
@@ -15591,8 +15709,24 @@
     },
     "pages": {
       "title": "Pagine",
-      "description": "Ogni pagina che Google ha mostrato in queste date. Spunta una pagina per seguirla. Cliccane una per vedere tutto su di lei e le parole chiave che le hanno portato visitatori.",
-      "searchPlaceholder": "Cerca pagine…"
+      "description": "Ogni pagina che Google ha mostrato in queste date. Spunta le pagine per disegnarle nel grafico. Cliccane una per vedere tutto su di lei.",
+      "searchPlaceholder": "Cerca pagine…",
+      "everyCountry": "Queste cifre contano ogni paese, come le tue pagine. Il paese che hai scelto ha avuto {clicks} clic da solo.",
+      "chart": {
+        "tickLabel": "Disegna {name} nel grafico",
+        "tickHeading": "Nel grafico",
+        "tickLimit": "Puoi disegnare fino a {most} pagine alla volta.",
+        "homePage": "Pagina iniziale",
+        "hint": "{count, plural, =0 {Spunta una pagina nella tabella per disegnarla qui.} =1 {La pagina che hai spuntato nella tabella: {when}.} other {Le # pagine che hai spuntato nella tabella: {when}.}}",
+        "dashed": "Le linee tratteggiate sono {before}, allineate per data.",
+        "nothingTicked": "Spunta una pagina nella tabella per disegnarla qui. Puoi spuntarne fino a {most}.",
+        "waiting": "Chiediamo a Google i giorni di ogni pagina.",
+        "failed": "Google non ha risposto per {names}. Riprova tra un minuto."
+      },
+      "eye": {
+        "clicked": "Pagine che hanno avuto un clic",
+        "half": "Pagine che fanno metà dei tuoi clic"
+      }
     },
     "places": {
       "title": "Paesi e dispositivi",
@@ -15614,8 +15748,10 @@
       "country": "Paese",
       "device": "Dispositivo",
       "clicks": "Clic",
-      "change": "Variazione",
+      "change": "Su o giù",
       "impressions": "Impressioni",
+      "shown": "Mostrato",
+      "shownTitle": "Impressioni: le volte che Google lo ha mostrato",
       "ctr": "CTR",
       "position": "Posizione",
       "share": "Quota dei clic",
@@ -15652,7 +15788,8 @@
       "update": "Aggiornamento",
       "usualCtr": "CTR abituale",
       "volume": "Volume",
-      "when": "Quando"
+      "when": "Quando",
+      "topListed": "La tabella elenca i tuoi primi {count}."
     },
     "record": {
       "searchDescription": "Quello che Google ha contato per questa ricerca, giorno per giorno, e quali tue pagine ha mostrato.",
@@ -15683,12 +15820,22 @@
       "share": "Quota",
       "noClicks": "Nessun clic in queste date.",
       "keywordsFor": "Parole chiave che hanno portato visitatori a questa pagina",
-      "namedFor": "Google nomina le parole chiave dietro {named} dei {clicks} clic di questa pagina; le altre le nasconde per privacy. Spunta una parola chiave per seguirla; cliccane una per vedere ogni tua pagina a cui ha portato visitatori.",
-      "keywordsHint": "Spunta una parola chiave per seguirla; cliccane una per vedere ogni tua pagina a cui ha portato visitatori.",
-      "pagesHint": "Ogni tua pagina che Google ha mostrato per questa parola chiave. Spunta una pagina per seguirla; cliccane una per vedere tutto su di lei.",
+      "namedFor": "Dei {clicks} clic di questa pagina, {named} vengono da parole chiave che Google nomina nel tuo paese principale. Gli altri vengono da altri paesi, o da ricerche che Google tiene private. Clicca una parola chiave per vedere ogni tua pagina a cui ha portato visitatori.",
+      "keywordsHint": "Clicca una parola chiave per vedere ogni tua pagina a cui ha portato visitatori.",
+      "pagesHint": "Ogni tua pagina che Google ha mostrato per questa parola chiave. Cliccane una per vedere tutto su di lei, o per seguirla.",
       "showAllCountries": "Mostra tutti i {count} paesi",
       "placesDescription": "Ogni paese e ogni dispositivo dietro i clic di “{name}”, per le date scelte.",
-      "failed": "Non è stato possibile leggerlo adesso. Riprova e avvisaci se continua a succedere."
+      "failed": "Non è stato possibile leggerlo adesso. Riprova e avvisaci se continua a succedere.",
+      "bands": {
+        "title": "Quale pagina mostra Google, e quale viene cliccata",
+        "hint": "Google ha mostrato {shown, plural, one {una delle tue pagine} other {# delle tue pagine}} per questa parola chiave in queste date, e {clicked, plural, =0 {nessuna ha avuto un clic} one {una ha avuto un clic} other {# hanno avuto un clic}}. La riga in alto è dove sono andate 100 impressioni. La riga in basso è dove sono andati 100 clic.",
+        "csvName": "Pagina"
+      },
+      "pageBands": {
+        "title": "Per quali parole chiave Google mostra questa pagina, e quali vengono cliccate",
+        "hint": "Google ha mostrato questa pagina per {shown, plural, one {una parola chiave} other {# parole chiave}} in queste date, e {clicked, plural, =0 {nessuna ha avuto un clic} one {una ha avuto un clic} other {# hanno avuto un clic}}. La riga in alto è dove sono andate 100 impressioni. La riga in basso è dove sono andati 100 clic.",
+        "csvName": "Parola chiave"
+      }
     },
     "connect": {
       "title": "Collega Google Search Console",
@@ -15765,8 +15912,23 @@
     },
     "keywords": {
       "title": "Parole chiave",
-      "description": "Ogni parola chiave per cui Google ha mostrato il tuo sito in queste date. Spunta una parola chiave per seguirla. Cliccane una per vedere tutto su di lei e le pagine a cui ha portato visitatori.",
-      "searchPlaceholder": "Cerca parole chiave…"
+      "description": "Ogni parola chiave per cui Google ha mostrato il tuo sito in queste date. Spunta le parole chiave per disegnarle nel grafico. Cliccane una per vedere tutto su di lei.",
+      "searchPlaceholder": "Cerca parole chiave…",
+      "named": "{named} dei tuoi {total} clic sono arrivati da ricerche che Google nomina. Gli altri {hidden} sono arrivati da ricerche che Google nasconde per privacy.",
+      "chart": {
+        "tickLabel": "Disegna {name} nel grafico",
+        "tickHeading": "Nel grafico",
+        "tickLimit": "Puoi disegnare fino a {most} parole chiave alla volta.",
+        "website": "Tutto il sito",
+        "switch": {
+          "on": "Sì",
+          "off": "No"
+        },
+        "hint": "{count, plural, =0 {Spunta una parola chiave nella tabella per disegnarla qui.} =1 {La parola chiave che hai spuntato nella tabella: {when}.} other {Le # parole chiave che hai spuntato nella tabella: {when}.}}",
+        "nothingTicked": "Spunta una parola chiave nella tabella per disegnarla qui. Puoi spuntarne fino a {most}.",
+        "waiting": "Chiediamo a Google i giorni di ogni parola chiave.",
+        "failed": "Google non ha risposto per {names}. Riprova tra un minuto."
+      }
     },
     "track": {
       "column": "Segui",
@@ -15844,7 +16006,7 @@
     },
     "demand": {
       "title": "Domanda persa",
-      "description": "Parole chiave che molte persone cercano ma per cui Google ti mostra appena, dalle ricerche mensili di Visibilità. E parole chiave per cui Google ti mostra ma che non segui ancora: spuntane una per seguirla.",
+      "description": "Parole chiave che molte persone cercano ma per cui Google ti mostra appena, dalle ricerche mensili di Visibilità. E parole chiave per cui Google ti mostra ma che non segui ancora. Cliccane una per seguirla.",
       "fewer": "Meno di {count} impressioni in queste date",
       "ofShown": "Delle {count} parole chiave mostrate da Google"
     },
@@ -16002,15 +16164,15 @@
     "tracked": {
       "keywords": {
         "title": "Parole chiave monitorate",
-        "description": "Le parole chiave che monitori, e come è andata ognuna in queste date rispetto ai giorni prima. Spuntale in Parole chiave per aggiungerle; togli la spunta qui per smettere di monitorarne una.",
+        "description": "Le parole chiave che monitori, e come è andata ognuna in queste date rispetto ai giorni prima. Clicca una parola chiave in Parole chiave per monitorarla. Togli la spunta qui per smettere di monitorarne una.",
         "searchPlaceholder": "Cerca tra le parole chiave monitorate…",
-        "empty": "Non monitori ancora nessuna parola chiave. Spuntale in Parole chiave per vederle qui."
+        "empty": "Non monitori ancora nessuna parola chiave. Cliccane una in Parole chiave per monitorarla."
       },
       "pages": {
         "title": "Pagine monitorate",
-        "description": "Le pagine che monitori, e come è andata ognuna in queste date rispetto ai giorni prima. Spuntale in Pagine per aggiungerle; togli la spunta qui per smettere di monitorarne una.",
+        "description": "Le pagine che monitori, e come è andata ognuna in queste date rispetto ai giorni prima. Clicca una pagina in Pagine per monitorarla. Togli la spunta qui per smettere di monitorarne una.",
         "searchPlaceholder": "Cerca tra le pagine monitorate…",
-        "empty": "Non monitori ancora nessuna pagina. Spuntale in Pagine per vederle qui."
+        "empty": "Non monitori ancora nessuna pagina. Cliccane una in Pagine per monitorarla."
       },
       "figures": {
         "shown": "Volte in cui Google le ha mostrate",
@@ -16291,17 +16453,8 @@
         "askRead": "Chiedi a Google di rileggere {text} in Search Console."
       }
     },
-    "pageGap": {
-      "homeCountry": "il tuo paese principale",
-      "total": "Clic in {place}",
-      "totalDetail": "{period}, ogni ricerca",
-      "tied": "Legati a una pagina",
-      "tiedDetail": "{share}%: le pagine qui sotto sommano a questo",
-      "untied": "Non legati a una pagina",
-      "untiedDetail": "ricerche che Google tiene private",
-      "worldwide": "Clic in tutto il mondo",
-      "worldwideDetail": "dall'elenco dei paesi",
-      "why": "Google lega a una pagina solo una parte dei tuoi clic in {place}: il resto viene da ricerche che tiene private. Per questo le pagine qui sotto sommano ai clic legati a una pagina, non a tutti i clic."
+    "everyCountry": {
+      "pages": "Le pagine contano i clic da ogni paese, non solo dal tuo paese principale. Google include le ricerche che tiene private solo quando non si sceglie un paese."
     },
     "services": {
       "title": "Domanda per servizio",

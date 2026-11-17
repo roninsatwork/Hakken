@@ -7,7 +7,7 @@ chart-card: Clicks, with Google's updates
   checkbox: Clicks
 search: Search updates…
 filter: Finished or not
-table: Update | Dates | Clicks | Change | Position | Volatility
+table: Update | Dates | Clicks | Up or down | Position | Volatility
   table-bar
     download: Download all (CSV)
   table-footer

@@ -2,8 +2,10 @@
 //
 // Fails a drawing that strays from the app: a class the app's stylesheet does
 // not have, a colour outside the record of the look and the chart palette, a
-// font the app does not use, a table that would scroll sideways, or a line of
-// words over a reading age of 14. Run it on every board before a canvas is
+// font the app does not use, a table that would scroll sideways, a cluttered
+// table (more than the name and five more columns, a heading over ten letters,
+// a cell with two lines, a name that wraps), or a line of words over a reading
+// age of 14. Run it on every board before a canvas is
 // published; build the kit first (`npm run drawing-kit`).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -22,6 +24,10 @@ const MARKERS = new Set(["group", "peer", "dark", "lucide"]);
 const LIBRARY_CLASS = /^(recharts-|legend-item-|xAxis$|yAxis$)/;
 /** Wider than this, a fixed minimum width makes a table scroll on a 1440px screen beside the menus. */
 const WIDEST_FIXED = 360;
+/** The table rule's most columns, the name and five more: `MOST_TABLE_COLUMNS` in tableRule.ts, held equal by src/table-rule-drift.test.ts. */
+export const MOST_TABLE_COLUMNS = 6;
+/** A table heading's most letters: "Impressions", at 11, was "to long a heading" (Anthony, 2026-11-17); "Up or down" has 8. */
+export const MOST_HEADING_LETTERS = 10;
 
 /** A class as Tailwind writes it in a selector. */
 export function selectorFor(className) {
@@ -96,6 +102,42 @@ export function checkDrawing(html, { kitCss, colours, appSource = "" }) {
     for (const token of classes) {
       const wide = token.match(/^min-w-\[(\d+)px\]$/);
       if (wide && Number(wide[1]) > WIDEST_FIXED) problems.push(`min-w-[${wide[1]}px] — tables fit the page; size number columns to their headings`);
+    }
+  }
+
+  // The table rule (src/ui/components/screens/tableRule.ts): the name and at most five more columns. A first column with
+  // no heading of its own, the tick box that draws a row on the chart, doesn't count. Keywords' board of 17 November had
+  // nine, was agreed, and was built: in a narrower window the keyword got 68 pixels, a word to a line.
+  // A board copied from the app (`<!-- copied-from-app -->`) is today's page, which a redraw is there to fix; a
+  // `CompactList` — a chart's score strip, a few rows inside a panel that has already introduced itself — isn't a list
+  // table, and the rule is about list tables (`DataTable`).
+  const copied = /<!--\s*copied-from-app/.test(html);
+  for (const table of copied ? [] : html.matchAll(/<table\b[\s\S]*?<\/table>/g)) {
+    if (/data-part="compact-list"[^<]*>\s*$/.test(html.slice(Math.max(0, (table.index ?? 0) - 200), table.index))) continue;
+    const head = table[0].match(/<thead\b[\s\S]*?<\/thead>/)?.[0] ?? table[0];
+    const row = [...head.matchAll(/<tr\b[\s\S]*?<\/tr>/g)].at(-1)?.[0] ?? "";
+    const cells = [...row.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/g)].map((cell) => cell[1]);
+    const shown = (cell) => cell.replace(/<span\b[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>[\s\S]*?<\/span>/g, "").replace(/<[^>]+>/g, "").trim();
+    const counted = cells.length - (cells.length > 0 && shown(cells[0]) === "" ? 1 : 0);
+    if (counted > MOST_TABLE_COLUMNS) {
+      problems.push(`a table of ${counted} columns, and the most is ${MOST_TABLE_COLUMNS}: the name and ${MOST_TABLE_COLUMNS - 1} more, besides a tick box for the chart — put the rest on the row's own screen`);
+    }
+    // The rest of the lean table's look, as Anthony settled it on the lean Keywords board (2026-11-17: "thats better, how
+    // we make this a rule so all tables we draw are like this"). A short heading: "impressions is to long a heading", so
+    // Shown, with Impressions on hover.
+    for (const cell of cells.map(shown)) {
+      const letters = cell.replace(/[^\p{L}\p{N}]/gu, "").length;
+      if (letters > MOST_HEADING_LETTERS) problems.push(`heading "${cell}" has ${letters} letters, and the most is ${MOST_HEADING_LETTERS} — use a shorter word, with the full one on hover (title)`);
+    }
+    // One line a row: "its the two lines thats not good", "remove the %". Nothing stacked in a cell, a move shown alone.
+    const nameAt = cells.length > 0 && shown(cells[0]) === "" ? 1 : 0;
+    const body = table[0].match(/<tbody\b[\s\S]*?<\/tbody>/)?.[0] ?? "";
+    for (const bodyRow of body.matchAll(/<tr\b[\s\S]*?<\/tr>/g)) {
+      const tds = [...bodyRow[0].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map((td) => td[1]);
+      if (tds.length !== cells.length) continue; // a loading, empty or opened-detail row across the table
+      if (tds.some((td) => /\bflex-col\b|<br\b/.test(td))) problems.push("a cell with two lines — each row is one line: a move is its own Up or down column, shown alone, and the rest goes on the row's own screen");
+      // The name on one line, cut with "…" and whole on hover (`cut`), never wrapped a word to a line.
+      if (tds[nameAt] !== undefined && !/\btruncate\b/.test(tds[nameAt])) problems.push("the name column wraps — cut it to one line with \"…\", whole on hover (RecordLinkCell's `cut`), with min-w-[160px] on the column");
     }
   }
 

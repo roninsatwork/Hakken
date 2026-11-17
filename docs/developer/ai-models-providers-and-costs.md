@@ -5,14 +5,14 @@ feature_area: AI models providers costs and Decisions
 audience: developer
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/ai-models-providers-and-costs.md
-last_reviewed: '2026-10-26T14:30:19+00:00'
+last_reviewed: '2026-11-15T09:04:37+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # AI Models, Providers, And Costs Developer Guide
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** AI models providers costs and Decisions
-> **Reviewed:** 26 October 2026, 14:30:19 GMT (Europe/London)
+> **Reviewed:** 15 November 2026, 09:04:37 GMT (Europe/London)
 > **Source path:** `docs/developer/ai-models-providers-and-costs.md` · **Status:** Current
 
 
@@ -218,3 +218,11 @@ Weekly counts query 501 rows per Decision and expose at most 500 with an at-leas
 Backend variable names include `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `OPENAI_API_KEY` (with retained OpenAI aliases), `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, and `TYPESAFE_API_KEY`. Values must remain outside docs and frontend payloads. Configuration presence is weaker evidence than a live list, and a live list is weaker than an accepted real feature workflow.
 
 Provider tests exercise injected fetch/configuration paths; no sync, probe, paid generation, or provider-side diagnostic was executed for this maintenance pass. The reviewed behavior is local implementation. Live deployments and rename cutover remain separate. The extension guide links the registry/adapter/tool responsibilities without treating a provider-card health badge as universal runtime acceptance.
+
+## Google writing requests
+
+The current checkout sends Vertex agent writing and explicit agent-cache work to location `us` on API `v1`. See `VERTEX_TEXT_CLIENT` in `convex/vertexProviderService.ts` and the call sites in `convex/googleAgentProvider.ts`. The one-shot adapter in `convex/googleProviderAdapter.ts` uses the same defaults and accepts a location override. Speech and catalog reads keep their existing location and API path. Embeddings have a separate location. This is a writing change on the dev branch. Actual latency, data location and production rollout still need deployment evidence.
+
+`vertexModelRules` works from the provider model ID. Hakken omits temperature for Gemini 3 and later. A Minimal request becomes Low when the model rules say Minimal is unsupported. A Fast request, represented by `NONE`, sends Low on models that would otherwise think by default. Gemini 4 skips creation of an explicit prompt cache. This does not give Hakken control over any cache Google manages itself.
+
+When Gemini returns a tool call, preserve its call ID and thought signature where present. The ID ties the result to that call and the signature is an opaque value from Google. Read `vertexProviderService.test.ts`, `googleAgentProvider.test.ts` and `googleProviderAdapter.test.ts` for the local request and tool-round checks. No Google request was made in this review.

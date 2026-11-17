@@ -16,7 +16,7 @@ import { ANALYTICS_READ } from "./utils/agentTools";
 import { findingWords, type Finding } from "./utils/sees/findings";
 import { judgeFindings, judgeLeftOff, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
 import {
-  JUDGE_FORMAT, MOST_COVERED, SEES_FINDINGS_FORMAT, firstAnswerStands, judgeFrom, namesWithNumbersIn, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
+  JUDGE_FORMAT, MOST_COVERED, SEES_FINDINGS_FORMAT, beforeNamed, firstAnswerStands, judgeFrom, namesWithNumbersIn, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
 import { CODE_FIRST_ROWS, briefOf, findingNames, findingsBriefOf, pageFacts, usesCodeFirstBrief } from "./utils/sees/pageData";
@@ -145,8 +145,12 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     ...(finding.params.tracking ? { tracking: finding.params.tracking } : {}),
     figures: factLines(findingFacts.filter((fact) => fact.key.startsWith(`f${at + 1}.`))),
   }));
+  // The dates before, by name where they have one, so the words say "in September", never "earlier".
+  const datesBefore = page.from && page.to ? beforeNamed(page.from, page.to, page.period) : null;
   const prompt = JSON.stringify({
-    website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period || "as the page shows them", trackingFaults,
+    website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period || "as the page shows them",
+    ...(datesBefore ? { datesBefore: datesBefore.name ? `${datesBefore.name} (${datesBefore.dates})` : datesBefore.dates } : {}),
+    trackingFaults,
     ...(findings.length > 0 ? { findings: findingsForWriter } : {}),
     // With code's findings, a short brief of the page; without, all it shows (page-screen-redo-plan-2026-11-03.md, step 6). On a
     // page trying the code-first brief, only the rows the findings name and a few for the setting (eye-code-first-brief-plan).
@@ -182,7 +186,11 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   // With nothing wrong in tracking health, words about tracking or about what counts go back (both writers).
   const noTracking = { noTrackingTalk: trackingFaults.length === 0, analytics };
   // The page's own names with numbers in them (Services' groups, named by their numbers): naming one is typing no figure.
-  const pageNames = { namesWithNumbers: [...(pageRead ? namesWithNumbersIn(pageRead.shown) : []), ...[...findingNames(findings)].filter((name) => /\d/.test(name))] };
+  // With the dates before's own name, which the Editor says a trailing "earlier" by (`spoken`).
+  const pageNames = {
+    namesWithNumbers: [...(pageRead ? namesWithNumbersIn(pageRead.shown) : []), ...[...findingNames(findings)].filter((name) => /\d/.test(name))],
+    ...(datesBefore?.name ? { beforeName: datesBefore.name } : {}),
+  };
   const withRead = (found: ReadonlyMap<string, Fact>) => new Map([...found, ...given]);
   const covering = mustCover.length > 0 ? { mustCover } : {};
   let verdict: SeesVerdict;

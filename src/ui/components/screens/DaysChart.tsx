@@ -37,6 +37,12 @@ export type DaysLine = {
    * never averaged for a long one, and a step with none of these has no figure.
    */
   per?: readonly DaysPoint[];
+  /**
+   * What `per` counts for: 100 unless given. Search Console's average position is 1 — each day's position times its
+   * impressions, for every one impression — so a week's or month's position is weighed by impressions, as Google
+   * weighs it (search-console-performance-way-3-plan-2026-11-17.md).
+   */
+  perScale?: number;
 };
 
 type Bucket = { first: string; last: string; sum: number };
@@ -56,8 +62,8 @@ function bucketsOf(points: readonly DaysPoint[], step: ExplorerStep): Array<[str
 }
 
 const shown = (bucket: Bucket, step: ExplorerStep) => Math.round(perStep(bucket.sum, bucket.first, bucket.last, step) * 10) / 10;
-/** Some count for every 100 of another, to one place: null with none of the other. */
-const perHundred = (count: number, of: number) => (of > 0 ? Math.round((1000 * count) / of) / 10 : null);
+/** Some count for every 100 of another (or every `scale`), to one place: null with none of the other. */
+const perHundred = (count: number, of: number, scale = 100) => (of > 0 ? Math.round((10 * scale * count) / of) / 10 : null);
 
 /** A chart's rows: each step's first and last day, and each line's figure. Plain code, so a chart and its tests share one sum. */
 export function daysChartRows(step: ExplorerStep, lines: readonly DaysLine[]): Array<Record<string, unknown>> {
@@ -77,19 +83,19 @@ export function daysChartRows(step: ExplorerStep, lines: readonly DaysLine[]): A
       if (held) held.pers.set(line.key, (held.pers.get(line.key) ?? 0) + point.value);
     }
   }
-  const underneath = lines.filter((one) => one.under).map((line) => ({ key: line.key, buckets: bucketsOf(line.points, step), pers: line.per ? bucketsOf(line.per, step) : null }));
+  const underneath = lines.filter((one) => one.under).map((line) => ({ key: line.key, buckets: bucketsOf(line.points, step), pers: line.per ? bucketsOf(line.per, step) : null, scale: line.perScale }));
   return [...steps.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([key, held], at) => {
     const values: Record<string, unknown> = {};
     for (const line of lines) {
       if (line.under) continue;
       const sum = held.sums.get(line.key);
-      if (line.per) values[line.key] = perHundred(sum ?? 0, held.pers.get(line.key) ?? 0);
+      if (line.per) values[line.key] = perHundred(sum ?? 0, held.pers.get(line.key) ?? 0, line.perScale);
       else values[line.key] = sum === undefined && line.gaps ? null : Math.round(perStep(sum ?? 0, held.first, held.last, step) * 10) / 10;
     }
     for (const line of underneath) {
       const bucket = line.buckets[at]?.[1];
       const per = line.pers?.[at]?.[1];
-      values[line.key] = !bucket ? null : line.pers ? perHundred(bucket.sum, per?.sum ?? 0) : shown(bucket, step);
+      values[line.key] = !bucket ? null : line.pers ? perHundred(bucket.sum, per?.sum ?? 0, line.scale) : shown(bucket, step);
     }
     if (coarserThanStep(held.first, held.last, step)) values.coarse = true;
     return datedRow(

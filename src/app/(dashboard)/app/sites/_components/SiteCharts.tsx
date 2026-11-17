@@ -41,7 +41,7 @@ import {
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
 import { GoogleUpdateFrame, GoogleUpdateMarkers, googleKeyEntry, googleLegend, useGoogleUpdates, type GoogleUpdates } from "./GoogleUpdateMarkers";
-import { formatCompact, formatMonthName, formatNumber, formatShortMonth } from "./siteFormat";
+import { formatCompact, formatLogMark, formatMonthName, formatNumber, formatShortMonth } from "./siteFormat";
 
 /**
  * The Sites screens' charts: lines over time, stacked bands, and bars — drawn
@@ -930,12 +930,15 @@ export function SiteScatterChart({
   readout,
   height = 340,
   scale = "wide",
+  formatY = formatNumber,
 }: {
   groups: SiteScatterGroup[];
   xLabel: string;
   yLabel: string;
   /** Short names for the two numbers in the hover readout, where an axis's own name is too long to fit it. */
   readout?: { x: string; y: string };
+  /** How the hover writes the figure up the side, where a whole number isn't enough: a click-through rate of 0.4 (Performance's dots). */
+  formatY?: (value: number) => string;
   height?: number;
   /** Where the scales stop: at the next power of ten, or close to the dots (`tightLogAxis`). */
   scale?: "wide" | "tight";
@@ -954,9 +957,9 @@ export function SiteScatterChart({
       <ResponsiveContainer width="100%" height={height} debounce={50}>
         <ScatterChart margin={{ top: 8, right: 16, bottom: 16, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border-dim" />
-          <XAxis type="number" dataKey="x" name={xLabel} scale="log" domain={xAxis.domain} ticks={xAxis.ticks} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS}
+          <XAxis type="number" dataKey="x" name={xLabel} scale="log" domain={xAxis.domain} ticks={xAxis.ticks} allowDecimals={false} tickFormatter={formatLogMark} {...AXIS_PROPS}
             label={{ value: xLabel, position: "insideBottom", offset: -8, fontSize: 11, fill: "currentColor" }} />
-          <YAxis type="number" dataKey="y" name={yLabel} scale="log" domain={yAxis.domain} ticks={yAxis.ticks} width={56} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS}
+          <YAxis type="number" dataKey="y" name={yLabel} scale="log" domain={yAxis.domain} ticks={yAxis.ticks} width={56} allowDecimals={false} tickFormatter={formatLogMark} {...AXIS_PROPS}
             label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "currentColor" }} />
           <ZAxis range={[90, 90]} />
           {/* The website leads the readout: the axes already say what the numbers are. */}
@@ -966,7 +969,7 @@ export function SiteScatterChart({
               <ChartTooltip
                 title={(_, entries) => String(entries[0]?.payload?.label ?? "")}
                 // Whole numbers, in the site's own way of writing them: an estimate's decimals read as thousands in Italian.
-                formatValue={(value) => formatNumber(value)}
+                formatValue={(value, entry) => (entry.dataKey === "y" ? formatY(value) : formatNumber(value))}
                 seriesLabel={(entry) => (entry.dataKey === "x" ? readout?.x ?? xLabel : readout?.y ?? yLabel)}
               />
             )}

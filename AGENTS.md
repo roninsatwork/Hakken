@@ -487,6 +487,34 @@ drifted from the app: "We cannot go through this with every agent").
 - **Run `npm run check:drawing -- <board>` on every board before
   publishing** a canvas, and fix what it names.
 - **Tables fit the page**: no minimum width, no sideways scrolling.
+- **Tables are lean, and more detail is a click through** (Anthony, 2026-11-17:
+  "we need to make a table rule, no cluttered tables ever, and if we need more
+  detail make a click through"; then, of the lean Keywords board, "thats better,
+  how we make this a rule so all tables we draw are like this"). Every table we
+  draw or build looks like that board,
+  `docs/plans/assets/search-console-keywords-lean-table/TableLean.dc.html`:
+  - **The name and at most five more columns.** A tick box that draws a row on
+    the chart doesn't count. Anything more about a row goes on the row's own
+    screen, which the row opens.
+  - **One line a row** ("its the two lines thats not good", "remove the %").
+    Nothing stacked in a cell: a move gets its own Up or down column and shows
+    the move alone, with no percent under it.
+  - **Short headings** ("impressions is to long a heading"): ten letters at most,
+    in the app's own words, with the full term on hover (`title`): Shown, with
+    Impressions on hover. A heading never wraps.
+  - **The name never squeezed or wrapped.** It keeps at least 160 pixels
+    (`min-w-[160px]` beside its `CUT_COLUMN` share, as All pages) and is cut to
+    one line with "…", whole on hover (RecordLinkCell's `cut`).
+  - **Look at it in a narrower window**, about 1,330 wide, as well as at 3,200.
+  Keywords had nine columns, and in a narrower window its keyword got 68
+  pixels, a word to a line. `npm run check:drawing` fails a board's table on
+  each of the first four. A built table's column count is enforced too:
+  `DataTable` tells the tests each table it draws and a cluttered one fails its
+  screen's tests (`src/ui/components/screens/tableRule.ts`). The tables over it
+  are frozen in `scripts/table-columns-allowlist.json` (58 the day it came in,
+  52 once Search Console's 13 lists were made lean the same day),
+  which may shrink, never grow: adding an entry is not the fix. The rest of a
+  built table's look is on whoever builds it, so look.
 - **Words are Inter, numbers JetBrains Mono.**
 - **A chart never grows with the screen** (Anthony, 2026-11-05: "why is this so
   huge on full screen"). Anthony's screen is 3,200 wide. An `<svg>` with a fixed

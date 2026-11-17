@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Change } from "@/src/ui/components/screens/Change";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
+
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../sites/_components/SiteCharts";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
@@ -13,7 +13,7 @@ import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTabl
 import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { CountChange, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { CountChange, figureColumns, useSearchConsoleList, type ChipId, keywordColumn } from "../../_components/SearchConsoleTables";
 import { useChartPeriods } from "../../_components/useChartPeriods";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { bandsSees } from "@/convex/utils/sees/searchConsoleScreens";
@@ -93,14 +93,9 @@ export default function SearchConsoleBandsPage() {
           { header: t("table.impressions"), field: "impressions" },
         ],
         columns: [
-          {
-            key: "key",
-            header: t("table.keyword"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
-          },
+          keywordColumn(t("table.keyword"), recordHref),
           { key: "band", header: t("table.band"), sortable: true, cell: (row) => <span className="text-[12px] text-secondary">{row.impressions > 0 ? t(`filters.bands.${row.band}`) : "–"}</span> },
+          // The lean table (AGENTS.md "Tables are lean", 2026-11-17): one line a row, the rest on the row's own screen. The move in position is its own column.
           ...figureColumns(t, ["position"]),
           { key: "positionChange", header: t("table.change"), align: "right", sortable: true, cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} /> },
           ...figureColumns(t, ["clicks", "impressions"]),

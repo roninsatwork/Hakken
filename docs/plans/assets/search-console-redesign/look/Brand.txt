@@ -15,7 +15,7 @@ search: Search keywords…
 filter: Brand or not
 filter: Position
 filter: Device
-table: Keyword | Brand | Clicks | Impressions | CTR | Position
+table: Keyword | Brand | Clicks | Shown | CTR | Position
   table-bar
     download: Download all (CSV)
   table-footer

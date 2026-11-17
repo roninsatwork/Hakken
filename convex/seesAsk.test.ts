@@ -380,7 +380,8 @@ describe("the eye on every page (sees-every-page-plan-2026-10-31.md, phase 1)", 
     // The writer read the page as the reader sees it: a click rate kept as a fraction shown as its percentage.
     const prompt = JSON.parse((generate.mock.calls[0][0] as { contents: Array<{ text: string }> }).contents[0].text);
     expect(JSON.stringify(prompt.pageFigures)).toContain("7% [[page.rows.door_handles.ctrPercent]]");
-    expect(prompt.page).toBe("the searches that bring the website visitors from Google");
+    // Keywords' own words since its Way 2 (search-console-keywords-way-2-plan-2026-11-17.md).
+    expect(prompt.page).toBe("every keyword Google showed the website for in the dates chosen: its clicks, times shown, share clicked and place, each against the span before");
     // The figures are kept, so pressed again on the same figures the answer stands.
     const saved = await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect()).find((row) => row.screen === "searchConsole.keywords"));
     expect(saved?.facts?.find((fact) => fact.key === "page.totals.clicks")?.value).toBe(900);

@@ -13,7 +13,8 @@ import { useFixedDay } from "@/src/test/realTime";
  * (docs/plans/active/search-console-plan.md §14.3, item 9): a list's page
  * reads its ready-made period — a record per 2,000 rows — the company's
  * tracked list and the website's brand words, each by its hold's index, and
- * never a kept day. So however
+ * of the kept days only those of the span before, to see Google has them
+ * (`googleHasSpan`, search-console-pages-way-1-plan-2026-11-17.md). So however
  * many days are kept, a page costs the same.
  *
  * Counted, not timed: the reads are counted through the database the list
@@ -52,6 +53,11 @@ describe("a large website's Search Console", () => {
         companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "sc-domain:big.co.uk",
         newestDay: NEWEST, oldestDay: "2026-03-31", createdAt: Date.now(), updatedAt: Date.now(),
       });
+      // A hundred and eighty kept days of the website's figures, of which a list's page reads only the span before's.
+      for (let day = 0; day < 180; day += 1) {
+        const at = new Date(Date.parse(`${NEWEST}T00:00:00Z`) - day * 86_400_000).toISOString().slice(0, 10);
+        await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "web", day: at, clicks: 1, impressions: 10, ctr: 0.1, position: 5, fetchedAt: 1 });
+      }
       // Ninety kept days of pairs, which a list's page must never read.
       for (let day = 0; day < 90; day += 1) {
         const start = new Date(Date.parse(`${NEWEST}T00:00:00Z`) - day * 86_400_000).toISOString().slice(0, 10);
@@ -88,13 +94,14 @@ describe("a large website's Search Console", () => {
       expect(limitReads.map((read) => read.table).sort()).toEqual(["fanOutLimits", "fanOutLimits", "platformLimits"]);
       expect(limitReads.filter((read) => read.table === "fanOutLimits").every((read) => read.index !== null)).toBe(true);
       const listReads = reads.filter((read) => !limitReads.includes(read));
-      // The connection, the period and the one before, the tracked list, and the website's brand words.
+      // The connection, the period and the one before, the tracked list, the website's brand words, and the span
+      // before's 30 days, to see Google has them (`googleHasSpan`).
       expect(listReads.map((read) => read.table).sort()).toEqual([
-        "holdProfiles", "searchConsoleConnections", "searchConsolePeriods", "searchConsolePeriods", "searchConsoleTracked",
+        "holdProfiles", "searchConsoleConnections", "searchConsoleDays", "searchConsolePeriods", "searchConsolePeriods", "searchConsoleTracked",
       ]);
       expect(listReads.every((read) => read.index?.startsWith("by_hold")), JSON.stringify(listReads)).toBe(true);
       const documents = listReads.reduce((sum, read) => sum + read.documents, 0);
-      expect(documents).toBe(1 + Math.ceil(ROWS_NOW / PART_ROWS) + Math.ceil(ROWS_BEFORE / PART_ROWS) + TRACKED);
+      expect(documents).toBe(1 + Math.ceil(ROWS_NOW / PART_ROWS) + Math.ceil(ROWS_BEFORE / PART_ROWS) + TRACKED + 30);
     }
 
     // The browser is sent one page of rows, counted exactly over the whole list.

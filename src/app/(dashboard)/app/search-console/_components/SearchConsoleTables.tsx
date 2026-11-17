@@ -12,7 +12,6 @@ import { PAGE_TYPES, RANK_INTENTS } from "@/convex/utils/siteShapes";
 import { useToast } from "@/src/context/ToastContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Change } from "@/src/ui/components/screens/Change";
-import { FigureWithMove } from "../../_components/FigureWithMove";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
@@ -26,7 +25,7 @@ import { useSiteParam, useSiteSearch } from "../../sites/_components/useSitePara
 import { useSiteSort, useSiteSortedList, type SiteSortColumns } from "../../sites/_components/useSiteSort";
 import { DaysBeforeChange } from "./SearchConsoleFigures";
 import { formatPosition, formatRate } from "./searchConsoleFormat";
-import { useLiveAsk } from "./searchConsoleRecords";
+import { pageLabel, useLiveAsk, type RecordSegment } from "./searchConsoleRecords";
 import {
   countryArg,
   isReadyMade,
@@ -37,7 +36,7 @@ import {
   useSearchConsoleStatus,
 } from "./useSearchConsole";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
-import { RecordLinkCell } from "../../sites/_components/SiteCells";
+import { CUT_COLUMN, RecordLinkCell } from "../../sites/_components/SiteCells";
 
 /**
  * What every Search Console table shares (search-console-plan.md §13.1,
@@ -226,6 +225,9 @@ export function useSearchConsoleList(options: {
       named: live.answer?.ok ? live.answer.named : null,
       comparable: live.answer?.ok ? live.answer.comparable : false,
       problem: live.answer && !live.answer.ok ? live.answer.problem : null,
+      // The length the list was held to, and how long it really is: Google's whole answer.
+      cut: live.answer?.ok ? live.answer.cut : null,
+      listed: live.answer?.ok ? live.answer.summary.rows : null,
     }
     : {
       pageRows: server.pageRows,
@@ -233,6 +235,8 @@ export function useSearchConsoleList(options: {
       named: server.result?.named ?? null,
       comparable: server.result?.comparable ?? false,
       problem: null,
+      cut: server.result?.cut ?? null,
+      listed: server.result?.listed ?? null,
     };
   const filtered = Boolean(term) || Object.keys(filters).some((key) => key !== "missed") || Boolean(device);
   const liveSummary = live.answer?.ok
@@ -264,6 +268,11 @@ export function useSearchConsoleList(options: {
     /** A list asked of Google: every row, searched, filtered and ordered as on screen, for its download. */
     liveRows: isLive ? (liveOrder.rows ?? null) : null,
     /**
+     * A list asked of Google: every row it answered, before the search and the chips, for a chart of the whole list (a
+     * keyword's own screen's bands, search-console-keyword-screen-way-2-plan-2026-11-17.md). Undefined while it's asked.
+     */
+    allLiveRows: isLive ? (live.answer === undefined ? undefined : (listedLive ?? [])) : null,
+    /**
      * What the page draws from, for the eye (sees-every-page-plan-2026-10-31.md): the list's figures and the rows on
      * screen — nothing until the figures are in. The rows are a page of a longer list (`picked`), so no rule reads 25 of
      * 24,000 searches as the whole (ask-hakken-every-chart-page-plan-2026-11-03.md, shared work 4); the whole list's own
@@ -282,6 +291,14 @@ export type ListSummary = NonNullable<FunctionReturnType<typeof api.searchConsol
  * asked of Google for other dates and any other country.
  */
 export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view?: View; missed?: "searched" | "untracked" }): ListSummary | null {
+  return useSearchConsoleSummaryRead(ask).summary;
+}
+
+/**
+ * The same summary, and whether it's still on its way: a page that must tell "loading" from "nothing to add up"
+ * (Performance's squares and bands, search-console-performance-way-3-plan-2026-11-17.md) reads it so.
+ */
+export function useSearchConsoleSummaryRead(ask: { dimension: "query" | "page"; view?: View; missed?: "searched" | "untracked" }): { summary: ListSummary | null; loading: boolean } {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
@@ -293,8 +310,8 @@ export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view
   const server = useQuery(api.searchConsoleLists.searchConsoleListPage, held && readyMade ? { ...base, page: 1, rows: 25 } : "skip");
   const asksGoogle = !readyMade || server?.live === true;
   const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, held && asksGoogle ? base : null);
-  if (asksGoogle) return live.answer?.ok ? live.answer.summary : null;
-  return server?.summary ?? null;
+  if (asksGoogle) return { summary: live.answer?.ok ? live.answer.summary : null, loading: held && live.answer === undefined };
+  return { summary: server?.summary ?? null, loading: held && server === undefined };
 }
 
 /** A count against the same days before, as a hero box's line under it. `neutral` for a count whose rise is not good news. */
@@ -488,7 +505,7 @@ export function BeforeAfter({ before, now, format }: { before: number | null; no
   );
 }
 
-type Figure = "clicks" | "change" | "impressions" | "ctr" | "position" | "moved" | "clicksAndChange" | "positionAndMove";
+type Figure = "clicks" | "change" | "impressions" | "ctr" | "position" | "moved";
 
 /**
  * The figure columns most tables share, right-aligned and sortable: with
@@ -496,9 +513,12 @@ type Figure = "clicks" | "change" | "impressions" | "ctr" | "position" | "moved"
  * shown then), and `moved`, the places risen or fallen — Wins and losses'
  * and the tracked lists' alike.
  *
- * `clicksAndChange` and `positionAndMove` fold the move under its figure, one
- * column each: the tracked lists, whose eight figures would not fit the page
- * otherwise (design-drift-plan D4, 2026-10-04). They sort by the figure.
+ * Each is one line (the table rule, AGENTS.md "Tables are lean"; Anthony on
+ * the lean Keywords board, 2026-11-17: "its the two lines thats not good").
+ * A move is its own column, `change` ("Up or down"), never folded under its
+ * figure as `clicksAndChange` and `positionAndMove` did. Impressions are
+ * headed "Shown", with Impressions on hover: "impressions is to long a
+ * heading".
  */
 export function figureColumns(say: (key: string) => string, which: readonly Figure[]): DataTableColumn<ListRow>[] {
   const all: Record<Figure, DataTableColumn<ListRow>> = {
@@ -508,9 +528,10 @@ export function figureColumns(say: (key: string) => string, which: readonly Figu
       header: say("table.change"),
       align: "right",
       sortable: true,
+      className: "whitespace-nowrap",
       cell: (row) => <Change by={row.change} isNew={row.change !== null && row.previousClicks === null && row.clicks > 0} format={formatNumber} />,
     },
-    impressions: { key: "impressions", header: say("table.impressions"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
+    impressions: { key: "impressions", header: <ShownHeading say={say} />, align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
     ctr: { key: "ctr", header: say("table.ctr"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.ctr)}</span> },
     position: { key: "position", header: say("table.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.impressions > 0 ? formatPosition(row.position) : "–"}</span> },
     moved: {
@@ -520,29 +541,13 @@ export function figureColumns(say: (key: string) => string, which: readonly Figu
       sortable: true,
       cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} />,
     },
-    clicksAndChange: {
-      key: "clicks",
-      header: say("table.clicks"),
-      align: "right",
-      sortable: true,
-      cell: (row) => {
-        const isNew = row.change !== null && row.previousClicks === null && row.clicks > 0;
-        const moved = isNew || (row.change !== null && row.change !== 0);
-        return <FigureWithMove figure={<span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span>} move={moved ? <Change by={row.change} isNew={isNew} format={formatNumber} /> : null} />;
-      },
-    },
-    positionAndMove: {
-      key: "position",
-      header: say("table.position"),
-      align: "right",
-      sortable: true,
-      cell: (row) => {
-        const moved = row.positionChange !== null && Math.abs(row.positionChange) >= 0.05;
-        return <FigureWithMove figure={<span className="font-mono text-[12px] text-secondary">{row.impressions > 0 ? formatPosition(row.position) : "–"}</span>} move={moved ? <Change by={row.positionChange} kind="places" format={formatPosition} /> : null} />;
-      },
-    },
   };
   return which.map((key) => all[key]);
+}
+
+/** A table's heading for impressions: "Shown", with Google's word on hover (the table rule's short headings). */
+export function ShownHeading({ say }: { say: (key: string) => string }) {
+  return <span title={say("table.shownTitle")}>{say("table.shown")}</span>;
 }
 
 /**
@@ -610,17 +615,54 @@ export function SearchConsoleDownload({ ask, headers, fields }: {
 }
 
 /**
- * A page in a Search Console list: its address as a link to its own screen,
- * and — once Google Analytics has seen it — its title over it
- * (google-analytics-plan.md GA27), each cut to one line, whole on hover. In
- * the list's first column, `CUT_COLUMN.first`.
+ * A keyword in a Search Console list, as a link to its own screen, on one line: never narrower than 160 pixels, and cut
+ * with "…" when it's longer than its share of the table, the whole of it on hover. Way 2 (17 November 2026) showed it
+ * whole, wrapping; in a narrower window the figures kept their width and the keyword got 68 pixels, a word to a line,
+ * and Anthony made the table rule (AGENTS.md "Tables are lean"; the lean Keywords board,
+ * docs/plans/active/search-console-keywords-lean-table-2026-11-17.md). Every Search Console list of keywords takes it.
+ */
+export function keywordColumn<Row extends { key: string }>(
+  header: string,
+  recordHref: (segment: RecordSegment, key: string) => string,
+  width: string = CUT_COLUMN.first,
+): DataTableColumn<Row> {
+  return {
+    key: "key",
+    header,
+    sortable: true,
+    className: `${width} min-w-[160px]`,
+    cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
+  };
+}
+
+/**
+ * A page in a Search Console list, as a link to its own screen, on one line (`PageNameCell`): never narrower than 160
+ * pixels, as All pages' Page column. Pages, Tracked pages, Shown but not clicked and Real against estimated take it, which
+ * each wrote out for themselves until the table rule (AGENTS.md "Tables are lean", 2026-11-17).
+ */
+export function pageColumn<Row extends { key: string; title?: string }>(
+  header: string,
+  host: string,
+  recordHref: (segment: RecordSegment, key: string) => string,
+): DataTableColumn<Row> {
+  return {
+    key: "key",
+    header,
+    sortable: true,
+    className: `${CUT_COLUMN.first} min-w-[160px]`,
+    cell: (row) => <PageNameCell title={row.title} label={pageLabel(row.key, host)} href={recordHref("pages/page", row.key)} />,
+  };
+}
+
+/**
+ * A page in a Search Console list: one line, as a link to its own screen — its
+ * title once Google Analytics has seen it (google-analytics-plan.md GA27),
+ * else its address — cut to the column, with the title and the whole address
+ * on hover. The title sat over the address until the table rule (one line a
+ * row, AGENTS.md "Tables are lean", 2026-11-17). In the list's first column,
+ * `CUT_COLUMN.first` with `min-w-[160px]`.
  */
 export function PageNameCell({ title, label, href }: { title?: string; label: string; href: string }) {
   if (!title) return <RecordLinkCell cut href={href}>{label}</RecordLinkCell>;
-  return (
-    <span className="flex min-w-0 flex-col">
-      <span className="block truncate text-[13px] text-foreground" title={title}>{title}</span>
-      <RecordLinkCell cut href={href} className="text-[12px] text-info">{label}</RecordLinkCell>
-    </span>
-  );
+  return <RecordLinkCell cut href={href} hover={`${title}\n${label}`}>{title}</RecordLinkCell>;
 }

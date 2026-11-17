@@ -1,5 +1,5 @@
 import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi, expect } from "vitest";
 import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
@@ -44,7 +44,8 @@ const DAYS = [
 const PERFORMANCE = { days: DAYS, totals: TOTALS, previous: BEFORE, named: 69, live: false };
 
 /** A keyword's or a page's own days, and where its clicks came from, as Google answers them. */
-const SERIES = { ok: true, days: DAYS, totals: TOTALS, previous: BEFORE, previousHeld: true };
+// The span before's days come with the dates (`daysBefore`): a keyword's day chart lays them under (2026-11-17).
+const SERIES = { ok: true, days: DAYS, daysBefore: DAYS, totals: TOTALS, previous: BEFORE, previousHeld: true };
 /** One page's keywords, or one keyword's pages, as Google answers them when the screen opens (keep-less-history-plan.md, 5.1). */
 const pairsOf = (row: unknown) => ({ ok: true, rows: [[row]], cut: null, named: 44, comparable: true, summary: SUMMARY });
 const SPLITS = {
@@ -91,17 +92,26 @@ afterEach(() => {
 
 describe("Search Console's approved looks: pages and keywords", () => {
   it("1 · Pages", async () => {
+    // Way 1 (search-console-pages-way-1-plan-2026-11-17.md): the boxes every country's, the line under them, the busiest
+    // page ticked and drawn day by day, and the table with its tick boxes.
     at("/app/search-console/site_1/pages");
-    answer({
-      "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleReads:searchConsolePerformance": PERFORMANCE,
-      "searchConsoleLists:searchConsoleListPage": list([PAGE_ROW]),
-      "searchConsoleTracking:searchConsoleTracking": TRACKING,
-      "pageKinds:pageKindChoices": null,
-    });
+    answer(
+      {
+        "searchConsoleConnect:searchConsoleStatus": STATUS,
+        "searchConsoleReads:searchConsolePerformance": PERFORMANCE,
+        "searchConsoleLists:searchConsoleListPage": list([PAGE_ROW]),
+        "searchConsoleTracking:searchConsoleTracking": TRACKING,
+        "pageKinds:pageKindChoices": null,
+        "pageTitles:pageTitlesFor": [],
+      },
+      { searchConsoleKeySeries: SERIES },
+    );
     const { container } = render(<SearchConsolePagesPage />);
     await screen.findByText("/ai-agency/");
     await screen.findByText("Click-through rate");
+    await screen.findByText("Clicks each day");
+    // It opens with its busiest pages ticked: here the one page with clicks.
+    expect(screen.getAllByRole("checkbox").filter((box) => (box as HTMLInputElement).checked)).toHaveLength(1);
     await expectApprovedLook(container, PLAN, "Main", "Search Console → Pages");
   });
 
@@ -116,9 +126,12 @@ describe("Search Console's approved looks: pages and keywords", () => {
       { searchConsoleKeySeries: SERIES, searchConsoleKeySplits: SPLITS, searchConsoleLiveList: pairsOf(ROW) },
     );
     const { container } = render(<SearchConsolePagePage />);
-    await screen.findByText("ai agency");
-    await screen.findByText("Click-through rate");
-    await screen.findByText("United Kingdom");
+    // The keyword screen's Way 2, turned round (Anthony, 17 November 2026: "just build it"): the keyword is named in the
+    // bands and in the table, and where the clicks came from is gone, so its countries aren't asked.
+    expect(await screen.findAllByText("ai agency")).toHaveLength(2);
+    // In its box, and among the day chart's Show choices.
+    expect(await screen.findAllByText("Click-through rate")).toHaveLength(2);
+    await screen.findByText("Which keywords Google shows this page for, and which get clicked");
     await expectApprovedLook(container, PLAN, "Page", "Search Console → Pages → a page");
   });
 
@@ -133,9 +146,12 @@ describe("Search Console's approved looks: pages and keywords", () => {
       { searchConsoleKeySeries: SERIES, searchConsoleKeySplits: SPLITS, searchConsoleLiveList: pairsOf(PAGE_ROW) },
     );
     const { container } = render(<SearchConsoleKeywordPage />);
-    await screen.findByText("/ai-agency/");
-    await screen.findByText("Click-through rate");
-    await screen.findByText("United Kingdom");
+    // Way 2 (search-console-keyword-screen-way-2-plan-2026-11-17.md): the page is named in the bands and in the table,
+    // and where the clicks came from is gone, so its countries aren't asked.
+    expect(await screen.findAllByText("/ai-agency/")).toHaveLength(2);
+    // In its box, and among the day chart's Show choices.
+    expect(await screen.findAllByText("Click-through rate")).not.toHaveLength(0);
+    expect(screen.queryByText("United Kingdom")).toBeNull();
     await expectApprovedLook(container, PLAN, "Keyword", "Search Console → Keywords → a keyword");
   });
 

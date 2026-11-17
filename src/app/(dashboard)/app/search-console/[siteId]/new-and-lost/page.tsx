@@ -14,7 +14,8 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
+
+import { keywordColumn, ShownHeading } from "../../_components/SearchConsoleTables";
 import { SITE_SERIES_COLOURS } from "../../../sites/_components/SiteCharts";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { SiteGainLossChart } from "../../../sites/_components/SiteGainLossChart";
@@ -188,13 +189,7 @@ export default function SearchConsoleNewLostPage() {
             empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: term || what || band ? t("table.noMatch") : t("table.empty") }}
             footer={list.footer}
             columns={[
-              {
-                key: "key",
-                header: t("table.keyword"),
-                sortable: true,
-                className: CUT_COLUMN.first,
-                cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
-              },
+              keywordColumn(t("table.keyword"), recordHref),
               {
                 key: "status",
                 header: t("table.status"),
@@ -204,7 +199,7 @@ export default function SearchConsoleNewLostPage() {
               },
               { key: "when", header: t("table.when"), sortable: true, cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatShortDay(row.when)}</span> },
               { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },
-              { key: "impressions", header: t("table.impressions"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
+              { key: "impressions", header: <ShownHeading say={t} />, align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
               { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatPosition(row.position)}</span> },
             ]}
           />

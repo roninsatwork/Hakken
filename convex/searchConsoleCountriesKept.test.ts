@@ -9,12 +9,14 @@ import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 import { seedGoogleSignIn } from "@/src/test/googleGrant";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
+import { unpackNumbers } from "./utils/searchConsolePacks";
 
 /**
  * Home countries only (docs/plans/active/search-console-home-countries-plan.md,
  * 2026-10-06), end to end with Google faked at the network: a run collects the
  * website's main home country with Google's country filter, held without a
- * country — but its list of every country's totals, asked whole — then each
+ * country — but its list of every country's totals, and every page, asked
+ * whole (pages since 2026-11-17, `EVERY_COUNTRY_LISTS`) — then each
  * country kept ready beside it, a country new to the list over the whole 90
  * days, and settles each. Image search is never asked. New and lost is kept for
  * every home country. A website whose figures were all countries' is cleared
@@ -85,6 +87,9 @@ function fakeGoogle(figures: Figures) {
 
 /** The country an ask is filtered to; undefined for one asked whole. */
 const countryOf = (ask: Ask) => ask.dimensionFilterGroups?.flatMap((group) => group.filters).find((filter) => filter.dimension === "country")?.expression;
+
+/** The lists asked of every country, whatever the home country (`EVERY_COUNTRY_LISTS`): the country list, and the pages since 2026-11-17. */
+const everyCountry = (ask: Ask) => ask.dimensions.join("+") === "country" || ask.dimensions.join("+") === "page";
 
 /** The website's figures: all of them (asked with no filter), the United Kingdom's — its main country — and Mozambique's. */
 function figures(): Figures {
@@ -203,8 +208,11 @@ describe("collecting the main country and a country kept ready", () => {
     expect(collected.every((ask) => ask.startDate >= "2026-09-22")).toBe(true);
     const whole = asks.filter((ask) => countryOf(ask) === undefined);
     expect(whole.length).toBeGreaterThan(0);
-    expect(whole.every((ask) => ask.dimensions.join("+") === "country")).toBe(true);
-    // The country kept beside it: every ask filtered to it, over its whole 90 days, and never a country list inside it.
+    expect(whole.every(everyCountry)).toBe(true);
+    // The pages are every country's, for the main country and the one kept beside it (2026-11-17): Google leaves the
+    // searches it keeps private out of a page's figures whenever a country is named.
+    expect(asks.filter((ask) => ask.dimensions.join("+") === "page").every((ask) => countryOf(ask) === undefined)).toBe(true);
+    // The country kept beside it: every other ask filtered to it, over its whole 90 days, and never a country list inside it.
     const kept = asks.filter((ask) => countryOf(ask) === "moz");
     expect(kept.every((ask) => !ask.dimensions.includes("country"))).toBe(true);
     expect(kept.filter((ask) => ask.dimensions[0] === "date" && ask.startDate !== HISTORY_FROM).map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
@@ -218,7 +226,13 @@ describe("collecting the main country and a country kept ready", () => {
     expect(held.lists.filter((record) => record.list === "pair").map((record) => record.keys.join(","))).toEqual(["plumber leeds,emergency plumber"]);
     // Every country's totals, for Countries and devices.
     expect(held.lists.find((record) => record.list === "country")?.keys).toEqual(["gbr", "moz"]);
+    // Every country's pages, each the United Kingdom's and Mozambique's together: 12 clicks, where the UK's pages hold 8.
+    const pageClicks = (lists: typeof held.lists, day: string) => lists
+      .filter((record) => record.list === "page" && record.start === day)
+      .flatMap((record) => unpackNumbers(record.clicks)).reduce((sum, clicks) => sum + clicks, 0);
+    expect(pageClicks(held.lists, NEWEST)).toBe(12);
     const moz = await keptOf(t, siteId, "moz");
+    expect(pageClicks(moz.lists, NEWEST)).toBe(12);
     expect(moz.days.map((day) => `${day.day} ${day.clicks}`)).toEqual([`${NEWEST} 4`]);
     expect(moz.lists.some((record) => record.list === "country")).toBe(false);
 
@@ -318,8 +332,31 @@ describe("reading the home countries", () => {
     });
     expect(splits.ok).toBe(true);
     expect(asks.length).toBeGreaterThan(0);
-    expect(asks.filter((ask) => !ask.dimensions.includes("country")).every((ask) => countryOf(ask) === "gbr")).toBe(true);
+    expect(asks.filter((ask) => !everyCountry(ask)).every((ask) => countryOf(ask) === "gbr")).toBe(true);
     expect(asks.filter((ask) => ask.dimensions.includes("country")).every((ask) => countryOf(ask) === undefined)).toBe(true);
+  });
+
+  test("a page's live figures are every country's: the page list, a page's days and its devices; the searches beside them stay the main country's", async () => {
+    const { t, siteId, reader } = await setup(["gbr"]);
+    const asks = fakeGoogle(figures());
+    await collect(t);
+    asks.length = 0;
+    const thirty = { siteId, searchType: "web" as const, from: "2026-08-28", to: NEWEST };
+
+    const list = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, dimension: "page" });
+    // Every country's pages: the one only Mozambique was shown too.
+    expect(list.ok && list.rows.flat().map((one) => one.key).sort()).toEqual(["https://acme-shop.test/", "https://acme-shop.test/ai/"]);
+    const page = { ...thirty, dimension: "page" as const, key: "https://acme-shop.test/" };
+    expect((await reader.action(api.searchConsoleLists.searchConsoleKeySplits, page)).ok).toBe(true);
+    expect((await reader.action(api.searchConsoleLists.searchConsoleKeySeries, page)).ok).toBe(true);
+
+    const namesPage = (ask: Ask) => ask.dimensionFilterGroups?.some((group) => group.filters.some((filter) => filter.dimension === "page")) ?? false;
+    const ofPages = asks.filter((ask) => ask.dimensions.join("+") === "page" || namesPage(ask));
+    expect(ofPages.length).toBeGreaterThan(0);
+    expect(ofPages.every((ask) => countryOf(ask) === undefined)).toBe(true);
+    const searches = asks.filter((ask) => ask.dimensions.join("+") === "query+page");
+    expect(searches.length).toBeGreaterThan(0);
+    expect(searches.every((ask) => countryOf(ask) === "gbr")).toBe(true);
   });
 
   test("a country kept ready before its first collection is on its way; one not kept says so", async () => {
@@ -366,7 +403,7 @@ describe("switching to the main home country (2026-10-06)", () => {
     expect(await connectionOf(t, siteId)).toMatchObject({ mainCountry: "gbr", newestDay: NEWEST });
     // The all-countries and image days cleared; a run started once they were gone collected the main country whole.
     expect(asks.length).toBeGreaterThan(0);
-    expect(asks.filter((ask) => !ask.dimensions.includes("country")).every((ask) => countryOf(ask) === "gbr")).toBe(true);
+    expect(asks.filter((ask) => !everyCountry(ask)).every((ask) => countryOf(ask) === "gbr")).toBe(true);
     // The collection's days from its 90-day window; the days before it asked once back to Google's line (phase 9).
     expect(asks.filter((ask) => ask.dimensions[0] === "date" && ask.startDate !== HISTORY_FROM).map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
     expect((await keptOf(t, siteId, undefined)).days.map((day) => `${day.searchType} ${day.day} ${day.clicks}`)).toEqual(["web 2026-08-01 2", `web ${NEWEST} 8`]);
@@ -378,7 +415,7 @@ describe("switching to the main home country (2026-10-06)", () => {
     const asks = fakeGoogle(figures());
     await collect(t);
     expect(await connectionOf(t, siteId)).toMatchObject({ mainCountry: "gbr", newestDay: NEWEST });
-    expect(asks.filter((ask) => !ask.dimensions.includes("country")).every((ask) => countryOf(ask) === "gbr")).toBe(true);
+    expect(asks.filter((ask) => !everyCountry(ask)).every((ask) => countryOf(ask) === "gbr")).toBe(true);
   });
 
   test("a main country moved on the Market page is cleared and collected afresh", async () => {

@@ -1,9 +1,7 @@
 "use client";
 
-import { useQuery } from "convex/react";
 import { MapPin, Monitor } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { api } from "@/convex/_generated/api";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -16,8 +14,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_compone
 import { countryName } from "../../_components/countries";
 import { filePercent, filePosition, formatPosition, formatRate, readerLanguage } from "../../_components/searchConsoleFormat";
 import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../../_components/SearchConsoleNotices";
-import type { Id } from "@/convex/_generated/dataModel";
-import { useLiveAsk } from "../../_components/searchConsoleRecords";
+import { useSearchConsoleSplit } from "../../_components/useSearchConsoleSplit";
 import {
   countryArg,
   useResultKind,
@@ -25,7 +22,6 @@ import {
   useSearchConsoleRange,
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
-  type ResultKind,
 } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { placesSees } from "@/convex/utils/sees/searchConsoleScreens";
@@ -49,19 +45,6 @@ function matching(rows: Split[] | undefined, term: string): Split[] | undefined 
 }
 
 /**
- * A short list for the dates chosen: the ready-made period's, or — for other
- * dates, or a country the website does not keep ready — asked of Google
- * (search-console-plan.md §14.3, item 4; §16).
- */
-function useSplitList(ask: { siteId: Id<"companyWebsites">; searchType: ResultKind; from: string; to: string; dimension: "country" | "device"; country?: string } | null) {
-  const server = useQuery(api.searchConsoleLists.searchConsoleSplitList, ask ?? "skip");
-  const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, server?.live && ask ? ask : null);
-  if (!server?.live) return server;
-  if (live.answer === undefined) return undefined;
-  return { rows: live.answer.ok ? live.answer.rows.flat() : [], preparing: false };
-}
-
-/**
  * Where a website's clicks came from, and on what (docs/plans/active/
  * search-console-plan.md §5.4): a table of countries and one of devices, each
  * with its share of the clicks, for the dates and kind of result chosen. The
@@ -82,8 +65,8 @@ export default function SearchConsolePlacesPage() {
   const held = Boolean(status && hasFigures(status));
   const base = { siteId, searchType: kind, from: range.from, to: range.to };
   // Every country, always; the devices in the country chosen.
-  const countryList = useSplitList(held ? { ...base, dimension: "country" } : null);
-  const deviceList = useSplitList(held ? { ...base, dimension: "device", ...countryArg(country) } : null);
+  const countryList = useSearchConsoleSplit(held ? { ...base, dimension: "country" } : null);
+  const deviceList = useSearchConsoleSplit(held ? { ...base, dimension: "device", ...countryArg(country) } : null);
   const countryCopy = { building: Boolean(countryList?.preparing || deviceList?.preparing), behind: false };
   const language = readerLanguage();
   const countries = countryList?.preparing ? undefined : countryList?.rows.map((row) => ({

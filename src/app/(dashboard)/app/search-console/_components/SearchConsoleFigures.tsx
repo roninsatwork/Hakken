@@ -26,7 +26,7 @@ type Figures = { clicks: number; impressions: number; ctr: number; position: num
 type Day = Figures & { day: string };
 
 /** A website's figures for some dates: each day, the totals, the same days before (null when not held), and the clicks Google names (null when not known). */
-export type SiteFigures = { days: Day[]; totals: Figures | null; previous: Figures | null; named: number | null };
+export type SiteFigures = { days: Day[]; totals: Figures | null; previous: Figures | null; named: number | null; daysBefore?: Day[] };
 
 const NO_FIGURES: SiteFigures = { days: [], totals: null, previous: null, named: null };
 
@@ -154,11 +154,23 @@ export function SearchConsoleFigures({ totals, previous, days, isNew = false }: 
  * in the country chosen.
  */
 export function SearchConsoleSiteFigures() {
+  return <SiteFiguresBoxes read={useSearchConsoleSiteFigures()} />;
+}
+
+/** The website's figures for the dates, kind of result and country chosen: the boxes' read, for a page that draws more from it (Keywords' chart). */
+export function useSearchConsoleSiteFigures() {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const { figures, problem, retry } = useSiteFiguresFor(status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to, ...periodArg(range) } : null);
+  return useSiteFiguresFor(status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to, ...periodArg(range) } : null);
+}
+
+/** The four boxes from a read the page already holds (`useSearchConsoleSiteFigures`). */
+export function SiteFiguresBoxes({ read }: { read: ReturnType<typeof useSiteFiguresFor> }) {
+  const status = useSearchConsoleStatus();
+  const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const { figures, problem, retry } = read;
   if (problem) return <LiveProblem problem={problem} retry={retry} />;
   if (figures === undefined) return <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
   return <SearchConsoleFigures totals={figures.totals} previous={figures.previous} days={range.days} />;

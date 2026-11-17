@@ -17,7 +17,7 @@ import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteP
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { useSiteFiguresFor } from "../../_components/SearchConsoleFigures";
 import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
-import { filePercent, filePosition, formatPosition, formatRate } from "../../_components/searchConsoleFormat";
+import { filePercent, filePosition, formatPosition, formatRate, appearanceName } from "../../_components/searchConsoleFormat";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { SearchConsoleChips, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
 import {
@@ -46,11 +46,6 @@ const SORTS: SiteSortColumns<Kind, "key" | "clicks" | "impressions" | "ctr" | "p
   pages: { value: (row) => row.pages, first: "desc" },
 };
 const nameOf = (row: Kind) => row.key;
-
-/** Google's name for a kind of rich result, in words: "REVIEW_SNIPPET" reads "Review snippet". */
-function kindName(key: string, known: (key: string) => string | null): string {
-  return known(key) ?? key.toLowerCase().replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase());
-}
 
 /**
  * Rich results (search-console-plan.md §13.3, drawn as "16 · Rich results"):
@@ -96,7 +91,7 @@ export default function SearchConsoleAppearancePage() {
   const rows: Kind[] | undefined = appearances?.map((row) => {
     const counted = countedReady ? (row.count ?? 0) >= 0 : pages.answer === undefined || pagesOf.has(row.key);
     return {
-      key: kindName(row.key, known),
+      key: appearanceName(row.key, known),
       clicks: row.clicks,
       impressions: row.impressions,
       ctr: row.ctr,

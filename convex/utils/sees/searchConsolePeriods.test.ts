@@ -4,6 +4,9 @@ import { readFixture } from "@/src/test/readFixture";
 import { findingWords, type Finding } from "./findings";
 import { pageDataFor } from "./pageData";
 import { pageFindings } from "./pageFindings";
+import { performanceSplits, type PerformanceRaw } from "@/src/app/(dashboard)/app/search-console/_components/performanceSees";
+import { keywordBands } from "@/src/app/(dashboard)/app/search-console/_components/keywordSees";
+import type { ListRow } from "@/src/app/(dashboard)/app/search-console/_components/SearchConsoleTables";
 
 const performance = readFixture("moreHandlesSearchConsolePerformance");
 const keywords = readFixture("moreHandlesSearchConsoleKeywords");
@@ -14,6 +17,10 @@ const newLost = readFixture("moreHandlesSearchConsoleNewLost");
 const devices = readFixture("moreHandlesSearchConsoleDevices");
 const volatility = readFixture("moreHandlesSearchConsoleVolatility");
 const roninsPerformance = readFixture("roninsSearchConsolePerformance");
+const splitsRead = readFixture("moreHandlesSearchConsolePerformanceSplits") as Record<string, unknown>;
+/** "more handles" on its own screen, as Google answered on 17 November 2026: its figures and every page shown for it. */
+const keywordScreen = readFixture("moreHandlesSearchConsoleKeywordScreen") as Record<string, unknown>;
+const pagesRead = readFixture("moreHandlesSearchConsolePages") as Record<string, unknown>;
 
 /**
  * Search Console's own findings on every period its date menu offers, on More Handles' own figures as its reads answered
@@ -78,9 +85,55 @@ const PLACE_NAMES = { firstPage: "Google's first page", secondPage: "Google's se
 const BAND_NAMES = { "1-3": "Top 3", "4-10": "4–10", "11-20": "11–20", "21-50": "21–50", "51+": "51 and below" };
 
 const performancePage = (period: Period) => ({ ...at(performance, period), names: { brand: "Brand", other: "Non-brand" } });
+
+/**
+ * Performance with its charts (search-console-performance-way-3-plan-2026-11-17.md): the charts' figures as the page
+ * builds them (`performanceSplits`), from its reads as they answered on 17 November 2026, beside the boxes and the day
+ * chart of 3 November. Classifications are named as the page names them; pages not sorted yet never are.
+ */
+const KIND_NAMES = (splitsRead.kindNames ?? {}) as Record<string, string>;
+const DEVICE_NAMES: Record<string, string> = { DESKTOP: "Desktop", MOBILE: "Mobile", TABLET: "Tablet" };
+const chartsPage = (period: Period) => ({
+  ...at(performance, period),
+  splits: performanceSplits(at(splitsRead, period) as unknown as PerformanceRaw, {
+    kind: (key) => KIND_NAMES[key] ?? null,
+    device: (key) => DEVICE_NAMES[key] ?? key,
+    look: (key) => key.toLowerCase().replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase()),
+    quiet: (line, rate) => `${line.toLocaleString("en-GB")} impressions or more, and under ${rate.toFixed(1)} clicks for every 100`,
+  }),
+  names: { brand: "Brand", other: "Non-brand", hidden: "Searches Google hides", allPages: "All your pages" },
+});
 const keywordsPage = (period: Period, names: Record<string, string>) => {
   const list = at(keywords, period) as { summary: unknown; rows: unknown[]; chart: unknown[] };
   return { summary: list.summary, rows: list.rows, picked: true, chart: (list.chart as Array<{ start: string }>).map((one) => ({ ...one, day: one.start })), names };
+};
+/**
+ * Keywords (search-console-keywords-way-2-plan-2026-11-17.md): the list, as Position bands and Brand and non-brand read it,
+ * the whole website's clicks from its boxes, and "door handles" ticked onto the chart with its clicks against the span before
+ * (the figures its own screen's test uses). The saved list and the website's days were read on different days, so on This
+ * month the list holds more clicks than the website's one day: no line about hidden searches there.
+ */
+const KEYWORD_NAMES = { ...BAND_NAMES, brand: "Brand", other: "Non-brand", hidden: "Searches Google hides" };
+const keywordsListPage = (period: Period) => {
+  const list = at(keywords, period) as { summary: unknown; rows: unknown[] };
+  const website = (at(performance, period) as { totals: { clicks: number } }).totals;
+  return { summary: list.summary, rows: list.rows, picked: true, website: { clicks: website.clicks }, ticked: [{ name: "door handles", clicks: 38, previousClicks: 22 }], names: KEYWORD_NAMES };
+};
+/**
+ * Pages (search-console-pages-way-1-plan-2026-11-17.md): the page list as its own read answered on 17 November 2026,
+ * every country's, with the span before's totals, the pages clicked, the few that make half the clicks and the two that
+ * moved most; the home page ticked onto the chart with its October clicks against September's; and the names the page
+ * says things by. That day More Handles' Last 6 months and Last 12 months have no span before: Google has no figures
+ * for it from 11 August 2025 to 22 April 2026 (`googleHasSpan`), and the 12 months before are past its sixteen.
+ */
+const PAGES_NAMES = {
+  allPages: "All your pages", clicked: "Pages that got a click", half: "Pages that make half your clicks", home: "Home page",
+  kinds: (pagesRead.kindNames ?? {}) as Record<string, string>,
+};
+const pagesPage = (period: Period) => {
+  const list = at(pagesRead, period) as { summary: unknown; rows: unknown[]; comparable: boolean };
+  // The ticked page's span before comes back only where Google has figures for it, as the page list's does.
+  return { summary: list.summary, rows: list.rows, picked: true, ticked: [{ name: "Home page", clicks: 396, previousClicks: list.comparable ? 327 : null }], names: PAGES_NAMES };
 };
 const curvePage = (period: Period) => {
   const { points, before } = at(curve, period) as { points: Array<{ position: number }>; before: Array<{ position: number }> | null };
@@ -154,6 +207,22 @@ const pagePage = (period: Period) => ({
   website: website(period),
 });
 
+/** A page as the table and the bands name it: its address on the website. */
+const pagePath = (key: string) => key.replace(/^https?:\/\/[^/]+/, "") || "/";
+/** A keyword's own screen, Way 2 (search-console-keyword-screen-way-2-plan-2026-11-17.md), on "more handles"' own figures. */
+const keywordScreenPage = (period: Period) => {
+  const one = at(keywordScreen, period) as unknown as { figures: Fixture; pages: ListRow[] };
+  const byClicks = [...one.pages].sort((left, right) => right.clicks - left.clicks).slice(0, 25);
+  return {
+    name: "more handles", keyword: "more handles",
+    figures: { days: [], ...one.figures },
+    bands: keywordBands(one.pages, pagePath, (count) => `The other ${count}`),
+    rows: byClicks.map((row) => ({ ...row, name: pagePath(row.key) })),
+    picked: true,
+    website: website(period),
+  };
+};
+
 // ── Each page, on every period ─────────────────────────────────────────────────────────────────────────────────────
 
 describe("Search Console finds the biggest things on every period the date menu offers (More Handles, 3 November 2026)", () => {
@@ -170,6 +239,20 @@ describe("Search Console finds the biggest things on every period the date menu 
       expect(lines.some((line) => line.startsWith("The last 28 days: clicks a day")), lines.join("\n")).toBe(true);
       expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(3);
     }
+  });
+
+  test.each(ALL)("Performance's charts: %s", (period) => {
+    const lines = said("searchConsole.performance", period, chartsPage(period));
+    clean(lines);
+    // The charts' own findings, two or more on every period: the squares' searches Google hides, a Classification's
+    // clicks or click rate, a device, or the dots' group Google shows a lot but people seldom click.
+    const charts = lines.filter((line) => /^Searches Google hides|for All your pages\.$| impressions or more, and under [\d.]+ clicks for every 100 |^(Mobile|Desktop|Tablet):|^(Handles|Hinges|Cupboard Handles|Window Furniture|Other Ironmongery|Blog|Door Knobs|Lighting|Brand|Buy By Brand|Locks|Electrical): clicks (up|down)/.test(line));
+    expect(charts.length, lines.join("\n")).toBeGreaterThanOrEqual(2);
+    // A Classification's clicks against the span before, only where that span is fair.
+    const classMoved = lines.some((line) => /^(Handles|Hinges|Cupboard Handles|Window Furniture|Other Ironmongery|Blog|Door Knobs|Lighting|Brand|Buy By Brand|Locks|Electrical): clicks (up|down)/.test(line));
+    if (NO_FAIR_BEFORE.includes(period)) expect(classMoved, lines.join("\n")).toBe(false);
+    // The headline still leads where there's a fair span before.
+    if (WHOLE.includes(period)) expect(lines[0], lines.join("\n")).toMatch(/^The whole website: clicks (up|down)/);
   });
 
   test.each(ALL)("Brand and non-brand: %s", (period) => {
@@ -220,6 +303,18 @@ describe("Search Console finds the biggest things on every period the date menu 
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
   });
 
+  test.each(ALL)("A keyword's own screen, on its own figures: %s", (period) => {
+    const page = keywordScreenPage(period);
+    const lines = said("searchConsole.keyword", period, page);
+    clean(lines);
+    // The bands: the page that took most of its clicks, with how many pages Google showed and how many got a click.
+    const top = page.bands.parts.filter((part) => part.key !== "rest").sort((left, right) => right.clicks - left.clicks)[0];
+    expect(lines.some((line) => line.startsWith(`${top.name} holds`)), lines.join("\n")).toBe(true);
+    // Where the clicks came from is gone from the screen, so the eye never says a country or a device.
+    expect(lines.some((line) => /Mobile|Desktop|Tablet|United Kingdom/.test(line)), lines.join("\n")).toBe(false);
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(2);
+  });
+
   test.each(ALL)("A page's own screen: %s", (period) => {
     const lines = said("searchConsole.page", period, pagePage(period));
     clean(lines);
@@ -241,6 +336,37 @@ describe("Search Console finds the biggest things on every period the date menu 
     clean(lines);
     if (!NO_FAIR_BEFORE.includes(period)) expect(lines.some((line) => /^Top 3: searches (up|down)/.test(line)), lines.join("\n")).toBe(true);
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(NO_FAIR_BEFORE.includes(period) ? 2 : 4);
+  });
+
+  test.each(ALL)("Keywords: %s", (period) => {
+    const page = keywordsListPage(period);
+    const lines = said("searchConsole.keywords", period, page);
+    clean(lines);
+    // Why the boxes and the table never add up: the clicks from searches Google hides, wherever the website had more.
+    if (page.website.clicks > (page.summary as { clicks: number }).clicks) expect(lines.some((line) => line.startsWith("Searches Google hides")), lines.join("\n")).toBe(true);
+    // The ticked keyword, set against the span before, where that span is fair.
+    if (!NO_FAIR_BEFORE.includes(period)) expect(lines.some((line) => line.startsWith("door handles: clicks up")), lines.join("\n")).toBe(true);
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
+  });
+
+  test.each(ALL)("Pages: %s", (period) => {
+    const lines = said("searchConsole.pages", period, pagesPage(period));
+    clean(lines);
+    const compared = (at(pagesRead, period) as { comparable: boolean }).comparable;
+    // How few of the pages Google showed got a click, and how few make half the clicks: on every period.
+    expect(lines.some((line) => line.startsWith("Pages that got a click")), lines.join("\n")).toBe(true);
+    expect(lines.some((line) => line.startsWith("Pages that make half your clicks")), lines.join("\n")).toBe(true);
+    // The Classification with most clicks, by its own name.
+    expect(lines.some((line) => /^(Blog|Cupboard Handles|Handles|Locks|Brand|Other Ironmongery|Buy By Brand|Door Knobs|Hinges|Window Furniture|Electrical|Lighting)( holds|: clicks)/.test(line)), lines.join("\n")).toBe(true);
+    if (compared) {
+      // Every page's clicks against the span before, and the ticked home page, only where that span is held.
+      expect(lines.some((line) => /^All your pages: clicks (up|down)/.test(line)), lines.join("\n")).toBe(true);
+      expect(lines.some((line) => line.startsWith("Home page: clicks up")), lines.join("\n")).toBe(true);
+    } else {
+      expect(lines.some((line) => /: clicks (up|down)/.test(line)), lines.join("\n")).toBe(false);
+    }
+    // At least four things on every period: with no span before, a Classification Google shows a lot but people click less.
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
   });
 
   test("Volatility: its own newest days, whatever the dates", () => {

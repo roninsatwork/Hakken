@@ -9,6 +9,8 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TableBar, type TableNoun } from "@/src/ui/components/screens/TableBar";
+import { TickActions, TickCount, type TableTicks } from "@/src/ui/components/screens/TableTicks";
+import { formatNumber } from "../../sites/_components/siteFormat";
 import { ResultKindSwitch, SearchConsoleGate, canRetry, liveProblemKey } from "./SearchConsoleNotices";
 import { SearchConsoleChips, SearchConsoleListDownload, type ChipId, type ListRow, type useSearchConsoleList } from "./SearchConsoleTables";
 import { useResultKind } from "./useSearchConsole";
@@ -34,6 +36,12 @@ export type ListTableSpec = {
   emptyLabel?: string;
   /** False for a list of only tracked rows (Tracked keywords, Tracked pages), where marking each one tracked says nothing. */
   markTracked?: boolean;
+  /**
+   * Tick boxes that choose what the page's chart draws (Keywords' ticked keywords, search-console-keywords-way-2-plan-2026-11-17.md):
+   * how many are ticked beside the count, and Clear all and Select top beside the download, as on All pages. The tick column itself
+   * is the page's first (`tickColumn`).
+   */
+  ticks?: TableTicks;
 };
 
 /** What a list says under its table when Google could not answer, and the way to ask again. */
@@ -76,9 +84,13 @@ export function SearchConsoleListScreen({
 }) {
   const t = useTranslations("searchConsole");
   const router = useRouter();
-  const { list, rowHref } = table;
+  const { list, rowHref, ticks } = table;
   const problem = useListProblem(list);
   const [resultKind] = useResultKind();
+  // A list longer than the website's limit counts its whole length, and says how many it lists (Anthony chose it on the Keywords
+  // canvas, 17 November 2026: "25,000 keywords" when Google gave 26,652). A search or filter counts what it finds, as always.
+  const { cut, listed } = list.table;
+  const whole = !list.filtered && cut !== null && listed !== null && listed > cut ? listed : null;
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={icon} title={title} description={description} />
@@ -98,10 +110,17 @@ export function SearchConsoleListScreen({
             filters={table.chips.length > 0 ? <SearchConsoleChips chips={table.chips} /> : undefined}
             cardHeader={
               <TableBar
-                footer={list.table.footer}
+                footer={whole === null ? list.table.footer : { ...list.table.footer, totalCount: whole }}
                 noun={table.noun}
-                actions={<SearchConsoleListDownload list={list} download={table.download} />}
+                actions={(
+                  <>
+                    {ticks ? <TickActions ticks={ticks} rows={list.table.pageRows ?? []} rowKey={(row) => row.key} /> : null}
+                    <SearchConsoleListDownload list={list} download={table.download} />
+                  </>
+                )}
               >
+                {whole !== null && cut !== null ? <span className="text-[12px] text-secondary">{t("table.topListed", { count: formatNumber(cut) })}</span> : null}
+                {ticks ? <TickCount ticks={ticks} /> : null}
                 {table.beside}
                 {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}
               </TableBar>

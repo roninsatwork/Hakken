@@ -53,6 +53,23 @@ export function daysIn(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1;
 }
 
+/**
+ * Whether Google has figures for a span: no stretch of 28 days or more inside it without one. Google keeps none for
+ * some websites' stretches inside its sixteen months — More Handles has none from 11 August 2025 to 22 April 2026, 255
+ * days (calendar-periods-audit-2026-10-21.md) — and a span reaching into one is not compared with: on Last 6 months
+ * its 183 days before held 23, and every figure looked up sevenfold (search-console-pages-way-1-plan-2026-11-17.md). A
+ * quiet day, or a quiet week, Google sends no row for is a day of nothing, as everywhere else.
+ */
+export const MISSING_STRETCH_DAYS = 28;
+export function spanCovered(heldDays: readonly string[], from: string, to: string): boolean {
+  let last = shiftDay(from, -1);
+  for (const day of [...heldDays].filter((held) => held >= from && held <= to).sort()) {
+    if (daysIn(last, day) - 2 >= MISSING_STRETCH_DAYS) return false;
+    last = day;
+  }
+  return daysIn(last, to) - 1 < MISSING_STRETCH_DAYS;
+}
+
 /** The same number of days just before a range: what its change is measured against. */
 export function periodBefore(from: string, to: string): { from: string; to: string } {
   return { from: shiftDay(from, -daysIn(from, to)), to: shiftDay(from, -1) };

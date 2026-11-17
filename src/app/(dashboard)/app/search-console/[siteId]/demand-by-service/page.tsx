@@ -23,6 +23,7 @@ import { useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
 import { SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { SearchConsoleEveryCountry } from "../../_components/SearchConsoleEveryCountry";
 import { countryArg, isReadyMade, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 import { useOpeningPeriod } from "../../../sites/_components/useCalendarPeriod";
@@ -101,6 +102,8 @@ export default function SearchConsoleDemandPage() {
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           {!readyMade ? <Notice>{t("readyMade")}</Notice> : null}
+          {/* Read from the page list, which is every country's. */}
+          <SearchConsoleEveryCountry />
           <SearchConsoleSees screen="services" seen={data ? servicesSees(data.services.map((row) => ({ ...row, name: nameOf(row), service: row.kind === "SERVICE" }))) : null} data={seesData} />
           <SearchConsoleChartCard
             title={t("chart.title")}

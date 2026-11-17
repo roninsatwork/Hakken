@@ -11,6 +11,9 @@ import { countsByType, type ClassificationType, type PageKinds } from "./pageKin
 import { wordStartMatcher } from "./wordStarts";
 import { compareTermsQuickly } from "./searchConsoleTerms";
 
+/** The keywords Performance's dots draw: the ones Google showed most (search-console-performance-way-3-plan-2026-11-17.md). */
+export const TOP_KEYWORDS = 300;
+
 export type Band = "1-3" | "4-10" | "11-20" | "21-50" | "51+";
 export const BANDS: readonly Band[] = ["1-3", "4-10", "11-20", "21-50", "51+"];
 
@@ -479,7 +482,7 @@ export type Summary = {
    * once the website has classifications of its own, each classification's
    * (by id) and Not sorted's (`utils/pageKinds.ts`).
    */
-  kinds: { kind: string; rows: number; clicks: number }[];
+  kinds: KindCount[];
   /** The classifications' rows and clicks added up by their type; empty without classifications. */
   types: { type: ClassificationType; rows: number; clicks: number }[];
   /**
@@ -490,7 +493,33 @@ export type Summary = {
    * which the eye drops as the page's own plumbing (`pageData.ts`).
    */
   wholeList?: ListSees;
+  /**
+   * Every row the span before held, added up: its clicks, impressions and position, for a list's own boxes beside
+   * the span's (Pages, search-console-pages-way-1-plan-2026-11-17.md). `previousClicks` counts only the rows listed
+   * now: 9,009 of More Handles' pages' clicks in September 2026, where every page Google showed then had 9,393. Null
+   * when the span before isn't held.
+   */
+  beforeTotals?: { clicks: number; impressions: number; position: number | null } | null;
+  /** The listed rows that got a click, and how few of the busiest make half the clicks (null with none): Pages' eye. */
+  clickedRows?: number;
+  halfRows?: number | null;
+  /**
+   * The pages that gained and lost most clicks over the whole list, each shown in the span before too: Pages' eye, which
+   * never reads 25 of 16,283 pages as the whole. Keys as the list keeps them until the read names them (`readList`),
+   * with their titles where the website has one. Null without the span before.
+   */
+  pageMovers?: { up: MovedPage | null; down: MovedPage | null } | null;
 };
+
+/** A page that moved, as `pageMovers` holds it. */
+export type MovedPage = MovedRow & { title?: string };
+
+/**
+ * One intent's, page type's or classification's share of a list: its rows (pages, for a list of pages), clicks and
+ * times shown, and its clicks in the span before — null when that span isn't held. Performance's squares and bands
+ * split by these (search-console-performance-way-3-plan-2026-11-17.md).
+ */
+export type KindCount = { kind: string; rows: number; clicks: number; impressions: number; previousClicks: number | null };
 
 /** A search that moved, by its key as the list keeps it: a token of the build's book until the read names it (`readList`). */
 export type MovedRow = { key: string; clicks: number; previousClicks: number };
@@ -550,6 +579,49 @@ function pagesIn(pairs: PairPages): number {
   return shown.size;
 }
 
+/** The span before's rows added up: clicks, impressions and Google's position weighted by impressions. */
+function beforeTotalsOf(rows: readonly SourceRow[]): { clicks: number; impressions: number; position: number | null } {
+  let clicks = 0;
+  let impressions = 0;
+  let positionSum = 0;
+  for (const row of rows) {
+    clicks += row.clicks;
+    impressions += row.impressions;
+    positionSum += row.positionSum;
+  }
+  return { clicks, impressions, position: impressions > 0 ? positionSum / impressions : null };
+}
+
+/**
+ * The page that gained most clicks and the one that lost most, each shown in the span before as well, and with at
+ * least a third of its clicks now then: 2 clicks to 43 is a new page more than a rise of 2,050% (More Handles, 1–15
+ * November 2026), as the eye's own `fairBefore` holds.
+ */
+function pageMoversOf(rows: readonly ListRow[]): { up: MovedPage | null; down: MovedPage | null } {
+  let up: MovedPage | null = null;
+  let down: MovedPage | null = null;
+  for (const row of rows) {
+    if (row.previousClicks === null || row.previousClicks <= 0 || row.previousClicks * 3 < row.clicks) continue;
+    const change = row.clicks - row.previousClicks;
+    if (change > 0 && (!up || change > up.clicks - up.previousClicks)) up = { key: row.key, clicks: row.clicks, previousClicks: row.previousClicks };
+    if (change < 0 && (!down || change < down.clicks - down.previousClicks)) down = { key: row.key, clicks: row.clicks, previousClicks: row.previousClicks };
+  }
+  return { up, down };
+}
+
+/** How few of the busiest make half of all the clicks: More Handles' 76 pages of 2,320 clicked in October 2026. */
+export function halfOf(clicks: readonly number[]): number | null {
+  const total = clicks.reduce((sum, value) => sum + value, 0);
+  if (total <= 0) return null;
+  const busiest = [...clicks].sort((left, right) => right - left);
+  let sum = 0;
+  for (let at = 0; at < busiest.length; at += 1) {
+    sum += busiest[at];
+    if (2 * sum >= total) return at + 1;
+  }
+  return busiest.length;
+}
+
 export function summarise(
   listed: readonly ListRow[],
   all: readonly ListRow[],
@@ -565,7 +637,7 @@ export function summarise(
   },
 ): Summary {
   const bands = emptyBands();
-  const kinds = new Map<string, { kind: string; rows: number; clicks: number }>();
+  const kinds = new Map<string, KindCount>();
   const pagesOfKind = new Map<string, Set<string>>();
   const summary: Summary = {
     rows: listed.length, of: all.length, ...figuresOf(listed, before !== null), tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0,
@@ -588,7 +660,7 @@ export function summarise(
     if (row.verdict === "low") summary.low += 1;
     if (row.impressions > 0) bands[row.band] += 1;
     const kind = row.kind ?? "UNJUDGED";
-    const entry = kinds.get(kind) ?? { kind, rows: 0, clicks: 0 };
+    const entry = kinds.get(kind) ?? { kind, rows: 0, clicks: 0, impressions: 0, previousClicks: before ? 0 : null };
     if (context.pageList) {
       const pages = pagesOfKind.get(kind) ?? new Set<string>();
       pages.add(pageWithoutSection(row.key));
@@ -598,6 +670,8 @@ export function summarise(
       entry.rows += 1;
     }
     entry.clicks += row.clicks;
+    entry.impressions += row.impressions;
+    if (entry.previousClicks !== null) entry.previousClicks += row.previousClicks ?? 0;
     kinds.set(kind, entry);
   }
   summary.kinds = [...kinds.values()].sort((left, right) => right.rows - left.rows || right.clicks - left.clicks);
@@ -606,6 +680,14 @@ export function summarise(
     const counts = emptyBands();
     for (const row of before) if (row.impressions > 0) counts[bandOf(row.positionSum / row.impressions)] += 1;
     summary.bandsBefore = counts;
+  }
+  if (context.pageList) {
+    // A list of pages' own boxes and its eye (search-console-pages-way-1-plan-2026-11-17.md).
+    summary.beforeTotals = before ? beforeTotalsOf(before) : null;
+    const clicked = listed.map((row) => row.clicks).filter((clicks) => clicks > 0);
+    summary.clickedRows = clicked.length;
+    summary.halfRows = halfOf(clicked);
+    summary.pageMovers = before ? pageMoversOf(listed) : null;
   }
   if (context.pages) {
     const pages = new Set<string>();

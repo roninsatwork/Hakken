@@ -63,7 +63,9 @@ export { chartReach, daysBetween } from "./utils/searchConsoleChartDays";
  * A search's list is added up from the pairs, with how many of the
  * website's pages it brought people to and the top one; a page's list is
  * Google's own page totals (the rare searches it hides included), with how
- * many searches and the top one from the pairs.
+ * many searches and the top one from the pairs. The pages are every
+ * country's, the only way Google keeps those searches in (2026-11-17,
+ * `EVERY_COUNTRY_LISTS`); their searches are the home country's.
  *
  * Built for all countries and for each country kept ready (§16), the same
  * way: `country` missing is all countries, and every read and write is by
@@ -586,7 +588,9 @@ export async function buildSitePeriods(
    */
   // `longGroup`, with `onlyLong`: one group of long periods alone, a job of its own; `stopAt`: past it the job stops itself (`RanLong`),
   // its long periods' pairs pausing for the next job a little before (`PairsPaused`); `carry`: where a job before paused them.
-  options: { searchType?: SearchType; long?: boolean; onlyLong?: boolean; longGroup?: LongGroup; stopAt?: number; careful?: boolean; held?: { pruned: boolean }; carry?: PairsCarry } = {},
+  // `fresh`: every long period asked of Google again, settled or not — once what Google is asked changes, as when the pages
+  // became every country's (2026-11-17, `searchConsolePageRefetch.ts`).
+  options: { searchType?: SearchType; long?: boolean; onlyLong?: boolean; longGroup?: LongGroup; stopAt?: number; careful?: boolean; held?: { pruned: boolean }; carry?: PairsCarry; fresh?: boolean } = {},
 ): Promise<number> {
   let written = 0;
   const builtAt = Date.now();
@@ -680,8 +684,10 @@ export async function buildSitePeriods(
   const isLong = (slot: Slot) => slot.long && !asNinety(slot);
   // The periods added up from the days kept: those inside the 60 days and the spans before them (SL1).
   const shortSpans = uniqueSpans(slots.filter((slot) => !isLong(slot) && !asNinety(slot) && slot.span).map((slot) => slot.span!));
-  // A finished period's long slot, built once its days settled, is kept as it is: never asked of Google again.
+  // A finished period's long slot, built once its days settled, is kept as it is: never asked of Google again — but by a
+  // fresh build, which asks for every one.
   const settledOf = async (searchType: SearchType): Promise<Set<string>> => {
+    if (options.fresh) return new Set();
     const finished = slots.filter((slot) => isLong(slot) && slot.span !== null && slot.span.to < newest);
     if (finished.length === 0) return new Set();
     return new Set(await ctx.runQuery(internal.searchConsolePeriods.settledSlots, {

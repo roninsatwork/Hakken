@@ -76,6 +76,8 @@ export const settlePart = internalAction({
     long: v.optional(v.boolean()),
     /** Only the 90 days and twelve months: caught up because a screen asked (`searchConsoleCatchUp.ts`). */
     onlyLong: v.optional(v.boolean()),
+    /** Every long period asked of Google again, settled or not: a rebuild after what Google is asked changed (`searchConsolePageRefetch.ts`). */
+    fresh: v.optional(v.boolean()),
     /** The chain's job this is, and what the jobs before it wrote and whether the long periods were due (missing: its first). */
     stage: v.optional(stageValidator),
     /** Where the job before paused this stage's pairs, their sums saved: carried on from there (SL4). */
@@ -125,9 +127,10 @@ export const settlePart = internalAction({
         } else {
           const stopAt = args.stopAt ?? Date.now() + STAGE_BUDGET_MS;
           const held = { pruned: false };
+          const fresh = args.fresh ? { fresh: true } : {};
           written += await buildSitePeriods(ctx, args.holdId, args.newest, args.oldest, args.country, stage === "SHORT"
             ? { searchType: args.searchType, long: false, stopAt, careful: begun.careful, held }
-            : { searchType: args.searchType, long: true, onlyLong: true, longGroup: stage === "NINETY" ? "QUARTERS" : "YEAR", stopAt, careful: begun.careful, held, ...(args.carry ? { carry: args.carry } : {}) });
+            : { searchType: args.searchType, long: true, onlyLong: true, longGroup: stage === "NINETY" ? "QUARTERS" : "YEAR", stopAt, careful: begun.careful, held, ...(args.carry ? { carry: args.carry } : {}), ...fresh });
           // A period's pairs past what one job may hold: never in silence (RR2).
           const { runId } = await runOf(ctx, args.connectionId, args.token);
           if (held.pruned && runId) {
@@ -239,11 +242,15 @@ export const refreshSitePeriods = internalAction({
  * (keep-less-history-plan.md, part 3).
  */
 export const rebuildSitePeriods = internalAction({
-  args: { connectionId: v.id("searchConsoleConnections") },
+  args: {
+    connectionId: v.id("searchConsoleConnections"),
+    /** Every long period asked of Google again, settled or not (`searchConsolePageRefetch.ts`). */
+    fresh: v.optional(v.boolean()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const plan = await planParts(ctx, args.connectionId);
-    if (plan) await startParts(ctx, args.connectionId, plan, undefined, true);
+    if (plan) await startParts(ctx, args.connectionId, plan, undefined, true, false, args.fresh);
     return null;
   },
 });

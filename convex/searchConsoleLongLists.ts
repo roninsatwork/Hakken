@@ -1,6 +1,6 @@
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
-import { GOOGLE_DIMENSIONS } from "./searchConsoleApi";
+import { EVERY_COUNTRY_LISTS, GOOGLE_DIMENSIONS } from "./searchConsoleApi";
 import { shiftDay } from "./searchConsoleDays";
 import { keepsSearch, keptLines } from "./searchConsoleKeep";
 import { askLive, countryFilters } from "./searchConsoleReads";
@@ -217,14 +217,16 @@ type Scope = { searchType: SearchType; list: SearchConsoleList; country: string 
 
 /** One ask of Google for a list's days: Google's rows and whether Google may have cut them; null when Google would not answer. */
 async function askedOf(ctx: ActionCtx, google: Google, scope: Scope, span: Span): Promise<{ rows: GoogleRow[]; cut: boolean } | null> {
-  const filters = countryFilters(scope.country);
+  // The pages are every country's, whichever country is built (`EVERY_COUNTRY_LISTS`, 2026-11-17).
+  const everyCountry = EVERY_COUNTRY_LISTS.has(scope.list);
+  const filters = everyCountry ? [] : countryFilters(scope.country);
   const answer = await askLive(ctx, google, {
     startDate: span.from,
     endDate: span.to,
     type: scope.searchType,
     dimensions: [...GOOGLE_DIMENSIONS[scope.list]],
     ...(filters.length > 0 ? { dimensionFilterGroups: [{ filters }] } : {}),
-  });
+  }, { everyCountry });
   if (!answer.ok) return null;
   return { rows: answer.rows, cut: answer.rows.length >= GOOGLE_MOST_ROWS };
 }

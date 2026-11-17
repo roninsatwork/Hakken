@@ -2,12 +2,11 @@
 
 import { FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { CUT_COLUMN } from "../../../../sites/_components/SiteCells";
-import { formatNumber } from "../../../../sites/_components/siteFormat";
 import { TrackedFigures } from "../../../_components/SearchConsoleFigures";
 import { SearchConsoleListScreen } from "../../../_components/SearchConsoleListTable";
+import { SearchConsoleEveryCountry } from "../../../_components/SearchConsoleEveryCountry";
 import { pageLabel, useRecordHref } from "../../../_components/searchConsoleRecords";
-import { type ChipId, figureColumns, PageNameCell, trackColumn, TrackedCount, useSearchConsoleList, useSearchConsoleTracking } from "../../../_components/SearchConsoleTables";
+import { type ChipId, figureColumns, pageColumn, trackColumn, TrackedCount, useSearchConsoleList, useSearchConsoleTracking, type ListRow } from "../../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../../_components/SearchConsoleSees";
 import { trackedSees } from "@/convex/utils/sees/searchConsoleScreens";
 
@@ -21,6 +20,8 @@ const CHIPS: readonly ChipId[] = [];
  * figures for them together above. Unticking one stops tracking it and it
  * leaves the list; each row opens the page's own screen, whose way back
  * returns here as it was left.
+ * The table is lean (the table rule, AGENTS.md "Tables are lean", 2026-11-17): Track stays, as unticking is what this
+ * page is for; the click rate, the count and the top one are on the row's own screen.
  */
 export default function SearchConsoleTrackedPagesPage() {
   const t = useTranslations("searchConsole");
@@ -35,7 +36,12 @@ export default function SearchConsoleTrackedPagesPage() {
       icon={<FileText className="h-5 w-5 text-brand" />}
       title={t("tracked.pages.title")}
       description={t("tracked.pages.description")}
-      heroes={<TrackedFigures summary={list.summary} days={list.range.days} />}
+      heroes={
+        <>
+          <SearchConsoleEveryCountry />
+          <TrackedFigures summary={list.summary} days={list.range.days} />
+        </>
+      }
       table={{
         list,
         chips: CHIPS,
@@ -59,22 +65,8 @@ export default function SearchConsoleTrackedPagesPage() {
         ],
         columns: [
           trackColumn(t, tracking, "page", (row) => pageLabel(row.key, host)),
-          {
-            key: "key",
-            header: t("table.page"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row) => <PageNameCell title={row.title} label={pageLabel(row.key, host)} href={recordHref("pages/page", row.key)} />,
-          },
-          ...figureColumns(t, ["clicksAndChange", "impressions", "ctr", "positionAndMove"]),
-          { key: "count", header: t("table.keywords"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.count === null ? "–" : formatNumber(row.count)}</span> },
-          {
-            key: "top",
-            header: t("table.topKeyword"),
-            sortable: true,
-            className: CUT_COLUMN.second,
-            cell: (row) => <span className="block truncate text-[12px] text-secondary">{row.top || "–"}</span>,
-          },
+          pageColumn<ListRow>(t("table.page"), host, recordHref),
+          ...figureColumns(t, ["clicks", "change", "impressions", "position"]),
         ],
       }}
     />

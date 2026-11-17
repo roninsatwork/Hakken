@@ -204,6 +204,8 @@ export const startSettleParts = internalMutation({
     run: v.optional(settleRunValidator),
     long: v.optional(v.boolean()),
     onlyLong: v.optional(v.boolean()),
+    /** Every long period asked of Google again, settled or not (`searchConsolePageRefetch.ts`). */
+    fresh: v.optional(v.boolean()),
   },
   returns: v.union(v.literal("STARTED"), v.literal("ALREADY_GOING")),
   handler: async (ctx, args) => {
@@ -244,6 +246,7 @@ export const startSettleParts = internalMutation({
           ...part,
           ...(args.long === undefined ? {} : { long: args.long }),
           ...(args.onlyLong ? { onlyLong: true } : {}),
+          ...(args.fresh ? { fresh: true } : {}),
         },
         place: stageName(part, stage ?? "SHORT"),
       });

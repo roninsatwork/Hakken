@@ -6,7 +6,7 @@ import Link from "next/link";
 import { BadgeCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
+
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../sites/_components/SiteCharts";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
@@ -16,7 +16,7 @@ import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTabl
 import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import { formatPosition, formatRate } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { figureColumns, useSearchConsoleList, type ChipId, type ListSummary } from "../../_components/SearchConsoleTables";
+import { figureColumns, useSearchConsoleList, type ChipId, type ListSummary, keywordColumn } from "../../_components/SearchConsoleTables";
 import { useChartPeriods } from "../../_components/useChartPeriods";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { brandSees } from "@/convex/utils/sees/searchConsoleScreens";
@@ -113,14 +113,9 @@ export default function SearchConsoleBrandPage() {
           { header: t("table.position"), field: "position" },
         ],
         columns: [
-          {
-            key: "key",
-            header: t("table.keyword"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
-          },
+          keywordColumn(t("table.keyword"), recordHref),
           { key: "brand", header: t("table.brand"), sortable: true, cell: (row) => <span className="text-[12px] text-secondary">{t(row.brand ? "filters.brandYes" : "filters.brandNo")}</span> },
+          // The lean table (AGENTS.md "Tables are lean", 2026-11-17): one line a row, the rest on the row's own screen. Click-through rate stays: brand searches are clicked far more often.
           ...figureColumns(t, ["clicks", "impressions", "ctr", "position"]),
         ],
       }}

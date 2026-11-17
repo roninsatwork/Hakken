@@ -5,14 +5,14 @@ feature_area: Insights findings and analysis foundation
 audience: company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/insights-findings.md
-last_reviewed: '2026-10-26T15:13:08+00:00'
+last_reviewed: '2026-11-15T09:04:37+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Insights Findings
 
 > **Product:** Hakken · **Document type:** end-user guide · **Feature area:** Insights findings and analysis foundation
-> **Reviewed:** 26 October 2026, 15:13:08 GMT (Europe/London)
+> **Reviewed:** 15 November 2026, 09:04:37 GMT (Europe/London)
 > **Source path:** `docs/end-user/insights-findings.md` · **Status:** Current
 
 
@@ -182,6 +182,13 @@ publication checks, schedule and saved-state boundaries. This review ran no
 analysis, made no source requests and changed no product behavior.
 
 Related coverage now includes [Reports](./insights-reports-and-exports.md), [Strategy and planning](./insights-strategy-and-planning.md), [Measurement and enquiries](./insights-measurement-and-enquiries.md), [Page reviews and experiments](./page-reviews-and-experiments.md), [Competing pages](./competing-pages-and-search-ownership.md), [Page decisions](./page-decisions-and-create-candidates.md), [Leaderboards](./insights-leaderboards.md) and [AI growth](./ai-search-growth-and-buyer-questions.md). See [Track record](./insights-track-record.md) for change/outcome evidence. Internal editorial operations are documented in the developer and operator directories; they are not additional customer controls.
+
+## Where the weekly findings get their figures
+
+The weekly specialists can look up saved Google Analytics and Search Console figures for the website being reviewed. They can choose a calendar period, such as last month or the last six months, while they check a possible finding. That period may differ from the one open on your screen. Check the period written with the finding before comparing it with a chart.
+
+The weekly specialists' screen tools use saved figures. Analytics Live is outside those tools. The current history refresh can separately request older figures from Google Analytics and Search Console. That can mean a wait for Google even though the specialists' screen reads use saved figures. Check the relevant connection and the Insights refresh notice if older figures are missing. A blank comparison can mean coverage is missing for one of the periods.
+
 
 ## Whole-section refresh status
 

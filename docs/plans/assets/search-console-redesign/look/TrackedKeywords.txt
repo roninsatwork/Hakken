@@ -9,7 +9,7 @@ figures
   figure: Click-through rate
   figure: Average position
 search: Search tracked keywords…
-table: Track | Keyword | Clicks | Impressions | CTR | Position | Pages | Top page
+table: Track | Keyword | Clicks | Up or down | Shown | Position
   table-bar
     download: Download all (CSV)
   table-footer

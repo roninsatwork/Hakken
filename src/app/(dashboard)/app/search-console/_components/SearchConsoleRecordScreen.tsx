@@ -2,43 +2,39 @@
 
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ExternalLink, FileText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/src/ui/components/screens/Button";
-import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { CUT_COLUMN, RecordLinkCell } from "../../sites/_components/SiteCells";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../sites/_components/siteFormat";
-import { countryName } from "./countries";
-import { SearchConsoleChart } from "./SearchConsoleChart";
+import { KeywordPagesBands } from "./KeywordRecordParts";
+import { keywordBands } from "./keywordSees";
+import { PerformanceDaysCard } from "./PerformanceParts";
 import { SearchConsoleFigures } from "./SearchConsoleFigures";
-import { SearchConsoleSplitList } from "./SearchConsoleSplitList";
 import { useListProblem, type ExportField } from "./SearchConsoleListTable";
-import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures, canRetry, liveProblemKey } from "./SearchConsoleNotices";
-import { readerLanguage } from "./searchConsoleFormat";
-import { BACK_KEY, pageLabel, useLiveAsk, useRecordBack, useRecordHref } from "./searchConsoleRecords";
+import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures, canRetry } from "./SearchConsoleNotices";
+import { pageLabel, useLiveAsk, useRecordBack, useRecordHref } from "./searchConsoleRecords";
 import {
   SearchConsoleChips,
   SearchConsoleListDownload,
-  TrackedCount,
   figureColumns,
-  trackColumn,
+  keywordColumn,
+  pageColumn,
   useSearchConsoleList,
   useSearchConsoleTracking,
   type ChipId,
+  type ListRow,
 } from "./SearchConsoleTables";
 import {
   countryArg,
   isReadyMade,
   useResultKind,
   useSearchConsoleCountry,
-  useSearchConsoleHref,
   periodArg, useSearchConsoleRange,
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
@@ -47,9 +43,6 @@ import { SearchConsoleSees } from "./SearchConsoleSees";
 import { recordSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 const CHIPS: readonly ChipId[] = ["tracked", "band", "device"];
-
-/** The chart's plot on a record's screen, as drawn. */
-const CHART_HEIGHT = 340;
 
 
 /**
@@ -63,17 +56,21 @@ const CHART_HEIGHT = 340;
  * the ready-made periods. All in the country chosen for the page, except
  * where the clicks came from by country — every country, always (§16). A new
  * screen with a way back, never a panel.
+ *
+ * A keyword's own screen is Way 2 (search-console-keyword-screen-way-2-plan-2026-11-17.md): Performance's day chart,
+ * full width, the bands of which page Google shows and which gets clicked, and the lean table (AGENTS.md "Tables are
+ * lean"). Where the clicks came from is gone from it, so its countries and devices aren't asked. A page's own screen is
+ * the same, turned round (Anthony, 17 November 2026: "just build it"): the bands of which keywords Google shows the page
+ * for and which get clicked, and its keywords in the lean table.
  */
 export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | "page" }) {
   const t = useTranslations("searchConsole");
-  const tp = useTranslations("searchConsole.places");
+  const ts = useTranslations("searchConsole.performance.squares");
+  const isKeyword = dimension === "query";
   const params = useSearchParams();
   const key = params.get("key") ?? "";
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
-  // Countries "Where the clicks came from" shows beside the chart (Anthony, 2026-10-03: "only show top countries"),
-  // the website's limit (`consoleTopCountries`); the rest are a click away.
-  const topCountries = status?.limits.topCountries ?? 0;
   const [kind] = useResultKind();
   const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
@@ -85,23 +82,17 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   // A page's title, kept once on the website's page list (google-analytics-plan.md GA27).
   const pageTitle = useQuery(api.pageTitles.pageTitle, key && dimension === "page" ? { siteId, page: key } : "skip");
   const ready = Boolean(status && hasFigures(status) && key);
-  // The country chosen narrows the days and the devices; the splits' countries are every country still.
+  // The country chosen narrows the days.
   const ask = { siteId, searchType: kind, dimension, key, from: range.from, to: range.to, ...countryArg(country) };
   const series = useLiveAsk(api.searchConsoleLists.searchConsoleKeySeries, ready ? { ...ask, ...periodArg(range) } : null);
-  const splits = useLiveAsk(api.searchConsoleLists.searchConsoleKeySplits, ready ? ask : null);
   const answered = series.answer;
   const days = useMemo(() => (answered === undefined ? undefined : answered.ok ? answered : { days: [], totals: null, previous: null, previousHeld: false }), [answered]);
   const other = dimension === "query" ? "page" : "query";
   const list = useSearchConsoleList({ dimension: other, within: { kind: dimension, key }, chips: CHIPS });
   const otherSegment = other === "query" ? "keywords/keyword" : "pages/page";
-  const label = (value: string) => (other === "page" ? pageLabel(value, host) : value);
-  const language = readerLanguage();
   const counts = tracking.counts ? (dimension === "query" ? tracking.counts.keywords : tracking.counts.pages) : null;
   const full = counts !== null && counts.count >= counts.limit && isTracked === false;
   const title = dimension === "query" ? key : pageLabel(key, host);
-  const hrefFor = useSearchConsoleHref(siteId);
-  const pathname = usePathname();
-  const allPlacesHref = hrefFor(`${dimension === "query" ? "keywords/keyword" : "pages/page"}/countries`, { key, [BACK_KEY]: `${pathname}?${params.toString()}` });
   const router = useRouter();
   const problem = useListProblem(list);
   // The eye's own figures for this search or page (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6): the
@@ -111,25 +102,24 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const readyMade = ready && isReadyMade(range, status?.connection?.newestDay);
   const websiteAsk = { siteId, searchType: kind, from: range.from, to: range.to, ...countryArg(country) };
   const curve = useQuery(api.searchConsoleChanges.searchConsoleCurve, readyMade ? websiteAsk : "skip");
-  const devices = useQuery(api.searchConsoleLists.searchConsoleSplitList, readyMade ? { ...websiteAsk, dimension: "device", ...periodArg(range) } : "skip");
-  const cameFrom = splits.answer?.ok ? splits.answer : null;
   const rowsShown = list.table.pageRows ?? null;
+  // The bands: every page Google answered for the keyword, or every keyword for the page, before the table's search and chips.
+  const allRows = list.allLiveRows;
+  const bands = useMemo(() => (allRows ? keywordBands(allRows, (row) => (isKeyword ? pageLabel(row, host) : row), (count) => ts("others", { count })) : allRows), [allRows, isKeyword, host, ts]);
   const seesData = useMemo(() => {
     if (!days) return undefined;
-    const deviceName = (device: string) => tp(`deviceNames.${device}` as "deviceNames.MOBILE");
     return {
       name: title,
       [dimension === "query" ? "keyword" : "page"]: key,
       figures: days,
-      cameFrom: cameFrom ? { devices: cameFrom.devices.map((row) => ({ ...row, name: deviceName(row.key) })) } : null,
+      ...(bands ? { bands } : {}),
       rows: rowsShown ? rowsShown.map((row) => ({ ...row, name: other === "page" ? pageLabel(row.key, host) : row.key })) : null,
       picked: true,
       website: {
         curve: curve && !curve.live ? curve.points.map((point) => ({ ...point, name: tw("websiteAtPlace", { place: point.position }) })) : null,
-        devices: devices && !devices.live ? devices.rows.map((row) => ({ key: row.key, name: deviceName(row.key), clicks: row.clicks, impressions: row.impressions })) : null,
       },
     };
-  }, [days, title, dimension, key, cameFrom, rowsShown, other, host, curve, devices, tp, tw]);
+  }, [days, title, dimension, key, bands, rowsShown, other, host, curve, tw]);
   // "Do first" may open the row the eye names: a page splitting this search, or this page's search that moved most.
   const seesLinks = useMemo(() => (rowsShown ?? []).slice(0, 3).map((row) => ({ label: other === "page" ? pageLabel(row.key, host) : row.key, href: recordHref(otherSegment, row.key) })), [rowsShown, other, host, recordHref, otherSegment]);
   const download: { header: string; field: ExportField }[] = [
@@ -176,6 +166,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
             links={seesLinks}
           />
           <ResultKindSwitch />
+          {/* A page's figures are every country's and its keywords the home country's: the table's line says so. */}
           {days === undefined ? (
             <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />
           ) : days.totals === null ? (
@@ -183,53 +174,17 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
           ) : (
             <SearchConsoleFigures totals={days.totals} previous={days.previous} days={range.days} isNew={days.previousHeld && days.previous === null} />
           )}
-          {/* The chart sets the row's depth; "Where the clicks came from" fills it beside, never deeper (as drawn). */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2.3fr)_minmax(280px,1fr)]">
-            <div className="min-w-0">
-              {days && days.totals !== null ? (
-                <SearchConsoleChart
-                  height={CHART_HEIGHT}
-                  title={t("record.chartTitle")}
-                  days={days.days}
-                  range={range}
-                  held={{ from: status.connection ? status.historyFrom : null, to: status.connection?.newestDay ?? null }}
-                  host={host}
-                  exportName={`${host}-search-console-${dimension === "query" ? "keyword" : "page"}-${range.from}-to-${range.to}`}
-                />
-              ) : (
-                <div className="h-[340px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />
-              )}
-            </div>
-            <div className="relative min-w-0">
-              <ChartCard
-                title={t("record.cameFrom")}
-                hint={t(dimension === "query" ? "record.thisKeywordOnly" : "record.thisPageOnly")}
-                className="overflow-y-auto lg:absolute lg:inset-0"
-              >
-                {splits.answer && !splits.answer.ok ? (
-                  <div className="flex flex-col items-start gap-2">
-                    <p className="text-[12px] text-muted">{t(liveProblemKey(splits.answer.problem))}</p>
-                    {canRetry(splits.answer.problem) ? <Button variant="quiet" onClick={splits.retry}>{t("record.tryAgain")}</Button> : null}
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                      <SearchConsoleSplitList heading={t("table.country")} rows={splits.answer?.countries.slice(0, topCountries)} name={(code) => countryName(code, language) ?? tp("unknownCountry")} />
-                      {splits.answer && splits.answer.countries.length > topCountries ? (
-                        <Link href={allPlacesHref} className="self-start text-[12px] text-secondary hover:text-info">
-                          {t("record.showAllCountries", { count: formatNumber(splits.answer.countries.length) })} →
-                        </Link>
-                      ) : null}
-                    </div>
-                    {/* No clicks at all is said once: the lists carry no heading when empty, so a second line would only repeat it. */}
-                    {splits.answer && splits.answer.countries.length === 0 && splits.answer.devices.length === 0 ? null : (
-                      <SearchConsoleSplitList heading={t("table.device")} rows={splits.answer?.devices} name={(device) => tp(`deviceNames.${device}`)} />
-                    )}
-                  </div>
-                )}
-              </ChartCard>
-            </div>
-          </div>
+          {days && days.totals !== null ? (
+            <PerformanceDaysCard
+              figures={{ days: days.days, daysBefore: days.daysBefore ?? [], totals: days.totals, previous: days.previous, named: null }}
+              host={host}
+              heldFrom={status.connection ? status.historyFrom : null}
+              exportName={`${host}-search-console-${isKeyword ? "keyword" : "page"}-${range.from}-to-${range.to}`}
+            />
+          ) : (
+            <div className="h-[340px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />
+          )}
+          <KeywordPagesBands bands={bands} host={host} of={isKeyword ? "pages" : "keywords"} />
           <section className="flex flex-col gap-3">
             <div>
               <h2 className="text-[16px] font-semibold text-foreground">{t(dimension === "query" ? "record.pagesFor" : "record.keywordsFor")}</h2>
@@ -253,7 +208,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                   noun={other === "query" ? "keywords" : "pages"}
                   actions={<SearchConsoleListDownload list={list} download={download} />}
                 >
-                  <TrackedCount tracking={tracking} kind={other} wording={other === "query" ? "keywordsOnSite" : "pagesOnSite"} />
+                  {/* No Track column: a page or a keyword is tracked on its own screen. */}
                   {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}
                 </TableBar>
               }
@@ -264,23 +219,10 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                 label: problem ?? (list.filtered ? t("table.noMatch") : t("table.empty")),
               }}
               footer={list.table.footer}
+              // The lean table: the name and five figures, one line a row (AGENTS.md "Tables are lean").
               columns={[
-                trackColumn(t, tracking, other, (row) => label(row.key)),
-                {
-                  key: "key",
-                  header: t(other === "query" ? "table.keyword" : "table.page"),
-                  sortable: true,
-                  className: CUT_COLUMN.first,
-                  cell: (row) => <RecordLinkCell cut href={recordHref(otherSegment, row.key)}>{label(row.key)}</RecordLinkCell>,
-                },
-                ...figureColumns(t, ["clicks", "impressions", "ctr", "position"]),
-                {
-                  key: "count",
-                  header: t(other === "query" ? "table.yourPages" : "table.keywords"),
-                  align: "right",
-                  sortable: true,
-                  cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.count === null ? "–" : formatNumber(row.count)}</span>,
-                },
+                isKeyword ? pageColumn<ListRow>(t("table.page"), host, recordHref) : keywordColumn<ListRow>(t("table.keyword"), recordHref),
+                ...figureColumns(t, ["clicks", "change", "impressions", "ctr", "position"]),
               ]}
             />
             {canRetry(list.table.problem) ? (

@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight } from "luci
 import { LAYER } from "@/src/ui/lib/layers";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "./Button";
+import { tellTableDrawn } from "./tableRule";
 
 import {
   CursorFooter,
@@ -275,6 +276,8 @@ export function DataTable<Row>({
   headerGroups,
   stickyFirstColumn = false,
 }: DataTableProps<Row>) {
+  // The table rule: the name and five more columns at most (`tableRule.ts`). Only the tests listen.
+  tellTableDrawn(columns);
   const t = useTranslations("ui.table");
   const isLoading = rows === undefined;
   const hasControls = Boolean(search || filters || views);

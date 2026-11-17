@@ -594,14 +594,26 @@ describe("collecting", () => {
     expect(twelveMonths.rows.map((one: Listed) => one.key)).toEqual(["https://acme-shop.test/"]);
     const withoutChange = (rows: Listed[]) => rows.map(({ change: _change, ...row }) => row);
     expect(withoutChange(twelveMonths.rows)).toEqual(withoutChange(ninety.rows));
-    // The last 3 months are set against the 3 months before, asked of Google (phase 9): a page gained from nothing.
+    // The last 3 months have none either: Google sent no days at all for the 3 months before, so it has no figures
+    // for them, and a span it has none for is never set against (`googleHasSpan`, search-console-pages-way-1-plan-
+    // 2026-11-17.md: More Handles' Last 6 months looked up sevenfold against eight months Google never had).
     // The last 12 months have none: the 12 before are past Google's sixteen months.
-    expect(ninety.rows.map((one: Listed) => one.change)).toEqual([8]);
+    expect(ninety.rows.map((one: Listed) => one.change)).toEqual([null]);
     expect(twelveMonths.rows.map((one: Listed) => one.change)).toEqual([null]);
     // Google Images keeps no searches (store less round two, A): its keyword list says so; its pages still list.
     const images = (dimension: "query" | "page") => admin.query(api.searchConsoleLists.searchConsoleListPage, { siteId, searchType: "image", dimension, from: "2026-06-27", to: NEWEST, page: 1, rows: 25 });
     expect(await images("query")).toMatchObject({ noSearches: true, preparing: false, rows: [] });
     expect((await images("page")).noSearches).toBeUndefined();
+    // Performance's dots and squares (search-console-performance-way-3-plan-2026-11-17.md): the keywords Google showed most,
+    // named and in the Keywords screen's order by impressions, with that list's own brand split. Google Images keeps none.
+    const month = { siteId, searchType: "web" as const, from: "2026-09-01", to: NEWEST, period: "thisMonth" as const };
+    const top = await admin.query(api.searchConsoleTopKeywords.searchConsoleTopKeywords, month);
+    const byShown = await admin.query(api.searchConsoleLists.searchConsoleListPage, { ...month, dimension: "query", sort: "impressions", direction: "desc", page: 1, rows: 25 });
+    type Shown = { key: string; clicks: number; impressions: number };
+    expect(top.rows.map((row) => [row.key, row.clicks, row.impressions])).toEqual(byShown.rows.map((row: Shown) => [row.key, row.clicks, row.impressions]));
+    expect(top.rows.length).toBeGreaterThan(0);
+    expect(top.brand).toEqual(byShown.summary?.brand ?? null);
+    expect(await admin.query(api.searchConsoleTopKeywords.searchConsoleTopKeywords, { ...month, searchType: "image" })).toMatchObject({ noSearches: true, rows: [] });
     // The days, weeks and months the Position bands and Brand charts read: the website has no brand words yet, so every click is the rest's.
     const charted = await t.run(async (ctx) => await ctx.db
       .query("searchConsoleWeeks")
@@ -750,6 +762,18 @@ describe("collecting", () => {
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", period).eq("which", "NOW"))
       .collect()).map(async (part) => await periodPartAsText(ctx, part))));
+
+    // Last month is over: its list holds to 31 August, its own last day, so it is never behind however new Google's days
+    // are, and nothing is added up again (search-console-pages-way-1-plan-2026-11-17.md: "Bringing them up to 15
+    // November" showed on every open of More Handles' Last month).
+    const lastMonth = { siteId, from: "2026-08-01", to: "2026-08-31", period: "lastMonth" as const };
+    const august = await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "lastMonth").eq("which", "NOW"))
+      .first());
+    expect(august?.to).toBe("2026-08-31");
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, lastMonth)).toMatchObject({ behind: false });
+    expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, lastMonth)).toBe(false);
 
     // This month: behind, caught up once however many screens open.
     expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates("thisMonth"))).toMatchObject({ behind: true, heldTo: NEWEST, newest });

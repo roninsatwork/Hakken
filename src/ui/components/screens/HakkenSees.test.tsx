@@ -227,7 +227,7 @@ describe("HakkenSees and its eye", () => {
 
   describe("a page that hands over its own figures (sees-every-page-plan-2026-10-31.md, phase 1)", () => {
     const page = {
-      screen: "searchConsole.keywords", siteId: "site_1" as never, period: "lastMonth", country: "", device: "",
+      screen: "searchConsole.almost", siteId: "site_1" as never, period: "lastMonth", country: "", device: "",
       data: { rows: [{ key: "door handles", clicks: 840, ctr: 0.07 }] },
       links: [{ label: "Pages", href: "/app/search-console/site_1/pages" }],
     };
@@ -246,7 +246,7 @@ describe("HakkenSees and its eye", () => {
       fireEvent.click(eye());
       await waitFor(() => expect(askSees).toHaveBeenCalled());
       expect(askSees.mock.calls[0]).toEqual([expect.objectContaining({
-        siteId: "site_1", screen: "searchConsole.keywords", path: "/app/search-console/site_1/keywords", period: "lastMonth", facts: [],
+        siteId: "site_1", screen: "searchConsole.almost", path: "/app/search-console/site_1/keywords", period: "lastMonth", facts: [],
         links: [{ label: "Keywords", href: "/app/search-console/site_1/keywords" }, { label: "Pages", href: "/app/search-console/site_1/pages" }],
         // The click rate as the page shows it, a percentage.
         data: { rows: [{ key: "door handles", clicks: 840, ctrPercent: 7 }] },

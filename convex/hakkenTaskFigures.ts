@@ -96,13 +96,14 @@ export const targetDaysInternal = internalAction({
     }
     const target = await ctx.runQuery(internal.searchConsoleReads.liveDaysTarget, { companyId: args.companyId, siteId: args.target.companyWebsiteId });
     if (!target) return { ok: false as const, problem: `${args.target.website} isn't connected to Search Console any more.` };
+    // A page's figures are every country's, as Search Console's Pages shows them (`EVERY_COUNTRY_LISTS`).
     const answer = await askLive(ctx, target, {
       startDate: args.from,
       endDate: args.to,
       type: "web",
       dimensions: ["date"],
       dimensionFilterGroups: [{ filters: [{ dimension: "page", operator: "equals", expression: args.target.page }] }],
-    });
+    }, { everyCountry: true });
     if (!answer.ok) {
       return {
         ok: false as const,

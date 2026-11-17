@@ -1,5 +1,5 @@
 import { compareTermsQuickly, termToken, tokenPlace } from "./utils/searchConsoleTerms";
-import { BANDS, bandOf, crossedOf, emptyRow, filterRows, isBrand, moverInto, type Band, type BandCounts, type BrandSplit, type Filters, type ListRow, type ListSees, type Summary, type View, type ViewContext } from "./utils/searchConsoleViews";
+import { BANDS, bandOf, crossedOf, emptyRow, filterRows, isBrand, moverInto, type Band, type BandCounts, type BrandSplit, type Filters, type KindCount, type ListRow, type ListSees, type Summary, type View, type ViewContext } from "./utils/searchConsoleViews";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { sortRows, type SortKey } from "./searchConsoleSorts";
 import type { Doc } from "./_generated/dataModel";
@@ -666,7 +666,7 @@ type Listed = {
 /** The figures over every row a list's rule lists, row by row in the list's order, as `summarise` adds them. */
 class Tally {
   private readonly bands = emptyBands();
-  private readonly kinds = new Map<string, { kind: string; rows: number; clicks: number }>();
+  private readonly kinds = new Map<string, KindCount>();
   private rows = 0;
   private sum = { clicks: 0, impressions: 0, previousClicks: 0, positionSum: 0 };
   private counts = { tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0, volume: 0, estimate: 0 };
@@ -692,9 +692,12 @@ class Tally {
     this.counts.estimate += row.estimate ?? 0;
     if (row.impressions > 0) this.bands[row.band] += 1;
     const kind = row.kind ?? "UNJUDGED";
-    const entry = this.kinds.get(kind) ?? { kind, rows: 0, clicks: 0 };
+    // As `summarise` counts them, row for row.
+    const entry = this.kinds.get(kind) ?? { kind, rows: 0, clicks: 0, impressions: 0, previousClicks: this.beforeHeld ? 0 : null };
     entry.rows += 1;
     entry.clicks += row.clicks;
+    entry.impressions += row.impressions;
+    if (entry.previousClicks !== null) entry.previousClicks += row.previousClicks ?? 0;
     this.kinds.set(kind, entry);
   }
 

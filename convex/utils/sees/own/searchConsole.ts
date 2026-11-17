@@ -1,6 +1,8 @@
 import type { FindingFact } from "../findings";
-import { MEASURES, measureWords } from "../measures";
+import { measureWords } from "../measures";
 import { firstOfEachList, isNumber, isRow, moved, named, partOf, round1, rowsOf, type OwnFound, type Row } from "./shared";
+import { FAIR_BEFORE, LEAST_CHANGE, PLACES_MOVED, RATE_UNDER, SHOWN_LEAST, SPLIT_SHARE_LEAST, WEBSITE_PLACES_MOVED, against, apartWhole, changeOf, fairBefore, namesOf, ratesApart, smallRates, text, wordsOf, type Words } from "./searchConsoleShared";
+import { pagesFindings } from "./searchConsolePages";
 
 /**
  * Search Console's pages with rules of their own (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6; Anthony,
@@ -24,65 +26,6 @@ import { firstOfEachList, isNumber, isRow, moved, named, partOf, round1, rowsOf,
 // ---------------------------------------------------------------------------
 // Shared to the section
 // ---------------------------------------------------------------------------
-
-/** A change too small to be news: under this share of the span before. */
-const LEAST_CHANGE = 0.02;
-/** A span before under this share of the span itself is a part of one, never a span before. */
-const FAIR_BEFORE = 1 / 3;
-/** A click rate under this many per cent is said per 1,000 times shown. */
-const PER_THOUSAND_UNDER = 2;
-/** A place moved this many places or more is worth saying: a search's own, and the whole website's average over all its searches. */
-const PLACES_MOVED = 0.3;
-const WEBSITE_PLACES_MOVED = 0.1;
-/** Times shown that make a click rate worth trusting. */
-const SHOWN_LEAST = 500;
-
-type Words = Row;
-const text = (holder: Row, key: string, fallback: string): string => (typeof holder[key] === "string" && (holder[key] as string).trim() ? (holder[key] as string).trim() : fallback);
-const wordsOf = (data: Row): Words => (isRow(data.words) ? data.words : {});
-const namesOf = (data: Row): Words => (isRow(data.names) ? data.names : {});
-const changeOf = (now: number, before: number) => (now - before) / before;
-/** Two counts a day that still differ once said whole, as the panel says them: never "11 against 11" (Ronins, 2026-11-03). */
-const apartWhole = (now: number, before: number) => Math.round(now) !== Math.round(before);
-/** A span before worth setting against: held, and not a sliver of the span itself. */
-const fairBefore = (now: number | null | undefined, before: number | null | undefined): before is number => isNumber(now) && isNumber(before) && before > 0 && before >= now * FAIR_BEFORE;
-const unitOf = (measure: string): FindingFact["unit"] => (MEASURES[measure]?.kind === "percent" ? "percent" : MEASURES[measure]?.kind === "place" || MEASURES[measure]?.kind === "score" ? "score" : "count");
-
-/** A figure set against another's, named (`apartOther`): another group's, another place's, the span before's. */
-function against(list: string, name: string, measure: string, value: number, mean: number, score: number, other: string, extra: { facts?: FindingFact[] } = {}): OwnFound {
-  const kind = value > mean ? "rowAbove" : "rowBelow";
-  const words = measureWords(measure);
-  const unit = unitOf(measure);
-  return {
-    id: `${kind}:${list}:${measure}:${name}`, kind, list, score,
-    params: { name, measure, value: round1(value), mean: round1(mean), against: "other", other, ...(MEASURES[measure]?.lessIsBetter ? { lessIsBetter: 1 } : {}) },
-    facts: [
-      { key: "value", value: round1(value), unit, label: `${name}: ${words}` },
-      { key: "mean", value: round1(mean), unit, label: `${other}: ${words}` },
-      ...(extra.facts ?? []),
-    ],
-  };
-}
-
-/** Whether a page's click rates are said per 1,000 times shown: its whole click rate under 2%. */
-const smallRates = (clicks: number, shown: number) => shown > 0 && (100 * clicks) / shown < PER_THOUSAND_UNDER;
-
-/**
- * Two click rates set against each other, each as clicks over times shown: per cent, or per 1,000 times shown under 2%.
- * `perThousandChosen`: the page's own choice, so every rate on one page is said the same way (`smallRates`): on More
- * Handles' Click rate by position, place 1 read "14.4 for every 1,000" beside place 2, and "1.4%" beside the month before.
- */
-function ratesApart(list: string, name: string, clicks: number, shown: number, otherClicks: number, otherShown: number, score: number, other: string, perThousandChosen?: boolean): OwnFound {
-  const rate = (100 * clicks) / shown;
-  const otherRate = (100 * otherClicks) / otherShown;
-  const perThousand = perThousandChosen ?? Math.max(rate, otherRate) < PER_THOUSAND_UNDER;
-  return against(list, name, perThousand ? "clicksPerThousand" : "ctrPercent", perThousand ? rate * 10 : rate, perThousand ? otherRate * 10 : otherRate, score, other, {
-    facts: [
-      { key: "clicks", value: clicks, unit: "count", label: `${name}: clicks` },
-      { key: "shown", value: shown, unit: "count", label: `${name}: times shown` },
-    ],
-  });
-}
 
 /** A share of a whole against its share before: "Brand: 9.1% of all the clicks, from 9.2% the span before". */
 function shareMoved(list: string, name: string, measure: string, share: number, shareBefore: number, score: number): OwnFound {
@@ -224,6 +167,85 @@ function performanceFindings(data: Row): OwnFound[] {
   const now = brand && isRow(brand.now) ? brand.now : null;
   const before = brand && isRow(brand.before) ? brand.before : null;
   if (now && before && dates && now.days === dates.days && before.days === dates.beforeDays) found.push(...brandMoves("brand", { now, before }, namesOf(data), 0.9));
+  if (isRow(data.splits)) found.push(...splitFindings(data.splits, words, namesOf(data)));
+  return found;
+}
+
+/** A Classification's clicks must move this much, and by this share of its clicks before, to be news. */
+const CLASS_MOVED_LEAST = 10;
+const CLASS_MOVED_SHARE = 0.1;
+
+/**
+ * Performance's charts (search-console-performance-way-3-plan-2026-11-17.md), as the page hands them
+ * (`performanceSplits`): out of every 100 clicks, how many came from searches Google hides, against the span before; the
+ * Classifications whose clicks rose and fell most; the Classification Google shows a lot but people click least, as the
+ * bands show it; the device most clicks came on, and one clicked far less than the rest; and how much of the keywords'
+ * impressions sit in the dots' group shown a lot but seldom clicked. Each span before only where it's fair: More
+ * Handles' Last 6 months holds 23 days before against 184.
+ */
+function splitFindings(splits: Row, words: Words, names: Words): OwnFound[] {
+  const found: OwnFound[] = [];
+  const website = text(words, "website", "The whole website");
+
+  const searches = isRow(splits.searches) ? splits.searches : null;
+  if (searches && isNumber(searches.hidden) && isNumber(searches.all) && searches.all > 0 && searches.hidden > 0) {
+    const name = text(names, "hidden", "Searches Google hides");
+    const was = isRow(searches.before) ? searches.before : null;
+    const share = (100 * searches.hidden) / searches.all;
+    const shareBefore = was && isNumber(was.hidden) && fairBefore(searches.all, was.all as number) ? (100 * was.hidden) / (was.all as number) : null;
+    if (shareBefore !== null && Math.abs(share - shareBefore) >= 2) found.push(shareMoved("hidden", name, "clicks", share, shareBefore, 0.9 + Math.min(0.4, Math.abs(share - shareBefore) / 20)));
+    else found.push(partOf("hidden", name, "clicks", searches.hidden, searches.all, 0.75));
+  }
+
+  const classifications = isRow(splits.classifications) ? splits.classifications : null;
+  const all = classifications && isRow(classifications.all) ? classifications.all : null;
+  const classes = classifications ? rowsOf(classifications.rows).filter((row) => named(row) && isNumber(row.clicks) && isNumber(row.impressions)) : [];
+  if (all && isNumber(all.clicks) && isNumber(all.impressions) && all.impressions > 0) {
+    // Its clicks against the span before: the biggest rise and the biggest fall, where the span before is fair.
+    if (fairBefore(all.clicks, all.clicksBefore as number)) {
+      const moves = classes
+        .filter((row) => isNumber(row.clicksBefore) && row.clicksBefore >= CLASS_MOVED_LEAST)
+        .map((row) => ({ row, by: (row.clicks as number) - (row.clicksBefore as number) }))
+        .filter((move) => Math.abs(move.by) >= Math.max(CLASS_MOVED_LEAST / 2, CLASS_MOVED_SHARE * (move.row.clicksBefore as number)));
+      const up = [...moves].sort((left, right) => right.by - left.by)[0];
+      const down = [...moves].sort((left, right) => left.by - right.by)[0];
+      for (const [move, list, score] of [[up, "classUp", 0.95], [down, "classDown", 1.0]] as const) {
+        if (!move || (list === "classUp" ? move.by <= 0 : move.by >= 0)) continue;
+        const before = move.row.clicksBefore as number;
+        found.push(moved(list, named(move.row)!, "clicks", move.row.clicks as number, before, score + Math.min(0.4, Math.abs(move.by / before))));
+      }
+    }
+    // The bands: the Classification with the most impressions among those clicked far less than all the pages.
+    const allShown = all.impressions;
+    const allRate = all.clicks / allShown;
+    const quiet = classes
+      .filter((row) => (row.impressions as number) >= SHOWN_LEAST && (row.impressions as number) / allShown >= SPLIT_SHARE_LEAST && (row.clicks as number) / (row.impressions as number) <= allRate * RATE_UNDER)
+      .sort((left, right) => (right.impressions as number) - (left.impressions as number))[0];
+    if (quiet && all.clicks > 0) {
+      const pages = text(names, "allPages", "All your pages");
+      found.push({ ...ratesApart("classRate", named(quiet)!, quiet.clicks as number, quiet.impressions as number, all.clicks, all.impressions, 0, pages, smallRates(all.clicks, all.impressions)), score: 0.85 });
+    }
+  }
+
+  const devices = rowsOf(splits.devices).filter((row) => named(row) && isNumber(row.clicks) && isNumber(row.impressions));
+  const deviceClicks = devices.reduce((sum, row) => sum + (row.clicks as number), 0);
+  const deviceShown = devices.reduce((sum, row) => sum + (row.impressions as number), 0);
+  if (devices.length > 1 && deviceClicks > 0 && deviceShown > 0) {
+    const top = [...devices].sort((left, right) => (right.clicks as number) - (left.clicks as number))[0];
+    found.push(partOf("device", named(top)!, "clicks", top.clicks as number, deviceClicks, 0.7));
+    // A device Google shows a fair share on, whose click rate is far under the whole website's.
+    const allRate = deviceClicks / deviceShown;
+    const under = devices
+      .filter((row) => (row.impressions as number) / deviceShown >= SPLIT_SHARE_LEAST * 3 && (row.impressions as number) >= SHOWN_LEAST && (row.clicks as number) / (row.impressions as number) <= allRate * RATE_UNDER)
+      .sort((left, right) => (left.clicks as number) / (left.impressions as number) - (right.clicks as number) / (right.impressions as number))[0];
+    if (under) found.push({ ...ratesApart("deviceRate", named(under)!, under.clicks as number, under.impressions as number, deviceClicks, deviceShown, 0, website, smallRates(deviceClicks, deviceShown)), score: 0.8 });
+  }
+
+  const keywords = isRow(splits.keywords) ? splits.keywords : null;
+  const quiet = keywords && isRow(keywords.quiet) ? keywords.quiet : null;
+  if (keywords && quiet && isNumber(keywords.impressions) && keywords.impressions > 0 && isNumber(quiet.impressions) && quiet.impressions > 0 && named(quiet)) {
+    found.push(partOf("quiet", named(quiet)!, "impressions", quiet.impressions, keywords.impressions, 0.8));
+  }
   return found;
 }
 
@@ -505,8 +527,9 @@ function updatesFindings(data: Row): OwnFound[] {
 // A search's and a page's own screens
 // ---------------------------------------------------------------------------
 
-/** A split row's share of the record's clicks against the whole website's share, this many points apart. */
-const SPLIT_POINTS = 10;
+/** A keyword's bands are said once Google showed at least two of the website's pages for it, with ten clicks between them. */
+const BANDS_SHOWN_LEAST = 2;
+const BANDS_CLICKS_LEAST = 10;
 
 function recordFindings(dimension: "keyword" | "page") {
   return (data: Row): OwnFound[] => {
@@ -543,26 +566,25 @@ function recordFindings(dimension: "keyword" | "page") {
       const gap = Math.abs(Math.log(Math.max(0.01, (one.params.value as number) / Math.max(0.01, one.params.mean as number))));
       if (gap >= Math.log(1.3)) found.push({ ...one, score: 1.1 + Math.min(0.4, gap / 2) });
     }
-    // Where its clicks came from against the whole website: the device and the country furthest from the website's share.
-    const cameFrom = isRow(data.cameFrom) ? data.cameFrom : {};
-    for (const [list, label] of [["devices", "device"], ["countries", "country"]] as const) {
-      const mine = rowsOf(cameFrom[list]).filter((row) => named(row) && isNumber(row.clicks));
-      const theirs = rowsOf(website[list]).filter((row) => named(row) && isNumber(row.clicks));
-      const [myClicks, allClicks] = [mine, theirs].map((rows) => rows.reduce((sum, row) => sum + (row.clicks as number), 0));
-      if (myClicks < 20 || allClicks <= 0) continue;
-      const apart = mine
-        .map((row) => {
-          const share = (100 * (row.clicks as number)) / myClicks;
-          const same = theirs.find((other) => named(other) === named(row));
-          return { row, share, site: same ? (100 * (same.clicks as number)) / allClicks : 0 };
-        })
-        .filter((one) => Math.abs(one.share - one.site) >= SPLIT_POINTS && Math.max(one.share, one.site) >= 15)
-        .sort((left, right) => Math.abs(right.share - right.site) - Math.abs(left.share - left.site))[0];
-      if (!apart) continue;
-      found.push({
-        ...against(`record${label}`, named(apart.row)!, "ownClicksSharePercent", apart.share, apart.site, 0.8 + Math.min(0.4, Math.abs(apart.share - apart.site) / 50), text(words, "website", "The whole website")),
-        params: { name: named(apart.row)!, measure: "ownClicksSharePercent", value: round1(apart.share), mean: round1(apart.site), against: "website" },
-      });
+    // Which page Google shows for a keyword, and which gets clicked — or, on a page's own screen, which keywords Google shows
+    // the page for (their bands, Way 2, search-console-keyword-screen-way-2-plan-2026-11-17.md; a page's since Anthony's "just
+    // build it", 17 November 2026): the share of the clicks the top one took, with how many Google showed and how many got a click.
+    // A page's screen no longer shows where its clicks came from, so its countries and devices are no longer said.
+    const bands = isRow(data.bands) ? data.bands : null;
+    if (bands && isNumber(bands.shown) && isNumber(bands.clicked) && isNumber(bands.clicks) && isNumber(bands.impressions) && bands.shown >= BANDS_SHOWN_LEAST && bands.clicks >= BANDS_CLICKS_LEAST) {
+      const top = rowsOf(bands.parts).filter((part) => named(part) && part.key !== "rest" && isNumber(part.clicks) && isNumber(part.impressions))
+        .sort((left, right) => (right.clicks as number) - (left.clicks as number))[0];
+      if (top && (top.clicks as number) > 0) {
+        const share = (top.clicks as number) / bands.clicks;
+        const keyword = dimension === "keyword";
+        const part = partOf(keyword ? "recordTopPage" : "recordTopKeyword", named(top)!, "clicks", top.clicks as number, bands.clicks, 1.1 + Math.min(0.5, Math.abs(share - 0.5)));
+        part.facts.push(
+          { key: "shown", value: bands.shown, unit: "count", label: keyword ? `${name}: the website's pages Google showed for it` : `${name}: the keywords Google showed it for` },
+          { key: "clicked", value: bands.clicked, unit: "count", label: keyword ? `${name}: the website's pages that got a click from it` : `${name}: the keywords that brought it a click` },
+          { key: "shownShare", value: round1((100 * (top.impressions as number)) / Math.max(1, bands.impressions)), unit: "percent", label: keyword ? `${named(top)}'s share of the times Google showed the website's pages for it` : `${named(top)}'s share of the times Google showed ${name}` },
+        );
+        found.push(part);
+      }
     }
     // The other side of the record: a search split between pages, or a page's search that moved most.
     const rows = rowsOf(data.rows).filter((row) => named(row) && isNumber(row.clicks));
@@ -739,6 +761,35 @@ function bandsFindings(data: Row): OwnFound[] {
 }
 
 // ---------------------------------------------------------------------------
+// Keywords
+// ---------------------------------------------------------------------------
+
+/**
+ * Keywords (search-console-keywords-way-2-plan-2026-11-17.md): every keyword Google showed the website for, its four
+ * boxes and the keywords ticked onto its chart. Out of every click the website had, how many came from searches Google
+ * hides, which is why the boxes and the table never add up; the rules Position bands and Brand and non-brand already have,
+ * on the same list; and each keyword ticked onto the chart, its clicks against the span before, the one that moved most.
+ */
+function keywordsFindings(data: Row): OwnFound[] {
+  const found: OwnFound[] = [];
+  const names = namesOf(data);
+  const summary = isRow(data.summary) ? data.summary : {};
+  const website = isRow(data.website) ? data.website : null;
+  if (website && isNumber(website.clicks) && isNumber(summary.clicks) && website.clicks > summary.clicks) {
+    const hidden = website.clicks - summary.clicks;
+    found.push(partOf("hidden", text(names, "hidden", "Searches Google hides"), "clicks", hidden, website.clicks, 1.2 + Math.min(0.3, hidden / website.clicks / 2)));
+  }
+  found.push(...bandsFindings(data), ...brandFindings(data));
+  const ticked = rowsOf(data.ticked)
+    .filter((row) => named(row) && isNumber(row.clicks) && isNumber(row.previousClicks) && fairBefore(row.clicks, row.previousClicks) && row.clicks !== row.previousClicks)
+    .sort((left, right) => Math.abs(changeOf(right.clicks as number, right.previousClicks as number)) - Math.abs(changeOf(left.clicks as number, left.previousClicks as number)));
+  const most = ticked[0];
+  // A keyword the reader ticked is the one they asked about: it ranks with the page's headlines.
+  if (most) found.push(moved("ticked", named(most)!, "clicks", most.clicks as number, most.previousClicks as number, 1.3 + Math.min(0.3, Math.abs(changeOf(most.clicks as number, most.previousClicks as number)) / 2)));
+  return found;
+}
+
+// ---------------------------------------------------------------------------
 // Volatility
 // ---------------------------------------------------------------------------
 
@@ -801,5 +852,7 @@ export const SEARCH_CONSOLE_OWN: Readonly<Record<string, { general: boolean; fin
   "searchConsole.page": { general: false, find: recordFindings("page") },
   "searchConsole.newLost": { general: false, find: newLostFindings },
   "searchConsole.bands": { general: false, find: bandsFindings },
+  "searchConsole.keywords": { general: false, find: keywordsFindings },
+  "searchConsole.pages": { general: false, find: pagesFindings },
   "searchConsole.volatility": { general: false, find: volatilityFindings },
 };

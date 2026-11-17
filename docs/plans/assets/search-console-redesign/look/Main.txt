@@ -4,22 +4,18 @@
 page-header: Pages
 choice: Kind of result: Web | Video | News | Discover | Google News
 figures
-  figure: Clicks in your home country
-  figure: Tied to a page
-  figure: Not tied to a page
-  figure: Clicks worldwide
-notice (info)
-figures
   figure: Clicks
   figure: Impressions
   figure: Click-through rate
   figure: Average position
+chart-card: Clicks each day
+filter: Show
+filter: Compare with
 search: Search pages…
 filter: Tracked
 filter: Position
 filter: Page type
-filter: Device
-table: Track | Page | Clicks | Impressions | CTR | Position | Keywords | Top keyword
+table: On the chart | Page | Clicks | Up or down | Shown | CTR | Position
   table-bar
     download: Download all (CSV)
   table-footer

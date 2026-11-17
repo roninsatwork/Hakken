@@ -196,19 +196,18 @@ describe("Tracked keywords", () => {
     expect(screen.getByPlaceholderText("searchConsole.tracked.keywords.searchPlaceholder")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByText(/searchConsole\.track\.count 8 200/)).toBeInTheDocument();
-    // The columns: the tick, the keyword, its figures, its pages and top page. What changed sits
-    // under Clicks and Position since 2026-10-04 — eight figure columns left no room for the
-    // keyword (design-drift-plan D4; Anthony: "go").
+    // The lean table (AGENTS.md "Tables are lean", 2026-11-17): Track, which unticking is this page for, the keyword
+    // and four figures on one line, the move its own Up or down column. The click rate, Pages and Top page are on the
+    // keyword's own screen.
     const headings = screen.getAllByRole("columnheader").map((heading) => heading.textContent ?? "");
     expect(headings.map((heading) => heading.replace(/\s+/g, ""))).toEqual([
       "searchConsole.track.column", "searchConsole.table.keyword", "searchConsole.table.clicks",
-      "searchConsole.table.impressions", "searchConsole.table.ctr", "searchConsole.table.position",
-      "searchConsole.table.pages", "searchConsole.table.topPage",
+      "searchConsole.table.change", "searchConsole.table.shown", "searchConsole.table.position",
     ]);
     const first = screen.getByText("ai agency").closest("tr")!;
     expect(first).toHaveTextContent("▲ 6");
-    expect(first).toHaveTextContent("▼ ui.change.places 0.8");
-    expect(first).toHaveTextContent("/ai-agency/");
+    expect(first).not.toHaveTextContent("ui.change.places");
+    expect(first).not.toHaveTextContent("/ai-agency/");
     // Every row is tracked here: none is marked as tracked, as drawn.
     expect(first.className).not.toContain("bg-brand/5");
   });
@@ -307,7 +306,7 @@ describe("Tracked keywords", () => {
 describe("Tracked pages", () => {
   const PAGE = { ...ROW, key: "https://acme-shop.test/ai-agency/", count: 481, top: "ai agency" };
 
-  it("asks for the tracked pages, each with its keywords and top keyword, opening the page's own screen", () => {
+  it("asks for the tracked pages, each opening the page's own screen, in the lean table", () => {
     at("/app/search-console/site_1/tracked/pages");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
@@ -319,8 +318,9 @@ describe("Tracked pages", () => {
     expect(screen.getByText(/searchConsole\.track\.count 6 100/)).toBeInTheDocument();
     const row = screen.getByRole("link", { name: "/ai-agency/" });
     expect(row.getAttribute("href")).toContain("/app/search-console/site_1/pages/page?");
-    expect(screen.getByText("481")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /searchConsole\.table\.topKeyword/ })).toBeInTheDocument();
+    // Its keywords and the top one are on the page's own screen (the table rule, 2026-11-17).
+    expect(screen.queryByText("481")).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: /searchConsole\.table\.topKeyword/ })).toBeNull();
     expect(screen.getByText("118")).toBeInTheDocument();
   });
 

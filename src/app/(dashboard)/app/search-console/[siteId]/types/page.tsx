@@ -16,6 +16,7 @@ import { formatRate } from "../../_components/searchConsoleFormat";
 import { useSearchConsoleSummary, type ListSummary } from "../../_components/SearchConsoleTables";
 import { useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
+import { SearchConsoleEveryCountry } from "../../_components/SearchConsoleEveryCountry";
 import { typesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 /**
@@ -69,6 +70,8 @@ export default function SearchConsoleTypesPage() {
         <SearchConsoleGate status={status} siteId={siteId}>
           <SearchConsoleSees screen="types" seen={pages ? typesSees(topKind ? { name: pageWord(topKind.kind), clicks: topKind.clicks } : null, pages.clicks) : null} data={pages || keywords ? { pages, keywords } : undefined} />
           <ResultKindSwitch />
+          {/* The page figures are every country's; the keyword figures the home country's. */}
+          <SearchConsoleEveryCountry />
           <FigureRow>
             {classified ? (
               <>

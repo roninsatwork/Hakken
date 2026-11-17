@@ -3,6 +3,7 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: By page classification
 choice: Kind of result: Web | Video | News | Discover | Google News
+notice (info)
 figures
   figure: Clicks from articles
   figure: Clicks from service pages

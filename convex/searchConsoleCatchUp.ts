@@ -40,12 +40,17 @@ async function behindOf(ctx: { db: QueryCtx["db"] }, holdId: Doc<"companyWebsite
   if (!connection || !newest) return null;
   const period = periodOf(from, to, newest, ukDay(), chosen);
   if (!period) return null;
+  const slot = slotsOf(newest, connection.oldestDay ?? newest).find((one) => one.period === period && one.which === "NOW");
   // Asked of Google when its days reach past the 60 kept day by day (calendar-periods-plan.md, phase 4).
-  const long = slotsOf(newest, connection.oldestDay ?? newest).find((slot) => slot.period === period && slot.which === "NOW")?.long ?? false;
-  // The period's own page list says what it holds to — one kept on another's days holds the empty part saying them.
+  const long = slot?.long ?? false;
+  // The period's own page list says what it holds to — one kept on another's days holds the empty part saying them. It
+  // is behind only when it stops before the period's own last day: a finished month holds to its last day, however much
+  // newer Google's days are. Until 17 November 2026 it was set against the newest day, so Last month said "Bringing them
+  // up to 15 November" on every open, and asked for the lists to be added up again each time.
   const list = await firstPartOf(ctx, holdId, undefined, "web", "page", period, "NOW");
-  if (!list || list.to >= newest) return null;
-  return { connection, heldTo: list.to, newest, long };
+  const lastDay = slot?.span?.to ?? newest;
+  if (!list || list.to >= lastDay) return null;
+  return { connection, heldTo: list.to, newest: lastDay, long };
 }
 
 /** What the screen says: whether its figures are behind, to which day, and how far along adding them up is. */

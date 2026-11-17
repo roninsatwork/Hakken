@@ -5,14 +5,14 @@ feature_area: coverage inventory and prioritized queue
 audience: all documentation audiences
 source_repository: roninsatwork/Hakken
 source_path: docs/index.md
-last_reviewed: '2026-11-05T08:52:48+00:00'
+last_reviewed: '2026-11-15T09:05:56+00:00'
 reviewed_against: current implementation
 status: Needs review
 ---
 # Hakken Documentation
 
 > **Product:** Hakken · **Document type:** documentation index · **Feature area:** coverage inventory and prioritized queue
-> **Reviewed:** 5 November 2026, 08:52:48 GMT (Europe/London)
+> **Reviewed:** 15 November 2026, 09:05:56 GMT (Europe/London)
 > **Source path:** `docs/index.md` · **Status:** Needs review
 
 
@@ -287,10 +287,10 @@ Before changing movement-side behaviour, read **Movement Mirror And Side-Ownersh
 ## Documentation Coverage Inventory
 
 Repository root resolved by Git: `/Users/ants/Projects/Kakken`. Branch: `dev`.
-Origin: `https://github.com/roninsatwork/Hakken.git`. Current reviewed HEAD:
+Origin: `https://github.com/roninsatwork/Hakken.git`. 5 November reviewed HEAD:
 `5e5ebd80`; prior run's committed documentation/source checkpoint is `4519f557`
 (the prior memory also records its earlier `d3c105f8` base). No fetch or pull.
-Current review checkpoint: **2026-11-05T08:52:48+00:00**, Europe/London.
+5 November checkpoint: **2026-11-05T08:52:48+00:00**, Europe/London.
 
 The table below is the **historical 26 October baseline of 89 scoped units**.
 Its per-row timestamps remain unchanged unless a row has actually been re-reviewed;
@@ -298,7 +298,7 @@ read the November overlay and queue for current changed-area completeness. Earli
 100% completion applied only to the then-discovered inventory. It is not a claim
 that every current screen, backend function or integration has been audited.
 
-The November structural scan found **421 page files and five Next route handlers**,
+The 5 November structural scan found **421 page files and five Next route handlers**,
 and 896 committed changed paths after `4519f557` (398 under src, 283 under convex,
 195 under docs, plus other configuration/scripts). Counts include tests and dated
 records and are not feature counts. The earlier 419-page/2099-export/300-table
@@ -420,7 +420,7 @@ Internal-only work retains developer/operator coverage rather than artificial us
 
 ### Prioritized Documentation Queue
 
-The initial current-run queue was **16 located change-review units**; it is now **five pending**.
+The 5 November run queue was **16 located change-review units**; it ended with **five pending**.
 Completed work is **ten scoped user/developer pair operations** (one new user guide paired
 with the extended existing eye developer guide, nine refreshed pairs) plus one internal
 reference unit. These are scoped guide updates, not ten newly delivered product features.
@@ -447,18 +447,53 @@ subdivision, not claims that unseen subfeatures were reviewed.
 | M15 | **Agent reads, objective work and tool synchronization** — implemented modules located; detailed review incomplete | changed | `convex/agentReads.ts; agentObjectiveLoopService.ts; agentRunStepWriter.ts; utils/agentTools.ts; builtInToolSync.ts; decisionRegistry.ts` | [Agents](./end-user/agents.md) / [Developer](./developer/agents.md); [Tools](./developer/ai-tools-and-connectors.md) | P2 pending. Inspect role/read scope, tool-call limits and model/Decision use beyond reviewed eye/chart paths; refresh agent operations/AI guides as evidence requires. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
 | M16 | **Route/API/schema references and shared chart kit** — implemented modules located; detailed review incomplete | changed | `src/app page.tsx inventory; convex/schema.ts; convex/_generated/api.d.ts; src/ui/components/screens/ChartCard.tsx; scripts/drawing-kit/parts.tsx` | [Routes](./developer/route-reference.md), [API/schema](./developer/convex-api-and-schema-reference.md), [Screen kit](./developer/screen-kit.md) | P2 pending. Regenerate scoped references from static source; review chart registration, hover/layout and look-test contracts; verify source paths before changing any declared counts. No artificial end-user pair. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
 
-Resume in order: **M12 → M13 → M14 → M15 → M16**. The next feature is the
-Insights tool/read boundary, starting with `insightsToolAsk.ts` and the source-read
-handlers. The dated sections-only audit and plan are context, not approval to change
-implementation. Preserve PRODUCT.md, research and plans. No guides were automatically
-deleted and no additional capability was classified as removed in this run.
+### 15 November Review and Remaining Queue
 
-**Documentation status: UPDATED; STOPPED_DUE_TO_EXECUTION_OR_CONTEXT_LIMIT.**
-The remaining source review spans several large report and agent families and needs a
-fresh focused context. The present context was used for cross-source discovery, ten
-substantive paired updates, reference corrections and validation; remaining capacity is
-reserved for the final safety/link checks and durable handoff. This is not an eight-item
-batch cutoff. Existing library coverage remains incomplete for current changes.
+Reviewed at 2026-11-15T09:05:56+00:00 (Europe/London), on `dev` at `b4ad9e70`. Git resolved
+`/Users/ants/Projects/Kakken`; origin is `https://github.com/roninsatwork/Hakken.git`.
+The starting tree was clean. The delta from `5e5ebd80` covered 119 paths under
+`src/`, 153 under `convex/` and 75 under `docs/`. A static file count found
+422 page files and five route handlers. Filename and Git scans across routes,
+workflows, permissions, tables, jobs, billing, notifications, storage, integrations
+and scripts were triage. The source reads below were focused on changed behaviour.
+Baseline review dates above still apply to areas not checked in detail this week.
+
+The starting queue had five inherited units. This pass located seven more.
+Four of 12 scoped units are documented (33%), with three guide pairs refreshed
+from three attempted and one internal developer guide updated. The identified
+changes comprise one new capability, 11 changed or still-pending review areas,
+and no newly suspected removals. These units overlap older baseline areas.
+Whole-library current coverage has no reliable total. Each completed unit below
+covers the named slice.
+
+| Unit | Capability and source evidence | Coverage and remaining work |
+| --- | --- | --- |
+| M12 | Changed, implemented. Weekly specialist reads in `insightsRun.ts:askSpecialist`, `insightsTools.ts` and `insightsToolAsk.ts`; upstream history calls in `insightHistoryWork.ts:fetchHistoryWork`. | Scoped review complete 2026-11-15T09:05:56+00:00. [User](./end-user/insights-findings.md) / [Developer](./developer/insights-findings.md). Direct history calls still differ from the sections-only rule. Changes to collection ownership need a product decision. |
+| M17 | Changed, implemented. Wiki answer selection in `wikiActions.ts:selectWikiContextForQuery` and `wikiSearch.ts:searchWikiPageKeysInternal`. | Scoped review complete 2026-11-15T09:05:56+00:00. [User](./end-user/company-wiki.md) / [Developer](./developer/company-wiki.md). |
+| M18 | Changed, implemented. Google writing defaults and request rules in `vertexProviderService.ts:VERTEX_TEXT_CLIENT/vertexModelRules`, `googleProviderAdapter.ts` and `googleAgentProvider.ts`. | Scoped review complete 2026-11-15T09:05:56+00:00. [Developer](./developer/ai-models-providers-and-costs.md). Request settings are internal. Live performance and deployed data location remain unverified. |
+| M19 | New, implemented. Analytics Services route and menu, `googleAnalyticsServiceReads.ts:readServices/readServiceDays`, `assistantServiceReads.ts`. | Scoped review complete 2026-11-15T09:05:56+00:00. [User](./end-user/google-analytics.md) / [Developer](./developer/google-analytics.md). The previous menu description was stale. `analyticsHasServices` remains exported without a current menu caller. |
+| M20 | Changed, implemented. Analytics Overview, Channels, Campaigns and Funnel and their matching `assistant*Reads.ts` paths. | **P1, next.** Check current steps, route limits, counts and Assistant projections against the Analytics and Assistant pairs. |
+| M21 | Changed, implemented. Code-first eye brief and fallback in `seesAskActions.ts`, `utils/sees/own/` and `utils/sees/pageFindingsPeriods.test.ts`. | **P1.** Compare current starting facts, rewrite and fallback with the [User](./end-user/what-hakken-sees.md) and [Developer](./developer/what-hakken-sees-guide.md) guides. |
+| M22 | Changed, implemented. Analytics Live comparisons, event names, tracking settings in `googleAnalyticsLiveUsual.ts`, `googleAnalyticsEventNames.ts`, `autoSetupSteps.ts` and Analytics routes. | **P1.** Review saved versus live figures, names and setup in the Analytics pair. |
+| M23 | Changed, implemented. Reading-age checks and chart interaction in `scripts/check-reading-age.mjs`, `scripts/check-drawing.mjs` and `src/ui/components/charts/MouseReadout.tsx`. | **P2.** Fold chart work into M16. Review developer checks and the screen kit. No separate customer guide is expected for internal checks. |
+
+Detailed review timestamp applies only to the four completed slices. Resume in
+order **M20 → M21 → M22 → M13 → M14 → M15 → M16 → M23**. Older M13–M16
+evidence paths remain above. The first step is the Analytics route and source
+reads for Overview, Channels, Campaigns and Funnel. Other work includes checking
+report and settings details beyond the file-level scan. The two historical
+possibly removed areas still need manual review before any guide deletion.
+
+The 15 November changes passed `git diff --check`, YAML parsing, metadata and
+word-count checks, and relative link and anchor checks. The empty-file scan found
+no empty Markdown. The keyword scan found one match in the historical validation
+record below. No standalone docs check is defined in package.json. Application
+checks and live services were outside this review.
+
+The external rename cutover in PRODUCT.md section 33 remains unverified.
+A scoped legacy-name scan found upstream references in the product setup and
+framework scripts and historical wording in `AssistantHero.tsx`. Source was
+left as found. No guide files were added, renamed or removed.
 
 ### Discrepancies and Limits Requiring Review
 
@@ -512,7 +547,7 @@ batch cutoff. Existing library coverage remains incomplete for current changes.
 
 - Concurrent Insights reliability changes introduce saved recovery stages and publication guards; no application tests or deployment were performed by this documentation task. Preserve other workers’ source changes and use their separate verification before release.
 
-### Current Run Validation
+### Historical 5 November Run Validation
 
 **Documentation status: UPDATED.** Twenty-eight allowed Markdown files changed: one
 new end-user guide and 27 existing files refreshed, including three indexes. Ten

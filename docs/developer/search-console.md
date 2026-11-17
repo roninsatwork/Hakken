@@ -125,6 +125,29 @@ website totals separately so rare queries withheld by Google do not erase
 those totals. Never rebuild an exact website total by summing only retained
 or visible search rows.
 
+**A page's figures are every country's** (Anthony, 2026-11-17: "Every
+country's pages"). Every other ask carries the home country's filter, but
+Google leaves the searches it keeps private out of a page's figures whenever
+a country is named, filtered or split by. Tested on morehandles.co.uk's
+15 October 2026: its UK pages added up to 68 of 266 clicks, split by country
+to 80 of 315, and asked of no country to 317 of 315. So the page list, one
+page's days and one page's devices are asked of no country
+(`EVERY_COUNTRY_LISTS` in `searchConsoleApi.ts`, `askLive`'s
+`everyCountry`), in the nightly collection, the long periods and live asks
+alike; a country kept ready holds the same every-country pages. A page's
+searches stay the home country's, so a website's pages add up to more than
+its home-country clicks, and each page screen says so
+(`SearchConsoleEveryCountry`). The kept page lists were fetched again once,
+and every period built again with its long periods asked afresh
+(`searchConsolePageRefetch.ts`, `fresh` on `rebuildSitePeriods`).
+
+Only a page asked alone, or by day, is whole. Split by device or by country,
+even with no country named, Google still leaves the private searches out:
+on morehandles.co.uk's home page in October 2026 the page and its days held
+396 clicks, its devices and its countries 255 each (checked after the fetch
+again, 2026-11-17). So "Where the clicks came from" on a page's own screen
+shares out the part Google splits, not all of the page's clicks.
+
 `searchConsoleCountries.ts` distinguishes configured ready countries from
 live country reads and stores which spans each has. `searchConsoleReads`
 validates date ranges, resolves authorized target connections and uses
@@ -204,3 +227,56 @@ consent, deployed callbacks or a live sixteen-month fill has succeeded.
 `searchConsoleLists.readListPage` resolves `periodOf` with the requested period and source newest day. A non-prepared span returns the live-read shape; detail keyword/page relationships can also require Google even for a named period. Other source-country readiness rules still apply. This differs from Analytics' custom-key list generation, Bing's weekly reconstruction and Clarity's scheduled local aggregation; share date arithmetic without merging their storage semantics. The changed `calendarPeriods.test.ts`, `searchConsolePeriods.test.ts` and list tests are verification sources, not run results here.
 
 The page's eye receives its own query answers through the section wrapper and shared child-part registration. Follow the [eye guide](./what-hakken-sees-guide.md) for provenance, credits and run checks. This is a scoped date/eye refresh; recent search-change, volatility, demand and large-list optimizations remain separate queue items in the central inventory.
+
+## Performance's charts — 17 November 2026
+
+Performance is the page Anthony chose on the canvas ("The new page so far · Way 3 with the dots from Way 4";
+`docs/plans/active/search-console-performance-way-3-plan-2026-11-17.md`). It is built from shared parts only, in
+`search-console/_components/PerformanceParts.tsx`: `DaysChart` for the day chart, `HundredGrid` and `HundredStrips` in a
+`MapCard` for the squares and bands, `DotGroups` in a `MapCard` for the keywords.
+
+Its reads are the ones other screens make, plus one:
+
+- `searchConsolePerformance` and `searchConsoleLiveDays` return `daysBefore`, the span before's days, which the chart
+  lays under the dates. `DaysChart` weighs average position by impressions (`perScale: 1`), as Google does.
+- The page list's summary gives each Classification `impressions` and `previousClicks` (`KindCount` in
+  `utils/searchConsoleViews.ts`, counted the same way by the keyword table's `Tally`).
+- `searchConsoleTopKeywords` (its own module, as `searchConsoleLists.ts` is at the size ceiling) names the 300 keywords
+  Google showed most (`TOP_KEYWORDS`), with the keyword list's brand split. Other dates ask Google for the whole list.
+- Devices and rich results come from `useSearchConsoleSplit`, moved out of Countries and devices.
+
+The eye gets the charts' figures through `performanceSees.ts` (pure, so `searchConsolePeriods.test.ts` builds the same
+figures from `moreHandlesSearchConsolePerformanceSplits.json`). Its rules are `splitFindings` in
+`utils/sees/own/searchConsole.ts`. The writer's brief went from 3,000 to 6,300 characters
+(`codeFirstBriefCeilings.json`), because the page now hands over four charts' figures.
+
+## The lean lists — 17 November 2026
+
+Anthony made the table rule on the Keywords table (AGENTS.md "Tables are lean";
+`docs/plans/active/search-console-keywords-lean-table-2026-11-17.md`), and every list built on `SearchConsoleListScreen`
+follows it, with New and lost:
+
+- **The name and at most five more columns.** `keywordColumn` and the new `pageColumn` hold the name at
+  `min-w-[160px]` beside its `CUT_COLUMN` share and cut it to one line, whole on hover. `PageNameCell` shows a page's
+  title once Google Analytics knows it, else its address, on one line, with both on hover (`RecordLinkCell`'s `hover`).
+- **One line a row.** `clicksAndChange` and `positionAndMove` are gone: a move is its own column, `change`, headed
+  "Up or down" (`table.change`, shared with Wins and losses, Position bands and Google updates).
+- **Short headings.** `figureColumns`' impressions are headed "Shown" with "Impressions" on hover (`ShownHeading`,
+  `table.shown`, `table.shownTitle`). CSV downloads keep Google's own words and every field.
+- **What moved to the row's own screen:** Track on Keywords, Pages, Almost there and Missed demand (the record screen has
+  its own Track box); Pages and Top page on Keywords and the tracked keywords; Keywords and Top keyword on Pages and the
+  tracked pages; CTR on the two tracked lists, which keep Track because unticking is what they are for; Position on
+  Shown but not clicked, which had six figures; the count of pages on Pages competing. Brand and non-brand keeps CTR
+  and leaves out Up or down.
+
+Still over the rule, frozen in `scripts/table-columns-allowlist.json` and waiting on Anthony: the table on a keyword's or
+a page's own screen (Track and six more) and the list of connected websites.
+
+## A keyword's own screen — 17 November 2026
+
+Way 2 on the canvas (`docs/plans/active/search-console-keyword-screen-way-2-plan-2026-11-17.md`).
+`SearchConsoleRecordScreen` branches on the dimension: a keyword gets Performance's day chart (`PerformanceDaysCard`,
+fed by `searchConsoleKeySeries`' new `daysBefore`), the bands of which page Google shows and which gets clicked
+(`KeywordPagesBands`, figures from `keywordSees.ts` over `useSearchConsoleList`'s new `allLiveRows`), and the lean table.
+It doesn't ask `searchConsoleKeySplits`. A page keeps the old layout, with its countries and devices, until its own
+board is agreed. The eye's `recordFindings` reads `bands` on a keyword's screen and `cameFrom` on a page's only.

@@ -5,14 +5,14 @@ feature_area: Company Wiki
 audience: end-user
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/company-wiki.md
-last_reviewed: '2026-10-26T14:25:23+00:00'
+last_reviewed: '2026-11-15T09:04:37+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Company Wiki
 
 > **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Company Wiki
-> **Reviewed:** 26 October 2026, 14:25:23 GMT (Europe/London)
+> **Reviewed:** 15 November 2026, 09:04:37 GMT (Europe/London)
 > **Source path:** `docs/end-user/company-wiki.md` · **Status:** Current
 
 
@@ -135,7 +135,11 @@ Page deletion removes the page and a bounded receipt set. Other pages' links are
 
 ## Using Answers And The Map
 
-Answer selection normally asks a model to choose up to four page keys, then opens the selected pages within a character budget. It tries maintained topic pages first and can make a second pass including source notes when no topic is chosen. Provider failure falls back to word matching. Large Wikis use a shortlist of recent, search-matched and hub pages; the assistant is not reading the entire archive for every question.
+When you ask a question, Ask Hakken first looks for maintained Wiki pages. It can also look at notes for filed documents if the maintained pages do not answer. On a long list, it puts pages that match your words first, then fills the list with other available pages. The chooser sees up to 15 entries and can select up to four page keys.
+
+If the chooser runs out of time, Ask Hakken can use the best search matches. If those are unavailable, it falls back to matching words. The five seconds allowed for the chooser cover the model calls across both passes. Finding, opening and reading pages can take extra time, as can writing the final reply.
+
+If the answer misses a document you know you filed, try naming the topic, product or document in the question. Check that the document has finished processing and that you are in the right company. A short follow-up can return a different set of pages because the shortlist depends on the words handed to the Wiki. The pages used are a starting point for checking the reply.
 
 The map reads a bounded set and displays at most four hundred layout nodes, so absence from the picture is not proof that a page was deleted. Follow the page list or search when investigating a missing topic. Open-question auto-resolution uses whether the quoted claim still appears in the page; it is not independent proof that a replacement claim is factually correct.
 

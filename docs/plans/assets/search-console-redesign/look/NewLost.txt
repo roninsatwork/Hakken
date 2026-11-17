@@ -14,7 +14,7 @@ chart-card: Keywords gained and lost
 search: Search keywords…
 filter: What happened
 filter: Position
-table: Keyword | Status | When | Clicks | Impressions | Position
+table: Keyword | Status | When | Clicks | Shown | Position
   table-bar
     download: Download all (CSV)
   table-footer

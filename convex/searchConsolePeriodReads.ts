@@ -8,6 +8,8 @@ import { textsFrom, wholeBook, type BookScope } from "./searchConsolePeriodBooks
 import { PARTS_MOST } from "./searchConsoleRollups";
 import { UNKNOWN } from "./searchConsoleFacts";
 import { CALENDAR_PERIODS, isCalendarPeriod } from "./utils/calendarPeriods";
+import { daysIn, spanCovered } from "./searchConsoleDays";
+import { connectionOf } from "./searchConsoleListSources";
 
 /**
  * Reading the ready-made periods (search-console-plan.md §14.3): a list
@@ -68,9 +70,29 @@ export async function partsToRead(
 ): Promise<Doc<"searchConsolePeriods">[]> {
   const parts = await storedParts(ctx, companyWebsiteId, country, searchType, list, period, which);
   if (parts.length === 0) return parts;
+  // A span before Google has no figures for is not set against: as though it weren't kept (`googleHasSpan`).
+  if (which === "BEFORE" && !(await googleHasSpan(ctx, companyWebsiteId, parts[0].from, parts[0].to))) return [];
   const instead = await sameDaysInstead(ctx, { companyWebsiteId, country, searchType, list }, period, which, parts[0], parts.length);
   if (instead) return await storedParts(ctx, companyWebsiteId, country, searchType, list, instead.period as SearchConsolePeriod, "NOW");
   return parts;
+}
+
+/**
+ * Whether Google has figures for a span of a website's days (`spanCovered`), judged by the website's own days, web
+ * results in its home country: one read of at most the span's days, each a small record. Only the days the website is
+ * meant to hold are judged — from where its history begins (`daysFrom`), else where collection began — so a span the
+ * days were never fetched for, read week by week from Google instead, is left as it is.
+ */
+export async function googleHasSpan(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, from: string, to: string): Promise<boolean> {
+  const held = (await ctx.db
+    .query("searchConsoleDays")
+    .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", undefined).eq("searchType", "web").gte("day", from).lte("day", to))
+    .take(daysIn(from, to) + 1)).map((row) => row.day);
+  if (spanCovered(held, from, to)) return true;
+  const connection = await connectionOf(ctx, companyWebsiteId);
+  const floor = connection?.daysFrom ?? connection?.oldestDay;
+  if (!floor || floor > to) return true;
+  return spanCovered(held, floor > from ? floor : from, to);
 }
 
 /** The build a period's parts name its keywords and pages in, when they are places in its book (§5.1). */

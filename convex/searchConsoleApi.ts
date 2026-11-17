@@ -131,6 +131,21 @@ export const GOOGLE_DIMENSIONS: Record<SearchConsoleList, readonly string[]> = {
 };
 
 /**
+ * The lists asked of every country, never with a home country's filter.
+ * The country list, so Countries and devices shows where the clicks come
+ * from (search-console-home-countries-plan.md, decision 4); and the pages
+ * (Anthony, 2026-11-17: "Every country's pages"). Google leaves the searches
+ * it keeps private out of a page's figures whenever a country is named,
+ * filtered or split by. Tested on morehandles.co.uk's 15 October 2026: its
+ * pages added up to 68 of the 266 clicks in the United Kingdom, to 80 of 315
+ * split by country, and to 317 of 315 asked of no country. So a page's
+ * figures — the page list, one page's days and devices — are every
+ * country's, while its searches, the website's totals and the other lists
+ * stay the home country's.
+ */
+export const EVERY_COUNTRY_LISTS: ReadonlySet<SearchConsoleList> = new Set(["country", "page"]);
+
+/**
  * The lists each kind of result has. Discover and Google News have no
  * searches — people did not type anything — so no pairs, and no search
  * appearance. Google Images keeps its totals and pages but not its searches

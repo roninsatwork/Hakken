@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { pageName } from "./pageNames";
+import { pageName, shortTitle } from "./pageNames";
 
 describe("a page by the name a person would say", () => {
   test.each([
@@ -18,4 +18,15 @@ describe("a page by the name a person would say", () => {
     expect(pageName("/door-handles/black-door-handles.html")).toBe("Black door handles");
     expect(pageName("https://www.morehandles.co.uk/blog/tubular-latch-guide/?x=1")).toBe("Tubular latch guide");
   });
+});
+
+describe("a page's title, short, for a chart's key (Anthony, 17 November 2026: \"i dont like long axis lables\")", () => {
+  test.each([
+    ["A Guide To Choose The Right Tubular Latch - Our Blog", "A Guide To Choose The Right…"],
+    ["Cupboard Handles and Knobs | More Handles", "Cupboard Handles and Knobs"],
+    ["What is a Spindle and what kind do I need? - Our Blog", "What is a Spindle and what…"],
+    ["Hinges", "Hinges"],
+    ["| More Handles", "| More Handles"],
+    ["Supercalifragilisticexpialidociousandmore words", "Supercalifragilisticexpialid…"],
+  ])("%s", (title, short) => expect(shortTitle(title)).toBe(short));
 });

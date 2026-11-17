@@ -5,14 +5,14 @@ feature_area: Insights findings and analysis foundation
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/insights-findings.md
-last_reviewed: '2026-10-26T15:13:08+00:00'
+last_reviewed: '2026-11-15T09:04:37+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Insights Findings
 
 > **Product:** Hakken · **Document type:** developer guide · **Feature area:** Insights findings and analysis foundation
-> **Reviewed:** 26 October 2026, 15:13:08 GMT (Europe/London)
+> **Reviewed:** 15 November 2026, 09:04:37 GMT (Europe/London)
 > **Source path:** `docs/developer/insights-findings.md` · **Status:** Current
 
 
@@ -172,6 +172,17 @@ application gate or browser session. The related-guide links below now cover the
 because the core findings pair exists.
 
 Related coverage now includes [Reports](./insights-reports-and-exports.md), [Strategy and planning](./insights-strategy-and-planning.md), [Measurement and enquiries](./insights-measurement-and-enquiries.md), [Page reviews and experiments](./page-reviews-and-experiments.md), [Competing pages](./competing-pages-and-search-ownership.md), [Page decisions](./page-decisions-and-create-candidates.md), [Leaderboards](./insights-leaderboards.md) and [AI growth](./ai-search-growth-and-buyer-questions.md). See [Track record](./insights-track-record.md) for change/outcome evidence. Internal editorial operations are documented in the developer and operator directories; they are not additional customer controls.
+
+## Specialist tools and the sections-only rule
+
+`insightsRun.ts:askSpecialist` passes `analyticsTool` and `searchConsoleTool` from `insightsTools.ts` to `askWithTools`. The caller sets company, host and website hold. The weekly model supplies a supported calendar period and chooses the screen, list or detail key. Analytics uses internal Assistant queries and merges supported screen parts. Its conversion map uses `agentReads.conversionsByInternal` with the hold. Search Console uses `assistantReads.searchConsoleInternal` for totals, daily comparisons or matching pages. Visibility, Bing and Clarity can contribute prepared evidence. They are outside this specialist tool list, as is Analytics Live.
+
+The read helpers can pin a page's period and filters. For example, the eye in `seesAskActions.ts` can offer the Analytics tool for an eligible screen. Custom dates use the facts supplied by the page. Weekly specialists choose their own supported periods. Read results attach source and date details where available. The specialist and read number prefix keeps evidence keys distinct when several specialists work at once.
+
+`insightsToolAsk.ts:askWithTools` checks recorded spend before each model turn and starts up to six turns. It can send an answer back once for correction. A model turn can contain several reads, so six is a turn limit. Failed reads are returned to the model as problems and logged with the read arguments. The default deadline is three minutes, with an early stop before another turn when five seconds or less remain. A failed rewrite can return the earlier parsed answer with the reason it was sent back. Check what the caller validates and saves before treating that answer as accepted. The tool loop records model calls and differs from the saved-answer reuse in `insightsAsk.ts:ask`. Tests in `convex/insightsToolAsk.test.ts` cover the rewrite turn text and the empty-reply case.
+
+The project's [sections-only rule](../../AGENTS.md#product-context--read-this-before-you-build-anything) says Insights should use data saved by the five sections and send collection work back to the section. The specialist tools above read saved data. The separate HISTORY stage still calls `insightHistoryWork.ts:fetchHistoryWork` through `insightHistorySteps.ts`. It asks Search Console through `askLive` and opens an Analytics session for report requests such as monthly landing pages and event counts. It then saves history under the website hold. The older provider-backed history route is a known gap against the rule. See the [dated sections-only plan](../plans/active/insights-sections-only-plan-2026-10-29.md) for the proposed move.
+
 
 ## Durable refresh, recovery and source generations
 

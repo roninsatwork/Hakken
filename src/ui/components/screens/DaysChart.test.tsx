@@ -55,6 +55,16 @@ describe("a chart's rows", () => {
     const rows = daysChartRows("day", [line("now", [["2026-10-01", 1], ["2026-10-02", 1]]), line("was", [["2026-09-01", 1], ["2026-09-02", 1]], { under: true, per: per([["2026-09-01", 50], ["2026-09-02", 0]]) })]);
     expect(rows.map((row) => row.was)).toEqual([2, null]);
   });
+
+  test("a figure weighed by another, as Google weighs average position by impressions, over a week and laid under", () => {
+    const per = (points: Array<[string, number]>) => line("x", points).points;
+    // Place 2 on 100 impressions and place 10 on 300: the week sits at 8, not at the days' plain average of 6.
+    const weighed = { per: per([["2026-10-05", 100], ["2026-10-06", 300]]), perScale: 1 };
+    const [week] = daysChartRows("week", [line("place", [["2026-10-05", 2 * 100], ["2026-10-06", 10 * 300]], weighed)]);
+    expect(week.place).toBe(8);
+    const rows = daysChartRows("day", [line("now", [["2026-10-05", 1]]), line("was", [["2026-09-05", 4 * 50]], { under: true, per: per([["2026-09-05", 50]]), perScale: 1 })]);
+    expect(rows[0].was).toBe(4);
+  });
 });
 
 describe("Up or down", () => {

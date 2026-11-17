@@ -5,14 +5,14 @@ feature_area: Company Wiki
 audience: developer
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/company-wiki.md
-last_reviewed: '2026-10-26T14:25:23+00:00'
+last_reviewed: '2026-11-15T09:04:37+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Company Wiki
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Company Wiki
-> **Reviewed:** 26 October 2026, 14:25:23 GMT (Europe/London)
+> **Reviewed:** 15 November 2026, 09:04:37 GMT (Europe/London)
 > **Source path:** `docs/developer/company-wiki.md` · **Status:** Current
 
 
@@ -125,7 +125,7 @@ Do not collapse these into a single blob field. The product depends on being abl
 
 ## Answer Context
 
-Wiki answer context reads whole pages. The preferred path in `selectWikiContextForQuery` asks the model to choose from the company wiki index, then opens selected pages whole with one hop along the best page's links. The mechanical word-match path in `getWikiAnswerContextInternal` is the provider-failure fallback.
+Wiki answer context reads whole pages. The preferred path in `selectWikiContextForQuery` asks the model to choose page keys, then opens the selected pages within the caller's character budget. On each shelf, `getPagesByKeysInternal` can follow up to two links from the first page, with source notes first. The shortlist and fallbacks are described under [Source Claims And Selection Bounds](#source-claims-and-selection-bounds).
 
 Customer pages are included only when the caller explicitly requests customer-page context for signed-in company surfaces. Anonymous widget or broad topic answers must not use customer pages. Keep this boundary explicit when adding new answer surfaces.
 
@@ -207,7 +207,11 @@ Preserve these invariants:
 
 `selectWikiContextForQuery` builds company and global indexes separately, prefixes global keys, and suppresses global keys already represented in the company shortlist. It gives company content first claim on the default fourteen-thousand-character budget; global content is opened only with more than four hundred characters left. Customer pages are controlled by an explicit flag and always excluded from the global shelf. Model picks are validated against offered keys and capped at four. A configured yes/no Decision can discard a selected page; its fallback keeps the candidate.
 
-Selection first offers tended pages, then includes source notes if no tended page survives. A provider/parsing exception uses the mechanical answer-context path. This fallback does not mean the entire corpus was read. `getWikiIndexInternal` uses a full recent index up to two hundred rows, then a bounded recent slice of one hundred fifty plus search matches and hubs. The map query reads at most one thousand rows and its layout caps at four hundred. Keep those retrieval/display bounds distinct from deletion or retention guarantees.
+Selection first offers tended pages. If none survive and adding source notes extends the index, it offers a second list. Above 15 entries, `wikiActions.ts:shortlistOf` asks `wikiSearch.ts:searchWikiPageKeysInternal` for up to 45 keys per shelf. It puts company hits before global hits, removes duplicates and drops keys outside the allowed index. It fills any spaces from the index in its existing order. The model sees at most 15 keys and hints. The index query and the list sent to the model have separate limits.
+
+The chooser resolves the `fast-chat` use case and requests `thinkingLevel: "NONE"`. Both model calls share a five-second allowance. The time starts immediately before each model request. Index reads, searches, spend writes, the optional Decision check and page reads sit outside that allowance. A timeout tries up to four saved search hits from the current shortlist pass. If there are no hits or opening them fails, it uses `getWikiAnswerContextInternal` to match words. A provider or parsing exception also uses that word-match path. A valid empty choice after the available passes can return empty context. The timeout path can open search hits without the model-pick Decision check.
+
+`convex/wikiActions.test.ts` covers the time limit, Fast request and shortlist order, including when the search finds no matching words. Those tests were read for this update. `getWikiIndexInternal` uses a full recent index up to two hundred rows, then a bounded recent slice of one hundred fifty plus search matches and hubs. The map query reads at most one thousand rows and its layout caps at four hundred. Keep those retrieval/display bounds distinct from deletion or retention guarantees.
 
 
 ## Staff Dispatch, Tending, And Link Continuations

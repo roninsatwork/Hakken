@@ -5,14 +5,14 @@ feature_area: Google Analytics
 audience: developers and platform operators
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/google-analytics.md
-last_reviewed: '2026-11-05T08:42:20+00:00'
+last_reviewed: '2026-11-15T09:05:56+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Google Analytics
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** Google Analytics
-> **Reviewed:** 5 November 2026, 08:42:20 GMT (Europe/London)
+> **Reviewed:** 15 November 2026, 09:05:56 GMT (Europe/London)
 > **Source path:** `docs/developer/google-analytics.md` · **Status:** Current
 
 ## Scope and evidence boundary
@@ -23,9 +23,9 @@ Google Analytics has a routed frontend, private company connections, report coll
 
 ## Routes and frontend composition
 
-The section root is `src/app/(dashboard)/app/analytics/page.tsx`. Website pages sit beneath `[siteId]`, where the parameter is a `companyWebsites` identifier. Shared section behavior lives in `_components/useAnalytics.ts`: `ANALYTICS_PAGES` defines the current menu, `analyticsQuery` carries shared filters, and the URL helpers preserve a detail screen's return context. `AnalyticsMenu` filters the Products item using the connection's shop flag.
+The section root is `src/app/(dashboard)/app/analytics/page.tsx`. Website pages sit beneath `[siteId]`, where the parameter is a `companyWebsites` identifier. Shared section behavior lives in `_components/useAnalytics.ts`: `ANALYTICS_PAGES` defines the current menu, `analyticsQuery` carries shared filters, and the URL helpers preserve a detail screen's return context. `AnalyticsMenu` renders every entry in `ANALYTICS_PAGES` for each website.
 
-The route family contains Overview, Live, Channels, Campaigns, Funnel, All pages, Conversions, Products, Visits, Tracking health and Connection. Nested routes provide individual page, event, channel and check views. Some route names are retained implementation addresses rather than literal menu labels: Funnel uses `funnel`; `visitors` forwards to `visits`, preserving the query string. Read `ANALYTICS_PAGES` before documenting a menu change from a directory listing alone.
+The route family contains Overview, Live, Channels, Campaigns, Funnel, All pages, Conversions, Products, Services, Visits, Tracking health and Connection. Nested routes provide individual page, event, channel and check views. Some route names are retained implementation addresses rather than literal menu labels: Funnel uses `funnel`; `visitors` forwards to `visits`, preserving the query string. Read `ANALYTICS_PAGES` before documenting a menu change from a directory listing alone.
 
 Historical screens use Convex queries and shared list/chart components. `AnalyticsGate` in `AnalyticsNotices.tsx` handles connection prerequisites; the Connection screen handles connecting, property selection, event choices and connected details. Writes use `useAdminAction` and confirmation components. No special connection secret belongs in a browser argument or a URL. The [end-user guide](../end-user/google-analytics.md) explains the workflow without exposing these module boundaries.
 
@@ -104,3 +104,11 @@ The daily collector and older-history fill now use `RUN_DAY_MS` of 22 hours in `
 The shared eye receives query answers plus child panel parts, rather than making Google requests. Its Live comparison is calculated by `googleAnalyticsLiveUsual.ts` from retained last-month figures. The active screen contracts in `utils/sees/screenEntries/googleAnalytics.ts` prohibit money claims and specify each screen's parts; these are not substitutes for the queries. See [What Hakken Sees](./what-hakken-sees-guide.md) for run/credit/checker details.
 
 Relevant changed tests include `googleAnalyticsConversionsMap.test.ts`, `googleAnalyticsProductPage.test.ts`, `googleAnalyticsProducts.test.ts`, `googleAnalyticsReads.test.ts` and `googleAnalyticsRows.test.ts`, plus period/own-findings fixtures. They provide local test contracts, not executed results in this pass. Retention and disconnection caveats above remain; the new UI does not confer cross-company access or prove external live acceptance.
+
+## Services from saved page figures
+
+The `[siteId]/services/page.tsx` route uses `googleAnalyticsServiceReads.analyticsServices`. The tenant query calls `readServices` and checks ownership with `requireMySite`. Tracked holds return no connection. The reader needs a connected property with a newest day, a `SERVICE` classification, and a saved current page slot. These checks drive separate no-connection, no-services and collecting states. The menu lists the route even when those checks fail. `analyticsHasServices` remains exported, but the current menu does not call it.
+
+The reader uses saved `page` and `landing` rows for the current and preceding slots. It decodes saved page references by hold and groups the two trailing-slash forms of an address. Page rows count visits and events on the page. Landing rows count visits that started there. The same visit can count on more than one service page. A missing device page slot falls back to every device and sets `everyDevice`. The split by landing channel is available only when the request is for every device. The output keeps up to 1,000 ranked services, including those with prior visits and none now. `analyticsServiceDays` reads saved series for up to 50 requested service groups. Both paths read saved Analytics data.
+
+`utils/serviceGroups.ts:openingSplit` defines the opening group lines shared by the page, the eye and Ask Hakken. When the page switches grouping choices, read the labels supplied for that view. `assistantServiceReads.ts:servicesForAssistant` uses the same data reader, with a named service and saved series for detail. The eye sends `servicesEyeData` from the screen. See `googleAnalyticsServiceReads.test.ts`, `servicesPage.test.tsx` and `utils/sees/servicesPeriods.test.ts` for local test coverage. This documentation pass read the sources and did not run those tests.

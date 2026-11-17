@@ -2,12 +2,12 @@
 
 import { Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
-import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
-import { KindText, figureColumns, useSearchConsoleList, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
+import { SearchConsoleEveryCountry } from "../../_components/SearchConsoleEveryCountry";
+import { useRecordHref } from "../../_components/searchConsoleRecords";
+import { KindText, figureColumns, pageColumn, useSearchConsoleList, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { estimatesSees } from "@/convex/utils/sees/searchConsoleScreens";
@@ -39,12 +39,15 @@ export default function SearchConsoleEstimatesPage() {
       title={t("estimates.title")}
       description={t("estimates.description")}
       heroes={
-        <FigureRow>
+        <>
+          <SearchConsoleEveryCountry />
+          <FigureRow>
           <Figure label={t("estimates.sites")} value={summary ? formatNumber(summary.estimate) : "…"} detail={<span className="text-secondary">{t("estimates.visitsIn", { period: periodWords.period })}</span>} />
           <Figure label={t("estimates.google")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
           <Figure label={t("estimates.high")} value={summary ? formatNumber(summary.high) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter", { percent: list.status?.limits.estimateOff ?? "…" })}</span>} />
           <Figure label={t("estimates.low")} value={summary ? formatNumber(summary.low) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter", { percent: list.status?.limits.estimateOff ?? "…" })}</span>} />
-        </FigureRow>
+          </FigureRow>
+        </>
       }
       table={{
         list,
@@ -62,13 +65,8 @@ export default function SearchConsoleEstimatesPage() {
           { header: t("filters.verdict"), field: "verdict" },
         ],
         columns: [
-          {
-            key: "key",
-            header: t("table.page"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row) => <RecordLinkCell cut href={recordHref("pages/page", row.key)}>{pageLabel(row.key, host)}</RecordLinkCell>,
-          },
+          // The lean table (AGENTS.md "Tables are lean", 2026-11-17): one line a row, the rest on the row's own screen.
+          pageColumn<ListRow>(t("table.page"), host, recordHref),
           { key: "kind", header: typeHeader, sortable: true, cell: (row) => <KindText kind={row.kind} of="pageType" kinds={list.pageKinds} /> },
           ...figureColumns(t, ["clicks"]),
           { key: "estimate", header: t("table.estimate"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.estimate === null ? "–" : formatNumber(row.estimate)}</span> },

@@ -12,7 +12,7 @@ search: Search keywords…
 filter: Wins or losses
 filter: Position
 filter: Device
-table: Keyword | Clicks | Change | Position | Moved
+table: Keyword | Clicks | Up or down | Position | Moved
   table-bar
     download: Download all (CSV)
   table-footer

@@ -6,6 +6,7 @@ import {
   ctrCurve,
   figuresOf,
   filterRows,
+  halfOf,
   isBrand,
   pageWithoutSection,
   pagesByKeyword,
@@ -180,7 +181,9 @@ describe("a page's hero boxes", () => {
       bandsBefore: { "1-3": 0, "4-10": 1, "11-20": 1, "21-50": 1, "51+": 0 },
       pagesInvolved: null,
     });
-    expect(summary.kinds).toEqual([{ kind: "BUYING", rows: 2, clicks: 45 }]);
+    // Each kind's times shown and its clicks the span before too, which Performance's squares and bands split by
+    // (search-console-performance-way-3-plan-2026-11-17.md): 1,541 + 900 shown, and 31 + 6 clicks before.
+    expect(summary.kinds).toEqual([{ kind: "BUYING", rows: 2, clicks: 45, impressions: 2441, previousClicks: 37 }]);
     // Brand against the rest is the whole list's, whatever the page lists.
     expect(summary.brand).toEqual({
       now: { brandClicks: 9, nonBrandClicks: 45, brandImpressions: 100, nonBrandImpressions: 2441 },
@@ -322,6 +325,35 @@ describe("a page's section links", () => {
       row("https://acme-shop.test/blog/", 1, 10, 9, { kind: "CONTENT_HUB" }),
     ]);
     const summary = summarise(rows, rows, null, { rules, brandWords: null, pageList: true });
-    expect(summary.kinds).toEqual([{ kind: "CONTENT_HUB", rows: 2, clicks: 9 }]);
+    // Its times shown are every row's, section links among them; with no span before, no clicks before.
+    expect(summary.kinds).toEqual([{ kind: "CONTENT_HUB", rows: 2, clicks: 9, impressions: 410, previousClicks: null }]);
+  });
+});
+
+describe("a list of pages' own figures (search-console-pages-way-1-plan-2026-11-17.md)", () => {
+  test("every page the span before held, added up, the pages clicked, the few that make half, and the two that moved most", () => {
+    const now = [row("/a", 60, 1000, 5), row("/b", 30, 1000, 8), row("/c", 6, 500, 12), row("/d", 4, 400, 9), row("/e", 0, 300, 40)];
+    const before = [row("/a", 40, 900, 6), row("/b", 50, 1000, 7), row("/c", 1, 200, 20), row("/gone", 9, 100, 3)];
+    const all = shaped(now, before);
+    const summary = summarise(all, all, before, { rules, brandWords: null, pageList: true });
+    // Every page the span before held, the one gone since among them: 100 clicks, where the pages listed now had 91.
+    expect(summary.beforeTotals).toEqual({ clicks: 100, impressions: 2200, position: (6 * 900 + 7 * 1000 + 20 * 200 + 3 * 100) / 2200 });
+    expect(summary.previousClicks).toBe(91);
+    expect(summary.clickedRows).toBe(4);
+    expect(summary.halfRows).toBe(1);
+    // /c went from 1 to 6: a new page more than a rise of 500%, so /a is the one that gained most.
+    expect(summary.pageMovers).toEqual({ up: { key: "/a", clicks: 60, previousClicks: 40 }, down: { key: "/b", clicks: 30, previousClicks: 50 } });
+  });
+
+  test("a list of searches, and a span before not held, carry none of them", () => {
+    const now = [row("ai agency", 5, 100, 4)];
+    expect(summarise(shaped(now), shaped(now), null, { rules, brandWords: null, pageList: true })).toMatchObject({ beforeTotals: null, pageMovers: null, clickedRows: 1, halfRows: 1 });
+    expect(summarise(shaped(now), shaped(now), now, { rules, brandWords: null })).not.toHaveProperty("beforeTotals");
+  });
+
+  test("how few of the busiest make half the clicks", () => {
+    expect(halfOf([76, 10, 10, 4])).toBe(1);
+    expect(halfOf([25, 25, 25, 25])).toBe(2);
+    expect(halfOf([])).toBeNull();
   });
 });

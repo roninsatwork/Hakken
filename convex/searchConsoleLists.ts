@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { internalQuery } from "./_generated/server";
 import type { ActionCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -14,6 +14,7 @@ import { checkedCountry, countryScope, type CountryScope } from "./searchConsole
 import { beforeOf, daysIn, historyLimitDay, periodOf } from "./searchConsoleDays";
 export { periodOf } from "./searchConsoleDays";
 import { periodFromParts, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
+import { keySeriesAnswer, namedMovers } from "./searchConsoleSpans";
 import { curveRows, keywordFiguresOf, keywordListOf, type KeywordParts } from "./searchConsoleKeywordList";
 import type { ListRows } from "./searchConsoleKeywordTable";
 import { BookNames, asText, namedRows, textsFrom, wholeBook } from "./searchConsolePeriodBooks";
@@ -129,8 +130,9 @@ const rowValidator = v.object({
 // The headings a list orders by, and its order (`searchConsoleSorts.ts`).
 const sortValidator = v.optional(v.union(...SORT_KEYS.map((key) => v.literal(key))));
 
-const brandSplitValidator = v.object({ brandClicks: v.number(), nonBrandClicks: v.number(), brandImpressions: v.number(), nonBrandImpressions: v.number() });
+export const brandSplitValidator = v.object({ brandClicks: v.number(), nonBrandClicks: v.number(), brandImpressions: v.number(), nonBrandImpressions: v.number() });
 const movedValidator = v.union(v.null(), v.object({ key: v.string(), clicks: v.number(), previousClicks: v.number() }));
+const pageMovedValidator = v.union(v.null(), v.object({ key: v.string(), clicks: v.number(), previousClicks: v.number(), title: v.optional(v.string()) }));
 
 /** What a page's hero boxes read: figures over every row its rule lists (`summarise`). */
 const summaryValidator = v.object({
@@ -155,7 +157,7 @@ const summaryValidator = v.object({
   bands: v.record(v.string(), v.number()),
   bandsBefore: v.union(v.record(v.string(), v.number()), v.null()),
   brand: v.union(v.null(), v.object({ now: brandSplitValidator, before: v.union(brandSplitValidator, v.null()) })),
-  kinds: v.array(v.object({ kind: v.string(), rows: v.number(), clicks: v.number() })),
+  kinds: v.array(v.object({ kind: v.string(), rows: v.number(), clicks: v.number(), impressions: v.number(), previousClicks: v.union(v.number(), v.null()) })),
   types: v.array(v.object({ type: classificationTypeValidator, rows: v.number(), clicks: v.number() })),
   /** What Hakken sees over the whole list (`ListSees`): searches' lists only, their movers named by the read. */
   wholeList: v.optional(v.object({
@@ -164,6 +166,12 @@ const summaryValidator = v.object({
     crossed: v.union(v.null(), v.object({ top3In: v.number(), top3Out: v.number(), pageOneIn: v.number(), pageOneOut: v.number() })),
     movers: v.union(v.null(), v.object({ brandUp: movedValidator, brandDown: movedValidator, otherUp: movedValidator, otherDown: movedValidator })),
   })),
+  /** The span before's rows added up (`Summary.beforeTotals`): a list's own boxes against it. */
+  beforeTotals: v.optional(v.union(v.null(), v.object({ clicks: v.number(), impressions: v.number(), position: v.union(v.number(), v.null()) }))),
+  clickedRows: v.optional(v.number()),
+  halfRows: v.optional(v.union(v.number(), v.null())),
+  /** The pages that gained and lost most clicks (`Summary.pageMovers`), named, with their titles. */
+  pageMovers: v.optional(v.union(v.null(), v.object({ up: pageMovedValidator, down: pageMovedValidator }))),
 });
 
 const filterArgs = {
@@ -352,6 +360,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
       if (moved) movers[way] = { ...moved, key: await names.textOf(moved.key) };
     }
   }
+  // The two pages that moved most, named, each with its title where the website has one.
+  if (summary.pageMovers) summary.pageMovers = await namedMovers(ctx, companyWebsiteId, summary.pageMovers, names);
   const sorted = sortRows(filterRows(listed, args, textOf), args.sort, args.direction, pageKinds);
   // A keyword's pages, or a page's keywords, hold their own limit; every other list the list limit.
   const most = within ? limits.pairedRows : limits.listRows;
@@ -372,7 +382,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   };
 }
 
-const answerFacts = {
+export const answerFacts = {
   current: v.boolean(),
   named: v.union(v.number(), v.null()),
   /** Rows the page's rule lists before any search or filter: the "of" in "12 of 268 pages". */
@@ -507,7 +517,7 @@ type LiveListAnswer =
 /** A filter asked of Google with a list: one keyword, one page, one country or one device. */
 type Filter = { dimension: "query" | "page" | "country" | "device" | "searchAppearance"; key: string };
 
-/** One of Google's lists for any dates, as rows a list adds up: the pairs, or the one split asked. */
+/** One of Google's lists for any dates, as rows: `everyCountry` asks it of no country, a page's figures (`EVERY_COUNTRY_LISTS`). */
 async function askGoogle(
   ctx: ActionCtx,
   target: { connectionId: Id<"searchConsoleConnections">; property: string },
@@ -515,8 +525,10 @@ async function askGoogle(
   list: "pair" | "page" | "country" | "device" | "appearance",
   from: string,
   to: string,
-  filters: readonly Filter[] = [],
+  given: readonly Filter[] = [],
+  how: { everyCountry?: boolean } = {},
 ): Promise<{ ok: true; rows: PackedRow[] } | { ok: false; problem: LiveProblem }> {
+  const filters = how.everyCountry ? given.filter((filter) => filter.dimension !== "country") : given;
   const answer = await askLive(ctx, target, {
     startDate: from,
     endDate: to,
@@ -525,7 +537,7 @@ async function askGoogle(
     ...(filters.length > 0
       ? { dimensionFilterGroups: [{ filters: filters.map((filter) => ({ dimension: filter.dimension, operator: "equals", expression: filter.key })) }] }
       : {}),
-  });
+  }, how);
   return answer.ok ? { ok: true, rows: fromGoogle(answer.rows, list === "pair") } : answer;
 }
 
@@ -565,10 +577,11 @@ async function liveRows(
       pairs: pairs.rows,
     };
   }
-  // A list of pages asks for its pages beside the pairs, at the same time.
+  // A list of pages asks for its pages beside the pairs, at the same time: the pages of every country, their
+  // searches the country's (`EVERY_COUNTRY_LISTS`).
   const [pairs, pages] = await Promise.all([
     askGoogle(ctx, target, searchType, "pair", from, to, filters),
-    dimension === "page" ? askGoogle(ctx, target, searchType, "page", from, to, filters) : null,
+    dimension === "page" ? askGoogle(ctx, target, searchType, "page", from, to, filters, { everyCountry: true }) : null,
   ]);
   if (!pairs.ok) return pairs;
   const side = bySide(pairs.rows, dimension);
@@ -842,9 +855,11 @@ export const searchConsoleKeySplits = tenantAction({
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     checkedLongest(args.from, args.to, target.limits);
     const filters: Filter[] = [{ dimension: args.dimension, key: args.key }];
+    // A page's devices are every country's, as its figures are (`EVERY_COUNTRY_LISTS`); a keyword's follow the country.
+    const everyCountry = args.dimension === "page";
     const [countries, devices] = await Promise.all([
       askGoogle(ctx, target, args.searchType, "country", args.from, args.to, filters),
-      askGoogle(ctx, target, args.searchType, "device", args.from, args.to, [...filters, ...inCountry]),
+      askGoogle(ctx, target, args.searchType, "device", args.from, args.to, everyCountry ? filters : [...filters, ...inCountry], { everyCountry }),
     ]);
     if (!countries.ok) return countries;
     if (!devices.ok) return devices;
@@ -927,9 +942,6 @@ export const exportSearchConsoleList = tenantAction({
 // One search or page over time: asked of Google when its screen opens (§14.3, item 5)
 // ---------------------------------------------------------------------------
 
-const dayValidator = v.object({ day: v.string(), clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() });
-const figuresValidator = v.object({ clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() });
-
 /** Figures added up from days: position weighted by impressions, as Google's own. */
 function totalsOf(days: readonly { clicks: number; impressions: number; position: number }[]) {
   if (days.length === 0) return null;
@@ -955,11 +967,9 @@ export const searchConsoleKeySeries = tenantAction({
     period: v.optional(calendarPeriodValidator),
     country: v.optional(v.string()),
   },
-  returns: v.union(
-    v.object({ ok: v.literal(true), days: v.array(dayValidator), totals: v.union(figuresValidator, v.null()), previous: v.union(figuresValidator, v.null()), previousHeld: v.boolean() }),
-    v.object({ ok: v.literal(false), problem: v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY")) }),
-  ),
-  handler: async (ctx, args) => {
+  returns: keySeriesAnswer,
+  // Written out: the handler asks a query of this same file (`googleHasDays`), which TypeScript can't follow round.
+  handler: async (ctx, args): Promise<Infer<typeof keySeriesAnswer>> => {
     checkedRange(args.from, args.to);
     checkedCountry(args.country);
     const companyId = getActiveCompanyId(ctx.user);
@@ -968,19 +978,23 @@ export const searchConsoleKeySeries = tenantAction({
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     checkedLongest(args.from, args.to, target.limits);
     const before = beforeOf(args.from, args.to, args.period);
+    // A page's days are every country's, as the page list is (`EVERY_COUNTRY_LISTS`); a keyword's are the country's.
+    const everyCountry = args.dimension === "page";
     const answer = await askLive(ctx, target, {
       startDate: before.from,
       endDate: args.to,
       type: args.searchType,
       dimensions: ["date"],
-      dimensionFilterGroups: [{ filters: [{ dimension: args.dimension, operator: "equals", expression: args.key }, ...countryFilters(args.country)] }],
-    });
+      dimensionFilterGroups: [{ filters: [{ dimension: args.dimension, operator: "equals", expression: args.key }, ...(everyCountry ? [] : countryFilters(args.country))] }],
+    }, { everyCountry });
     if (!answer.ok) return answer;
     const all = answer.rows
       .map((row) => ({ day: row.keys[0] ?? "", clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position }))
       .sort((left, right) => left.day.localeCompare(right.day));
     const [days, earlier] = [all.filter((day) => day.day >= args.from), all.filter((day) => day.day >= before.from && day.day <= before.to)];
-    const previousHeld = before.from >= historyLimitDay(Date.now());
-    return { ok: true as const, days, totals: totalsOf(days), previous: previousHeld ? totalsOf(earlier) : null, previousHeld };
+    // Inside Google's sixteen months, and a span Google has the website's figures for (`googleHasSpan`).
+    const previousHeld: boolean = before.from >= historyLimitDay(Date.now())
+      && await ctx.runQuery(internal.searchConsoleSpans.googleHasDays, { companyId, siteId: args.siteId, from: before.from, to: before.to });
+    return { ok: true as const, days, daysBefore: previousHeld ? earlier : [], totals: totalsOf(days), previous: previousHeld ? totalsOf(earlier) : null, previousHeld };
   },
 });

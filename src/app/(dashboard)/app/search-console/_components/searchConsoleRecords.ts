@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAction } from "convex/react";
 import { getFunctionName, type FunctionArgs, type FunctionReference, type FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
+import { SHORT_NAME, shortTitle } from "@/convex/utils/pageNames";
 import { pageForPath, useSearchConsoleHref } from "./useSearchConsole";
 
 /**
@@ -52,6 +53,18 @@ export function useRecordBack(siteId: string, list: "keywords" | "pages", host: 
       ? pageLabel(key, host)
       : t(`menu.${pageForPath(path, siteId)}`);
   return { label: t("record.backTo", { name }), href: fromHere };
+}
+
+/**
+ * A page's name on a chart, short (Anthony on the Pages canvas, 17 November 2026: "i dont like long axis lables"): its
+ * title without the website's name, else its address, cut to about 28 letters at a word (`shortTitle`); the home page
+ * in words. The table keeps the whole name.
+ */
+export function shortPageName(title: string | undefined, url: string, host: string, homePage: string): string {
+  const label = pageLabel(url, host);
+  if (label === "/") return homePage;
+  if (title) return shortTitle(title);
+  return label.length <= SHORT_NAME ? label : `${label.slice(0, SHORT_NAME).replace(/[/\s,.;:?!-]+$/, "")}…`;
 }
 
 /**
@@ -126,4 +139,44 @@ export function useLiveAsk<Action extends LiveAction>(
     answer: answered?.key === `${askKey}#${attempt}` ? answered.answer : undefined,
     retry: () => setAttempt((count) => count + 1),
   };
+}
+
+/**
+ * Several asks of Google at once, each kept by itself while the screen is open: Keywords' ticked keywords, each one's days
+ * (search-console-keywords-way-2-plan-2026-11-17.md). A keyword ticked asks only for itself, a keyword unticked and ticked
+ * again asks nothing, and the answers come back in the order asked. `retry` asks again for every one.
+ */
+export function useLiveAsks<Action extends LiveAction>(
+  action: Action,
+  asks: ReadonlyArray<FunctionArgs<Action>>,
+): { answers: ReadonlyArray<FunctionReturnType<Action> | undefined>; retry: () => void } {
+  const run = useAction(action);
+  const actionName = getFunctionName(action);
+  const keys = asks.map((ask) => JSON.stringify(ask));
+  const keysKey = JSON.stringify(keys);
+  const [attempt, setAttempt] = useState(0);
+  const [answered, setAnswered] = useState<ReadonlyMap<string, FunctionReturnType<Action>>>(() => new Map());
+  // The asks already sent, read only here, so one asked once is never sent again while the screen is open.
+  const sent = useRef(new Set<string>());
+  useEffect(() => {
+    for (const askKey of JSON.parse(keysKey) as string[]) {
+      const key = `${askKey}#${attempt}`;
+      if (sent.current.has(key)) continue;
+      sent.current.add(key);
+      const flightKey = `${actionName}|${key}`;
+      let asked = inFlight.get(flightKey);
+      if (!asked) {
+        asked = (run as unknown as (args: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>>)(JSON.parse(askKey) as FunctionArgs<Action>)
+          // Our own server failing is not Google being busy: say so, and offer to ask again.
+          .catch(() => ({ ok: false, problem: "FAILED" }) as unknown as FunctionReturnType<Action>)
+          .finally(() => inFlight.delete(flightKey));
+        inFlight.set(flightKey, asked);
+      }
+      // Each answer is kept under its own ask, so one that arrives after the ticks change is never shown for another.
+      void asked.then((answer) => setAnswered((held) => new Map(held).set(key, answer as FunctionReturnType<Action>)));
+    }
+  }, [actionName, keysKey, attempt, run]);
+  // The same answers keep the same list, so a page's eye works its figures out again only when one comes in.
+  const answers = useMemo(() => (JSON.parse(keysKey) as string[]).map((askKey) => answered.get(`${askKey}#${attempt}`)), [keysKey, answered, attempt]);
+  return { answers, retry: () => setAttempt((count) => count + 1) };
 }

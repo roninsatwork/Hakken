@@ -56,7 +56,17 @@ describe("the Editor", () => {
     expect(typedNumbers("AI Agency had [[f3.value]] events for every 100 visits, against [[f3.mean]].")).toEqual([]);
     expect(typedNumbers("[[f1.value]] per 100 visits, and each 100 more")).toEqual([]);
     expect(typedNumbers("about 100 visits")).toEqual(["100"]);
-    expect(typedNumbers("every 1000 visits")).toEqual(["1000"]);
+    // Search Console's own words for a small click rate (`clicksPerThousand`), never a figure (Performance's first press, 2026-11-17).
+    expect(typedNumbers("Other Ironmongery brought [[f5.value]] clicks for every 1,000 times shown, against [[f5.mean]].")).toEqual([]);
+    expect(typedNumbers("[[f4.value]] clicks per 1000 times shown")).toEqual([]);
+    expect(typedNumbers("about 1,000 visits")).toEqual(["1,000"]);
+    expect(typedNumbers("every 500 visits")).toEqual(["500"]);
+    // A place on Google by its number names the place, as the findings do: a keyword's first press (2026-11-17).
+    expect(typedNumbers("People clicked [[f2.value]] of the times Google showed the website, beating its [[f2.mean]] average at place 1.")).toEqual([]);
+    expect(typedNumbers("Most sit in places 4 to 10, and Place 3 gets [[f1.value]].")).toEqual([]);
+    // An average position, or a move in places, is a figure all the same.
+    expect(typedNumbers("It sits at place 12.2 on average.")).toEqual(["12.2"]);
+    expect(typedNumbers("It rose 3 places.")).toEqual(["3"]);
     // A name with a digit in it is a name (sees-every-page-plan, 2026-10-31: "handles4doors.co.uk" was sent back as a typed number).
     expect(typedNumbers("[[f1.value]] links come from handles4doors.co.uk; the M4 bolt sells.")).toEqual([]);
     expect(typedNumbers("about 70k more, 3x the rest")).toEqual(["70", "3"]);

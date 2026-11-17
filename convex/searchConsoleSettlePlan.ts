@@ -61,6 +61,8 @@ export async function startParts(
   run?: SettleRun,
   long?: boolean,
   onlyLong?: boolean,
+  /** Every long period asked of Google again, settled or not (`searchConsolePageRefetch.ts`). */
+  fresh?: boolean,
 ): Promise<"STARTED" | "ALREADY_GOING"> {
   return await ctx.runMutation(internal.searchConsoleSettling.startSettleParts, {
     connectionId,
@@ -69,5 +71,6 @@ export async function startParts(
     ...(run ? { run } : {}),
     ...(long === undefined ? {} : { long }),
     ...(onlyLong ? { onlyLong } : {}),
+    ...(fresh ? { fresh } : {}),
   });
 }

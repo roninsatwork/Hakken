@@ -15557,7 +15557,6 @@
       "beforeTooOld": "Google keeps 16 months: the days before aren't there to compare",
       "new": "New in these dates"
     },
-    "named": "{named} of {total} clicks came from searches Google names. The other {hidden} came from searches Google hides for privacy: they are in the totals, never in a list.",
     "historyFilling": "Google's 16 months are still coming in: the days shown start on {day} for now.",
     "chart": {
       "title": "Clicks and impressions over time",
@@ -15582,7 +15581,126 @@
     },
     "performance": {
       "title": "Performance",
-      "description": "What Google itself counted for this website: real clicks and impressions, where Visibility shows estimates."
+      "description": "Where your clicks come from, and which keywords get clicked.",
+      "theseDates": "these dates",
+      "days": {
+        "title": "{name} each {step, select, day {day} week {week} other {month}}",
+        "hint": "{now}.",
+        "hintAgainst": "{now} and {before}, lined up by date.",
+        "lowerBetter": "Lower is better. 1 is the top of Google.",
+        "showLabel": "Show",
+        "compareWith": "Compare with",
+        "nothing": "No comparison",
+        "figureRate": "Clicks for every 100 impressions",
+        "empty": "Nothing to show for these dates."
+      },
+      "squares": {
+        "title": "Out of every 100 {noun}",
+        "hint": "All your {noun} in {when}. That's {count} {noun}. Each square is 1 in every 100.",
+        "noun": {
+          "clicks": "clicks",
+          "impressions": "impressions"
+        },
+        "note": {
+          "searches": "Google hides searches that only a few people make. They still count in your totals.",
+          "classification": "Pages count clicks from every country, not just your home country.",
+          "look": "Only results with extra details, like prices or stars."
+        },
+        "noBefore": "This split has no figure for {when}.",
+        "showLabel": "Show",
+        "splitLabel": "Split by",
+        "compareWith": "Compare with",
+        "nothing": "No comparison",
+        "split": {
+          "searches": "Searches",
+          "device": "Device",
+          "classification": "Classification",
+          "look": "How Google showed you"
+        },
+        "groups": {
+          "brand": "Brand searches",
+          "named": "Other searches Google names",
+          "hidden": "Searches Google hides"
+        },
+        "others": "The other {count}",
+        "readout": {
+          "figure": "{noun} in {when}",
+          "inEvery": "{share} in 100"
+        },
+        "empty": "Nothing to show for this choice.",
+        "failed": "Google didn't answer. Try again in a minute.",
+        "csvRow": "Row",
+        "csvSquares": "Squares"
+      },
+      "bands": {
+        "title": {
+          "clicks": "What Google shows, and what gets clicked",
+          "pages": "What Google shows, and how many pages it has"
+        },
+        "hint": "The top row is where 100 impressions went. The bottom row is the same for 100 {noun}.",
+        "press": "Press one to keep it lit.",
+        "noun": {
+          "clicks": "clicks",
+          "pages": "pages"
+        },
+        "splitLabel": "Split by",
+        "compareWith": "Compare with",
+        "against": {
+          "clicks": "Clicks",
+          "pages": "Pages"
+        },
+        "topLabel": "Out of every 100 impressions",
+        "bottomLabel": "Out of every 100 {noun}",
+        "readout": {
+          "impressions": "Impressions",
+          "ofImpressions": "Of all impressions",
+          "ofThose": "Of all {noun}"
+        },
+        "csvName": "Name"
+      },
+      "dots": {
+        "title": "Which keywords Google shows, and which get clicked",
+        "hint": "Each dot is a keyword. Further right had more {noun}. Higher up got clicked more.",
+        "noun": {
+          "impressions": "impressions",
+          "clicks": "clicks"
+        },
+        "countLabel": "Count",
+        "showLabel": "Show",
+        "show": {
+          "other": "Without brand searches",
+          "all": "Every keyword"
+        },
+        "acrossLabel": "{noun} from",
+        "across": {
+          "half": "{count}, half your middle keyword",
+          "middle": "{count}, your middle keyword",
+          "twice": "{count}, twice your middle keyword"
+        },
+        "upLabel": "Click-through rate from",
+        "up": {
+          "half": "{rate}, half your website",
+          "middle": "{rate}, your whole website",
+          "twice": "{rate}, twice your website"
+        },
+        "groups": {
+          "name": "{across}, and {up}",
+          "acrossMore": "{count} {noun} or more",
+          "acrossFewer": "Under {count} {noun}",
+          "upMore": "{rate} or more clicks for every 100",
+          "upFewer": "under {rate} clicks for every 100"
+        },
+        "axis": "Click-through rate",
+        "under": "Your {count} keywords with the most impressions.",
+        "noClicks": "{count, plural, one {# had no clicks, so it isn't drawn.} other {# had no clicks, so they aren't drawn.}}",
+        "empty": "No keywords to show for these dates.",
+        "failed": "Google didn't answer. Try again in a minute.",
+        "csvKeyword": "Keyword",
+        "csvGroup": "Group"
+      },
+      "eye": {
+        "allPages": "All your pages"
+      }
     },
     "searches": {
       "title": "Searches",
@@ -15591,8 +15709,24 @@
     },
     "pages": {
       "title": "Pages",
-      "description": "Every page Google showed for these dates. Tick a page to track it. Click one to see everything about it, and the keywords that brought people to it.",
-      "searchPlaceholder": "Search pages…"
+      "description": "Every page Google showed for these dates. Tick pages to draw them on the chart. Click one to see everything about it.",
+      "searchPlaceholder": "Search pages…",
+      "everyCountry": "These figures count every country, like your pages. The country you picked had {clicks} clicks on its own.",
+      "chart": {
+        "tickLabel": "Draw {name} on the chart",
+        "tickHeading": "On the chart",
+        "tickLimit": "You can draw up to {most} pages at once.",
+        "homePage": "Home page",
+        "hint": "{count, plural, =0 {Tick a page in the table to draw it here.} =1 {The page you've ticked in the table, in {when}.} =2 {The two pages you've ticked in the table, in {when}.} =3 {The three pages you've ticked in the table, in {when}.} =4 {The four pages you've ticked in the table, in {when}.} =5 {The five pages you've ticked in the table, in {when}.} other {The # pages you've ticked in the table, in {when}.}}",
+        "dashed": "The dashed lines are {before}, lined up by date.",
+        "nothingTicked": "Tick a page in the table to draw it here. You can tick up to {most}.",
+        "waiting": "Asking Google for each page's days.",
+        "failed": "Google didn't answer for {names}. Try again in a minute."
+      },
+      "eye": {
+        "clicked": "Pages that got a click",
+        "half": "Pages that make half your clicks"
+      }
     },
     "places": {
       "title": "Countries and devices",
@@ -15614,8 +15748,10 @@
       "country": "Country",
       "device": "Device",
       "clicks": "Clicks",
-      "change": "Change",
+      "change": "Up or down",
       "impressions": "Impressions",
+      "shown": "Shown",
+      "shownTitle": "Impressions: the times Google showed it",
       "ctr": "CTR",
       "position": "Position",
       "share": "Share of clicks",
@@ -15652,7 +15788,8 @@
       "update": "Update",
       "usualCtr": "Usual CTR",
       "volume": "Volume",
-      "when": "When"
+      "when": "When",
+      "topListed": "The table lists your top {count}."
     },
     "record": {
       "searchDescription": "What Google counted for this search, day by day, and which of your pages it showed.",
@@ -15683,12 +15820,22 @@
       "share": "Share",
       "noClicks": "No clicks in these dates.",
       "keywordsFor": "Keywords that brought people to this page",
-      "namedFor": "Google names the keywords behind {named} of this page's {clicks} clicks; it hides the rest for privacy. Tick a keyword to track it; click one to see every page of yours it brought people to.",
-      "keywordsHint": "Tick a keyword to track it; click one to see every page of yours it brought people to.",
-      "pagesHint": "Every page of yours Google showed for this keyword. Tick a page to track it; click one to see everything about it.",
+      "namedFor": "Of this page's {clicks} clicks, {named} came from keywords Google names in your home country. The rest came from other countries, or from searches Google keeps private. Click a keyword to see every page of yours it brought people to.",
+      "keywordsHint": "Click a keyword to see every page of yours it brought people to.",
+      "pagesHint": "Every page of yours Google showed for this keyword. Click one to see everything about it, or to track it.",
       "showAllCountries": "Show all {count} countries",
       "placesDescription": "Every country and every device behind “{name}”'s clicks, for the dates chosen.",
-      "failed": "This couldn't be read just now. Try again, and tell us if it keeps happening."
+      "failed": "This couldn't be read just now. Try again, and tell us if it keeps happening.",
+      "bands": {
+        "title": "Which page Google shows, and which gets clicked",
+        "hint": "Google showed {shown, plural, one {one of your pages} other {# of your pages}} for this keyword in these dates, and {clicked, plural, =0 {none got a click} one {one got a click} other {# got a click}}. The top row is where 100 impressions went. The bottom row is where 100 clicks went.",
+        "csvName": "Page"
+      },
+      "pageBands": {
+        "title": "Which keywords Google shows this page for, and which get clicked",
+        "hint": "Google showed this page for {shown, plural, one {one keyword} other {# keywords}} in these dates, and {clicked, plural, =0 {none got a click} one {one got a click} other {# got a click}}. The top row is where 100 impressions went. The bottom row is where 100 clicks went.",
+        "csvName": "Keyword"
+      }
     },
     "connect": {
       "title": "Connect Google Search Console",
@@ -15765,8 +15912,23 @@
     },
     "keywords": {
       "title": "Keywords",
-      "description": "Every keyword Google showed your website for in these dates. Tick a keyword to track it. Click one to see everything about it, and the pages it brought people to.",
-      "searchPlaceholder": "Search keywords…"
+      "description": "Every keyword Google showed your website for in these dates. Tick keywords to draw them on the chart. Click one to see everything about it.",
+      "searchPlaceholder": "Search keywords…",
+      "named": "{named} of your {total} clicks came from searches Google names. The other {hidden} came from searches Google hides for privacy.",
+      "chart": {
+        "tickLabel": "Draw {name} on the chart",
+        "tickHeading": "On the chart",
+        "tickLimit": "You can draw up to {most} keywords at once.",
+        "website": "Your whole website",
+        "switch": {
+          "on": "On",
+          "off": "Off"
+        },
+        "hint": "{count, plural, =0 {Tick a keyword in the table to draw it here.} =1 {The keyword you've ticked in the table, in {when}.} =2 {The two keywords you've ticked in the table, in {when}.} =3 {The three keywords you've ticked in the table, in {when}.} =4 {The four keywords you've ticked in the table, in {when}.} =5 {The five keywords you've ticked in the table, in {when}.} other {The # keywords you've ticked in the table, in {when}.}}",
+        "nothingTicked": "Tick a keyword in the table to draw it here. You can tick up to {most}.",
+        "waiting": "Asking Google for each keyword's days.",
+        "failed": "Google didn't answer for {names}. Try again in a minute."
+      }
     },
     "track": {
       "column": "Track",
@@ -15844,7 +16006,7 @@
     },
     "demand": {
       "title": "Missed demand",
-      "description": "Keywords many people search for that Google barely shows you for, from Visibility's monthly searches. And keywords Google shows you for that you don't track yet: tick one to track it.",
+      "description": "Keywords many people search for that Google barely shows you for, from Visibility's monthly searches. And keywords Google shows you for that you don't track yet. Click one to track it.",
       "fewer": "Fewer than {count} impressions in these dates",
       "ofShown": "Of the {count} keywords Google showed"
     },
@@ -16002,15 +16164,15 @@
     "tracked": {
       "keywords": {
         "title": "Tracked keywords",
-        "description": "The keywords you track, and how each did in these dates against the days before. Tick keywords on Keywords to add them; untick one here to stop tracking it.",
+        "description": "The keywords you track, and how each did in these dates against the days before. Click a keyword on Keywords to track it. Untick one here to stop tracking it.",
         "searchPlaceholder": "Search tracked keywords…",
-        "empty": "You don't track any keywords yet. Tick them on Keywords to see them here."
+        "empty": "You don't track any keywords yet. Click one on Keywords to track it."
       },
       "pages": {
         "title": "Tracked pages",
-        "description": "The pages you track, and how each did in these dates against the days before. Tick pages on Pages to add them; untick one here to stop tracking it.",
+        "description": "The pages you track, and how each did in these dates against the days before. Click a page on Pages to track it. Untick one here to stop tracking it.",
         "searchPlaceholder": "Search tracked pages…",
-        "empty": "You don't track any pages yet. Tick them on Pages to see them here."
+        "empty": "You don't track any pages yet. Click one on Pages to track it."
       },
       "figures": {
         "shown": "Times Google showed them",
@@ -16291,17 +16453,8 @@
         "askRead": "Ask Google to read {text} again in Search Console."
       }
     },
-    "pageGap": {
-      "homeCountry": "your home country",
-      "total": "Clicks in {place}",
-      "totalDetail": "{period}, every search",
-      "tied": "Tied to a page",
-      "tiedDetail": "{share}%: the pages below add up to this",
-      "untied": "Not tied to a page",
-      "untiedDetail": "searches Google keeps private",
-      "worldwide": "Clicks worldwide",
-      "worldwideDetail": "from the country list",
-      "why": "Google ties only part of your clicks in {place} to a page: the rest come from searches it keeps private. So the pages below add up to the clicks tied to a page, not to every click."
+    "everyCountry": {
+      "pages": "Pages count clicks from every country, not just your home country. Google only includes the searches it keeps private when no country is chosen."
     },
     "services": {
       "title": "Demand by service",

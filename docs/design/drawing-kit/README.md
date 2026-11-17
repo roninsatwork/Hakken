@@ -53,10 +53,17 @@ next drawing.
 6. **Tables fit the page.** No minimum width and no sideways scrolling: number
    columns as wide as their headings, text columns sharing the rest, long
    keywords and addresses wrapping. Websites' short headings: Volume,
-   Position, CPC, Traffic, Keywords.
+   Position, CPC, Traffic, Keywords. **Tables are lean** (2026-11-17): the
+   name and at most five more columns, besides a tick box for the chart, and
+   the rest on the row's own screen; one line a row; headings of ten letters
+   at most, the full term on hover; the name cut to one line with "…". Copy
+   the lean Keywords board (`docs/plans/assets/search-console-keywords-lean-table/`;
+   AGENTS.md).
 7. **Check every board.** `npm run check:drawing -- <board.dc.html> …` fails
    a class the app does not have, a colour outside the look, a font other
-   than Inter and JetBrains Mono, a table that would scroll, or a line of words
+   than Inter and JetBrains Mono, a table that would scroll, a table of more
+   than the name and five more columns, a heading over ten letters, a cell of
+   two lines, a name that wraps, or a line of words
    over a reading age of 14. Fix what it names before publishing.
 8. **A part the kit does not have** is new to the screen kit. Tell Anthony by
    name before drawing it (`core-component-set-no-drift`); when it is built,

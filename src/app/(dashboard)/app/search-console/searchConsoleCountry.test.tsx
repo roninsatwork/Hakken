@@ -348,13 +348,14 @@ describe("one country choice per page", () => {
         "searchConsoleTracking:searchConsoleTracking": TRACKING,
       });
       const { unmount } = render(<Page />);
-      expect(screen.getByRole("combobox", { name: "searchConsole.filters.device" })).toBeInTheDocument();
+      // The table's own chips are there (Pages has no Device since 17 November 2026; its board leaves it off).
+      expect(screen.getByRole("combobox", { name: "searchConsole.filters.tracked" })).toBeInTheDocument();
       expect(screen.queryByRole("combobox", { name: /country/i })).not.toBeInTheDocument();
       unmount();
     }
   });
 
-  it("a keyword's own screen has no Country filter either, and asks for its days and devices in the country chosen", async () => {
+  it("a keyword's own screen has no Country filter either, and asks for its days and pages in the country chosen", async () => {
     at("/app/search-console/site_1/keywords/keyword", "key=plumber+leeds&country=gbr");
     actions = {
       searchConsoleKeySeries: vi.fn().mockResolvedValue({ ok: true, days: PERFORMANCE.days, totals: FIGURES, previous: null, previousHeld: true }),
@@ -372,7 +373,8 @@ describe("one country choice per page", () => {
     expect(screen.getByRole("combobox", { name: "searchConsole.filters.device" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: /country/i })).not.toBeInTheDocument();
     expect(actions.searchConsoleKeySeries).toHaveBeenCalledWith(expect.objectContaining({ dimension: "query", key: "plumber leeds", country: "gbr" }));
-    expect(actions.searchConsoleKeySplits).toHaveBeenCalledWith(expect.objectContaining({ country: "gbr" }));
+    // Where the clicks came from is gone from a keyword's screen (2026-11-17, Way 2): its countries and devices aren't asked.
+    expect(actions.searchConsoleKeySplits).not.toHaveBeenCalled();
     expect(actions.searchConsoleLiveList).toHaveBeenCalledWith(expect.objectContaining({ within: { kind: "query", key: "plumber leeds" }, country: "gbr" }));
   });
 });

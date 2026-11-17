@@ -5,14 +5,14 @@ feature_area: Google Analytics
 audience: company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/google-analytics.md
-last_reviewed: '2026-11-05T08:42:20+00:00'
+last_reviewed: '2026-11-15T09:05:56+00:00'
 reviewed_against: current implementation
 status: Current
 ---
 # Google Analytics
 
 > **Product:** Hakken · **Document type:** End-user guide · **Feature area:** Google Analytics
-> **Reviewed:** 5 November 2026, 08:42:20 GMT (Europe/London)
+> **Reviewed:** 15 November 2026, 09:05:56 GMT (Europe/London)
 > **Source path:** `docs/end-user/google-analytics.md` · **Status:** Current
 
 ## What this section does
@@ -51,7 +51,7 @@ Conversion choices affect reporting history. Changing a tick or a local value ca
 
 Begin with **Overview** for a summary, then use **Channels** to understand sources and **Campaigns** for tagged links. A channel detail can lead to the pages reached from that source. **Landing pages** examines where visits began and what happened next. **All pages** includes pages viewed beyond the first page of a visit. Those are different questions: a page can be widely viewed without commonly being the entry point.
 
-**Conversions** brings together the actions counted as results and the events behind them. Follow an event or page into its detail view when you need context rather than relying on an aggregate count. **Visits** describes visits and audience groups recorded by Analytics; older Visitors links forward to Visits. **Products** appears for a website identified as a shop; it is not a universal menu item. Use these views to locate a question worth investigating, rather than treating every difference as a recommended change.
+**Conversions** brings together the actions counted as results and the events behind them. Follow an event or page into its detail view when you need context rather than relying on an aggregate count. **Visits** describes visits and audience groups recorded by Analytics; older Visitors links forward to Visits. **Products** and **Services** both appear in the menu. Products shows shop figures where they are available. Services uses pages the website has classified as services. Use these views to locate a question worth investigating, rather than treating every difference as a recommended change.
 
 The period menu offers This week, Last week, This month, Last month, Last 3 months, Last 6 months and Last 12 months, plus custom dates. It opens on Last month. Weeks run Monday to Sunday, and comparisons distinguish whole periods from periods still in progress. An incomplete period is compared with corresponding days rather than automatically with the entire preceding period. Check the dates actually shown, especially at the start of a month or when collection has not caught up.
 
@@ -92,3 +92,11 @@ The Conversions map can group conversions by Classification, channel, device or 
 Custom date lists are built for the selected span and its preceding span and can be reused for about a day. Google can refuse or delay that build; selecting dates does not guarantee immediate availability. Repeatedly reconnecting cannot fix a quota refusal. Ready-made periods remain the simplest starting point when investigating whether the connection itself is healthy.
 
 The eye on supported website data pages opens [What Hakken Sees](./what-hakken-sees.md). It can explain the selected figures and start a conversation about them. Analytics Live also supports an interpretation of its current snapshot, marked with the writing time. Its estimate of a usual half hour comes from last month's stored audience spread evenly over half hours, not a forecast for that weekday and time. Neither the eye nor these local implementation notes proves a live integration has passed acceptance.
+
+## Compare service pages
+
+Open **Services** in your website's Analytics menu. Start with a date range where you expect enough visits to compare. The chart groups the services by visits and events per 100 visits when it first opens. Its lines start at the middle service's visit count, rounded, and the whole website's event rate. You can change the lines and see how the groups change. The chart and the table can help you find a busy service with few events and open its page to check further.
+
+An event belongs to the page where it happened. A visit that includes two service pages can count for each service. Compare **visits that started on a service** separately. Events on the home page or another page outside the service group cannot be credited to a service from this report. Events per 100 visits count actions and can exceed 100. A row with fewer than 100 visits shows the rate with a warning.
+
+Use the table to search by name or path, sort, and narrow the results by group or classification. The CSV contains the sorted, filtered list, including rows on later table pages. Select a row to open that page's own Analytics screen. If the device breakdown has not been saved yet, the page can show figures for every device and says when it does. With no service classification or saved data, the page tells you why figures are unavailable. Check the website's page classifications and Analytics connection before reading a blank page as zero demand.

@@ -9,14 +9,14 @@ import { Change } from "@/src/ui/components/screens/Change";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
+
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../sites/_components/SiteCharts";
 import { formatNumber, formatShortDay, toCsv } from "../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard, useSeriesTicks } from "../../_components/SearchConsoleChartCard";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
-import { BeforeAfter, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { BeforeAfter, useSearchConsoleList, type ChipId, keywordColumn } from "../../_components/SearchConsoleTables";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { countryArg, useSearchConsoleCountry } from "../../_components/useSearchConsole";
@@ -140,13 +140,7 @@ export default function SearchConsoleVolatilityPage() {
           { header: t("table.clicks"), field: "clicks" },
         ],
         columns: [
-          {
-            key: "key",
-            header: t("table.keyword"),
-            sortable: true,
-            className: CUT_COLUMN.first,
-            cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
-          },
+          keywordColumn(t("table.keyword"), recordHref),
           { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousPosition} now={row.impressions > 0 ? row.position : null} format={formatPosition} /> },
           { key: "movedBy", header: t("table.moved"), align: "right", sortable: true, cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} /> },
           { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },

@@ -260,7 +260,8 @@ export function PagesMapCard({ choice, answer }: { choice: ClassificationChoice;
 }
 
 /** Each ticked page's line, in the order ticked. Your whole website is grey and dashed. */
-const PLOTTED_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_AMBER, CHART_SERIES_TEAL];
+/** The ticked rows' lines, in tick order: All pages' pages, and Search Console Keywords' keywords. */
+export const PLOTTED_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_AMBER, CHART_SERIES_TEAL];
 const LINES_HEIGHT = 200;
 const WHOLE_SWITCH = ["off", "on"] as const;
 

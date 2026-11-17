@@ -9,32 +9,57 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
     about: "Search Console's overview: how often Google showed the website and how often people clicked, for the dates chosen against the span before",
     parts: [
       "the four boxes: clicks, times shown, the share clicked and Google's average place, each against the span before",
-      "how many of the clicks came from searches Google names; it hides the rest",
-      "the chart: clicks, times shown, the share clicked and the average place, day by day",
+      "the chart: clicks, times shown, the share clicked or the average place, day by day, with the span before laid under it",
+      "out of every 100 clicks or times shown: brand searches, the other searches Google names and the ones it hides; or each device, Classification or kind of rich result, against the span before where it's kept",
+      "two rows of 100, impressions above and clicks or pages below, for each Classification or device: which Google shows a lot but people click less",
+      "a dot for each of the 300 keywords Google showed most, in four groups by impressions and clicks for every 100; keywords with no clicks are left off",
+      "Classifications count every country's pages; everything else is the home country's",
     ],
     never: SEARCH_CONSOLE_NEVER,
   },
-  "searchConsole.keywords": { about: "the searches that bring the website visitors from Google" },
-  "searchConsole.pages": { about: "the website's pages in Google: clicks, times shown and position" },
+  // Keywords as Anthony chose it on 17 November 2026 (search-console-keywords-way-2-plan-2026-11-17.md).
+  "searchConsole.keywords": {
+    about: "every keyword Google showed the website for in the dates chosen: its clicks, times shown, share clicked and place, each against the span before",
+    parts: [
+      "the four boxes: the whole website's clicks, times shown, the share clicked and Google's average place, each against the span before",
+      "a line under them: how many of those clicks came from searches Google names, and how many from searches it hides for privacy",
+      "the chart: clicks, times shown or the average place, day by day, for each keyword ticked in the table (five at most) and for the whole website",
+      "the table: every keyword, its clicks and how they moved since the span before, its times shown, share clicked and place; its pages are on its own screen",
+    ],
+    never: SEARCH_CONSOLE_NEVER,
+  },
+  // Pages as Anthony chose it on 17 November 2026 (search-console-pages-way-1-plan-2026-11-17.md).
+  "searchConsole.pages": {
+    about: "every page Google showed the website for in the dates chosen, every country's: its clicks, times shown, share clicked and place, each against the span before",
+    parts: [
+      "the four boxes: every page's clicks, times shown, the share clicked and Google's average place, every country's, each against every page the span before held",
+      "a line under them: how many clicks the country chosen had alone",
+      "the chart: clicks, times shown or the average place, day by day, for each page ticked in the table (five at most), with the span before under each; it opens on the three pages with most clicks",
+      "the table: every page, its clicks and how they moved since the span before, its times shown, share clicked and place; its keywords and Track are on its own screen",
+    ],
+    never: SEARCH_CONSOLE_NEVER,
+  },
   "searchConsole.record": { about: "one search's or one page's own screen in Search Console" },
   // A search's and a page's own screens, each its own key (section 6: "separate screen keys"); their words stay `record`.
+  // A keyword's own screen as Anthony chose it on 17 November 2026 (search-console-keyword-screen-way-2-plan-2026-11-17.md).
   "searchConsole.keyword": {
-    about: "one search's own screen: how often Google showed the website for it and people clicked, its place, where its clicks came from, and the website's pages Google showed for it",
+    about: "one search's own screen: how often Google showed the website for it and people clicked, its place, and which of the website's pages Google showed for it and which got the clicks",
     parts: [
       "the four boxes: clicks, times shown, the share clicked and Google's average place, against the span before",
-      "the chart: its clicks and times shown, day by day",
-      "where the clicks came from: the top countries and each device",
-      "the website's pages Google showed for this search, with their clicks and places",
+      "the chart: its clicks, times shown, the share clicked or the average place, day by day, with the span before laid under it",
+      "two rows of 100, impressions above and clicks below, for the six pages Google showed most for this search and the rest: which page Google shows, and which gets clicked",
+      "the table: each page Google showed for this search, with its clicks and how they moved since the span before, its times shown, share clicked and place",
     ],
-    never: [...SEARCH_CONSOLE_NEVER, "other searches than this one, except as the whole website's figures it is set against"],
+    never: [...SEARCH_CONSOLE_NEVER, "other searches than this one, except as the whole website's figures it is set against", "the countries or devices its clicks came from, which this screen doesn't show"],
   },
   "searchConsole.page": {
-    about: "one page's own screen in Search Console: how often Google showed it and people clicked, its place, where its clicks came from, and the searches it was shown for",
+    // A page's own screen as the keyword screen's Way 2, turned round (Anthony, 17 November 2026: "just build it").
+    about: "one page's own screen in Search Console: how often Google showed it and people clicked, its place, and which keywords Google showed it for and which got clicked",
     parts: [
-      "the four boxes: clicks, times shown, the share clicked and Google's average place, against the span before",
-      "the chart: its clicks and times shown, day by day",
-      "where the clicks came from: the top countries and each device",
-      "the searches Google showed this page for, with their clicks and places",
+      "the four boxes: clicks, times shown, the share clicked and Google's average place, every country's, against the span before",
+      "the chart: clicks, times shown, the share clicked or the average place, day by day, with the span before laid under it",
+      "two rows of 100, impressions above and clicks below, for the six keywords Google showed this page for most and the rest: which keyword shows it, and which brings the clicks",
+      "the table: every keyword Google showed this page for, its clicks and how they moved since the span before, its times shown, share clicked and place",
     ],
     never: [...SEARCH_CONSOLE_NEVER, "other pages than this one, except as the whole website's figures it is set against"],
   },

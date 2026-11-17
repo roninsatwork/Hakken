@@ -12,7 +12,7 @@ search: Search keywords…
 filter: Tracked
 filter: Position
 filter: Intent
-table: Track | Keyword | Position | Impressions | Clicks | Volume | Page
+table: Keyword | Position | Shown | Clicks | Volume | Page
   table-bar
     download: Download all (CSV)
   table-footer

@@ -76,6 +76,22 @@ many appearances and is not a promise that every person saw the website in
 one fixed rank. A movement in average position can reflect a changed mix of
 searches as well as changed results for a particular search.
 
+Under the four boxes, Performance has four charts:
+
+- **Each day.** Clicks, impressions, click-through rate or position, with the
+  dates before drawn underneath.
+- **Out of every 100 clicks.** Where your clicks came from. Pick brand
+  searches, other searches, and the ones Google hides. Or pick devices,
+  Classifications or rich results.
+- **What Google shows, and what gets clicked.** Two rows of 100. A band that
+  gets narrower going down is shown a lot but clicked less.
+- **Which keywords Google shows, and which get clicked.** A dot for each of
+  your 300 keywords with the most impressions. Keywords with no clicks aren't
+  drawn, and the line under the chart says how many.
+
+Classifications count clicks from every country. Everything else counts your
+home country.
+
 Choose the result kind deliberately. The implementation exposes web, video,
 news, Discover and Google News where data is available. Image search is not
 collected or shown in the current menu, even though older schema definitions
@@ -96,6 +112,13 @@ comparing screenshots or links, confirm the website, dates, result kind and
 country match. The menu preserves these choices in the address so moving
 between pages need not silently reset the question.
 
+Pages are the exception. A page's clicks and views count every country, not
+just your home country, so your pages add up to more than the clicks shown
+for your home country. Google only counts the searches it keeps private when
+no country is chosen, and without them a page can show a small part of its
+real clicks. Each screen with page figures says so. Your keywords, and your
+website's own totals, are still your home country's.
+
 ## Searches, pages and tracked lists
 
 **Keywords** examines the searches associated with the website's results.
@@ -105,8 +128,18 @@ and one search can surface more than one page. Google can withhold rare
 searches, so adding every visible search row is not a reliable way to rebuild
 the site's total clicks or all of a page's traffic.
 
+Each list keeps to one line a row: the name, then a few figures. Impressions
+are headed **Shown**; hover over it to see the word. **Up or down** is how a
+row's clicks moved against the days before. Click a row to open its own
+screen. That's where you track it and see everything else about it.
+
+A keyword's own screen shows its clicks each day, with the span before laid
+under them. Then it shows which of your pages Google showed for it, and which
+got the clicks. The top row is where 100 impressions went, and the bottom row
+where 100 clicks went.
+
 The tracked keyword and tracked page screens narrow attention to the things
-the company has chosen to follow. A company tracking a search is a different
+the company has chosen to follow. Untick one there to stop tracking it. A company tracking a search is a different
 concept from Google reporting that search in one historical period. Private
 tracking lists belong to the company, even when a supplier's underlying
 website data is shared. Do not assume a colleague at another company can see

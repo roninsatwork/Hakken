@@ -21,21 +21,21 @@ const searches = {
 
 describe("what a page's own figures show", () => {
   test("the whole fell, the biggest rise and fall on the list, and the one holding most of it", () => {
-    const found = pageFindings("searchConsole.keywords", searches);
+    const found = pageFindings("searchConsole.almost", searches);
     const words = found.map(findingWords);
     expect(words).toContain("Clicks fell to 900 from 1200 the span before.");
     expect(words).toContain("door handles: clicks rose to 520 from 300, the biggest rise on the list.");
     expect(words).toContain("brass hinges: clicks fell to 160 from 480, the biggest fall on the list.");
     // At most four from one list: the list's four strongest, before the share it holds.
     expect(words.filter((line) => line.startsWith("door handles holds"))).toEqual([]);
-    expect(pageFindings("searchConsole.keywords", { rows: searches.rows.map(({ key, clicks }) => ({ key, clicks })) }).map(findingWords)).toEqual(["door handles holds 57.8% of the list's clicks."]);
+    expect(pageFindings("searchConsole.almost", { rows: searches.rows.map(({ key, clicks }) => ({ key, clicks })) }).map(findingWords)).toEqual(["door handles holds 57.8% of the list's clicks."]);
     // Each finding's figures are keyed by its place, for the writer to name.
     expect(found[0].facts[0].key).toMatch(/^f1\./);
     expect(found.length).toBeLessThanOrEqual(6);
   });
 
   test("a percentage far from the list's average, weighed by its own base, on rows enough to trust", () => {
-    const words = pageFindings("searchConsole.keywords", { rows: searches.rows }).map(findingWords);
+    const words = pageFindings("searchConsole.almost", { rows: searches.rows }).map(findingWords);
     // Weighed by the times shown: door stops are shown most and clicked least; door handles clicked twice the average.
     expect(words).toContain("door stops: share clicked 0.5%, against 2.9% on average across the list.");
     expect(words).toContain("door handles: share clicked 5.8%, against 2.9% on average across the list.");
@@ -58,7 +58,7 @@ describe("what a page's own figures show", () => {
 
   test("small moves and even lists say nothing", () => {
     const even = { totals: { clicks: 100, clicksBefore: 96 }, rows: [{ key: "a", clicks: 25, previousClicks: 24 }, { key: "b", clicks: 25, previousClicks: 26 }, { key: "c", clicks: 25, previousClicks: 23 }, { key: "d", clicks: 25, previousClicks: 23 }] };
-    expect(pageFindings("searchConsole.keywords", even)).toEqual([]);
+    expect(pageFindings("searchConsole.almost", even)).toEqual([]);
   });
 
   test("the span before kept beside the figures, as the Products screen keeps its steps", () => {
@@ -138,7 +138,7 @@ describe("what a page's own figures show", () => {
       { key: "rare knob", clicks: 1, change: 0, position: 3, positionChange: 30 },
       { key: "door stops", clicks: 60, change: 2, position: 7, positionChange: 0.4 },
     ] };
-    const said = pageFindings("searchConsole.keywords", searches).map(findingWords);
+    const said = pageFindings("searchConsole.almost", searches).map(findingWords);
     expect(said).toContain("door handles: place in search results 4.2, from 9 the span before, the biggest climb on the list.");
     expect(said).toContain("brass hinges: place in search results 11.4, from 5.3 the span before, the biggest drop on the list.");
     // Visibility keeps its move as change; a page of a longer list says no "biggest". On a page with no rules of its own:
@@ -190,7 +190,7 @@ describe("what a page's own figures show", () => {
     expect(pageFindings("clarity.pages", { rows: unkept }).some((finding) => finding.kind === "rowUp")).toBe(false);
     // A move of three in every hundred of the list's figure is said, past ten: once lost under a twentieth.
     const small = [{ key: "a", clicks: 500, previousClicks: 480 }, { key: "b", clicks: 200, previousClicks: 236 }, { key: "c", clicks: 150, previousClicks: 150 }, { key: "d", clicks: 150, previousClicks: 150 }];
-    expect(pageFindings("searchConsole.keywords", { rows: small }).map(findingWords)).toContain("b: clicks fell to 200 from 236, the biggest fall on the list.");
+    expect(pageFindings("searchConsole.almost", { rows: small }).map(findingWords)).toContain("b: clicks fell to 200 from 236, the biggest fall on the list.");
   });
 
   test("a row is named by its own words before the number or id it is kept by; Google's stand-ins name nothing (page-screen-redo-plan-2026-11-03.md)", () => {

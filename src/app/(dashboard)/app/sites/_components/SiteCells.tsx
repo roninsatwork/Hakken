@@ -186,18 +186,23 @@ export function ExternalUrlCell({ url, label, cut = false }: { url: string; labe
  * click anywhere else on the row opens the same screen through the table's
  * `onRowClick`; this one stops there so the screen is not opened twice.
  */
-export function RecordLinkCell({ href, children, className = "text-[13px] text-foreground", cut = false }: {
+export function RecordLinkCell({ href, children, className = "text-[13px] text-foreground", cut = false, hover }: {
   href: string;
   children: ReactNode;
   className?: string;
   /** Cut short with "…" on one line, the whole of it on hover — in a `CUT_COLUMN`. */
   cut?: boolean;
+  /**
+   * What the hover says, when it's more than the words shown: a Search Console page's title and its address, with only
+   * the title on its one line (the table rule: one line a row, AGENTS.md "Tables are lean").
+   */
+  hover?: string;
 }) {
   return (
     <Link
       href={href}
       onClick={(event) => event.stopPropagation()}
-      title={cut && typeof children === "string" ? children : undefined}
+      title={hover ?? (cut && typeof children === "string" ? children : undefined)}
       className={`${cut ? "block truncate " : ""}${className} hover:underline`}
     >
       {children}

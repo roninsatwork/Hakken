@@ -85,7 +85,7 @@ export const searchConsoleScreenInternal = internalQuery({
       spanBefore: { from: before.from, to: before.to },
       figuresTo: connection.newestDay,
       link: `/app/search-console/${hold._id}${segment ? `/${segment}` : ""}?period=${period}${keyPart}`,
-      rule: "These are the figures the screen shows, for Google's web results in the website's main home country. A click is a visit from Google, not a sale. Give them with the link, in plain words; never money.",
+      rule: "These are the figures the screen shows, for Google's web results in the website's main home country, but a page's figures, which are every country's: Google only counts the searches it keeps private in a page's figures when no country is chosen. So a website's pages add up to more than its clicks in its home country. A click is a visit from Google, not a sale. Give them with the link, in plain words; never money.",
     };
     const site = reader(ctx, args.companyId);
     const ask = { searchType: "web" as const, from, to, period };
