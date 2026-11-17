@@ -15835,6 +15835,9 @@
         "title": "Per quali parole chiave Google mostra questa pagina, e quali vengono cliccate",
         "hint": "Google ha mostrato questa pagina per {shown, plural, one {una parola chiave} other {# parole chiave}} in queste date, e {clicked, plural, =0 {nessuna ha avuto un clic} one {una ha avuto un clic} other {# hanno avuto un clic}}. La riga in alto è dove sono andate 100 impressioni. La riga in basso è dove sono andati 100 clic.",
         "csvName": "Parola chiave"
+      },
+      "eye": {
+        "clickedKeywords": "Parole chiave che hanno avuto un clic"
       }
     },
     "connect": {

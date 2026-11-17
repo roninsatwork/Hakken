@@ -15835,6 +15835,9 @@
         "title": "Which keywords Google shows this page for, and which get clicked",
         "hint": "Google showed this page for {shown, plural, one {one keyword} other {# keywords}} in these dates, and {clicked, plural, =0 {none got a click} one {one got a click} other {# got a click}}. The top row is where 100 impressions went. The bottom row is where 100 clicks went.",
         "csvName": "Keyword"
+      },
+      "eye": {
+        "clickedKeywords": "Keywords that got a click"
       }
     },
     "connect": {

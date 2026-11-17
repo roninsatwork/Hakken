@@ -586,6 +586,11 @@ function recordFindings(dimension: "keyword" | "page") {
         found.push(part);
       }
     }
+    // How few of the keywords Google showed a page for brought it a click: said whatever the dates, with a span before or not,
+    // as Pages says its own pages that got one.
+    if (dimension === "page" && bands && isNumber(bands.shown) && isNumber(bands.clicked) && bands.shown >= BANDS_SHOWN_LEAST && bands.clicked > 0) {
+      found.push(partOf("recordClicked", text(names, "clicked", "Keywords that got a click"), "searches", bands.clicked, bands.shown, 0.85 + Math.min(0.3, 1 - bands.clicked / bands.shown)));
+    }
     // The other side of the record: a search split between pages, or a page's search that moved most.
     const rows = rowsOf(data.rows).filter((row) => named(row) && isNumber(row.clicks));
     const rowClicks = rows.reduce((sum, row) => sum + (row.clicks as number), 0);

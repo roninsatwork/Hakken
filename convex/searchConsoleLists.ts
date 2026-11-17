@@ -14,7 +14,7 @@ import { checkedCountry, countryScope, type CountryScope } from "./searchConsole
 import { beforeOf, daysIn, historyLimitDay, periodOf } from "./searchConsoleDays";
 export { periodOf } from "./searchConsoleDays";
 import { periodFromParts, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
-import { keySeriesAnswer, namedMovers } from "./searchConsoleSpans";
+import { keySeriesAnswer, namedMovers, totalsOf } from "./searchConsoleSpans";
 import { curveRows, keywordFiguresOf, keywordListOf, type KeywordParts } from "./searchConsoleKeywordList";
 import type { ListRows } from "./searchConsoleKeywordTable";
 import { BookNames, asText, namedRows, textsFrom, wholeBook } from "./searchConsolePeriodBooks";
@@ -743,10 +743,14 @@ export const searchConsoleLiveList = tenantAction({
     const { limits } = target;
     checkedLongest(args.from, args.to, limits);
     const before = beforeOf(args.from, args.to, args.period);
-    // Google keeps sixteen months: days before it would read as nothing, not as a fall.
+    // Google keeps sixteen months, and has no figures for some websites' stretches inside them (`googleHasSpan`): days it has
+    // none for would read as nothing, not as a fall, so they are neither asked of it nor set against (a page's keywords on More
+    // Handles' Last 6 months, 2026-11-17).
+    const beforeHeld: boolean = before.from >= historyLimitDay(Date.now())
+      && await ctx.runQuery(internal.searchConsoleSpans.googleHasDays, { companyId, siteId: args.siteId, from: before.from, to: before.to });
     const [now, earlier] = await Promise.all([
       liveRows(ctx, target, args.searchType, dimension, args.from, args.to, filters, within),
-      before.from >= historyLimitDay(Date.now())
+      beforeHeld
         ? liveRows(ctx, target, args.searchType, dimension, before.from, before.to, filters, within)
         : { ok: false as const, problem: "GOOGLE_REFUSED" as const },
     ]);
@@ -941,15 +945,6 @@ export const exportSearchConsoleList = tenantAction({
 // ---------------------------------------------------------------------------
 // One search or page over time: asked of Google when its screen opens (§14.3, item 5)
 // ---------------------------------------------------------------------------
-
-/** Figures added up from days: position weighted by impressions, as Google's own. */
-function totalsOf(days: readonly { clicks: number; impressions: number; position: number }[]) {
-  if (days.length === 0) return null;
-  const clicks = days.reduce((sum, day) => sum + day.clicks, 0);
-  const impressions = days.reduce((sum, day) => sum + day.impressions, 0);
-  const positionSum = days.reduce((sum, day) => sum + day.position * day.impressions, 0);
-  return { clicks, impressions, ctr: impressions > 0 ? clicks / impressions : 0, position: impressions > 0 ? positionSum / impressions : 0 };
-}
 
 /**
  * One search's or one page's days, and its totals against the period before

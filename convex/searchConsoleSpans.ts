@@ -49,3 +49,12 @@ export async function namedMovers(
   }
   return named;
 }
+
+/** Figures added up from days: position weighted by impressions, as Google's own. A page's or keyword's own days (`searchConsoleKeySeries`). */
+export function totalsOf(days: readonly { clicks: number; impressions: number; position: number }[]) {
+  if (days.length === 0) return null;
+  const clicks = days.reduce((sum, day) => sum + day.clicks, 0);
+  const impressions = days.reduce((sum, day) => sum + day.impressions, 0);
+  const positionSum = days.reduce((sum, day) => sum + day.position * day.impressions, 0);
+  return { clicks, impressions, ctr: impressions > 0 ? clicks / impressions : 0, position: impressions > 0 ? positionSum / impressions : 0 };
+}

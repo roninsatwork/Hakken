@@ -113,13 +113,15 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
       [dimension === "query" ? "keyword" : "page"]: key,
       figures: days,
       ...(bands ? { bands } : {}),
+      // The name a page's eye says its clicked keywords by, in the reader's words.
+      ...(isKeyword ? {} : { names: { clicked: t("record.eye.clickedKeywords") } }),
       rows: rowsShown ? rowsShown.map((row) => ({ ...row, name: other === "page" ? pageLabel(row.key, host) : row.key })) : null,
       picked: true,
       website: {
         curve: curve && !curve.live ? curve.points.map((point) => ({ ...point, name: tw("websiteAtPlace", { place: point.position }) })) : null,
       },
     };
-  }, [days, title, dimension, key, bands, rowsShown, other, host, curve, tw]);
+  }, [days, title, dimension, key, bands, isKeyword, t, rowsShown, other, host, curve, tw]);
   // "Do first" may open the row the eye names: a page splitting this search, or this page's search that moved most.
   const seesLinks = useMemo(() => (rowsShown ?? []).slice(0, 3).map((row) => ({ label: other === "page" ? pageLabel(row.key, host) : row.key, href: recordHref(otherSegment, row.key) })), [rowsShown, other, host, recordHref, otherSegment]);
   const download: { header: string; field: ExportField }[] = [

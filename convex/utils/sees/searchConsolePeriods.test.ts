@@ -21,6 +21,7 @@ const splitsRead = readFixture("moreHandlesSearchConsolePerformanceSplits") as R
 /** "more handles" on its own screen, as Google answered on 17 November 2026: its figures and every page shown for it. */
 const keywordScreen = readFixture("moreHandlesSearchConsoleKeywordScreen") as Record<string, unknown>;
 const pagesRead = readFixture("moreHandlesSearchConsolePages") as Record<string, unknown>;
+const pageScreen = readFixture("moreHandlesSearchConsolePageScreen") as Record<string, unknown>;
 
 /**
  * Search Console's own findings on every period its date menu offers, on More Handles' own figures as its reads answered
@@ -194,19 +195,6 @@ const keywordPage = (period: Period) => ({
   picked: true,
   website: website(period),
 });
-const pagePage = (period: Period) => ({
-  name: "/door-handles.html", page: "https://www.morehandles.co.uk/door-handles.html",
-  figures: { days: [], totals: { clicks: 120, impressions: 30400, ctr: 0.0039, position: 11.8 }, previous: { clicks: 151, impressions: 29900, ctr: 0.0051, position: 11.2 }, previousHeld: true },
-  cameFrom: { devices: [{ key: "MOBILE", name: "Mobile", clicks: 70, impressions: 21000, share: 0.5833 }, { key: "DESKTOP", name: "Desktop", clicks: 48, impressions: 9100, share: 0.4 }, { key: "TABLET", name: "Tablet", clicks: 2, impressions: 300, share: 0.0167 }] },
-  rows: [
-    { key: "door handles", name: "door handles", clicks: 24, impressions: 9800, ctr: 0.0024, position: 12.1, previousClicks: 15, change: 9 },
-    { key: "brass door handles", name: "brass door handles", clicks: 1, impressions: 2400, ctr: 0.0004, position: 9.4, previousClicks: 25, change: -24 },
-    { key: "internal door handles", name: "internal door handles", clicks: 6, impressions: 1900, ctr: 0.0032, position: 14.3, previousClicks: 9, change: -3 },
-  ],
-  picked: true,
-  website: website(period),
-});
-
 /** A page as the table and the bands name it: its address on the website. */
 const pagePath = (key: string) => key.replace(/^https?:\/\/[^/]+/, "") || "/";
 /** A keyword's own screen, Way 2 (search-console-keyword-screen-way-2-plan-2026-11-17.md), on "more handles"' own figures. */
@@ -220,6 +208,29 @@ const keywordScreenPage = (period: Period) => {
     rows: byClicks.map((row) => ({ ...row, name: pagePath(row.key) })),
     picked: true,
     website: website(period),
+  };
+};
+
+/**
+ * A page's own screen, the keyword screen's Way 2 turned round (Anthony, 17 November 2026: "just build it"), on the tubular
+ * latch guide's own figures and keywords as its reads answered that day: every country's figures, and each keyword Google
+ * showed it for, with its clicks the span before where Google has them.
+ */
+const PAGE_SCREEN_KEY = "https://www.morehandles.co.uk/blog/tubular-latch-guide-choosing-right-latch/";
+const pageScreenPage = (period: Period) => {
+  const one = at(pageScreen, period) as unknown as { figures: Fixture; keywords: Array<[string, number, number, number, number | null]> };
+  const rows = one.keywords.map(([key, clicks, impressions, position, previousClicks]) => ({
+    key, clicks, impressions, ctr: impressions > 0 ? clicks / impressions : 0, position, previousClicks, change: previousClicks === null ? null : clicks - previousClicks,
+  })) as unknown as ListRow[];
+  const byClicks = [...rows].sort((left, right) => right.clicks - left.clicks).slice(0, 25);
+  return {
+    name: pagePath(PAGE_SCREEN_KEY), page: PAGE_SCREEN_KEY,
+    figures: { days: [], ...one.figures },
+    bands: keywordBands(rows, (key) => key, (count) => `The other ${count}`),
+    rows: byClicks.map((row) => ({ ...row, name: row.key })),
+    picked: true,
+    website: website(period),
+    names: { clicked: "Keywords that got a click" },
   };
 };
 
@@ -315,11 +326,21 @@ describe("Search Console finds the biggest things on every period the date menu 
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(2);
   });
 
-  test.each(ALL)("A page's own screen: %s", (period) => {
-    const lines = said("searchConsole.page", period, pagePage(period));
+  test.each(ALL)("A page's own screen, on its own figures: %s", (period) => {
+    const page = pageScreenPage(period);
+    const lines = said("searchConsole.page", period, page);
     clean(lines);
-    expect(lines.some((line) => line.startsWith("brass door handles: clicks down")), lines.join("\n")).toBe(true);
-    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
+    // The bands: the keyword that took most of its clicks, with how many keywords Google showed it for and how many got a click.
+    const top = page.bands.parts.filter((part) => part.key !== "rest").sort((left, right) => right.clicks - left.clicks)[0];
+    expect(lines.some((line) => line.startsWith(`${top.name} holds`)), lines.join("\n")).toBe(true);
+    // Where the clicks came from is gone from the screen, so the eye never says a country or a device.
+    expect(lines.some((line) => /Mobile|Desktop|Tablet|United Kingdom/.test(line)), lines.join("\n")).toBe(false);
+    // Its clicks against the span before, only where Google has figures for that span.
+    const held = (page.figures as unknown as { previous: unknown }).previous !== null;
+    expect(lines.some((line) => line.startsWith(`${page.name}: clicks up`) || line.startsWith(`${page.name}: clicks down`)), lines.join("\n")).toBe(held);
+    // How few of its keywords got a click: on every period, the span before or not.
+    expect(lines.some((line) => line.startsWith("Keywords that got a click")), lines.join("\n")).toBe(true);
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(3);
   });
 
   test.each(ALL)("New and lost: %s", (period) => {

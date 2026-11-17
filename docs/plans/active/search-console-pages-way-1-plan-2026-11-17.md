@@ -175,6 +175,14 @@ and the Search Console helpers moved to `own/searchConsolePages.ts` and `own/sea
 helpers to `convex/searchConsoleSpans.ts` (both files had passed a thousand lines), and three docs naming the AI model
 added to the provider guard's list with their reason. `npm run build` was not run.
 
+A page's own screen's eye, on Anthony's "ok do it" (17 November 2026): held on every period by `searchConsolePeriods.test.ts`
+on the tubular latch guide's own figures and keywords (`src/test/fixtures/moreHandlesSearchConsolePageScreen.json`, 12
+Google asks), in place of the made-up figures it had. It finds the keyword that brings most clicks, its click rate against
+the whole website at its place, and, new and said on every period, how few of its keywords got a click; never a country
+or a device. Its brief limit is 4,150 (`codeFirstBriefCeilings.json`, was 3,500): it now hands the keyword bands the
+screen shows, as the keyword screen does. Recording it found the Last 6 months fault on lists asked of Google (a page's
+keywords): `searchConsoleLiveList` now asks no span before Google has no figures for, and sets none against.
+
 Still to do:
 
-- A page's own screen's eye has no every-period test on More Handles' figures yet, and hasn't been pressed.
+- A page's own screen's eye hasn't been pressed.
