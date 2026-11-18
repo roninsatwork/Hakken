@@ -1,16 +1,16 @@
-# Search Console → Tracked pages — the approved look (board "TrackedPages" of docs/plans/assets/search-console-redesign/).
+# Search Console → Tracked pages — the approved look (board "TrackedPages" of docs/plans/assets/search-console-tracked-way-1/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Tracked pages
 choice: Kind of result: Web | Video | News | Discover | Google News
-notice (info)
 figures
   figure: Clicks
   figure: Impressions
   figure: Click-through rate
   figure: Average position
+chart-card: Clicks each day
 search: Search tracked pages…
-table: Track | Page | Clicks | Up or down | Shown | Position
+table: On the chart | Page | Clicks | Up or down | Shown | Position | Track
   table-bar
     download: Download all (CSV)
   table-footer

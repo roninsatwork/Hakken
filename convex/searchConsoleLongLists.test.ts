@@ -1,6 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
 import { shiftDay } from "./searchConsoleDays";
-import { keepsSearch, keptLines } from "./searchConsoleKeep";
 import { MOST_PAIRS_HELD, PairSums, PairsPaused, addPiece, longListRows, piecesOf, type PairsCarry, type Span } from "./searchConsoleLongLists";
 import { addRowsInto, addUpRows, fromGoogle, type GoogleRow, type Row } from "./utils/searchConsolePacks";
 
@@ -88,34 +87,48 @@ function answerFor(span: Span, pairs: boolean): GoogleRow[] {
   return [...rows.values()];
 }
 
-/** Searches let go the way the pairs held by text let them go until 2026-10-16: what `PairSums.prune` must match. */
-function prunedBefore(sums: Map<string, Row>, tracked: ReadonlySet<string>, most: number): boolean {
+/**
+ * Searches let go the way the pairs held by text would let them go: what `PairSums.prune` must match. The memory guard
+ * (`MOST_PAIRS_HELD`) lets the searches seen least go first, never one with a click or one tracked (18 November 2026:
+ * every search is kept otherwise), and a search let go stays out of the period (`gone`), unless it comes back with a click.
+ */
+function prunedBefore(sums: Map<string, Row>, tracked: ReadonlySet<string>, most: number, gone: Set<string>): boolean {
   if (sums.size <= most) return false;
-  const searches = new Map<string, { clicks: number; impressions: number; positionSum: number; pages: number; keys: string[] }>();
+  const searches = new Map<string, { clicks: number; impressions: number; keys: string[] }>();
   for (const [key, row] of sums) {
-    const one = searches.get(row.key) ?? { clicks: 0, impressions: 0, positionSum: 0, pages: 0, keys: [] };
+    const one = searches.get(row.key) ?? { clicks: 0, impressions: 0, keys: [] };
     one.clicks += row.clicks;
     one.impressions += row.impressions;
-    one.positionSum += row.positionSum;
-    one.pages += 1;
     one.keys.push(key);
     searches.set(row.key, one);
   }
   const unkept = [...searches.entries()]
-    .filter(([search, figures]) => !tracked.has(search) && !keepsSearch(figures))
+    .filter(([search, figures]) => figures.clicks === 0 && !tracked.has(search))
     .sort((left, right) => left[1].impressions - right[1].impressions || (left[0] < right[0] ? -1 : 1));
   let pruned = false;
-  for (const [, figures] of unkept) {
+  for (const [search, figures] of unkept) {
     if (sums.size <= most / 2) break;
     for (const key of figures.keys) sums.delete(key);
+    gone.add(search);
     pruned = true;
   }
   return pruned;
 }
 
-/** The periods' pairs added up by text, as until 2026-10-16: a cut week's days added up, then into each period. */
+/** A piece's rows added into a period's sums by text, a search let go kept out unless it comes back with a click. */
+function addKept(sums: Map<string, Row>, rows: readonly Row[], gone: Set<string>) {
+  addRowsInto(sums, rows.filter((row) => {
+    if (!gone.has(row.key)) return true;
+    if (row.clicks === 0) return false;
+    gone.delete(row.key);
+    return true;
+  }));
+}
+
+/** The periods' pairs added up by text, as until 2026-10-16: a cut week's days added up, then into each period, every search kept. */
 function pairsBefore(spans: readonly Span[], tracked: readonly string[], most: number) {
   const sums = spans.map(() => new Map<string, Row>());
+  const gone = spans.map(() => new Set<string>());
   let pruned = false;
   for (const piece of piecesOf(spans)) {
     let rows = fromGoogle(answerFor(piece, true), true);
@@ -126,12 +139,12 @@ function pairsBefore(spans: readonly Span[], tracked: readonly string[], most: n
     }
     spans.forEach((span, which) => {
       if (piece.from >= span.from && piece.to <= span.to) {
-        addRowsInto(sums[which], rows);
-        if (prunedBefore(sums[which], new Set(tracked), most)) pruned = true;
+        addKept(sums[which], rows, gone[which]);
+        if (prunedBefore(sums[which], new Set(tracked), most, gone[which])) pruned = true;
       }
     });
   }
-  return { lists: sums.map((held) => keptLines([...held.values()], new Set(tracked))), pruned };
+  return { lists: sums.map((held) => [...held.values()]), pruned };
 }
 
 const PERIODS: Span[] = [{ from: shiftDay(NEWEST, -89), to: NEWEST }, { from: shiftDay(NEWEST, -179), to: shiftDay(NEWEST, -90) }];
@@ -141,12 +154,29 @@ describe("the pairs added up by number (search-console-streamed-lists-plan.md, S
   test("the same lists, in the same order with the same figures, as the pairs added up by text — cut weeks asked a day at a time", async () => {
     expect(piecesOf(PERIODS).filter(cutWeek).length).toBeGreaterThan(3);
     const tracked = ["plumber 7"];
-    const held = { pruned: false };
+    const held: { pruned: boolean; letGo?: number } = { pruned: false };
     const asked = await longListRows({} as never, google, { searchType: "web", list: "pair", country: undefined }, PERIODS, tracked, undefined, held);
     const before = pairsBefore(PERIODS, tracked, MOST_PAIRS_HELD);
     expect(PERIODS.map((span) => asked?.get(`${span.from}|${span.to}`))).toEqual(before.lists);
     expect(before.lists[0].length).toBeGreaterThan(100);
-    expect(held.pruned).toBe(false);
+    expect(held).toEqual({ pruned: false, asked: true });
+  });
+
+  test("every search's pairs are kept, whatever their figures: no click, past place 20, on one page (the keep rule went on 18 November 2026)", async () => {
+    const asked = await longListRows({} as never, google, { searchType: "web", list: "pair", country: undefined }, PERIODS, []);
+    for (const span of PERIODS) {
+      // Every pair Google sent for the period's weeks, a cut week's from its days, added up.
+      const google = addUpRows(piecesOf([span]).map((piece) => fromGoogle(cutWeek(piece)
+        ? Array.from({ length: days(piece) }, (_, at) => answerFor({ from: shiftDay(piece.from, at), to: shiftDay(piece.from, at) }, true)).flat()
+        : answerFor(piece, true), true)));
+      const listed = asked?.get(`${span.from}|${span.to}`) ?? [];
+      expect(listed.length).toBe(google.length);
+      expect(new Set(listed.map((row) => row.key))).toEqual(new Set(google.map((row) => row.key)));
+      // Searches the keep rule left out are there: unclicked, deep, each on one page.
+      const lonely = listed.filter((row) => row.clicks === 0 && row.positionSum / row.impressions > 20 && listed.filter((other) => other.key === row.key).length === 1);
+      expect(lonely.length).toBeGreaterThan(20);
+      expect(listed.reduce((sum, row) => sum + row.impressions, 0)).toBe(google.reduce((sum, row) => sum + row.impressions, 0));
+    }
   });
 
   test.each([1, 2, 3])("past the most held, the same searches let go, the same left in the same order (seed %i)", (seed) => {
@@ -163,19 +193,54 @@ describe("the pairs added up by number (search-console-streamed-lists-plan.md, S
     }
     // The same pieces added up by text.
     const sums = PERIODS.map(() => new Map<string, Row>());
+    const gone = PERIODS.map(() => new Set<string>());
     let prunedThen = false;
     for (const piece of piecesOf(PERIODS)) {
       if (cutWeek(piece)) continue;
       PERIODS.forEach((span, which) => {
         if (piece.from >= span.from && piece.to <= span.to) {
-          addRowsInto(sums[which], fromGoogle(answerFor(piece, true), true));
-          if (prunedBefore(sums[which], new Set(tracked), most)) prunedThen = true;
+          addKept(sums[which], fromGoogle(answerFor(piece, true), true), gone[which]);
+          if (prunedBefore(sums[which], new Set(tracked), most, gone[which])) prunedThen = true;
         }
       });
     }
     expect(pruned).toBe(true);
     expect(pruned).toBe(prunedThen);
     expect(periods.map((period) => period.rows())).toEqual(sums.map((held) => [...held.values()]));
+    expect(periods.map((period) => period.letGo)).toEqual(gone.map((held) => held.size));
+  });
+
+  test("past the most held, a search with a click or one tracked is never let go, every click stays, and the run says how many went", async () => {
+    const whole = await longListRows({} as never, google, { searchType: "web", list: "pair", country: undefined }, PERIODS, []);
+    // Tracked: a search seen least of all in the first period, never clicked, so the first the guard would let go.
+    const first = whole?.get(`${PERIODS[0].from}|${PERIODS[0].to}`) ?? [];
+    const tracked = [[...first].filter((row) => !first.some((other) => other.key === row.key && other.clicks > 0)).sort((left, right) => left.impressions - right.impressions)[0].key];
+    const held: { pruned: boolean; letGo?: number } = { pruned: false };
+    const asked = await longListRows({} as never, google, { searchType: "web", list: "pair", country: undefined }, PERIODS, tracked, undefined, held);
+    // The same periods held to a small most, a week at a time, as the guard holds a busy website's year.
+    const most = 400;
+    const periods = PERIODS.map(() => new PairSums());
+    for (const piece of piecesOf(PERIODS)) {
+      const week = new PairSums();
+      week.addGoogle(cutWeek(piece) ? Array.from({ length: days(piece) }, (_, at) => answerFor({ from: shiftDay(piece.from, at), to: shiftDay(piece.from, at) }, true)).flat() : answerFor(piece, true));
+      addPiece(periods, PERIODS, piece, week, new Set(tracked), most);
+    }
+    expect(held).toEqual({ pruned: false, asked: true });
+    for (const [which, span] of PERIODS.entries()) {
+      const all = whole?.get(`${span.from}|${span.to}`) ?? [];
+      expect(asked?.get(`${span.from}|${span.to}`)).toEqual(all);
+      const kept = periods[which].rows();
+      expect(periods[which].letGo).toBeGreaterThan(0);
+      // Every clicked search, and the tracked one, still there with every click.
+      const clicked = new Set(all.filter((row) => row.clicks > 0).map((row) => row.key));
+      for (const search of clicked) expect(kept.some((row) => row.key === search), search).toBe(true);
+      if (which === 0) expect(kept.some((row) => row.key === tracked[0])).toBe(true);
+      // Every click is in the lists: a search let go had none, and one back with a click keeps it.
+      const clicks = (rows: readonly Row[]) => rows.reduce((sum, row) => sum + row.clicks, 0);
+      expect(clicks(kept)).toBe(clicks(all));
+      const left = new Set(all.map((row) => row.key)).size - new Set(kept.map((row) => row.key)).size;
+      expect(left).toBe(periods[which].letGo);
+    }
   });
 
   test("paused near the end of every job and carried on by the next, the same lists as one job, and nothing left saved (SL4)", async () => {

@@ -46,6 +46,19 @@ const COUNTS: Record<string, Measure> = {
   rankedKeywordsTotal: { words: "searches ranked for", kind: "count" },
   top3: { words: "searches in Google's top 3", kind: "count" },
   pages: { words: "pages", kind: "count" },
+  /** Countries and devices' "Countries with a click" (search-console-countries-and-devices-way-1-plan-2026-11-18.md). */
+  countries: { words: "countries", kind: "count" },
+  /** Countries and devices' devices: each one's share of the country chosen's clicks, never every country's (2026-11-18). */
+  deviceClicks: { words: "clicks in the country chosen", kind: "count" },
+  /** Demand by Classification's share of the clicks Google ties to a page, never all the country's (2026-11-18). */
+  pageClicks: { words: "clicks on your pages", kind: "count" },
+  // A tracked row's share of what everything tracked brought (search-console-tracked-way-1-plan-2026-11-18.md): never "of all the clicks".
+  trackedKeywordClicks: { words: "clicks from the keywords you track", kind: "count" },
+  trackedPageClicks: { words: "clicks on the pages you track", kind: "count" },
+  /** Indexing's pages Google gave a reason for, and the pages it has an answer for (search-console-indexing-v1-plan-2026-11-18.md). */
+  notIndexedPages: { words: "pages not in Google", kind: "count" },
+  checkedPages: { words: "pages checked", kind: "count" },
+  notIndexedClicks: { words: "clicks on pages not in Google", kind: "count" },
   backlinks: { words: "links", kind: "count" },
   referringDomains: { words: "linking websites", kind: "count" },
   linkingWebsites: { words: "linking websites", kind: "count" },

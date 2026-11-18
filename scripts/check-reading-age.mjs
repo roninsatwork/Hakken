@@ -12,9 +12,10 @@ import { readingAge, readOut, tooHard } from "./reading-age.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 /** Read only by the people who run the platform, who may be more exact. */
-const ADMIN_ONLY = new Set(["admin", "billingAdmin"]);
+export const ADMIN_ONLY = new Set(["admin", "billingAdmin"]);
 
-function* messagesOf(node, at = "") {
+/** Every message in a dictionary, by its dotted key. */
+export function* messagesOf(node, at = "") {
   for (const [key, value] of Object.entries(node)) {
     const here = at ? `${at}.${key}` : key;
     if (typeof value === "string") yield [here, value];

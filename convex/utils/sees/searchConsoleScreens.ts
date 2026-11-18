@@ -216,12 +216,16 @@ export function typesSees(top: { name: string; clicks: number } | null, clicks: 
   return seen([{ code: "topType", text: top.name, a: percent(top.clicks / clicks) }]);
 }
 
-/** Countries and devices: the country bringing the most clicks, named by the screen, and mobile's share. */
-export function placesSees(country: { name: string; clicks: number } | null, clicks: number, mobileClicks: number | null): Seen {
+/**
+ * Countries and devices: the country bringing the most clicks, named by the screen, and mobile's share of that
+ * country's clicks. Its devices are the country chosen's (search-console-countries-and-devices-way-1-plan-2026-11-18.md),
+ * so `deviceClicks` is their own total, and the screen hands mobile's only when the country chosen is the busiest.
+ */
+export function placesSees(country: { name: string; clicks: number } | null, clicks: number, mobileClicks: number | null, deviceClicks: number = clicks): Seen {
   if (!country || clicks === 0) return seen([{ code: "noPlaces" }]);
   return seen([
     { code: "topCountry", text: country.name, a: percent(country.clicks / clicks) },
-    mobileClicks !== null && { code: "mobileShare", a: percent(mobileClicks / clicks) },
+    mobileClicks !== null && deviceClicks > 0 && { code: "mobileShare", a: percent(mobileClicks / deviceClicks) },
   ]);
 }
 
@@ -280,69 +284,46 @@ export function websitesSees(sites: ReadonlyArray<{ siteId: string; host: string
   );
 }
 
-/** A service's showings and clicks, now and before, named by the screen. */
-export type ServiceDemand = { name: string; shown: number; shownBefore: number | null; clicks: number; clicksBefore: number | null; service: boolean };
-
-/** A service needs this many showings before its change says anything. */
-const DEMAND_FLOOR = 100;
+/** A Classification's clicks, named by the screen, and whether it's one the reader made (never Unclassified). */
+export type ClassificationClicks = { name: string; clicks: number; sorted: boolean };
 
 /**
- * Demand by service (insights-analyst-plan.md §4.4, phase 9): whether Google
- * showed the website more or less than the days before and what happened to
- * the clicks, and which service held up best and which fell most — the one
- * to put next quarter's effort into.
+ * Demand by Classification (search-console-demand-by-classification-way-2-plan-2026-11-18.md): the Classification that
+ * got the most clicks, and its share of the clicks Google tied to the country's pages, as the squares count them.
  */
-export function servicesSees(services: readonly ServiceDemand[]): Seen {
-  const shown = services.reduce((sum, service) => sum + service.shown, 0);
-  if (shown === 0) return seen([{ code: "noDemand" }]);
-  const held = services.filter((service) => service.shownBefore !== null);
-  const shownBefore = held.reduce((sum, service) => sum + (service.shownBefore ?? 0), 0);
-  const clicks = services.reduce((sum, service) => sum + service.clicks, 0);
-  const clicksBefore = held.reduce((sum, service) => sum + (service.clicksBefore ?? 0), 0);
-  const moved = (now: number, before: number) => Math.round(((now - before) / before) * 100);
-  // Best and worst among the services themselves, never the guides or the company's other groups.
-  const sized = held.filter((service) => service.service && (service.shownBefore ?? 0) >= DEMAND_FLOOR).map((service) => ({ ...service, change: moved(service.shown, service.shownBefore ?? 0) }));
-  const ranked = [...sized].sort((a, b) => b.change - a.change);
-  const best = ranked[0], worst = ranked.at(-1);
+export function servicesSees(classifications: readonly ClassificationClicks[]): Seen {
+  const clicks = classifications.reduce((sum, one) => sum + one.clicks, 0);
+  const top = classifications.filter((one) => one.sorted).sort((left, right) => right.clicks - left.clicks)[0];
+  if (!top || top.clicks <= 0 || clicks <= 0) return seen([{ code: "noDemand" }]);
+  return seen([{ code: "topClicks", text: top.name, a: Math.max(1, Math.round((100 * top.clicks) / clicks)) }]);
+}
+
+/** A reason as Indexing names it, in the reader's words, with its page's address and its pages. */
+export type IndexingReasonPages = { name: string; slug: string; pages: number };
+
+/**
+ * Indexing (search-console-indexing-v1-plan-2026-11-18.md): the biggest reason Google gave, and its share of the pages
+ * not in Google, with its own page as the step; every page checked in Google where Google gave no reason; and nothing
+ * checked yet where nothing is.
+ */
+export function indexingSees(reasons: readonly IndexingReasonPages[], checks: { checked: number } | null): Seen {
+  if (!checks || checks.checked === 0) return seen([{ code: "noChecks" }]);
+  const top = reasons[0];
+  if (!top) return seen([{ code: "allIn", a: checks.checked }]);
+  const notIndexed = reasons.reduce((sum, one) => sum + one.pages, 0);
+  // Tied at the top, no reason is the biggest: the line says how many reasons Google gave instead.
+  const tied = reasons[1] !== undefined && reasons[1].pages >= top.pages;
   return seen(
-    [
-      shownBefore > 0 && { code: shown >= shownBefore ? "shownMore" : "shownFewer", a: Math.abs(moved(shown, shownBefore)), b: clicks, c: clicksBefore },
-      // Sizes as plain numbers, `c` 1 when the best still rose: the words say up or down.
-      best && worst && best !== worst && { code: "bestWorst", text: best.name, more: worst.name, a: Math.abs(best.change), b: Math.abs(worst.change), c: best.change >= 0 ? 1 : 0 },
-    ],
-    [best && { code: "growBest", text: best.name, link: "seeStrategy", to: { url: "/app/insights/strategy" } }],
+    [tied ? { code: "reasonsTied", a: reasons.length, b: notIndexed } : { code: "biggest", text: top.name, a: top.pages, b: notIndexed }],
+    [{ code: "seeReason", text: top.name, link: "seeReasonPages", to: { segment: `indexing/${top.slug}` } }],
   );
 }
 
-/** A money page's indexing, as the weekly check found it. */
-export type PageIndexing = { page: string; verdict: string | null; lastRead: string | null };
-
-/** A page Google hasn't read in this many days carries none of the changes made since. */
-const UNREAD_DAYS = 60;
-
 /**
- * Indexing (insights-analyst-plan.md §4.4, phase 8): how many money pages
- * Google has indexed, which one isn't, and the one it read longest ago — with
- * asking Google to read it again as the step, in Search Console itself.
+ * A reason's own page under Indexing: how many of the website's pages Google gave it for, and how many of them still
+ * got clicks in the dates.
  */
-export function indexingSees(pages: readonly PageIndexing[], checkedDay: string | null): Seen {
-  const inspected = pages.filter((page) => page.verdict !== null);
-  if (inspected.length === 0) return seen([{ code: "noIndexing" }]);
-  const indexed = inspected.filter((page) => page.verdict === "PASS");
-  const missing = inspected.filter((page) => page.verdict !== "PASS");
-  const oldest = [...indexed].filter((page) => page.lastRead).sort((a, b) => (a.lastRead ?? "").localeCompare(b.lastRead ?? ""))[0];
-  const daysAgo = (day: string) => (checkedDay ? Math.round((Date.parse(checkedDay) - Date.parse(day)) / 86_400_000) : 0);
-  const stale = oldest?.lastRead && daysAgo(oldest.lastRead) >= UNREAD_DAYS ? oldest : null;
-  const console = { url: "https://search.google.com/search-console" };
-  return seen(
-    [
-      { code: "indexedOf", a: indexed.length, b: inspected.length },
-      missing.length > 0 && { code: "notIndexed", text: missing[0].page, a: missing.length },
-      oldest?.lastRead ? { code: "oldestRead", text: oldest.page, days: [oldest.lastRead] } : null,
-    ],
-    [
-      missing.length > 0 && { code: "fixIndexing", text: missing[0].page, link: "openSearchConsole", to: console },
-      stale && { code: "askRead", text: stale.page, link: "openSearchConsole", to: console },
-    ],
-  );
+export function reasonSees(name: string, pages: number, clicked: number): Seen {
+  if (pages === 0) return seen([{ code: "reasonNone", text: name }]);
+  return seen([{ code: "reasonPages", text: name, a: pages }, clicked > 0 && { code: "reasonClicked", a: clicked }]);
 }

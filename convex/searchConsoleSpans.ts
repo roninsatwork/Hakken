@@ -4,7 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { titlesOf } from "./pageTitles";
 import type { BookNames } from "./searchConsolePeriodBooks";
 import { googleHasSpan } from "./searchConsolePeriodReads";
-import type { MovedPage } from "./utils/searchConsoleViews";
+import type { MovedPage, TrackedList, TrackedMove } from "./utils/searchConsoleViews";
 
 /**
  * What Search Console's lists need from a span of days, beside `searchConsoleLists.ts` (moved out as it passed a thousand
@@ -48,6 +48,34 @@ export async function namedMovers(
     named[way] = { ...moved, key, ...(title ? { title } : {}) };
   }
   return named;
+}
+
+/**
+ * A tracked list's rows that moved, and the busiest onto and off Google's first page, named as the rows on screen are: a
+ * keyword's text from the book, a page with its title where the website has one (search-console-tracked-way-1-plan-2026-11-18.md).
+ */
+export async function namedTracked(
+  ctx: { db: QueryCtx["db"] },
+  companyWebsiteId: Id<"companyWebsites">,
+  tracked: TrackedList,
+  names: BookNames | null,
+  pages: boolean,
+): Promise<TrackedList> {
+  const nameOne = async (moved: TrackedMove | null): Promise<TrackedMove | null> => {
+    if (!moved) return null;
+    const key = names ? await names.textOf(moved.key) : moved.key;
+    const title = pages ? (await titlesOf(ctx, companyWebsiteId, [key])).get(key) : undefined;
+    return { ...moved, key, ...(title ? { title } : {}) };
+  };
+  const pair = async (two: { up: TrackedMove | null; down: TrackedMove | null } | null) => (two ? { up: await nameOne(two.up), down: await nameOne(two.down) } : null);
+  return {
+    ...tracked,
+    movers: await pair(tracked.movers),
+    places: await pair(tracked.places),
+    firstPage: { ...tracked.firstPage, cameTop: await nameOne(tracked.firstPage.cameTop), leftTop: await nameOne(tracked.firstPage.leftTop) },
+    busiest: await nameOne(tracked.busiest),
+    quietest: tracked.quietest ? { ...tracked.quietest, ...(await nameOne(tracked.quietest)) } : null,
+  };
 }
 
 /** Figures added up from days: position weighted by impressions, as Google's own. A page's or keyword's own days (`searchConsoleKeySeries`). */

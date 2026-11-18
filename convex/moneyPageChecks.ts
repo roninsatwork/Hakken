@@ -3,6 +3,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { accessTokenFor } from "./searchConsoleConnect";
+import { countOtherAsks, usedOrigin } from "./searchConsolePageChecks";
+import { INSPECT_URL, googleDay } from "./utils/pageIndexChecks";
 import { callGoogle } from "./googleApi";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
@@ -53,7 +55,9 @@ export const checkTargets = internalQuery({
       .map((page) => ({ page: page.page, kind: page.page === "/" ? "HOME" : page.pageType ?? null, clicks: page.clicks }));
     const last = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", hold._id)).first();
     return {
-      origin: originOf(website, console),
+      // The address the website really uses, as Google shows its pages (the www fault: morehandles.co.uk's main pages were
+      // asked without it and all read as not indexed; search-console-indexing-v1-plan-2026-11-18.md).
+      origin: console?.status === "CONNECTED" ? await usedOrigin(ctx, hold, console.property ?? null) : originOf(website, console),
       consoleId: console?.status === "CONNECTED" ? console._id : null,
       property: console?.status === "CONNECTED" ? console.property ?? null : null,
       pages,
@@ -81,10 +85,19 @@ const pageChangeSeen = v.object({ kind: changeKindValidator, page: v.string() })
  * check it replaces: the last one kept.
  */
 export const saveChecks = internalMutation({
-  args: { holdId: v.id("companyWebsites"), rows: v.array(checkRow) },
+  args: {
+    holdId: v.id("companyWebsites"),
+    rows: v.array(checkRow),
+    /**
+     * The asks of Google's URL inspection the checks made, on Google's day: counted on the Search Console page checks' day
+     * (`countOtherAsks`), so their daily limit keeps a fifth of Google's 2,000 in hand (review fixes, 18 November 2026).
+     */
+    inspected: v.optional(v.object({ day: v.string(), asked: v.number(), failed: v.number() })),
+  },
   returns: v.array(pageChangeSeen),
   handler: async (ctx, args) => {
     const now = Date.now();
+    if (args.inspected) await countOtherAsks(ctx, args.holdId, args.inspected.day, args.inspected.asked, args.inspected.failed, now);
     const held = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", args.holdId)).take(MOST_MONEY_PAGES * 4);
     const wanted = new Set(args.rows.map((row) => row.page));
     for (const row of held) if (!wanted.has(row.page)) await ctx.db.delete(row._id);
@@ -164,13 +177,19 @@ export const checkWebsite = internalAction({
     if (!args.force && targets.checkedAt !== null && Date.now() - targets.checkedAt < CHECK_EVERY_MS) return { checked: 0, problems: [], changed: [] };
     const problems = new Set<string>();
     let inspect: ((address: string) => Promise<Indexed | null>) | null = null;
+    // Every ask of the inspection, answered or not, on Google's day: Search Console's page checks count them as their own.
+    const inspected = { day: googleDay(Date.now()), asked: 0, failed: 0 };
     if (targets.consoleId && targets.property) {
       const token = await accessTokenFor(ctx, targets.consoleId as Id<"searchConsoleConnections">);
       if (token.ok) {
         const property = targets.property;
         inspect = async (address) => {
-          const answer = await callGoogle("https://searchconsole.googleapis.com/v1/urlInspection/index:inspect", token.accessToken, { inspectionUrl: address, siteUrl: property });
-          if (!answer.ok) problems.add(`URL inspection: ${answer.reason} ${answer.status} ${answer.detail}`.slice(0, 300));
+          inspected.asked += 1;
+          const answer = await callGoogle(INSPECT_URL, token.accessToken, { inspectionUrl: address, siteUrl: property });
+          if (!answer.ok) {
+            inspected.failed += 1;
+            problems.add(`URL inspection: ${answer.reason} ${answer.status} ${answer.detail}`.slice(0, 300));
+          }
           return answer.ok ? indexedFrom(answer.json, address) : null;
         };
       } else problems.add(`Search Console sign-in: ${token.problem}`);
@@ -183,7 +202,9 @@ export const checkWebsite = internalAction({
       batch.forEach((page, index) => rows.push({ ...page, ...found[index] }));
     }
     // Typed here: a result inferred from this module's own mutation collapses the API's types.
-    const changed: Array<typeof pageChangeSeen.type> = await ctx.runMutation(internal.moneyPageChecks.saveChecks, { holdId: args.holdId, rows });
+    const changed: Array<typeof pageChangeSeen.type> = await ctx.runMutation(internal.moneyPageChecks.saveChecks, {
+      holdId: args.holdId, rows, ...(inspected.asked > 0 ? { inspected } : {}),
+    });
     return { checked: rows.length, problems: [...problems], changed };
   },
 });

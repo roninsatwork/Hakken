@@ -334,7 +334,8 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
         companyId: owner.companyId,
         surface: thread.widgetId ? "WIDGET" : "COMPANY_CHAT",
         ...(shouldInjectPersonalNote(thread) ? { noteFor: thread.userId } : {}),
-        presentation: "WRITTEN",
+        // The company's own people read the screens' style; a visitor on the website chat reads the company's own.
+        presentation: thread.widgetId ? "WRITTEN" : "COMPANY_ANSWER",
         agent: { systemPrompt: agent.systemPrompt, skills: runtimeSkills, alwaysMemories: agentAlwaysMemories },
         ...(thread.companyWebsiteId ? { websiteHoldId: thread.companyWebsiteId } : {}),
         ...(thread.startedOn ? { startedOn: thread.startedOn } : {}),

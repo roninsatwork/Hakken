@@ -80,9 +80,21 @@ export const websiteDaysInternal = internalQuery({
  * A website's or one page's visitors and impressions each day from `from` to
  * `to`. A page's are asked of Google: a day it was not shown in is a day of
  * none, so every day in the range is answered.
+ *
+ * `countries` says whose a page's figures are; a website's are always the main home country's, as collection keeps them.
+ * An alert's are every country's (`EVERY`): alerts set before 18 November 2026 chose their numbers against them, and
+ * More Handles' home page had about 396 clicks from every country in October against 184 from the UK, so the home
+ * country's would fire an alert with nothing changed (review fixes, 18 November 2026). Ask Hakken's chart of a page is
+ * the main home country's (`HOME`), as Search Console's Pages it links to shows it since that day.
  */
 export const targetDaysInternal = internalAction({
-  args: { companyId: v.id("companies"), target: hakkenTaskTargetValidator, from: v.string(), to: v.string() },
+  args: {
+    companyId: v.id("companies"),
+    target: hakkenTaskTargetValidator,
+    from: v.string(),
+    to: v.string(),
+    countries: v.union(v.literal("EVERY"), v.literal("HOME")),
+  },
   returns: v.union(
     v.object({ ok: v.literal(true), days: v.array(dayFiguresValidator) }),
     v.object({ ok: v.literal(false), problem: v.string() }),
@@ -96,14 +108,14 @@ export const targetDaysInternal = internalAction({
     }
     const target = await ctx.runQuery(internal.searchConsoleReads.liveDaysTarget, { companyId: args.companyId, siteId: args.target.companyWebsiteId });
     if (!target) return { ok: false as const, problem: `${args.target.website} isn't connected to Search Console any more.` };
-    // A page's figures are every country's, as Search Console's Pages shows them (`EVERY_COUNTRY_LISTS`).
+    // Every country's for an alert, asked of no country; the main home country's otherwise (`askLive` names it).
     const answer = await askLive(ctx, target, {
       startDate: args.from,
       endDate: args.to,
       type: "web",
       dimensions: ["date"],
       dimensionFilterGroups: [{ filters: [{ dimension: "page", operator: "equals", expression: args.target.page }] }],
-    }, { everyCountry: true });
+    }, { everyCountry: args.countries === "EVERY" });
     if (!answer.ok) {
       return {
         ok: false as const,

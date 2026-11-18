@@ -4,7 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { SearchConsolePeriod, SearchConsolePeriodList, SearchType } from "./searchConsoleSchema";
 import { unpackNumbers, unpackedPart, type Row, type Unpacked } from "./utils/searchConsolePacks";
 import { termToken, tokenPlace, type BookKind } from "./utils/searchConsoleTerms";
-import { textsFrom, wholeBook, type BookScope } from "./searchConsolePeriodBooks";
+import { textsFrom, wholeBook, type BookScope, type BookShelf } from "./searchConsolePeriodBooks";
 import { PARTS_MOST } from "./searchConsoleRollups";
 import { UNKNOWN } from "./searchConsoleFacts";
 import { CALENDAR_PERIODS, isCalendarPeriod } from "./utils/calendarPeriods";
@@ -113,13 +113,17 @@ export function withTokens<T extends { list: SearchConsolePeriodList; keys: stri
 ): Omit<T, "keys"> & { keys: string[] } {
   if (typeof part.keys !== "string") return { ...part, keys: part.keys };
   const tokens = (kind: BookKind, packed: string) => unpackNumbers(packed).map((place) => termToken(kind, place));
+  const pages = isPageList(part.list);
   return {
     ...part,
-    keys: tokens(part.list === "page" ? "page" : "query", part.keys),
-    ...(typeof part.tops === "string" && !part.pageBook ? { tops: tokens(part.list === "page" ? "query" : "page", part.tops) } : {}),
+    keys: tokens(pages ? "page" : "query", part.keys),
+    ...(typeof part.tops === "string" && !part.pageBook ? { tops: tokens(pages ? "query" : "page", part.tops) } : {}),
     ...(typeof part.pages === "string" && !part.pageBook ? { pages: tokens("page", part.pages) } : {}),
   };
 }
+
+/** The lists keyed by page: every country's pages, and the main home country's own (`countryPage`, 18 November 2026). */
+export const isPageList = (list: SearchConsolePeriodList): boolean => list === "page" || list === "countryPage";
 
 /** First parts read for a period: the one being swapped in, and the one before it. */
 export const FIRST_PARTS_READ = 3;
@@ -184,8 +188,10 @@ export async function readPeriod(
   period: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
   country?: string,
+  /** The whole books this read has already read, so a list and its span before of one build read their book once. */
+  shelf?: BookShelf,
 ): Promise<ReadPeriod | null> {
-  return await periodFromParts(ctx, companyWebsiteId, searchType, list, await partsToRead(ctx, companyWebsiteId, searchType, list, period, which, country), country);
+  return await periodFromParts(ctx, companyWebsiteId, searchType, list, await partsToRead(ctx, companyWebsiteId, searchType, list, period, which, country), country, true, shelf);
 }
 
 export type ReadPeriod = { from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[]; book: BookScope | null };
@@ -218,6 +224,7 @@ export async function periodFromParts(
   country?: string,
   /** False to leave a page list's pages as places in its book (`readPeriodUnnamed`). */
   named = true,
+  shelf?: BookShelf,
 ): Promise<ReadPeriod | null> {
   const scope = country;
   const parts = stored.map((part) => unpackedPart(withTokens(part)));
@@ -228,8 +235,8 @@ export async function periodFromParts(
     ? { companyWebsiteId, ...(scope === undefined ? {} : { country: scope }), searchType, builtAt: parts[0].builtAt }
     : null;
   // A list of pages is a website's pages at most — read with their addresses whole (§5.3).
-  if (book && list === "page" && named) {
-    const pages = await wholeBook(ctx, book, "page");
+  if (book && isPageList(list) && named) {
+    const pages = shelf ? await shelf.whole(book, "page") : await wholeBook(ctx, book, "page");
     for (const row of rows) {
       const at = tokenPlace(row.key);
       if (at) row.key = pages[at.place] ?? "";
@@ -284,8 +291,9 @@ export async function periodPartAsText(ctx: { db: QueryCtx["db"] }, part: Doc<"s
 }
 
 /**
- * The period the background reads judge "lately" by — the keep rule, Your
- * pages' clicks, competing pages: the rolling Last 3 months, which always
+ * The period the background reads judge "lately" by — Your pages' clicks,
+ * competing pages (and the keep rule, until it went on 18 November 2026):
+ * the rolling Last 3 months, which always
  * reaches 90 days back (sees-header-and-rolling-dates-plan.md, part two; it
  * was this quarter and last together until the quarters were retired on
  * 2026-10-29).

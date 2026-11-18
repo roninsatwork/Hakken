@@ -210,8 +210,11 @@ describe("collecting the main country and a country kept ready", () => {
     expect(whole.length).toBeGreaterThan(0);
     expect(whole.every(everyCountry)).toBe(true);
     // The pages are every country's, for the main country and the one kept beside it (2026-11-17): Google leaves the
-    // searches it keeps private out of a page's figures whenever a country is named.
-    expect(asks.filter((ask) => ask.dimensions.join("+") === "page").every((ask) => countryOf(ask) === undefined)).toBe(true);
+    // searches it keeps private out of a page's figures whenever a country is named. Only the main country's own pages,
+    // asked once a period for Demand by Classification (2026-11-18), carry its filter.
+    const pageAsks = asks.filter((ask) => ask.dimensions.join("+") === "page");
+    expect(pageAsks.some((ask) => countryOf(ask) === undefined)).toBe(true);
+    expect(pageAsks.every((ask) => countryOf(ask) === undefined || countryOf(ask) === "gbr")).toBe(true);
     // The country kept beside it: every other ask filtered to it, over its whole 90 days, and never a country list inside it.
     const kept = asks.filter((ask) => countryOf(ask) === "moz");
     expect(kept.every((ask) => !ask.dimensions.includes("country"))).toBe(true);
@@ -336,27 +339,142 @@ describe("reading the home countries", () => {
     expect(asks.filter((ask) => ask.dimensions.includes("country")).every((ask) => countryOf(ask) === undefined)).toBe(true);
   });
 
-  test("a page's live figures are every country's: the page list, a page's days and its devices; the searches beside them stay the main country's", async () => {
+  test("a list of pages not redone yet is every country's when asked live; the searches beside it stay the main country's", async () => {
     const { t, siteId, reader } = await setup(["gbr"]);
     const asks = fakeGoogle(figures());
     await collect(t);
     asks.length = 0;
     const thirty = { siteId, searchType: "web" as const, from: "2026-08-28", to: NEWEST };
 
+    // Shown but not clicked and the rest read every country's pages until they're redone (`EVERY_COUNTRY_LISTS`).
     const list = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, dimension: "page" });
     // Every country's pages: the one only Mozambique was shown too.
     expect(list.ok && list.rows.flat().map((one) => one.key).sort()).toEqual(["https://acme-shop.test/", "https://acme-shop.test/ai/"]);
-    const page = { ...thirty, dimension: "page" as const, key: "https://acme-shop.test/" };
-    expect((await reader.action(api.searchConsoleLists.searchConsoleKeySplits, page)).ok).toBe(true);
-    expect((await reader.action(api.searchConsoleLists.searchConsoleKeySeries, page)).ok).toBe(true);
-
-    const namesPage = (ask: Ask) => ask.dimensionFilterGroups?.some((group) => group.filters.some((filter) => filter.dimension === "page")) ?? false;
-    const ofPages = asks.filter((ask) => ask.dimensions.join("+") === "page" || namesPage(ask));
-    expect(ofPages.length).toBeGreaterThan(0);
-    expect(ofPages.every((ask) => countryOf(ask) === undefined)).toBe(true);
+    const pages = asks.filter((ask) => ask.dimensions.join("+") === "page");
+    expect(pages.length).toBeGreaterThan(0);
+    expect(pages.every((ask) => countryOf(ask) === undefined)).toBe(true);
     const searches = asks.filter((ask) => ask.dimensions.join("+") === "query+page");
     expect(searches.length).toBeGreaterThan(0);
     expect(searches.every((ask) => countryOf(ask) === "gbr")).toBe(true);
+  });
+
+  test("Pages follows the country: its live list, a page's days and its devices are the main country's, a page's countries every country's (18 November 2026)", async () => {
+    const { t, siteId, reader } = await setup(["gbr"]);
+    const asks = fakeGoogle(figures());
+    await collect(t);
+    asks.length = 0;
+    const thirty = { siteId, searchType: "web" as const, from: "2026-08-28", to: NEWEST };
+
+    const list = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, dimension: "page", inCountry: true });
+    // The United Kingdom's own pages: never the one only Mozambique was shown, and each with its keywords from its searches.
+    expect(list.ok && list.rows.flat().map((one) => [one.key, one.clicks, one.count, one.top])).toEqual([["https://acme-shop.test/", 8, 2, "plumber leeds"]]);
+    const page = { ...thirty, dimension: "page" as const, key: "https://acme-shop.test/" };
+    const splits = await reader.action(api.searchConsoleLists.searchConsoleKeySplits, page);
+    expect(splits.ok && splits.devices.map((one) => [one.key, one.clicks])).toEqual([["MOBILE", 6], ["DESKTOP", 2]]);
+    // A row's clicks and its own screen's are the same country's.
+    expect(await reader.action(api.searchConsoleLists.searchConsoleKeySeries, page)).toMatchObject({ ok: true, totals: { clicks: 8 } });
+
+    const namesPage = (ask: Ask) => ask.dimensionFilterGroups?.some((group) => group.filters.some((filter) => filter.dimension === "page")) ?? false;
+    const ofPages = asks.filter((ask) => (ask.dimensions.join("+") === "page" || namesPage(ask)) && !ask.dimensions.includes("country"));
+    expect(ofPages.length).toBeGreaterThan(0);
+    expect(ofPages.every((ask) => countryOf(ask) === "gbr")).toBe(true);
+    // Where a page's clicks came from by country is every country's, as on Countries and devices.
+    const byCountry = asks.filter((ask) => ask.dimensions.join("+") === "country");
+    expect(byCountry).toHaveLength(1);
+    expect(countryOf(byCountry[0])).toBeUndefined();
+  });
+
+  test("Pages asked live without each page's keywords: Google's pairs aren't asked, and the download asks them apart, the same keywords and top one (speed fixes, 18 November 2026)", async () => {
+    const { t, siteId, reader } = await setup(["gbr"]);
+    const asks = fakeGoogle(figures());
+    await collect(t);
+    asks.length = 0;
+    const thirty = { siteId, searchType: "web" as const, from: "2026-08-28", to: NEWEST };
+    const pairsAsked = () => asks.filter((ask) => ask.dimensions.join("+") === "query+page");
+
+    const apart = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, dimension: "page", inCountry: true, keywordsApart: true });
+    expect(apart.ok && apart.keywordsApart).toBe(true);
+    expect(apart.ok && apart.rows.flat().map((one) => [one.key, one.clicks, one.count, one.top])).toEqual([["https://acme-shop.test/", 8, null, null]]);
+    expect(pairsAsked()).toEqual([]);
+    // The figures are the same as with the keywords beside them.
+    const whole = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, dimension: "page", inCountry: true });
+    expect(whole.ok && whole.keywordsApart).toBeUndefined();
+    expect(whole.ok && apart.ok && whole.summary).toEqual(apart.ok && apart.summary);
+    expect(whole.ok && whole.rows.flat().map((one) => [one.key, one.clicks, one.impressions, one.position])).toEqual(apart.ok && apart.rows.flat().map((one) => [one.key, one.clicks, one.impressions, one.position]));
+    // A list of pages never asks for the pairs of the dates before: no list of pages reads them.
+    expect(pairsAsked().length).toBeGreaterThan(0);
+    expect(pairsAsked().every((ask) => ask.startDate === thirty.from)).toBe(true);
+
+    asks.length = 0;
+    const keywords = await reader.action(api.searchConsoleLiveAsks.searchConsoleLivePageKeywords, thirty);
+    expect(keywords.ok && keywords.pages.flat()).toEqual([{ key: "https://acme-shop.test/", count: 2, top: "plumber leeds" }]);
+    // The country's own searches, as the list's, both of Google's pages asked at once.
+    expect(pairsAsked().map((ask) => [countryOf(ask), ask.startRow])).toEqual([["gbr", 0], ["gbr", 25_000]]);
+    // Another company's reader is told the website isn't connected, and Google isn't asked.
+    asks.length = 0;
+    const rival = t.withIdentity({ subject: await t.run(async (ctx) => await ctx.db.insert("users", {
+      name: "Rival", email: "rival@rival.test", role: "USER", companyId: await ctx.db.insert("companies", { name: "Rival", createdAt: 1 }), createdAt: 1,
+    })) });
+    expect(await rival.action(api.searchConsoleLiveAsks.searchConsoleLivePageKeywords, thirty)).toEqual({ ok: false, problem: "NOT_CONNECTED" });
+    expect(asks).toEqual([]);
+  });
+
+  test("Countries and devices keep the dates before: each country's and device's clicks then, every country's total and the countries clicked; a ticked country's days are its own (2026-11-18)", async () => {
+    const { t, siteId, connectionId, reader } = await setup(["gbr"]);
+    // Nothing held yet, so the run collects the whole 90 days, the same days last month among them.
+    await t.run(async (ctx) => await ctx.db.patch(connectionId, { newestDay: undefined, oldestDay: undefined }));
+    const held = figures();
+    held.all.web["2026-08-20"] = { total: row("", 9, 300), country: [row("gbr", 5), row("moz", 1), row("irl", 3)], device: [row("MOBILE", 6), row("DESKTOP", 3)] };
+    held.gbr.web["2026-08-20"] = { total: row("", 5, 120), device: [row("MOBILE", 4), row("DESKTOP", 1)] };
+    const asks = fakeGoogle(held);
+    await collect(t);
+    asks.length = 0;
+    const month = { siteId, searchType: "web" as const, from: "2026-09-01", to: NEWEST, period: "thisMonth" as const };
+
+    const countries = await reader.query(api.searchConsoleLists.searchConsoleSplitList, { ...month, dimension: "country" });
+    expect(countries.comparable).toBe(true);
+    expect(countries.rows.map((one) => [one.key, one.clicks, one.previousClicks, one.change])).toEqual([["gbr", 8, 5, 3], ["moz", 4, 1, 3]]);
+    // Every country the dates before held, Ireland too, though Google showed the website there no more.
+    expect(countries.summary).toMatchObject({ clicks: 12, beforeTotals: { clicks: 9 }, clickedRows: 2, clickedBefore: 3 });
+    const devices = await reader.query(api.searchConsoleLists.searchConsoleSplitList, { ...month, dimension: "device" });
+    expect(devices.rows.map((one) => [one.key, one.clicks, one.previousClicks])).toEqual([["MOBILE", 6, 4], ["DESKTOP", 2, 1]]);
+    expect(asks).toEqual([]);
+
+    // A country ticked onto the chart: its own days, the dates before in the same ask, filtered to it alone.
+    const series = await reader.action(api.searchConsoleLists.searchConsoleKeySeries, { ...month, dimension: "country", key: "moz" });
+    expect(series).toMatchObject({ ok: true, totals: { clicks: 4 } });
+    expect(asks).toHaveLength(1);
+    expect(asks[0].dimensionFilterGroups?.flatMap((group) => group.filters)).toEqual([{ dimension: "country", operator: "equals", expression: "moz" }]);
+    await expect(reader.action(api.searchConsoleLists.searchConsoleKeySeries, { ...month, dimension: "country", key: "GBR" })).rejects.toThrow("not a country Google names");
+  });
+
+  test("a finished long period settled before countries and devices kept their dates before asks Google for those two lists alone, once (2026-11-18)", async () => {
+    const { t, siteId, connectionId } = await setup(["gbr"]);
+    await t.run(async (ctx) => await ctx.db.patch(connectionId, { newestDay: undefined, oldestDay: undefined }));
+    const asks = fakeGoogle(figures());
+    await collect(t);
+    // Last month is August; what it is set against, July, is past the 60 days kept: asked of Google, and settled.
+    const july = (list: string) => t.run(async (ctx) => (await ctx.db.query("searchConsolePeriods").withIndex("by_hold_country_type_list_period", (q) => q
+      .eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list as "country").eq("period", "lastMonth").eq("which", "BEFORE")).collect()));
+    const kept = [...(await july("country")), ...(await july("device"))];
+    expect(kept.map((part) => [part.list, part.from, part.to])).toEqual([["country", "2026-07-01", "2026-07-31"], ["device", "2026-07-01", "2026-07-31"]]);
+    // As a build before 18 November left it: July's pages and searches kept, its countries and devices not.
+    await t.run(async (ctx) => {
+      for (const part of kept) await ctx.db.delete(part._id);
+    });
+    asks.length = 0;
+    const connection = (await connectionOf(t, siteId))!;
+    const token = await t.mutation(internal.searchConsoleSettling.startSettle, { connectionId, parts: 1 });
+    await t.action(internal.searchConsoleSettle.settlePart, {
+      connectionId, holdId: siteId, token, searchType: "web", newest: connection.newestDay!, oldest: connection.oldestDay!, onlyLong: true, stage: "NINETY",
+    });
+    await finishScheduled(t);
+
+    expect((await july("country"))[0]).toMatchObject({ from: "2026-07-01", to: "2026-07-31" });
+    expect((await july("device"))[0]).toMatchObject({ from: "2026-07-01", to: "2026-07-31" });
+    // July's pages and searches stay as they were: only its countries and devices are asked for, once each.
+    const ofJuly = asks.filter((ask) => ask.startDate === "2026-07-01" && ask.endDate === "2026-07-31").map((ask) => ask.dimensions.join("+")).sort();
+    expect(ofJuly).toEqual(["country", "device"]);
   });
 
   test("a country kept ready before its first collection is on its way; one not kept says so", async () => {
@@ -387,6 +505,112 @@ describe("reading the home countries", () => {
     await expect(reader.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "xyz", page: 1, rows: 25 })).rejects.toThrow("not a country Google names");
     await expect(reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, country: "GBR" })).rejects.toThrow("not a country Google names");
     expect(asks).toEqual([]);
+  });
+});
+
+/**
+ * Demand by Classification (search-console-demand-by-classification-way-2-plan-2026-11-18.md): its figures follow the
+ * country menu, so it reads the main home country's own pages, Google's country filter on, kept by the collector for each
+ * period and its dates before (`countryPage`). Another country is asked of Google when it's chosen.
+ */
+describe("Demand by Classification: the home country's own pages (2026-11-18)", () => {
+  test("the collector keeps the main country's own pages for each period and its dates before; the read sorts them by Classification and asks Google nothing; another country asks it twice", async () => {
+    const { t, siteId, connectionId, reader } = await setup(["gbr", "moz"]);
+    // Nothing held yet, so the run collects the whole 90 days.
+    await t.run(async (ctx) => await ctx.db.patch(connectionId, { newestDay: undefined, oldestDay: undefined }));
+    const held = figures();
+    // Google ties 5 of the United Kingdom's 8 clicks to a page: the other 3 are searches it keeps private.
+    held.gbr.web[NEWEST] = { ...held.gbr.web[NEWEST], page: [row("https://acme-shop.test/", 5)] };
+    held.gbr.web["2026-08-20"] = { total: row("", 5, 120), page: [row("https://acme-shop.test/boilers/", 3)] };
+    held.all.web["2026-08-20"] = { total: row("", 5, 120), page: [row("https://acme-shop.test/boilers/", 3)] };
+    const boilers = await t.run(async (ctx) => {
+      const id = await ctx.db.insert("pageClassifications", { companyWebsiteId: siteId, name: "Boilers", type: "SERVICE", createdAt: 1, updatedAt: 1 });
+      await ctx.db.insert("pageClassificationLines", { companyWebsiteId: siteId, classificationId: id, kind: "CONTAINS", value: "/boilers/", createdAt: 1 });
+      const ai = await ctx.db.insert("pageClassifications", { companyWebsiteId: siteId, name: "AI", type: "SERVICE", createdAt: 1, updatedAt: 1 });
+      await ctx.db.insert("pageClassificationLines", { companyWebsiteId: siteId, classificationId: ai, kind: "CONTAINS", value: "/ai/", createdAt: 1 });
+      return { id, ai };
+    });
+    const asks = fakeGoogle(held);
+    await collect(t);
+
+    // Asked of Google with the main country's filter, never with the country kept beside it: those are asked when chosen.
+    const ofPages = asks.filter((ask) => ask.dimensions.join("+") === "page");
+    expect(ofPages.some((ask) => countryOf(ask) === "gbr" && ask.startDate === "2026-09-01" && ask.endDate === NEWEST)).toBe(true);
+    expect(ofPages.some((ask) => countryOf(ask) === "moz")).toBe(false);
+    const main = await keptOf(t, siteId, undefined);
+    const kept = (which: string) => main.periods.find((part) => part.list === "countryPage" && part.period === "thisMonth" && part.which === which);
+    expect(kept("NOW")).toMatchObject({ from: "2026-09-01", to: NEWEST, keys: ["https://acme-shop.test/"], clicks: [5] });
+    expect(kept("BEFORE")).toMatchObject({ from: "2026-08-01", to: "2026-08-26", clicks: [5] });
+    expect((await keptOf(t, siteId, "moz")).periods.some((part) => part.list === "countryPage")).toBe(false);
+
+    asks.length = 0;
+    const month = { siteId, from: "2026-09-01", to: NEWEST, period: "thisMonth" as const };
+    const demand = await reader.query(api.searchConsoleDemand.searchConsoleDemand, month);
+    expect(demand).toMatchObject({ live: false, from: "2026-09-01", to: NEWEST, comparable: true });
+    expect(demand.live === false && demand.rows).toEqual([
+      // The home page is in no Classification yet; Boilers was shown only the month before.
+      { kind: "NOT_SORTED", clicks: 5, impressions: 50, clicksBefore: 0, impressionsBefore: 0, pages: 1 },
+      { kind: boilers.id, clicks: 0, impressions: 0, clicksBefore: 5, impressionsBefore: 50, pages: 0 },
+    ]);
+    // An address naming the main country by its code reads the same; other dates and another country are asked of Google.
+    expect(await reader.query(api.searchConsoleDemand.searchConsoleDemand, { ...month, country: "gbr" })).toEqual(demand);
+    expect(await reader.query(api.searchConsoleDemand.searchConsoleDemand, { siteId, from: "2026-09-02", to: NEWEST })).toEqual({ live: true });
+    expect(await reader.query(api.searchConsoleDemand.searchConsoleDemand, { ...month, country: "moz" })).toEqual({ live: true });
+    expect(asks).toEqual([]);
+
+    // Mozambique: its pages for the dates and the dates before, one ask each, its filter on.
+    const live = await reader.action(api.searchConsoleDemand.searchConsoleLiveDemand, { ...month, country: "moz" });
+    expect(live).toEqual({ ok: true, from: "2026-09-01", to: NEWEST, comparable: true, rows: [{ kind: boilers.ai, clicks: 4, impressions: 40, clicksBefore: 0, impressionsBefore: 0, pages: 1 }] });
+    // Asked side by side, so in either order.
+    expect(asks.map((ask) => [ask.dimensions.join("+"), countryOf(ask), ask.startDate, ask.endDate]).sort()).toEqual([
+      ["page", "moz", "2026-08-01", "2026-08-26"],
+      ["page", "moz", "2026-09-01", NEWEST],
+    ]);
+    // Another company's reader is refused.
+    const rival = t.withIdentity({ subject: await t.run(async (ctx) => await ctx.db.insert("users", {
+      name: "Rival", email: "rival@rival.test", role: "USER", companyId: await ctx.db.insert("companies", { name: "Rival", createdAt: 1 }), createdAt: 1,
+    })) });
+    await expect(rival.query(api.searchConsoleDemand.searchConsoleDemand, month)).rejects.toThrow("not one your company holds");
+    expect(await rival.action(api.searchConsoleDemand.searchConsoleLiveDemand, month)).toEqual({ ok: false, problem: "NOT_CONNECTED" });
+  });
+});
+
+/**
+ * Pages (search-console-pages-way-1-plan-2026-11-17.md, "Follows the country menu — 18 November 2026"): its list reads the
+ * same kept pages as Demand by Classification (`countryPage`), each with its keywords and top one from the country's own
+ * searches, for its download. Another country, another kind of result, or other dates are asked of Google with the
+ * country's filter (`searchConsoleLiveList`, `inCountry`).
+ */
+describe("Pages: the home country's own pages (2026-11-18)", () => {
+  test("Pages reads the main country's kept pages with their keywords and asks Google nothing; another country, News and other dates are asked of it", async () => {
+    const { t, siteId, connectionId, reader } = await setup(["gbr", "moz"]);
+    await t.run(async (ctx) => await ctx.db.patch(connectionId, { newestDay: undefined, oldestDay: undefined }));
+    const held = figures();
+    // Google ties 5 of the United Kingdom's 8 clicks to a page: the other 3 are searches it keeps private.
+    held.gbr.web[NEWEST] = { ...held.gbr.web[NEWEST], page: [row("https://acme-shop.test/", 5)] };
+    const asks = fakeGoogle(held);
+    await collect(t);
+    asks.length = 0;
+
+    const dates = { siteId, searchType: "web" as const, dimension: "page" as const, from: "2026-09-01", to: NEWEST, period: "thisMonth" as const };
+    const month = { ...dates, page: 1, rows: 25 };
+    const pages = await reader.query(api.searchConsoleLists.searchConsoleListPage, { ...month, inCountry: true });
+    expect(pages).toMatchObject({ live: false, preparing: false, from: "2026-09-01", to: NEWEST, comparable: true, summary: { clicks: 5 } });
+    expect(pages.rows.map((one) => [one.key, one.clicks, one.count, one.top])).toEqual([["https://acme-shop.test/", 5, 2, "plumber leeds"]]);
+    // The download the same: its keywords and top one beside each page.
+    const file = await reader.action(api.searchConsoleLists.exportSearchConsoleList, {
+      ...dates, inCountry: true, headers: ["Page", "Clicks", "Keywords", "Top keyword"], fields: ["key", "clicks", "count", "top"],
+    });
+    expect(file.csv.split("\n")).toEqual(["Page,Clicks,Keywords,Top keyword", "https://acme-shop.test/,5,2,plumber leeds"]);
+    // The screens not redone yet still read every country's pages.
+    const every = await reader.query(api.searchConsoleLists.searchConsoleListPage, month);
+    expect(every.rows.map((one) => [one.key, one.clicks])).toEqual([["https://acme-shop.test/", 8], ["https://acme-shop.test/ai/", 4]]);
+    expect(asks).toEqual([]);
+    // The main country by its code reads the same; a country kept beside it, News and other dates are asked of Google.
+    expect((await reader.query(api.searchConsoleLists.searchConsoleListPage, { ...month, inCountry: true, country: "gbr" })).rows).toEqual(pages.rows);
+    for (const other of [{ country: "moz" }, { searchType: "news" as const }, { from: "2026-09-02", period: undefined }]) {
+      expect(await reader.query(api.searchConsoleLists.searchConsoleListPage, { ...month, inCountry: true, ...other })).toMatchObject({ live: true, rows: [] });
+    }
   });
 });
 

@@ -53,7 +53,9 @@ export const SHORT_NAME = 28;
  * Console's Pages chart (`shortPageName`) and its eye's movers say pages so.
  */
 export function shortTitle(name: string): string {
-  const bare = name.split(/ \| | - /)[0].trim() || name.trim();
+  // Any space beside the bar or dash: More Handles' titles carry a non-breaking one ("Door Handles |\u00a0More Handles"),
+  // which the chart and the eye said whole until 18 November 2026. En and em dashes split it too.
+  const bare = name.split(/\s+[|\u2013\u2014-]\s+/)[0].trim() || name.trim();
   if (bare.length <= SHORT_NAME) return bare;
   const cut = bare.slice(0, SHORT_NAME + 1);
   const at = cut.lastIndexOf(" ");

@@ -118,14 +118,15 @@ export const ASSISTANT_CHART_HANDLERS: Record<string, (input: ToolHandlerExecuti
     const range = rangeOf(input.args, resolved.newestDay);
     if ("problem" in range) return { ok: false, problem: range.problem };
 
-    // The days before are drawn only where Search Console's history reaches.
+    // The days before are drawn only where Search Console's history reaches. A page's are the main home country's, as
+    // Search Console's Pages the chart links to shows them (`targetDaysInternal`).
     const heldFrom = resolved.oldestDay;
     const beforeHeld = !heldFrom || range.beforeTo >= heldFrom;
     const [now, before] = await Promise.all([
-      input.ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, { companyId: input.companyId, target: resolved.target, from: range.from, to: range.to }),
+      input.ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, { companyId: input.companyId, target: resolved.target, from: range.from, to: range.to, countries: "HOME" }),
       beforeHeld
         ? input.ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, {
-            companyId: input.companyId, target: resolved.target, from: heldFrom && range.beforeFrom < heldFrom ? heldFrom : range.beforeFrom, to: range.beforeTo,
+            companyId: input.companyId, target: resolved.target, from: heldFrom && range.beforeFrom < heldFrom ? heldFrom : range.beforeFrom, to: range.beforeTo, countries: "HOME",
           })
         : Promise.resolve({ ok: true as const, days: [] }),
     ]);

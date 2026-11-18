@@ -91,6 +91,38 @@ describe("asking for figures", () => {
     expect(bodies).toHaveLength(2);
   });
 
+  test("together: both pages asked at once, the same rows in the same order (speed fixes, 18 November 2026)", async () => {
+    const started: number[] = [];
+    let answerFirst: () => void = () => undefined;
+    const first = new Promise<void>((resolve) => {
+      answerFirst = resolve;
+    });
+    vi.stubGlobal("fetch", vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { startRow: number };
+      started.push(body.startRow);
+      // The first page waits until the second has been asked: they are on their way together.
+      if (body.startRow === 0) await first;
+      else answerFirst();
+      return Response.json({ rows: body.startRow === 0 ? rows(GOOGLE_PAGE_ROWS) : rows(3).map((row) => ({ ...row, keys: ["after"] })) });
+    }));
+    const answer = await queryAnalytics("token", "sc-domain:acme-shop.test", {
+      startDate: "2026-09-20", endDate: "2026-09-20", type: "web", dimensions: ["query", "page"],
+    }, { together: true });
+    expect(started).toEqual([0, GOOGLE_PAGE_ROWS]);
+    expect(answer.ok && answer.rows.length).toBe(GOOGLE_PAGE_ROWS + 3);
+    expect(answer.ok && answer.rows.at(-1)?.keys).toEqual(["after"]);
+    expect(answer.ok && answer.requests).toBe(2);
+  });
+
+  test("together: a first page that holds every row is the answer, the second's answer left unread", async () => {
+    const bodies = stubAnswers((body) => (body.startRow === 0 ? Response.json({ rows: rows(40) }) : new Response("", { status: 503 })));
+    const answer = await queryAnalytics("token", "sc-domain:acme-shop.test", {
+      startDate: "2026-09-20", endDate: "2026-09-20", type: "web", dimensions: ["query", "page"],
+    }, { together: true });
+    expect(bodies.map((body) => body.startRow)).toEqual([0, GOOGLE_PAGE_ROWS]);
+    expect(answer.ok && answer.rows.length).toBe(40);
+  });
+
   test("names the property in the address, encoded", async () => {
     const urls: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {

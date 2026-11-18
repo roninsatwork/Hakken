@@ -264,6 +264,9 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   siteSitemapParts: LATEST,
   holdPages: LATEST,
   moneyPageChecks: LATEST,
+  // Search Console's page checks: a row a page, written over; and a row a day of counts, the oldest past 90 days going.
+  pageIndexChecks: LATEST,
+  pageIndexDays: cleared("90 days", "searchConsolePageChecks/clearOldDays"),
   pageClassifications: RECORD,
   classificationTypes: RECORD,
   // A row a chain and website, written over by each run (collection-reliability-plan.md, RR1).

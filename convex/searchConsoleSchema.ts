@@ -119,8 +119,11 @@ export const periodListValidator = v.union(
   v.literal("country"),
   v.literal("device"),
   v.literal("appearance"),
+  // The main home country's own pages, Google's country filter on, for Demand by Classification (18 November 2026,
+  // search-console-demand-by-classification-way-2-plan-2026-11-18.md): `page` is every country's since 17 November.
+  v.literal("countryPage"),
 );
-export type SearchConsolePeriodList = "query" | "pair" | "pairByPage" | "competing" | "page" | "country" | "device" | "appearance";
+export type SearchConsolePeriodList = "query" | "pair" | "pairByPage" | "competing" | "page" | "country" | "device" | "appearance" | "countryPage";
 
 /**
  * The ready-made periods (plan §14.3, item 4): the date menu's seven calendar
@@ -267,6 +270,12 @@ export const searchConsoleTables = {
      */
     /** When a screen last asked for the 90 days and twelve months to be caught up (`searchConsoleCatchUp.ts`). */
     catchUpAt: v.optional(v.number()),
+    /**
+     * The searches a long period's memory guard let go (`MOST_PAIRS_HELD`), one entry for each settle stage that
+     * reached it (`searchConsoleSettle.ts`, a kind of result and country's 3 and 6 months or 12 months): the website's
+     * Search Console screens say so until that stage's next build fits (2026-11-18).
+     */
+    searchesLetGo: v.optional(v.array(v.object({ stage: v.string(), searches: v.number(), at: v.number() }))),
     settling: v.optional(v.object({
       token: v.number(),
       parts: v.number(),

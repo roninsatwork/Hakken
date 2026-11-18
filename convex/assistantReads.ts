@@ -234,7 +234,8 @@ export const searchConsoleInternal = internalQuery({
     const link = `/app/search-console/${hold._id}${args.page ? "/pages" : ""}`;
 
     if (args.page) {
-      const list = await readList(ctx, hold._id, { searchType: "web", dimension: "page", from, to, period, q: args.page });
+      // The country's own pages, as Search Console's Pages shows them since 18 November 2026 (`inCountry`).
+      const list = await readList(ctx, hold._id, { searchType: "web", dimension: "page", from, to, period, q: args.page, inCountry: true });
       const rows = list.rows.slice(0, 5).map((row) => ({
         page: row.key,
         clicks: row.clicks,
@@ -249,7 +250,8 @@ export const searchConsoleInternal = internalQuery({
         from,
         to,
         pagesMatching: rows,
-        note: list.preparing ? "Search Console's figures are still being added up for these days." : undefined,
+        note: list.preparing ? "Search Console's figures are still being added up for these days."
+          : list.live ? "The home country's pages for these dates aren't added up yet: open the Pages screen to see them." : undefined,
         link,
       };
     }

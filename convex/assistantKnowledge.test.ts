@@ -4,7 +4,7 @@ import { readTicket } from "../services/voice-relay/protocol.mjs";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_EMBEDDING_MODEL_ID } from "./aiModelService";
-import { REALTIME_VOICE_STYLE } from "./assistantKnowledge";
+import { COMPANY_ANSWER_STYLE, REALTIME_VOICE_STYLE } from "./assistantKnowledge";
 import schema from "./schema";
 
 /**
@@ -217,10 +217,29 @@ describe("one brain, many doors", () => {
       expect(told).toContain("We only cover West Yorkshire.");
       expect(told).toContain("Prefers short answers.");
     }
-    // Word for word what the typed door is told, then the speech style.
-    expect(spoken).toBe(`${typed.systemInstruction}\n\n====================\nSPEAKING OUT LOUD:\n\n${REALTIME_VOICE_STYLE}`);
+    // A typed answer to the company's own people ends with how the screens write (writing-guide.md, 18 November 2026),
+    // and so does an agent's in the same app.
+    const writing = `\n\n====================\nHOW TO WRITE YOUR ANSWER:\n\n${COMPANY_ANSWER_STYLE}`;
+    expect(typed.systemInstruction.endsWith(writing)).toBe(true);
+    expect(agent.systemInstruction.endsWith(writing)).toBe(true);
+    // Word for word what the typed door is told before that, then the speech style.
+    expect(spoken).toBe(`${typed.systemInstruction.slice(0, -writing.length)}\n\n====================\nSPEAKING OUT LOUD:\n\n${REALTIME_VOICE_STYLE}`);
     // The agent's own part sits inside the same instructions, not in place of them.
     expect(agent.systemInstruction).toContain("CONFIGURED AGENT BEHAVIOR:\n\nYou help with heating questions.");
+  });
+
+  test("a visitor on the website chat is never told the screens' style, which is for the company's own people", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const seeded = await seedCompany(t);
+    const widgetThreadId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const widgetId = await ctx.db.insert("widgets", { companyId: seeded.companyId, agentId: seeded.agentId, name: "Website chat", allowedDomains: ["https://onebrain.test"], isActive: true, createdAt: now });
+      return await ctx.db.insert("threads", { companyId: seeded.companyId, agentId: seeded.agentId, widgetId, title: "Visitor", createdAt: now, updatedAt: now });
+    });
+    await t.action(internal.agentRuntime.runAgentObjective, { threadId: widgetThreadId, agentId: seeded.agentId, content: QUESTION });
+    const told = lastAgentRequest().systemInstruction;
+    expect(told).toContain("Always mention the five-year guarantee.");
+    expect(told).not.toContain("HOW TO WRITE YOUR ANSWER");
   });
 
   test("typed, spoken and agent doors read the same documents and memories for the same question", async () => {

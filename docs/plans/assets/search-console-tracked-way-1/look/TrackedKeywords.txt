@@ -1,4 +1,4 @@
-# Search Console → Tracked keywords — the approved look (board "TrackedKeywords" of docs/plans/assets/search-console-redesign/).
+# Search Console → Tracked keywords — the approved look (board "TrackedKeywords" of docs/plans/assets/search-console-tracked-way-1/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Tracked keywords
@@ -8,8 +8,9 @@ figures
   figure: Impressions
   figure: Click-through rate
   figure: Average position
+chart-card: Clicks each day
 search: Search tracked keywords…
-table: Track | Keyword | Clicks | Up or down | Shown | Position
+table: On the chart | Keyword | Clicks | Up or down | Shown | Position | Track
   table-bar
     download: Download all (CSV)
   table-footer

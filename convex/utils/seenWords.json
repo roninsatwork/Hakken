@@ -1327,7 +1327,8 @@
         "connect": "Connect it",
         "seeStrategy": "See the strategy",
         "seeCannibalisation": "See Keyword cannibalisation",
-        "openSearchConsole": "Open Search Console"
+        "openSearchConsole": "Open Search Console",
+        "seeReasonPages": "See the pages"
       },
       "keywords": {
         "noKeywords": "Google showed your website for no keywords {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {the last 3 months} last6Months {the last 6 months} other {the last 12 months}}.",
@@ -1462,18 +1463,17 @@
       },
       "services": {
         "noDemand": "Google hasn't shown your pages in these dates.",
-        "shownMore": "Google showed you {a}% more than the days before, and clicks went from {c} to {b}.",
-        "shownFewer": "Google showed you {a}% less than the days before, and clicks went from {c} to {b}.",
-        "bestWorst": "Among your services, interest held best for {text}, {countC, plural, =1 {up} other {down}} {a}%, and fell most for {more}, down {b}%.",
-        "growBest": "Put next quarter's effort into {text}."
+        "topClicks": "{text} got the most clicks. That's {a} in every 100 clicks on your pages."
       },
       "indexing": {
-        "noIndexing": "Your money pages haven't been checked with Google yet: the first weekly check is on its way.",
-        "indexedOf": "Google has indexed {a} of your {b} money pages.",
-        "notIndexed": "{text} isn't indexed, so it can't show in Google's results.",
-        "oldestRead": "The page Google read longest ago is {text}, on {day1}: a change made since isn't in its results yet.",
-        "fixIndexing": "Inspect {text} in Search Console and ask Google to index it.",
-        "askRead": "Ask Google to read {text} again in Search Console."
+        "noChecks": "None of your pages are checked with Google yet.",
+        "allIn": "All {a} pages checked so far are in Google.",
+        "biggest": "{text} is the biggest reason Google gave. That's {a} of the {b} pages not in Google.",
+        "reasonsTied": "Google gave {a} different reasons for the {b} pages not in Google.",
+        "seeReason": "Look at the pages Google gave this reason.",
+        "reasonPages": "Google gave {text} for {a} of your pages.",
+        "reasonClicked": "{a} of them still got clicks.",
+        "reasonNone": "Google hasn't given {text} for any page checked so far."
       }
     }
   },
@@ -2805,7 +2805,8 @@
         "connect": "Collegalo",
         "seeStrategy": "Vedi la strategia",
         "seeCannibalisation": "Vedi la cannibalizzazione delle parole chiave",
-        "openSearchConsole": "Apri Search Console"
+        "openSearchConsole": "Apri Search Console",
+        "seeReasonPages": "Vedi le pagine"
       },
       "keywords": {
         "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {gli ultimi 3 mesi} last6Months {gli ultimi 6 mesi} other {gli ultimi 12 mesi}}.",
@@ -2940,18 +2941,17 @@
       },
       "services": {
         "noDemand": "Google non ha mostrato le tue pagine in queste date.",
-        "shownMore": "Google ti ha mostrato il {a}% in più dei giorni precedenti, e i clic sono passati da {c} a {b}.",
-        "shownFewer": "Google ti ha mostrato il {a}% in meno dei giorni precedenti, e i clic sono passati da {c} a {b}.",
-        "bestWorst": "Tra i tuoi servizi, l'interesse ha tenuto meglio per {text}, {countC, plural, =1 {in crescita del} other {in calo del}} {a}%, ed è sceso di più per {more}, in calo del {b}%.",
-        "growBest": "Metti l'impegno del prossimo trimestre su {text}."
+        "topClicks": "{text} ha ricevuto più clic. Sono {a} su ogni 100 clic sulle tue pagine."
       },
       "indexing": {
-        "noIndexing": "Le tue pagine che portano clienti non sono ancora state controllate con Google: il primo controllo settimanale è in arrivo.",
-        "indexedOf": "Google ha indicizzato {a} delle tue {b} pagine che portano clienti.",
-        "notIndexed": "{text} non è indicizzata, quindi non può comparire nei risultati di Google.",
-        "oldestRead": "La pagina che Google ha letto da più tempo è {text}, il {day1}: una modifica fatta dopo non è ancora nei risultati.",
-        "fixIndexing": "Controlla {text} in Search Console e chiedi a Google di indicizzarla.",
-        "askRead": "Chiedi a Google di rileggere {text} in Search Console."
+        "noChecks": "Nessuna delle tue pagine è ancora controllata con Google.",
+        "allIn": "Tutte le {a} pagine controllate finora sono su Google.",
+        "biggest": "{text} è il motivo più comune dato da Google. Sono {a} delle {b} pagine non su Google.",
+        "reasonsTied": "Google ha dato {a} motivi diversi per le {b} pagine non su Google.",
+        "seeReason": "Guarda le pagine a cui Google ha dato questo motivo.",
+        "reasonPages": "Google ha dato {text} per {a} delle tue pagine.",
+        "reasonClicked": "{a} di queste hanno ricevuto comunque clic.",
+        "reasonNone": "Google non ha dato {text} per nessuna pagina controllata finora."
       }
     }
   }

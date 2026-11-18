@@ -168,7 +168,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
             links={seesLinks}
           />
           <ResultKindSwitch />
-          {/* A page's figures are every country's and its keywords the home country's: the table's line says so. */}
+          {/* A page's figures and its keywords are the country chosen's, as Pages' row is, since 18 November 2026. */}
           {days === undefined ? (
             <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />
           ) : days.totals === null ? (
@@ -190,11 +190,9 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
           <section className="flex flex-col gap-3">
             <div>
               <h2 className="text-[16px] font-semibold text-foreground">{t(dimension === "query" ? "record.pagesFor" : "record.keywordsFor")}</h2>
-              <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-secondary">
-                {dimension === "page" && days?.totals && list.table.named !== null
-                  ? t("record.namedFor", { named: formatNumber(list.table.named), clicks: formatNumber(days.totals.clicks) })
-                  : t(dimension === "query" ? "record.pagesHint" : "record.keywordsHint")}
-              </p>
+              {/* A page's keywords add up to its own clicks, both the country's (More Handles' tubular latch guide in
+                  October: 87 and 87), so no line sets one against the other, as it did while a page counted every country. */}
+              <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-secondary">{t(dimension === "query" ? "record.pagesHint" : "record.keywordsHint")}</p>
             </div>
             {list.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
             {list.noSearches ? <p className="text-[12px] text-muted">{t("table.noSearches", { kind })}</p> : null}

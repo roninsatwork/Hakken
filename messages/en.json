@@ -10750,6 +10750,11 @@
         "rankedKeywordsTotal": "searches ranked for",
         "top3": "searches in Google's top 3",
         "pages": "pages",
+        "countries": "countries",
+        "deviceClicks": "clicks in the country chosen",
+        "pageClicks": "clicks on your pages",
+        "trackedKeywordClicks": "clicks from the keywords you track",
+        "trackedPageClicks": "clicks on the pages you track",
         "backlinks": "links",
         "referringDomains": "linking websites",
         "linkingWebsites": "linking websites",
@@ -10926,7 +10931,10 @@
         "wentOnPercent": "went on to the next step",
         "timesDone": "times",
         "addedPerHundred": "added to a basket for every 100 visits",
-        "servicesLookedAt": "services people looked at"
+        "servicesLookedAt": "services people looked at",
+        "notIndexedPages": "pages not in Google",
+        "checkedPages": "pages checked",
+        "notIndexedClicks": "clicks on pages not in Google"
       }
     },
     "sidePanel": {
@@ -15523,7 +15531,7 @@
       "trackedKeywords": "Tracked keywords",
       "trackedPages": "Tracked pages",
       "volatility": "Volatility",
-      "services": "Demand by service",
+      "services": "Classifications",
       "indexing": "Indexing"
     },
     "kinds": {
@@ -15603,7 +15611,6 @@
         },
         "note": {
           "searches": "Google hides searches that only a few people make. They still count in your totals.",
-          "classification": "Pages count clicks from every country, not just your home country.",
           "look": "Only results with extra details, like prices or stars."
         },
         "noBefore": "This split has no figure for {when}.",
@@ -15644,7 +15651,7 @@
           "pages": "pages"
         },
         "splitLabel": "Split by",
-        "compareWith": "Compare with",
+        "show": "Show",
         "against": {
           "clicks": "Clicks",
           "pages": "Pages"
@@ -15711,7 +15718,6 @@
       "title": "Pages",
       "description": "Every page Google showed for these dates. Tick pages to draw them on the chart. Click one to see everything about it.",
       "searchPlaceholder": "Search pages…",
-      "everyCountry": "These figures count every country, like your pages. The country you picked had {clicks} clicks on its own.",
       "chart": {
         "tickLabel": "Draw {name} on the chart",
         "tickHeading": "On the chart",
@@ -15725,21 +15731,47 @@
       },
       "eye": {
         "clicked": "Pages that got a click",
-        "half": "Pages that make half your clicks"
+        "half": "Pages that make half your clicks",
+        "yourPages": "Your pages"
       }
     },
     "places": {
       "title": "Countries and devices",
-      "description": "Where the clicks came from, and on what: each country's and device's share of this website's clicks.",
-      "countries": "Countries",
-      "devices": "Devices",
+      "description": "Every country Google showed your website in for these dates. Tick countries to draw them on the chart.",
+      "devicesIn": "Devices in {country}",
       "searchCountries": "Search countries…",
       "searchDevices": "Search devices…",
       "unknownCountry": "Unknown",
+      "clicksBefore": "Clicks in {before}",
       "deviceNames": {
         "DESKTOP": "Desktop",
         "MOBILE": "Mobile",
         "TABLET": "Tablet"
+      },
+      "boxes": {
+        "clicks": "Clicks",
+        "inCountry": "In {country}",
+        "outOf100": "Out of every 100 clicks",
+        "others": "From other countries",
+        "clicked": "Countries with a click",
+        "clickedOf": "{count} of {of}",
+        "more": "▲ {change} more than {before}",
+        "fewer": "▼ {change} fewer than {before}",
+        "same": "The same as {before}",
+        "nothingBefore": "Nothing to compare with {before}"
+      },
+      "chart": {
+        "tickLabel": "Draw {name} on the chart",
+        "tickHeading": "On the chart",
+        "tickLimit": "You can draw up to {most} countries at once.",
+        "hint": "{count, plural, =0 {Tick a country in the table to draw it here.} =1 {The country you've ticked in the table, in {when}.} =2 {The two countries you've ticked in the table, in {when}.} =3 {The three countries you've ticked in the table, in {when}.} =4 {The four countries you've ticked in the table, in {when}.} =5 {The five countries you've ticked in the table, in {when}.} other {The # countries you've ticked in the table, in {when}.}}",
+        "nothingTicked": "Tick a country in the table to draw it here. You can tick up to {most}.",
+        "waiting": "Asking Google for each country's days.",
+        "failed": "Google didn't answer for {names}. Try again in a minute."
+      },
+      "eye": {
+        "others": "Other countries",
+        "deviceIn": "{device} in {country}"
       }
     },
     "table": {
@@ -15774,6 +15806,11 @@
       "topKeyword": "Top keyword",
       "yourPages": "Your pages",
       "asked": "Asked of Google for these dates",
+      "pairsCut": "Google gives at most {most} pairs of a keyword and a page. Some small keywords aren't counted here.",
+      "pairsCutFile": "Google gives at most {most} pairs of a keyword and a page. Some small keywords are left out of the file.",
+      "pagesCut": "Google gives at most {most} pages in {when}. Some pages with few clicks aren't counted here.",
+      "countriesCut": "Google gives at most {most} countries in {when}. Some countries with few clicks aren't counted here.",
+      "devicesCut": "Google gives at most {most} devices in {when}. Some devices with few clicks aren't counted here.",
       "band": "Band",
       "brand": "Brand",
       "dates": "Dates",
@@ -15820,7 +15857,6 @@
       "share": "Share",
       "noClicks": "No clicks in these dates.",
       "keywordsFor": "Keywords that brought people to this page",
-      "namedFor": "Of this page's {clicks} clicks, {named} came from keywords Google names in your home country. The rest came from other countries, or from searches Google keeps private. Click a keyword to see every page of yours it brought people to.",
       "keywordsHint": "Click a keyword to see every page of yours it brought people to.",
       "pagesHint": "Every page of yours Google showed for this keyword. Click one to see everything about it, or to track it.",
       "showAllCountries": "Show all {count} countries",
@@ -15911,7 +15947,8 @@
       "keptTo": "The figures to {day} are still here. Nothing new comes in until it's connected again.",
       "keptNone": "Nothing new comes in until it's connected again.",
       "historyKept": "Totals from {from}, and searches and pages from {day}; longer periods are asked of Google, which keeps 16 months.",
-      "disconnectTitle": "Disconnect Search Console?"
+      "disconnectTitle": "Disconnect Search Console?",
+      "searchesLetGo": "Google sent more searches for the last 3, 6 or 12 months than fit at once. The {count} shown least are left out of those lists, but your totals still count them."
     },
     "keywords": {
       "title": "Keywords",
@@ -16167,20 +16204,27 @@
     "tracked": {
       "keywords": {
         "title": "Tracked keywords",
-        "description": "The keywords you track, and how each did in these dates against the days before. Click a keyword on Keywords to track it. Untick one here to stop tracking it.",
+        "description": "The keywords you track, and how each did in these dates. Tick keywords to draw them on the chart. Click one to see everything about it.",
         "searchPlaceholder": "Search tracked keywords…",
-        "empty": "You don't track any keywords yet. Click one on Keywords to track it."
+        "empty": "You don't track any keywords yet. Open one on Keywords and press Track this keyword.",
+        "eye": {
+          "all": "Your tracked keywords",
+          "onChart": "the keywords on the chart",
+          "firstPage": "On Google's first page"
+        }
       },
       "pages": {
         "title": "Tracked pages",
-        "description": "The pages you track, and how each did in these dates against the days before. Click a page on Pages to track it. Untick one here to stop tracking it.",
+        "description": "The pages you track, and how each did in these dates. Tick pages to draw them on the chart. Click one to see everything about it.",
         "searchPlaceholder": "Search tracked pages…",
-        "empty": "You don't track any pages yet. Click one on Pages to track it."
+        "empty": "You don't track any pages yet. Open one on Pages and press Track this page.",
+        "eye": {
+          "all": "Your tracked pages",
+          "onChart": "the pages on the chart"
+        }
       },
-      "figures": {
-        "shown": "Times Google showed them",
-        "ctr": "Clicks for each time shown",
-        "position": "Google's own average"
+      "eye": {
+        "notShown": "Not shown at all"
       }
     },
     "volatility": {
@@ -16219,7 +16263,7 @@
       "weekdays": "On weekdays",
       "recent": "The last 28 days",
       "earlier": "The 28 days before",
-      "others": "The other services",
+      "others": "The other Classifications",
       "beforeIt": "Before it",
       "place": "Place {place}",
       "topThree": "Places 1 to 3",
@@ -16307,7 +16351,8 @@
         "connect": "Connect it",
         "seeStrategy": "See the strategy",
         "seeCannibalisation": "See Keyword cannibalisation",
-        "openSearchConsole": "Open Search Console"
+        "openSearchConsole": "Open Search Console",
+        "seeReasonPages": "See the pages"
       },
       "keywords": {
         "noKeywords": "Google showed your website for no keywords {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {the last 3 months} last6Months {the last 6 months} other {the last 12 months}}.",
@@ -16442,82 +16487,254 @@
       },
       "services": {
         "noDemand": "Google hasn't shown your pages in these dates.",
-        "shownMore": "Google showed you {a}% more than the days before, and clicks went from {c} to {b}.",
-        "shownFewer": "Google showed you {a}% less than the days before, and clicks went from {c} to {b}.",
-        "bestWorst": "Among your services, interest held best for {text}, {countC, plural, =1 {up} other {down}} {a}%, and fell most for {more}, down {b}%.",
-        "growBest": "Put next quarter's effort into {text}."
+        "topClicks": "{text} got the most clicks. That's {a} in every 100 clicks on your pages."
       },
       "indexing": {
-        "noIndexing": "Your money pages haven't been checked with Google yet: the first weekly check is on its way.",
-        "indexedOf": "Google has indexed {a} of your {b} money pages.",
-        "notIndexed": "{text} isn't indexed, so it can't show in Google's results.",
-        "oldestRead": "The page Google read longest ago is {text}, on {day1}: a change made since isn't in its results yet.",
-        "fixIndexing": "Inspect {text} in Search Console and ask Google to index it.",
-        "askRead": "Ask Google to read {text} again in Search Console."
+        "noChecks": "None of your pages are checked with Google yet.",
+        "allIn": "All {a} pages checked so far are in Google.",
+        "biggest": "{text} is the biggest reason Google gave. That's {a} of the {b} pages not in Google.",
+        "reasonsTied": "Google gave {a} different reasons for the {b} pages not in Google.",
+        "seeReason": "Look at the pages Google gave this reason.",
+        "reasonPages": "Google gave {text} for {a} of your pages.",
+        "reasonClicked": "{a} of them still got clicks.",
+        "reasonNone": "Google hasn't given {text} for any page checked so far."
       }
     },
     "everyCountry": {
       "pages": "Pages count clicks from every country, not just your home country. Google only includes the searches it keeps private when no country is chosen."
     },
     "services": {
-      "title": "Demand by service",
-      "description": "How often Google showed you for each of your services {period} against {before}, and what buyers clicked.",
-      "readyMade": "Demand by service shows once Google has sent some of the period's days.",
-      "search": "Find a service",
-      "tableTitle": "{count, plural, one {# service} other {# services}} · {name} against {before}",
+      "title": "Classifications",
+      "description": "How often Google showed each of your Classifications, and the clicks they got.",
+      "search": "Find a Classification…",
       "download": "Download CSV",
-      "noMatch": "No service matches",
       "empty": "Google hasn't shown your pages in these dates.",
-      "guides": "Guides and articles",
-      "other": "Everything else",
-      "notSorted": "Unclassified",
-      "seeInsights": "See the Insights findings about demand",
+      "unclassifiedHover": "Pages not in a Classification yet",
+      "squaresHint": "The {noun} on your pages in {when}. That's {count} {noun}. Each square is 1 in every 100.",
+      "boxes": {
+        "more": "▲ {change} more than {before}",
+        "fewer": "▼ {change} fewer than {before}",
+        "higher": "▲ {change} points higher than {before}",
+        "lower": "▼ {change} points lower than {before}",
+        "better": "▲ {change} places better than {before}",
+        "worse": "▼ {change} places worse than {before}",
+        "same": "No change since {before}",
+        "nothingBefore": "Nothing to compare with {before}",
+        "tooOld": "Google keeps 16 months, so there's nothing to compare with."
+      },
+      "show": {
+        "label": "Show",
+        "all": "Every Classification",
+        "more": "More clicks",
+        "fewer": "Fewer clicks"
+      },
       "columns": {
-        "service": "Service",
-        "shown": "Times shown",
-        "change": "Change",
-        "clicks": "Clicks",
-        "clicksBefore": "Clicks before"
+        "category": "Category",
+        "categoryTitle": "Classification",
+        "shownUpTitle": "Impressions, up or down since {before}",
+        "clicksUpTitle": "Clicks, up or down since {before}",
+        "pagesTitle": "Pages Google showed in {when}"
       },
-      "chart": {
-        "title": "How often Google showed you, by service",
-        "hint": "{name} against {before}.",
-        "before": "The days before",
-        "now": "The last days"
-      },
-      "home": "Home page"
+      "csv": {
+        "shownBefore": "Impressions in {before}",
+        "clicksBefore": "Clicks in {before}"
+      }
     },
     "indexing": {
       "title": "Indexing",
-      "description": "Whether Google has indexed each page that brings enquiries, and when it last read it. From Search Console's URL inspection, once a week.",
-      "of": "{a} of {b}",
-      "search": "Find a page",
-      "tableTitle": "{count, plural, one {# page} other {# pages}} · Your money pages",
-      "download": "Download CSV",
-      "noMatch": "No page matches",
-      "empty": "Your money pages are checked with Google once a week. The first check is on its way.",
-      "indexed": "Indexed",
-      "notIndexed": "Not indexed",
-      "notAsked": "Not asked yet",
-      "unknown": "Google didn't say",
-      "otherCanonical": "Google shows another page in its place",
-      "seeInsights": "See the Insights findings about indexing",
-      "figures": {
-        "indexed": "Money pages indexed",
-        "indexedDetail": "as Google says today",
-        "readThisMonth": "Read by Google this month",
-        "readThisMonthDetail": "in the 30 days before the check",
+      "description": "Which of your pages are in Google, and why some aren't.",
+      "boxes": {
         "notIndexed": "Not indexed",
-        "noneMissing": "none",
-        "checked": "Checked",
-        "checkedOn": "once a week; last on {day}",
-        "notYet": "the first check is on its way"
-      },
-      "columns": {
-        "page": "Page",
+        "reasons": "{count, plural, one {Google gave # reason. It's in the table below.} other {Google gave # reasons. They're in the table below.}}",
+        "noReasons": "Google showed no problems with the pages checked so far.",
+        "notChecked": "Not checked with Google yet.",
         "indexed": "Indexed",
-        "lastRead": "Last read by Google",
-        "why": "Why not"
+        "indexedDetail": "Google can show these in search.",
+        "biggest": "The biggest reason. That's {pages} of the {all} pages not indexed.",
+        "clicks": "Clicks on pages not indexed",
+        "clicksShare": "About 1 in {oneIn} of the clicks on your pages in {dates}.",
+        "clicksMost": "Most of the clicks on your pages in {dates}.",
+        "clicksNone": "None of the clicks on your pages in {dates}."
+      },
+      "progress": {
+        "checked": "{checked} of your {known} pages are checked so far. The rest are done by about {day}.",
+        "allChecked": "All {known} of your pages are checked. Google is asked about each one again in turn.",
+        "none": "Google hasn't been asked about your pages yet. The first checks start tonight, with the nightly update.",
+        "noneOff": "Google hasn't been asked about your pages yet. The first checks start once they're turned on for this website.",
+        "fullReport": "Full report in Search Console"
+      },
+      "chart": {
+        "title": "Pages not indexed each day",
+        "hint": "The reasons in the table below, day by day, since the checks began on {day}.",
+        "hintNone": "The reasons in the table below, day by day, once the checks begin.",
+        "show": "Show",
+        "every": "Every reason",
+        "nothingTicked": "Tick a reason in the Show menu to draw it here.",
+        "figure": "Pages",
+        "day": "Day",
+        "empty": "Nothing to show yet."
+      },
+      "table": {
+        "title": "Why pages aren't indexed",
+        "search": "Search reasons…",
+        "reason": "Reason",
+        "source": "Source",
+        "pages": "Pages",
+        "clicks": "Clicks",
+        "clicksHover": "Clicks in {dates}",
+        "shown": "Shown",
+        "impressions": "Impressions",
+        "crawled": "Crawled",
+        "lastCrawled": "Last crawled",
+        "download": "Download all (CSV)",
+        "noMatch": "Nothing matches that search.",
+        "empty": "No reasons to show yet."
+      },
+      "sources": {
+        "website": "Website",
+        "google": "Google systems"
+      },
+      "reasons": {
+        "serverError": {
+          "words": "Server error (5xx)",
+          "short": "5xx",
+          "means": "Your website broke when Google asked for these pages."
+        },
+        "redirectError": {
+          "words": "Redirect error",
+          "short": "Redirect error",
+          "means": "These links send people round in a loop, or to a dead end."
+        },
+        "robots": {
+          "words": "Blocked by robots.txt",
+          "short": "robots.txt",
+          "means": "Your website tells Google not to visit these pages."
+        },
+        "noindex": {
+          "words": "Excluded by ‘noindex’ tag",
+          "short": "Noindex",
+          "means": "These pages tell Google not to show them."
+        },
+        "soft404": {
+          "words": "Soft 404",
+          "short": "Soft 404",
+          "means": "These pages are there, but Google thinks they look empty."
+        },
+        "unauthorized": {
+          "words": "Blocked due to unauthorized request (401)",
+          "short": "401",
+          "means": "Google needs to sign in to see these pages."
+        },
+        "notFound": {
+          "words": "Not found (404)",
+          "short": "404",
+          "means": "These pages have gone. People who click them see an error."
+        },
+        "forbidden": {
+          "words": "Blocked due to access forbidden (403)",
+          "short": "403",
+          "means": "Your website won't let Google see these pages."
+        },
+        "other4xx": {
+          "words": "Blocked due to other 4xx issue",
+          "short": "4xx",
+          "means": "Your website said no when Google asked for these pages."
+        },
+        "removed": {
+          "words": "Blocked by page removal tool",
+          "short": "Removed",
+          "means": "Someone asked Google to hide these pages for a while."
+        },
+        "alternate": {
+          "words": "Alternate page with proper canonical tag",
+          "short": "Alternate",
+          "means": "These pages point Google to a main page. That's as it should be."
+        },
+        "redirect": {
+          "words": "Page with redirect",
+          "short": "Redirect",
+          "means": "These old links send people on to another page. Google shows that page instead."
+        },
+        "duplicate": {
+          "words": "Duplicate without user-selected canonical",
+          "short": "Duplicate",
+          "means": "These pages copy another, and don't say which is the main one."
+        },
+        "googleChose": {
+          "words": "Duplicate, Google chose different canonical than user",
+          "short": "Google's pick",
+          "means": "You picked a main page, but Google picked a different one."
+        },
+        "crawled": {
+          "words": "Crawled - currently not indexed",
+          "short": "Crawled",
+          "means": "Google visited these pages, but chose not to show them yet."
+        },
+        "discovered": {
+          "words": "Discovered - currently not indexed",
+          "short": "Discovered",
+          "means": "Google knows about these pages, but hasn't visited them yet."
+        },
+        "unknown": {
+          "words": "URL is unknown to Google",
+          "short": "Unknown",
+          "means": "Google has no record of these pages."
+        }
+      },
+      "reason": {
+        "back": "Back to Indexing",
+        "boxes": {
+          "pages": "Pages",
+          "pagesDetail": "Out of the {checked} pages checked so far.",
+          "lastShown": "Last shown",
+          "lastShownDetail": "Not shown in search since {day}.",
+          "neverShown": "Google didn't show them in search.",
+          "stillClicked": "Clicks they still got",
+          "stillClickedDetail": "In {dates}, from people who saw them in search.",
+          "sitemap": "In your sitemap",
+          "sitemapStill": "Your sitemap still asks Google to show them.",
+          "sitemapAsks": "Your sitemap asks Google to show them.",
+          "sitemapNone": "Your sitemap doesn't list any of them.",
+          "clicks": "Clicks",
+          "lastVisited": "Last visited",
+          "lastVisitedDetail": "Google hasn't been back since.",
+          "neverVisited": "Google hasn't been to them.",
+          "picked": "Google picked another page",
+          "pickedDetail": "Google shows that page in their place.",
+          "inGoogle": "Go to a page in Google",
+          "inGoogleRest": "{count, plural, one {The other one goes to a page not checked yet.} other {The other # go to pages not checked yet.}}",
+          "inGoogleAll": "Each of them goes to a page in Google.",
+          "stillShown": "Still shown in {month}",
+          "stillShownDetail": "{count, plural, one {The other one was not shown in {month}.} other {The other # were not shown in {month}.}}",
+          "linked": "Linked from your pages",
+          "linkedDetail": "Links from your own pages help Google find them."
+        },
+        "chart": {
+          "impressions": "Impressions each day",
+          "clicks": "Clicks each day",
+          "hint": "{count, plural, one {How often Google showed this page each day.} other {How often Google showed these pages each day.}}",
+          "from": "Each day is kept from {day}.",
+          "show": "Show",
+          "showImpressions": "Impressions",
+          "showClicks": "Clicks",
+          "day": "Day",
+          "empty": "Nothing to show for these dates."
+        },
+        "table": {
+          "title": "Examples",
+          "search": "Search pages…",
+          "page": "Page",
+          "main": "Main page",
+          "mainHover": "The page Google shows in its place",
+          "lastShown": "Last shown",
+          "lastShownHover": "The last day Google showed it in search",
+          "days": "Days",
+          "daysHover": "Days Google showed it, out of the {days} since {day}",
+          "daysOf": "{days} of {of}",
+          "home": "Home page",
+          "empty": "None of the {checked} pages checked so far has this answer.",
+          "noMatch": "Nothing matches that search."
+        }
       }
     }
   },

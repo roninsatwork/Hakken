@@ -22,6 +22,8 @@ export const GOOGLE_PAGE_ROWS = 25_000;
 
 /** Google gives at most 50,000 rows a day for each kind of result; asking past this finds nothing more. */
 const MOST_ROWS = 50_000;
+/** The most rows Google gives one ask (`MOST_ROWS`): a list this long may be cut, and its screens say so (18 November 2026). */
+export const GOOGLE_MOST_ROWS = MOST_ROWS;
 
 /** The permission levels that can read a property's figures. An unverified user cannot. */
 const READERS = new Set(["siteOwner", "siteFullUser", "siteRestrictedUser"]);
@@ -173,34 +175,44 @@ type Ask = {
 /**
  * Every row Google has for one ask, paged by 25,000 up to its 50,000 a day.
  * Fresh figures included (`dataState: "all"`): the last days are fetched
- * again each day until they settle.
+ * again each day until they settle. `together` asks for the two pages at
+ * once, for an answer a person waits on that is often longer than one page:
+ * a month of More Handles' keywords and pages was 50,000 rows, two asks of
+ * 2.7 seconds one after the other (speed fixes, 18 November 2026). The second
+ * is one request more when the first holds every row, and the answer is the
+ * same either way.
  */
 export async function queryAnalytics(
   accessToken: string,
   property: string,
   ask: Ask,
+  how: { together?: boolean } = {},
 ): Promise<{ ok: true; rows: AnalyticsRow[]; requests: number } | GoogleFailure> {
   const url = `${API}/sites/${encodeURIComponent(property)}/searchAnalytics/query`;
+  const askPage = async (startRow: number) => await call(url, accessToken, { ...ask, dataState: "all", rowLimit: GOOGLE_PAGE_ROWS, startRow });
+  const rowsOf = (json: unknown) => ((json as { rows?: AnalyticsRow[] }).rows ?? []).map((row) => ({
+    keys: row.keys ?? [],
+    clicks: row.clicks ?? 0,
+    impressions: row.impressions ?? 0,
+    ctr: row.ctr ?? 0,
+    position: row.position ?? 0,
+  }));
   const rows: AnalyticsRow[] = [];
   let requests = 0;
   for (let startRow = 0; startRow < MOST_ROWS; startRow += GOOGLE_PAGE_ROWS) {
-    const answer = await call(url, accessToken, {
-      ...ask,
-      dataState: "all",
-      rowLimit: GOOGLE_PAGE_ROWS,
-      startRow,
-    });
-    requests += 1;
+    const both = how.together && startRow + GOOGLE_PAGE_ROWS < MOST_ROWS;
+    const [answer, next] = await Promise.all([askPage(startRow), both ? askPage(startRow + GOOGLE_PAGE_ROWS) : null]);
+    requests += both ? 2 : 1;
     if (!answer.ok) return answer;
-    const page = ((answer.json as { rows?: AnalyticsRow[] }).rows ?? []).map((row) => ({
-      keys: row.keys ?? [],
-      clicks: row.clicks ?? 0,
-      impressions: row.impressions ?? 0,
-      ctr: row.ctr ?? 0,
-      position: row.position ?? 0,
-    }));
+    const page = rowsOf(answer.json);
     rows.push(...page);
     if (page.length < GOOGLE_PAGE_ROWS) break;
+    if (!next) continue;
+    if (!next.ok) return next;
+    const after = rowsOf(next.json);
+    rows.push(...after);
+    startRow += GOOGLE_PAGE_ROWS;
+    if (after.length < GOOGLE_PAGE_ROWS) break;
   }
   return { ok: true, rows, requests };
 }

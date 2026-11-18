@@ -115,6 +115,26 @@ describe("whether a website's lists have been added up", () => {
   });
 });
 
+describe("searches a long period's memory guard let go (`MOST_PAIRS_HELD`, 18 November 2026)", () => {
+  test("each stage that let searches go is noted, the most shown, and taken off once that stage's build fits again", async () => {
+    const { t, connectionId } = await setup();
+    const note = (stage: string, searches: number) => t.mutation(internal.searchConsoleSettling.noteSearchesLetGo, { connectionId, stage, searches });
+    const held = async () => (await t.run(async (ctx) => await ctx.db.get(connectionId)))?.searchesLetGo?.map((entry) => `${entry.stage} ${entry.searches}`) ?? null;
+    // A build that fitted notes nothing.
+    await note("web||YEAR", 0);
+    expect(await held()).toBeNull();
+    await note("web||YEAR", 9_000);
+    await note("web||NINETY", 2_000);
+    expect(await held()).toEqual(["web||YEAR 9000", "web||NINETY 2000"]);
+    // The next 12 months' build let more go; then the 3 and 6 months' fitted.
+    await note("web||YEAR", 11_000);
+    await note("web||NINETY", 0);
+    expect(await held()).toEqual(["web||YEAR 11000"]);
+    await note("web||YEAR", 0);
+    expect(await held()).toBeNull();
+  });
+});
+
 describe("a settle that died", () => {
   test("is no longer taken as going once it is older than any chain takes, so it never blocks the next (2026-10-15)", () => {
     const now = Date.parse("2026-10-15T15:00:00Z");

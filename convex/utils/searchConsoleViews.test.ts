@@ -12,6 +12,7 @@ import {
   pagesByKeyword,
   shapeRows,
   summarise,
+  trackedListOf,
   withGone,
   withSectionsInPages,
   withTracked,
@@ -262,6 +263,41 @@ describe("Tracked keywords and Tracked pages (drawn 2026-10-03)", () => {
     expect(summarise(listed, listed, null, { rules, brandWords: null })).toMatchObject({ rows: 3, clicks: 0, impressions: 0, previousClicks: null, position: null });
   });
 
+  test("each row keeps its impressions in the days before, nought when Google didn't show it then, none without those days (2026-11-18)", () => {
+    const listed = applyView("tracked", rows(), { rules });
+    expect(listed.map((entry) => [entry.key, entry.previousImpressions])).toEqual([["ai agency", 1200], ["gone quiet", 70], ["never shown", 0]]);
+    expect(shapeRows([row("a", 1, 100, 2)], null, { tracked: new Set(), brandWords: null })[0].previousImpressions).toBeNull();
+  });
+
+  test("a tracked list's own figures, over every row it tracks: the days before, movers, places, the first page (2026-11-18)", () => {
+    const now = [row("door handles", 118, 40000, 13.1), row("art deco", 34, 1800, 4.9), row("cupboard", 19, 3300, 13), row("kitchen", 14, 3800, 10.1), row("tiny", 1, 5, 2)];
+    const was = [row("door handles", 12, 30000, 15.8), row("art deco", 24, 1500, 5.4), row("cupboard", 63, 3000, 7.7), row("kitchen", 9, 2900, 19.7), row("tiny", 0, 4, 30)];
+    const keys = new Set([...now.map((entry) => entry.key), "never shown"]);
+    const listed = applyView("tracked", shapeRows(withTracked(now, keys), was, { tracked: keys, brandWords: null }), { rules });
+    const tracked = trackedListOf(listed, true);
+    // The days before, from each row's own: 108 clicks, 37,404 impressions, Google's place weighted by them.
+    expect(tracked.before).toMatchObject({ clicks: 108, impressions: 37404 });
+    expect(tracked.before?.position).toBeCloseTo((15.8 * 30000 + 5.4 * 1500 + 7.7 * 3000 + 19.7 * 2900 + 30 * 4) / 37404);
+    // The most clicks gained, where the days before are a fair base (12 is under a third of 118, so door handles isn't it).
+    expect(tracked.movers?.up).toMatchObject({ key: "art deco", clicks: 34, previousClicks: 24 });
+    expect(tracked.movers?.down).toMatchObject({ key: "cupboard", clicks: 19, previousClicks: 63 });
+    // Places: shown ten times or more in both, so "tiny", from 30 to 2 on a handful of showings, isn't one.
+    expect(tracked.places?.up).toMatchObject({ key: "kitchen", previousPosition: 19.7 });
+    expect(tracked.places?.down).toMatchObject({ key: "cupboard", previousPosition: 7.7 });
+    // On the first page: art deco, cupboard before; art deco and tiny now. Cupboard left it, tiny came onto it.
+    expect(tracked.firstPage).toMatchObject({ now: 2, before: 2, came: 1, left: 1, cameTop: { key: "tiny" }, leftTop: { key: "cupboard" } });
+    expect(tracked.busiest).toMatchObject({ key: "door handles", clicks: 118 });
+    // Shown 500 times or more, the fewest clicks for each time shown: door handles, 118 for 40,000.
+    expect(tracked.quietest).toMatchObject({ key: "door handles", clicks: 118, impressions: 40000 });
+    expect(tracked.notShown).toBe(1);
+    // Without the days before, nothing about them is claimed.
+    const alone = trackedListOf(applyView("tracked", shapeRows(withTracked(now, keys), null, { tracked: keys, brandWords: null }), { rules }), false);
+    expect(alone).toMatchObject({ before: null, movers: null, places: null, firstPage: { now: 2, before: null, came: null, left: null }, notShown: 1 });
+    // The read works it out for a tracked list, and only then.
+    expect(summarise(listed, listed, was, { rules, brandWords: null, trackedList: true }).trackedList).toEqual(tracked);
+    expect(summarise(listed, listed, was, { rules, brandWords: null })).not.toHaveProperty("trackedList");
+  });
+
   test("Wins and losses: a keyword gone since the days before moved no places", () => {
     const gone = shapeRows(withGone([], [row("gone", 40, 400, 6)]), [row("gone", 40, 400, 6)], { tracked: new Set(), brandWords: null });
     expect(gone[0]).toMatchObject({ change: -40, previousPosition: 6, positionChange: null });
@@ -355,5 +391,24 @@ describe("a list of pages' own figures (search-console-pages-way-1-plan-2026-11-
     expect(halfOf([76, 10, 10, 4])).toBe(1);
     expect(halfOf([25, 25, 25, 25])).toBe(2);
     expect(halfOf([])).toBeNull();
+  });
+});
+
+// Performance said Cupboard Handles had 574 clicks in September where Classifications said 595 (18 November 2026): the span
+// before's clicks were added up over the pages listed now, so a page that left the list after September lost its clicks.
+describe("a list of pages' Classifications, against the span before", () => {
+  test("each Classification's clicks before add up over the whole span before, pages gone since included", () => {
+    const kindOfPage = (page: string) => (page.includes("/handles/") ? "HANDLES" : "OTHER");
+    const now = [row("https://shop.test/handles/a", 10, 100, 4), row("https://shop.test/blog/b", 5, 80, 6)];
+    // "/handles/gone" had 7 clicks before and none now: it isn't in the list now.
+    const before = [row("https://shop.test/handles/a", 8, 90, 5), row("https://shop.test/handles/gone", 7, 60, 8), row("https://shop.test/blog/b", 4, 70, 6)];
+    const listed = shapeRows(now, before, { tracked: new Set(), brandWords: null }).map((one) => ({ ...one, kind: kindOfPage(one.key) }));
+    const summary = summarise(listed, listed, before, { rules, brandWords: null, pageList: true, kindOfPage });
+    const handles = summary.kinds.find((kind) => kind.kind === "HANDLES");
+    expect(handles).toMatchObject({ clicks: 10, previousClicks: 15, rows: 1 });
+    expect(summary.kinds.reduce((sum, kind) => sum + (kind.previousClicks ?? 0), 0)).toBe(19);
+    // Without the Classification of any page, it stays the listed pages' own clicks before.
+    const listedOnly = summarise(listed, listed, before, { rules, brandWords: null, pageList: true });
+    expect(listedOnly.kinds.find((kind) => kind.kind === "HANDLES")).toMatchObject({ previousClicks: 8 });
   });
 });

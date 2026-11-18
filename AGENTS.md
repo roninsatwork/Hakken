@@ -471,6 +471,29 @@ it cannot be weak or poor"). A page's eye is done only when all of these hold:
   a piece that guesses, is fixed in the shared checker (`seesFrom`,
   `judgeLeftOff`), never page by page.
 
+## Words On Screens And Boards
+
+**Read [docs/developer/writing-guide.md](docs/developer/writing-guide.md)
+before writing any word Anthony or a client reads** (Anthony, 2026-11-18,
+after asking for the same style yet again: "why do I have to ask every day",
+then "how do we stop that for other agents"). That's screens, drawings,
+canvas notes, emails, Ask Hakken's replies and your replies to him. The
+standard is the screens redone with him, and the guide lists them.
+
+- **The checks refuse what a machine can catch.** `npm run check:words`,
+  inside `check:guards`, fails a client line in `messages/en.json` with a
+  month left unnamed ("the month before"), a colon or a dash joining two
+  ideas, or Hakken talking about itself. `npm run check:drawing` holds every
+  board to the same rules, plus a sentence said twice on one board and a
+  "Compare with" menu that isn't a period. Run it on the canvas's
+  `canvas.json` too: it checks the notes.
+- **The frozen list may shrink, never grow.** Lines already at fault the day
+  it came in are in `scripts/word-style-allowlist.json`. Adding an entry is
+  not the fix.
+- **Read every string yourself before handing anything back, whoever drew
+  it.** A helper's "the check passes" is not that read. The checks can't tell
+  whether a line sounds like a person talking.
+
 ## Drawing And Building Screens
 
 **Read [docs/developer/drawing-guide.md](docs/developer/drawing-guide.md)
@@ -581,7 +604,9 @@ drifted from the app: "We cannot go through this with every agent").
   measures long words and long sentences, so passing doesn't mean the words are
   right. How a screen should sound comes from the screens redone with Anthony:
   short plain lines about people and Google. None of their 238 sentences says
-  Hakken.
+  Hakken. The rest of the style is in
+  [docs/developer/writing-guide.md](docs/developer/writing-guide.md), and
+  `npm run check:words` holds the parts a machine can check.
 - Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing `HakkenModal` patterns.
 - **A pop-up is only for a yes or a no** (Anthony, 2026-10-01, said before and
   forgotten): confirming a delete, discarding changes, approving. Anything with

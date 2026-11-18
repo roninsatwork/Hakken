@@ -259,6 +259,27 @@ describe("Keywords", () => {
     expect(new URLSearchParams(String(nav.replace.mock.calls.at(-1)?.[0]).split("?")[1]).get("sort")).toBe("position");
   });
 
+  it("says when a long period had more searches than fit, and how many were left out, never in silence (18 November 2026)", () => {
+    at("/app/search-console/site_1/keywords");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": status({}, { searchesLetGo: 12500 }),
+      "searchConsoleLists:searchConsoleListPage": LIST,
+      "searchConsoleTracking:searchConsoleTracking": TRACKING,
+    });
+    render(<SearchConsoleSearchesPage />);
+    expect(screen.getByText("searchConsole.connection.searchesLetGo 12,500")).toBeInTheDocument();
+    cleanup();
+    // Every search fits: nothing said.
+    at("/app/search-console/site_1/keywords");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": status(),
+      "searchConsoleLists:searchConsoleListPage": LIST,
+      "searchConsoleTracking:searchConsoleTracking": TRACKING,
+    });
+    render(<SearchConsoleSearchesPage />);
+    expect(screen.queryByText(/searchConsole\.connection\.searchesLetGo/)).toBeNull();
+  });
+
   it("says a newly connected website's lists are on their way", () => {
     at("/app/search-console/site_1/keywords");
     answer({

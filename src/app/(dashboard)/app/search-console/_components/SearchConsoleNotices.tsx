@@ -12,7 +12,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDate } from "@/src/lib/dates";
-import { formatDay } from "../../sites/_components/siteFormat";
+import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { SiteViewSwitch } from "../../sites/_components/SiteViewSwitch";
 import { countryName } from "./countries";
 import { readerLanguage } from "./searchConsoleFormat";
@@ -133,9 +133,13 @@ export function SearchConsoleGate({ status, siteId, children }: {
   const t = useTranslations("searchConsole.connection");
   const hrefFor = useSearchConsoleHref(siteId);
   if (hasFigures(status)) {
+    // A long period's searches past what one job can hold, the ones shown least left out (`MOST_PAIRS_HELD`): said on
+    // every screen while it is so, never in silence (2026-11-18).
+    const letGo = status.connection?.searchesLetGo;
     return (
       <>
         <SearchConsoleCatchUp siteId={siteId} newestDay={status.connection?.newestDay} />
+        {letGo ? <Notice tone="warning">{t("searchesLetGo", { count: formatNumber(letGo) })}</Notice> : null}
         {children}
       </>
     );

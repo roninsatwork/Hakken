@@ -20,10 +20,10 @@ import { slotParts } from "./searchConsoleRollups";
 import { encodePagesFromAction } from "./holdPageRefs";
 import { deleteBooks, keywordPlaces } from "./searchConsoleKeywordBooks";
 import { deletePeriodBooks } from "./searchConsolePeriodBooks";
-import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
 import { countriesKeptReady, heldFor, mainConsoleCountry, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
 import { NOTHING_HELD } from "./searchConsoleMainCountry";
 import { noteRegister } from "./searchConsoleSeenDays";
+import { clearPageChecks } from "./searchConsolePageChecks";
 
 /**
  * Collecting a connected site's Search Console figures, and keeping them as
@@ -456,13 +456,6 @@ export async function runStep(
     }
   };
 
-  // Each kind of result's searches kept, read once a step and grown day by day, newest first (`searchConsoleKeep.ts`).
-  const keeps = new Map<SearchType, Promise<Set<string>>>();
-  const keptFor = (type: SearchType) => {
-    const held = keeps.get(type) ?? keptSearchesOf(ctx, state.companyWebsiteId, args.country, type);
-    keeps.set(type, held);
-    return held;
-  };
   // The totals already held for the step's days, to fetch again only the days Google has changed.
   const heldTotals = new Map<string, Figures & { namedClicks?: number }>();
   for (const held of await ctx.runQuery(internal.searchConsoleSync.heldDayTotals, { companyWebsiteId: state.companyWebsiteId, ...country, from: stepFrom, to: args.to })) {
@@ -505,9 +498,8 @@ export async function runStep(
         }
         counts.requests += answer.requests;
         counts.rows += answer.rows.length;
-        const all = fromGoogle(answer.rows, list === "pair");
-        // Only the searches kept (store less round two, D): clicked, tracked, in the top 20, or on two pages or more.
-        const rows = list === "pair" ? keptLines(all, await keptFor(type)) : all;
+        // Every search's lines kept, whatever its figures (Anthony, 18 November 2026; `searchConsoleKeep.ts`).
+        const rows = fromGoogle(answer.rows, list === "pair");
         if (list === "pair") named.set(type, rows.reduce((sum, row) => sum + row.clicks, 0));
         if (list === "pair") for (const row of rows) see(type, "query", row.key, day);
         if (list === "page") for (const row of rows) see(type, "page", row.key, day);
@@ -878,11 +870,13 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
     .withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of seenDays) await ctx.db.delete(row._id);
+  // Its page checks and their days of counts (search-console-indexing-v1-plan-2026-11-18.md): Google's answers for this property.
+  const checksGone = await clearPageChecks(ctx, companyWebsiteId, PURGE_ROWS);
   // Its keyword books go last, once nothing else is left, a few large records a call (collection-reliability-plan.md,
   // RR3): 500 of them, each up to 4,000 keywords, passed a call's 16 MB, and the website stayed "clearing" for good. The
   // page numbers stay: they are the website's, and Google Analytics' lists point to them too (`holdPageRefs.ts`).
   const restGone = lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
-    && seenDays.length < PURGE_ROWS;
+    && seenDays.length < PURGE_ROWS && checksGone;
   return restGone && await deleteBooks(ctx, companyWebsiteId, "ALL", BOOKS_PER_PURGE) && await deletePeriodBooks(ctx, companyWebsiteId, "ALL", BOOKS_PER_PURGE);
 }
 

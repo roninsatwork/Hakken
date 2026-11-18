@@ -744,6 +744,7 @@ from this table because they are navigation/coverage records rather than feature
 | [developer/websites-and-visibility.md](./developer/websites-and-visibility.md) | 1325 | developer |
 | [developer/workflow-automation.md](./developer/workflow-automation.md) | 3736 | developer |
 | [developer/workflow-runtime-internals.md](./developer/workflow-runtime-internals.md) | 4638 | developer |
+| [developer/writing-guide.md](./developer/writing-guide.md) | 1639 | developer |
 | [end-user/administration.md](./end-user/administration.md) | 2389 | end-user |
 | [end-user/agent-operations-and-review.md](./end-user/agent-operations-and-review.md) | 1874 | end-user |
 | [end-user/agent-setup-and-configuration.md](./end-user/agent-setup-and-configuration.md) | 1872 | end-user |

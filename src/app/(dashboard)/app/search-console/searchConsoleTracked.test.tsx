@@ -11,11 +11,11 @@ import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 import { useScreenDay } from "@/src/test/realTime";
 
 /**
- * Tracked keywords and Tracked pages (drawn and approved 2026-10-03): a
- * Tracked group first in the menu, open, each page with its count; each page
- * only the keywords or pages ticked, the four figures for them together, a
- * search box and no chips, unticking taking a row off, and a row opening its
- * own screen with the way back to the tracked list.
+ * Tracked keywords and Tracked pages (drawn and approved 2026-10-03; redone as the canvas's Way 1 on 18 November 2026,
+ * search-console-tracked-way-1-plan-2026-11-18.md): a Tracked group first in the menu, open, each page with its count;
+ * each page only the keywords or pages tracked, the four boxes for them together against the dates before, a chart of the
+ * rows ticked in the table that opens on the three busiest, a search box and no chips, Track at the row's end, unticking
+ * taking a row off, and a row opening its own screen with the way back to the tracked list.
  */
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
@@ -57,15 +57,21 @@ const STATUS = {
 };
 
 const ROW = {
-  key: "ai agency", clicks: 44, impressions: 1564, ctr: 44 / 1564, position: 4.3, previousClicks: 38, change: 6, share: 0.4,
+  key: "ai agency", clicks: 44, impressions: 1564, ctr: 44 / 1564, position: 4.3, previousClicks: 38, previousImpressions: 1400, change: 6, share: 0.4,
   band: "4-10", previousPosition: 3.5, positionChange: -0.8, count: 1, top: "https://acme-shop.test/ai-agency/", tracked: true,
   kind: null, volume: null, estimate: null, brand: false, usualCtr: null, expected: null, topShare: null, next: null, nextShare: null, verdict: null, gap: null,
 };
-const SECOND = { ...ROW, key: "bad websites", clicks: 25, impressions: 1115, ctr: 25 / 1115, position: 6.3, previousClicks: 5, change: 20, previousPosition: 9.1, positionChange: 2.8 };
+const SECOND = { ...ROW, key: "bad websites", clicks: 25, impressions: 1115, ctr: 25 / 1115, position: 6.3, previousClicks: 5, previousImpressions: 600, change: 20, previousPosition: 9.1, positionChange: 2.8 };
 const SUMMARY = {
   rows: 2, of: 2, clicks: 118, impressions: 7603, previousClicks: 99, position: 5.9, tracked: 2, gaining: 2, losing: 0, gained: 26, lost: 0,
   volume: 0, estimate: 0, expected: 0, high: 0, low: 0, pagesInvolved: null, pagesShown: null,
   bands: { "1-3": 0, "4-10": 2, "11-20": 0, "21-50": 0, "51+": 0 }, bandsBefore: null, brand: null, kinds: [],
+  // The tracked rows' own figures in the dates before (`Summary.trackedList`): the boxes are set against these.
+  trackedList: {
+    before: { clicks: 99, impressions: 6000, position: 6.4 },
+    movers: { up: null, down: null }, places: { up: null, down: null },
+    firstPage: { now: 2, before: 2, came: 0, left: 0, cameTop: null, leftTop: null }, busiest: null, notShown: 0,
+  },
 };
 const LIST = {
   rows: [ROW, SECOND], total: 2, page: 1, pages: 1, size: 25, cut: null, preparing: false, current: true, named: 69, listed: 2, comparable: true,
@@ -183,26 +189,27 @@ describe("Tracked keywords", () => {
       dimension: "query", view: "tracked", from: "2026-08-01", to: "2026-08-31", sort: "clicks", direction: "desc",
     });
     expect(screen.getByText("searchConsole.tracked.keywords.title")).toBeInTheDocument();
-    // Clicks with its change on the days before; impressions, click-through rate and position with their notes.
+    // The four boxes Pages shows, for the tracked keywords together, each against the dates before: 118 clicks against 99,
+    // 7,603 impressions against 6,000, a click rate of 1.6% against 1.7%, and place 5.9 against 6.4.
     expect(screen.getByText("118")).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.figures.up 19 common.periods.versus.lastMonth")).toBeInTheDocument();
+    expect(screen.getByText(/^searchConsole\.services\.boxes\.more 19% /)).toBeInTheDocument();
     expect(screen.getByText("7,603")).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.tracked.figures.shown")).toBeInTheDocument();
+    expect(screen.getByText(/^searchConsole\.services\.boxes\.more 27% /)).toBeInTheDocument();
     expect(screen.getByText("1.6%")).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.tracked.figures.ctr")).toBeInTheDocument();
+    expect(screen.getByText(/^searchConsole\.services\.boxes\.lower 0\.1 /)).toBeInTheDocument();
     expect(screen.getByText("5.9")).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.tracked.figures.position")).toBeInTheDocument();
+    expect(screen.getByText(/^searchConsole\.services\.boxes\.better 0\.5 /)).toBeInTheDocument();
 
     expect(screen.getByPlaceholderText("searchConsole.tracked.keywords.searchPlaceholder")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByText(/searchConsole\.track\.count 8 200/)).toBeInTheDocument();
-    // The lean table (AGENTS.md "Tables are lean", 2026-11-17): Track, which unticking is this page for, the keyword
-    // and four figures on one line, the move its own Up or down column. The click rate, Pages and Top page are on the
-    // keyword's own screen.
+    // The lean table (AGENTS.md "Tables are lean", 2026-11-17): the chart's tick box, the keyword and four figures on one
+    // line, the move its own Up or down column, and Track at the row's end, never beside the chart's tick box. The click
+    // rate, Pages and Top page are on the keyword's own screen.
     const headings = screen.getAllByRole("columnheader").map((heading) => heading.textContent ?? "");
-    expect(headings.map((heading) => heading.replace(/\s+/g, ""))).toEqual([
-      "searchConsole.track.column", "searchConsole.table.keyword", "searchConsole.table.clicks",
-      "searchConsole.table.change", "searchConsole.table.shown", "searchConsole.table.position",
+    expect(headings.slice(1).map((heading) => heading.replace(/\s+/g, ""))).toEqual([
+      "searchConsole.table.keyword", "searchConsole.table.clicks",
+      "searchConsole.table.change", "searchConsole.table.shown", "searchConsole.table.position", "searchConsole.track.column",
     ]);
     const first = screen.getByText("ai agency").closest("tr")!;
     expect(first).toHaveTextContent("▲ 6");
@@ -210,18 +217,34 @@ describe("Tracked keywords", () => {
     expect(first).not.toHaveTextContent("/ai-agency/");
     // Every row is tracked here: none is marked as tracked, as drawn.
     expect(first.className).not.toContain("bg-brand/5");
+    // The chart of the rows ticked opens on the three with most clicks, written into the address once.
+    expect(screen.getByText(/searchConsole\.performance\.days\.title/)).toBeInTheDocument();
+    const written = new URLSearchParams(String(nav.replace.mock.calls.at(-1)?.[0] ?? "").split("?")[1]);
+    expect(written.get("plot")).toBe("ai agency\nbad websites");
   });
 
   it("says nothing of the days before when they aren't held", () => {
     at("/app/search-console/site_1/tracked/keywords");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleLists:searchConsoleListPage": { ...LIST, comparable: false, summary: { ...SUMMARY, previousClicks: null } },
+      "searchConsoleLists:searchConsoleListPage": { ...LIST, comparable: false, summary: { ...SUMMARY, previousClicks: null, trackedList: { ...SUMMARY.trackedList, before: null } } },
       "searchConsoleTracking:searchConsoleTracking": TRACKING,
     });
     render(<SearchConsoleTrackedKeywordsPage />);
-    expect(screen.getByText("searchConsole.figures.noBefore")).toBeInTheDocument();
-    expect(screen.queryByText(/searchConsole\.figures\.up/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/^searchConsole\.services\.boxes\.nothingBefore /)).toHaveLength(4);
+    expect(screen.queryByText(/searchConsole\.services\.boxes\.more/)).not.toBeInTheDocument();
+  });
+
+  it("says nothing of the days before when Google showed none of the tracked keywords then, rather than a place of nought", () => {
+    at("/app/search-console/site_1/tracked/keywords");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleLists:searchConsoleListPage": { ...LIST, summary: { ...SUMMARY, previousClicks: 0, trackedList: { ...SUMMARY.trackedList, before: { clicks: 0, impressions: 0, position: null } } } },
+      "searchConsoleTracking:searchConsoleTracking": TRACKING,
+    });
+    render(<SearchConsoleTrackedKeywordsPage />);
+    expect(screen.getAllByText(/^searchConsole\.services\.boxes\.nothingBefore /)).toHaveLength(4);
+    expect(screen.queryByText(/searchConsole\.services\.boxes\.worse/)).not.toBeInTheDocument();
   });
 
   it("says so when nothing is tracked", () => {
@@ -233,6 +256,9 @@ describe("Tracked keywords", () => {
     });
     render(<SearchConsoleTrackedKeywordsPage />);
     expect(screen.getByText("searchConsole.tracked.keywords.empty")).toBeInTheDocument();
+    // Nothing tracked: no boxes of noughts and no chart, only the line that says how to track one.
+    expect(screen.queryByText("searchConsole.figures.clicks")).not.toBeInTheDocument();
+    expect(screen.queryByText(/searchConsole\.performance\.days\.title/)).not.toBeInTheDocument();
   });
 
   it("opens a keyword's own screen, whose way back names Tracked keywords and returns to the list as it was left", () => {
@@ -296,10 +322,11 @@ describe("Tracked keywords", () => {
     expect(await screen.findByText("ai agency")).toBeInTheDocument();
     expect(actions.searchConsoleLiveList).toHaveBeenCalledWith(expect.objectContaining({ dimension: "query", view: "tracked", country: "moz" }));
     expect(screen.queryByText("bad websites")).not.toBeInTheDocument();
-    // The figures are the one row left's: 44 clicks, 38 the days before.
+    // The figures are the one row left's: 44 clicks against 38 the dates before, 1,564 impressions against 1,400.
     expect(screen.getByText("44", { selector: "div" })).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.figures.up 6 common.periods.versus.lastMonth")).toBeInTheDocument();
+    expect(screen.getByText(/^searchConsole\.services\.boxes\.more 16% /)).toBeInTheDocument();
     expect(screen.getByText("1,564", { selector: "div" })).toBeInTheDocument();
+    expect(screen.getByText(/^searchConsole\.services\.boxes\.more 12% /)).toBeInTheDocument();
   });
 });
 
@@ -314,7 +341,9 @@ describe("Tracked pages", () => {
       "searchConsoleTracking:searchConsoleTracking": TRACKING,
     });
     render(<SearchConsoleTrackedPagesPage />);
-    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ dimension: "page", view: "tracked" });
+    // The country's own pages, as Pages counts them since 18 November 2026.
+    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ dimension: "page", view: "tracked", inCountry: true });
+    expect(screen.queryByText("searchConsole.everyCountry.pages")).not.toBeInTheDocument();
     expect(screen.getByText(/searchConsole\.track\.count 6 100/)).toBeInTheDocument();
     const row = screen.getByRole("link", { name: "/ai-agency/" });
     expect(row.getAttribute("href")).toContain("/app/search-console/site_1/pages/page?");

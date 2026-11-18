@@ -445,6 +445,8 @@ export const searchConsoleStatus = tenantQuery({
           v.null(),
           v.object({ outcome: attemptOutcomeValidator, account: orNull(v.string()), at: v.number() }),
         ),
+        /** The most searches one long period's memory guard let go, while one has (`MOST_PAIRS_HELD`): the screens say so. */
+        searchesLetGo: v.optional(v.number()),
       }),
     ),
   })),
@@ -491,6 +493,7 @@ export const searchConsoleStatus = tenantQuery({
           attempt: connection.attempt
             ? { outcome: connection.attempt.outcome, account: connection.attempt.account ?? null, at: connection.attempt.at }
             : null,
+          ...(connection.searchesLetGo?.length ? { searchesLetGo: Math.max(...connection.searchesLetGo.map((entry) => entry.searches)) } : {}),
         }
         : null,
     };

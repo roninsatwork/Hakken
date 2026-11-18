@@ -104,12 +104,17 @@ export function usePerformanceReads() {
     if (top === undefined) return undefined;
     return { rows: top.rows, brand: top.brand, noSearches: top.noSearches === true, failed: false, preparing: top.preparing };
   }, [held, asksGoogle, live.answer, top]);
-  const pages = useSearchConsoleSummaryRead({ dimension: "page" });
+  // The country's own pages, as Pages and Demand by Classification read them: the boxes and the squares count one country
+  // (review fixes, 18 November 2026).
+  const pages = useSearchConsoleSummaryRead({ dimension: "page", inCountry: true });
   const devices = useSearchConsoleSplit(held ? { ...base, dimension: "device" } : null);
   const appearance = useSearchConsoleSplit(held ? { ...base, dimension: "appearance" } : null);
   return {
     keywords,
-    /** Each Classification's pages, clicks, impressions and clicks before: every country's (`EVERY_COUNTRY_LISTS`). */
+    /**
+     * Each Classification's pages, clicks, impressions and clicks before, in the country chosen: they share out only the
+     * clicks Google ties to a page, fewer than the boxes' (Google ties none to the searches it keeps private).
+     */
     kinds: pages.loading ? undefined : (pages.summary?.kinds ?? []),
     devices: devices === undefined ? undefined : (devices?.rows ?? []) as ShortRow[],
     appearance: appearance === undefined ? undefined : (appearance?.rows ?? []) as ShortRow[],
@@ -201,11 +206,12 @@ export function PerformanceDaysCard({ figures, host, heldFrom, exportName }: { f
 
 const SPLITS = ["searches", "device", "classification", "look"] as const;
 type Split = (typeof SPLITS)[number];
-const GRID_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET, CHART_COMPARATOR_GREY];
+/** The squares' colours, the biggest first: Demand by Classification's squares take them too. */
+export const GRID_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET, CHART_COMPARATOR_GREY];
 const DEVICES = ["DESKTOP", "MOBILE", "TABLET"];
 
 /** One part of a split: its clicks and impressions, and its clicks and impressions before where those are kept. */
-type Part = { key: string; name: string; clicks: number; impressions: number; clicksBefore: number | null; impressionsBefore: number | null; pages: number | null };
+export type Part = { key: string; name: string; clicks: number; impressions: number; clicksBefore: number | null; impressionsBefore: number | null; pages: number | null };
 
 /** The names the page says things by, in the reader's words. */
 function useNames() {
@@ -249,8 +255,11 @@ function partsOf(split: Split, reads: PerformanceReads, figures: SiteFigures, na
   return rows?.map((row) => ({ key: row.key, name: split === "device" ? names.device(row.key) : names.look(row.key), clicks: row.clicks, impressions: row.impressions, clicksBefore: null, impressionsBefore: null, pages: null }));
 }
 
-/** The biggest few by name, the rest together as "The other N", so the key stays short. Searches keep their three as they are. */
-function topAndRest(parts: readonly Part[], read: (part: Part) => number, named: number, otherName: (count: number) => string): Part[] {
+/**
+ * The biggest few by name, the rest together as "The other N", so the key stays short. Searches keep their three as they
+ * are. Demand by Classification's squares and bands share it.
+ */
+export function topAndRest<One extends Part>(parts: readonly One[], read: (part: One) => number, named: number, otherName: (count: number) => string): Array<One | Part> {
   const ranked = [...parts].sort((left, right) => read(right) - read(left));
   if (ranked.length <= named + 1) return ranked;
   const rest = ranked.slice(named);
@@ -267,6 +276,7 @@ function topAndRest(parts: readonly Part[], read: (part: Part) => number, named:
 /** Where 100 clicks or impressions came from: brand searches and the ones Google hides, devices, Classifications, rich results. */
 export function PerformanceSquaresCard({ reads, figures, host }: { reads: PerformanceReads; figures: SiteFigures; host: string }) {
   const t = useTranslations("searchConsole.performance.squares");
+  const td = useTranslations("searchConsole.services");
   const tc = useTranslations("searchConsole.chart");
   const [kind] = useResultKind();
   const dates = usePerformanceDates();
@@ -302,8 +312,9 @@ export function PerformanceSquaresCard({ reads, figures, host }: { reads: Perfor
   const noSearches = split === "searches" && reads.keywords?.noSearches === true;
   const failed = split === "searches" && reads.keywords?.failed === true;
   const hint = [
-    t("hint", { noun, when: dates.inNow, count: formatNumber(total) }),
-    ...(split === "device" ? [] : [t(`note.${split}`)]),
+    // A Classification's are the clicks on the country's pages, fewer than the boxes': never "All your clicks", as on Demand.
+    split === "classification" ? td("squaresHint", { noun, when: dates.inNow, count: formatNumber(total) }) : t("hint", { noun, when: dates.inNow, count: formatNumber(total) }),
+    ...(split === "device" || split === "classification" ? [] : [t(`note.${split}`)]),
     ...(compare === "before" && !hasBefore && parts.length > 0 ? [t("noBefore", { when: dates.inBefore })] : []),
   ].join(" ");
   return (
@@ -362,7 +373,7 @@ export function PerformanceBandsCard({ reads, figures, host }: { reads: Performa
       { value: ts("readout.inEvery", { share: oneDecimal(per100(bottoms[at] ?? 0, bottomAll)) }), label: t("readout.ofThose", { noun }) },
     ],
   }));
-  const hint = [t("hint", { noun }), ...(split === "classification" ? [ts("note.classification")] : []), t("press")].join(" ");
+  const hint = [t("hint", { noun }), t("press")].join(" ");
   return (
     <MapCard
       title={t(`title.${bottomKey}`)}
@@ -375,7 +386,8 @@ export function PerformanceBandsCard({ reads, figures, host }: { reads: Performa
       controls={[
         { kind: "select", key: "split", label: t("splitLabel"), value: split, options: BAND_SPLITS.map((value) => ({ value, label: ts(`split.${value}`) })), onChange: (next) => setSplit(next as BandSplit) },
         {
-          kind: "select", key: "against", label: t("compareWith"), value: bottomKey,
+          // "Show", as Demand by Classification's same menu says: "Compare with" is only ever a period (writing-guide.md).
+          kind: "select", key: "against", label: t("show"), value: bottomKey,
           options: (split === "classification" ? (["clicks", "pages"] as const) : (["clicks"] as const)).map((value) => ({ value, label: t(`against.${value}`) })),
           onChange: (next) => setBottom(next as "clicks" | "pages"),
         },

@@ -11,6 +11,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TableBar, type TableNoun } from "@/src/ui/components/screens/TableBar";
 import { TickActions, TickCount, type TableTicks } from "@/src/ui/components/screens/TableTicks";
 import { formatNumber } from "../../sites/_components/siteFormat";
+import { GoogleCutLine } from "./GoogleCutLine";
 import { ResultKindSwitch, SearchConsoleGate, canRetry, liveProblemKey } from "./SearchConsoleNotices";
 import { SearchConsoleChips, SearchConsoleListDownload, type ChipId, type ListRow, type useSearchConsoleList } from "./SearchConsoleTables";
 import { useResultKind } from "./useSearchConsole";
@@ -123,6 +124,9 @@ export function SearchConsoleListScreen({
                 {ticks ? <TickCount ticks={ticks} /> : null}
                 {table.beside}
                 {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}
+                {/* Said once: the pages themselves cut, which leaves their keywords short too, else only the pairs (18 November 2026). */}
+                {list.listCut ? <GoogleCutLine most={list.listCut} noun="pages" />
+                  : list.pairsCut ? <span className="text-[12px] text-secondary">{t("table.pairsCut", { most: formatNumber(list.pairsCut) })}</span> : null}
               </TableBar>
             }
             sort={list.order.tableSort}

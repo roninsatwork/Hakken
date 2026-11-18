@@ -5,6 +5,7 @@ import { bookOfParts, partsToRead, periodFromParts } from "./searchConsolePeriod
 import { BookNames, wholeBook, type BookScope } from "./searchConsolePeriodBooks";
 import { tokenPlace } from "./utils/searchConsoleTerms";
 import { keywordColumnsOf, keywordTable, pairColumnsOf, type ListRows } from "./searchConsoleKeywordTable";
+import { namedTracked } from "./searchConsoleSpans";
 import type { SortKey } from "./searchConsoleSorts";
 import type { Filters, SitesKeyword, Summary, View, ViewContext, ViewRules } from "./utils/searchConsoleViews";
 
@@ -104,6 +105,8 @@ export async function keywordListOf(
       if (moved) movers[way] = { ...moved, key: await names.textOf(moved.key) };
     }
   }
+  // A tracked list's movers and the busiest onto and off the first page, named the same way.
+  if (table.summary.trackedList) table.summary.trackedList = await namedTracked(ctx, companyWebsiteId, table.summary.trackedList, names, false);
   return {
     rows: table.rows,
     cut: table.cut,

@@ -151,6 +151,8 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['admin.agents.details.rules.form.edit.idLabel', 'the same'],
     ['ai.chatLogs.company.widgetSource', '"Widget" is used untranslated in Italian'],
     ['ai.costs.chart.titleUsd', 'a placeholder and a currency code'],
+    ['searchConsole.indexing.reasons.soft404.words', "Google's own name for the reason, which its Italian Search Console uses too"],
+    ['searchConsole.indexing.reasons.soft404.short', 'the same name, short'],
   ]);
 
   const readCatalogue = (name: string) =>

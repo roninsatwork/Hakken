@@ -315,10 +315,50 @@ function searchAnalytics(ask: SearchAsk, size: RehearsalSize): unknown {
  * A call it does not know is refused, saying which, so a rehearsal that
  * reaches one stops and says so rather than going on wrong.
  */
+/** Google's words for a pretend page, and how often each comes: most pages in Google, a few with each problem. */
+const INSPECTED: ReadonlyArray<{ share: number; coverageState: string; verdict: string; crawled: boolean }> = [
+  { share: 80, coverageState: "Submitted and indexed", verdict: "PASS", crawled: true },
+  { share: 6, coverageState: "Crawled - currently not indexed", verdict: "NEUTRAL", crawled: true },
+  { share: 4, coverageState: "Discovered - currently not indexed", verdict: "NEUTRAL", crawled: false },
+  { share: 4, coverageState: "Page with redirect", verdict: "NEUTRAL", crawled: true },
+  { share: 3, coverageState: "Not found (404)", verdict: "NEUTRAL", crawled: true },
+  { share: 3, coverageState: "URL is unknown to Google", verdict: "NEUTRAL", crawled: false },
+];
+
+/** A whole number from a link's letters, the same every time. */
+const textNumber = (text: string) => mix(...Array.from(text, (letter) => letter.charCodeAt(0)));
+
+/**
+ * Google's URL inspection for one pretend page (search-console-indexing-v1-plan-2026-11-18.md), as its answer is
+ * shaped: where the page stands, the day Google last visited it, the page it chose, whether a sitemap lists it, and a
+ * page of the website linking to it. Worked out from the link alone.
+ */
+function inspection(ask: { inspectionUrl?: string; siteUrl?: string }): unknown {
+  const address = ask.inspectionUrl ?? "";
+  const number = textNumber(address);
+  let at = number % 100;
+  const answer = INSPECTED.find((one) => (at -= one.share) < 0) ?? INSPECTED[0];
+  const origin = /^https?:\/\/[^/]+/.exec(address)?.[0] ?? `https://www.${REHEARSAL_HOST}`;
+  const crawledDay = isoDay(Math.floor(Date.now() / DAY_MS) - 1 - (number % 40));
+  return {
+    inspectionResult: {
+      indexStatusResult: {
+        coverageState: answer.coverageState,
+        verdict: answer.verdict,
+        ...(answer.crawled ? { lastCrawlTime: `${crawledDay}T06:00:00Z`, crawledAs: "MOBILE" } : {}),
+        ...(answer.coverageState === "Page with redirect" ? { googleCanonical: `${origin}/` } : answer.crawled ? { googleCanonical: address } : {}),
+        ...(number % 2 === 0 ? { sitemap: [`${origin}/sitemap.xml`] } : {}),
+        ...(number % 3 === 0 ? { referringUrls: [`${origin}/`] } : {}),
+      },
+    },
+  };
+}
+
 export function rehearsalAnswer(url: string, accessToken: string, body: unknown): { ok: true; json: unknown } | { ok: false; reason: "REFUSED"; status: number; detail: string } {
   const size = sizeOf(accessToken);
   if (/analyticsdata\.googleapis\.com\/v1beta\/properties\/[^/:]+:runReport$/.test(url)) return { ok: true, json: report((body ?? {}) as ReportAsk, size) };
   if (/searchconsole\.googleapis\.com\/webmasters\/v3\/sites\/[^/]+\/searchAnalytics\/query$/.test(url)) return { ok: true, json: searchAnalytics(body as SearchAsk, size) };
+  if (/searchconsole\.googleapis\.com\/v1\/urlInspection\/index:inspect$/.test(url)) return { ok: true, json: inspection((body ?? {}) as { inspectionUrl?: string }) };
   if (/searchconsole\.googleapis\.com\/webmasters\/v3\/sites$/.test(url)) {
     return { ok: true, json: { siteEntry: [{ siteUrl: `sc-domain:${REHEARSAL_HOST}`, permissionLevel: "siteOwner" }] } };
   }

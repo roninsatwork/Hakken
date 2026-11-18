@@ -29,6 +29,7 @@ import { adviceTables } from "./adviceSchema";
 import { insightsTables } from "./insightsSchema";
 import { clarityTables } from "./claritySchema";
 import { collectionStepTables } from "./collectionStepsSchema";
+import { pageIndexTables } from "./pageIndexSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -53,6 +54,7 @@ export default defineSchema({
   ...autoSetupTables,
   ...searchConsoleTables,
   ...collectionStepTables,
+  ...pageIndexTables,
   ...googleTables,
   ...googleAnalyticsTables,
   ...bingWebmasterTables,

@@ -322,6 +322,24 @@ export const settleRunOf = internalQuery({
   },
 });
 
+/**
+ * What a long stage's memory guard let go (`MOST_PAIRS_HELD`): its entry set when searches went, taken off when the
+ * stage's build fitted, so the website's Search Console screens say so only while it is true (`searchConsoleStatus`).
+ */
+export const noteSearchesLetGo = internalMutation({
+  args: { connectionId: v.id("searchConsoleConnections"), stage: v.string(), searches: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) return null;
+    const others = (connection.searchesLetGo ?? []).filter((entry) => entry.stage !== args.stage);
+    const entries = args.searches > 0 ? [...others, { stage: args.stage, searches: args.searches, at: Date.now() }] : others;
+    if (entries.length === (connection.searchesLetGo ?? []).length && args.searches === 0) return null;
+    await ctx.db.patch(connection._id, { searchesLetGo: entries.length > 0 ? entries : undefined });
+    return null;
+  },
+});
+
 /** Whether a settle job is already counted: started again by its watch, it goes straight to the settle's ending. */
 export const partCounted = internalQuery({
   args: { connectionId: v.id("searchConsoleConnections"), token: v.number(), part: v.string() },

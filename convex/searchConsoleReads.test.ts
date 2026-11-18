@@ -419,9 +419,9 @@ describe("the tables", () => {
     const twoDays = { ...range, from: "2026-09-25", to: "2026-09-26" };
     expect(await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...twoDays, ...page })).toMatchObject({ live: true, preparing: false, total: 0 });
 
-    const asks: Array<{ startDate: string; endDate: string; dimensions: string[] }> = [];
+    const asks: Array<{ startDate: string; endDate: string; dimensions: string[]; startRow: number }> = [];
     vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const ask = JSON.parse(String(init?.body)) as { startDate: string; endDate: string; dimensions: string[] };
+      const ask = JSON.parse(String(init?.body)) as { startDate: string; endDate: string; dimensions: string[]; startRow: number };
       asks.push(ask);
       const pair = (query: string, page: string, clicks: number, impressions: number, position: number) =>
         ({ keys: [query, page], clicks, impressions, ctr: clicks / impressions, position });
@@ -437,9 +437,13 @@ describe("the tables", () => {
       ["plumber leeds", 8, 3, 6, 2, "https://acme-shop.test/plumbers/"],
       ["boiler repair", 1, 9, 1, 1, "https://acme-shop.test/boilers/"],
     ]);
-    expect(asks.map((ask) => `${ask.startDate} ${ask.endDate} ${ask.dimensions.join("+")}`)).toEqual([
-      "2026-09-25 2026-09-26 query+page",
-      "2026-09-23 2026-09-24 query+page",
+    // Each span's pairs with Google's second page asked at the same time (speed fixes, 18 November 2026): a first page
+    // holding every row is the answer.
+    expect(asks.map((ask) => `${ask.startDate} ${ask.endDate} ${ask.dimensions.join("+")} ${ask.startRow}`).sort()).toEqual([
+      "2026-09-23 2026-09-24 query+page 0",
+      "2026-09-23 2026-09-24 query+page 25000",
+      "2026-09-25 2026-09-26 query+page 0",
+      "2026-09-25 2026-09-26 query+page 25000",
     ]);
   });
 

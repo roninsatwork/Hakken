@@ -76,6 +76,12 @@ export type ListRow = {
   change: number | null;
   /** Its position in the period before, where it had one. */
   previousPosition: number | null;
+  /**
+   * Its impressions in the period before: 0 when Google didn't show it then, null when those days aren't held. A tracked
+   * list's boxes set its impressions, click-through rate and place against the period before from it, and follow an
+   * untick at once (search-console-tracked-way-1-plan-2026-11-18.md).
+   */
+  previousImpressions?: number | null;
   /** Places it rose (positive) or fell on the period before; null without one before. */
   positionChange: number | null;
   /** Its share of every row's clicks. */
@@ -198,6 +204,7 @@ export function shapeRows(
       previousClicks: earlier ? (was?.clicks ?? null) : null,
       change: earlier ? row.clicks - (was?.clicks ?? 0) : null,
       previousPosition,
+      previousImpressions: earlier ? (was?.impressions ?? 0) : null,
       // Not shown now (gone, or tracked and not shown): no position, so no places moved.
       positionChange: previousPosition === null || row.impressions === 0 ? null : previousPosition - position,
       share: total > 0 ? row.clicks / total : 0,
@@ -504,12 +511,114 @@ export type Summary = {
   clickedRows?: number;
   halfRows?: number | null;
   /**
+   * The span before's rows that got a click, null when that span isn't held: Countries and devices' "Countries with a
+   * click" against the dates before (search-console-countries-and-devices-way-1-plan-2026-11-18.md). It counts every
+   * country the span before held, not only those listed now.
+   */
+  clickedBefore?: number | null;
+  /**
    * The pages that gained and lost most clicks over the whole list, each shown in the span before too: Pages' eye, which
    * never reads 25 of 16,283 pages as the whole. Keys as the list keeps them until the read names them (`readList`),
    * with their titles where the website has one. Null without the span before.
    */
   pageMovers?: { up: MovedPage | null; down: MovedPage | null } | null;
+  /** A tracked list's own figures over every row it tracks (`trackedListOf`): Tracked keywords' and Tracked pages' boxes and eye. */
+  trackedList?: TrackedList;
 };
+
+/** A tracked row that moved: its clicks and place now and before, by its key as the list keeps it until the read names it. */
+export type TrackedMove = { key: string; clicks: number; previousClicks: number; position: number | null; previousPosition: number | null; title?: string };
+
+/**
+ * A tracked list's own figures, over every row it tracks and never only the page of them on screen
+ * (search-console-tracked-way-1-plan-2026-11-18.md): what the rows had in the span before, added up from each row's
+ * clicks, impressions and place then, for the four boxes; the rows that gained and lost most clicks; the rows that moved
+ * most places up and down; how many sit on Google's first page now and before, with how many came onto it and left it,
+ * and the busiest of each; the row with the most clicks; the row Google showed often (`TRACKED_QUIET_SHOWN_LEAST` times or
+ * more) that got the fewest clicks for each time shown; and how many Google didn't show at all. `before`, `movers` and `places` are null, and the first
+ * page's before and moves are left out, when the span before isn't held.
+ */
+export type TrackedList = {
+  before: { clicks: number; impressions: number; position: number | null } | null;
+  movers: { up: TrackedMove | null; down: TrackedMove | null } | null;
+  places: { up: TrackedMove | null; down: TrackedMove | null } | null;
+  firstPage: { now: number; before: number | null; came: number | null; left: number | null; cameTop: TrackedMove | null; leftTop: TrackedMove | null };
+  busiest: TrackedMove | null;
+  quietest: (TrackedMove & { impressions: number }) | null;
+  notShown: number;
+};
+
+/** Times shown in each span under this and a row's place is too thin to say it moved: a place read off a handful of showings swings by itself. */
+export const TRACKED_PLACE_SHOWN_LEAST = 10;
+/** Times shown under this and a row's click rate is too thin to call it shown a lot but seldom clicked, as the eye's other rules hold it. */
+export const TRACKED_QUIET_SHOWN_LEAST = 500;
+
+/** A tracked list's figures over every row it tracks (`TrackedList`), worked out on the server (`summarise`) and, for a list asked of Google, again on the page as rows are unticked. */
+export function trackedListOf(rows: readonly ListRow[], beforeHeld: boolean): TrackedList {
+  const onFirstPage = (position: number | null, shown: number) => position !== null && shown > 0 && (bandOf(position) === "1-3" || bandOf(position) === "4-10");
+  const moveOf = (row: ListRow): TrackedMove => ({
+    key: row.key, clicks: row.clicks, previousClicks: row.previousClicks ?? 0,
+    position: row.impressions > 0 ? row.position : null, previousPosition: row.previousPosition,
+  });
+  let clicksBefore = 0;
+  let shownBefore = 0;
+  let placeBefore = 0;
+  let notShown = 0;
+  let up: ListRow | null = null;
+  let down: ListRow | null = null;
+  let rose: ListRow | null = null;
+  let fell: ListRow | null = null;
+  const firstPage: TrackedList["firstPage"] = { now: 0, before: beforeHeld ? 0 : null, came: beforeHeld ? 0 : null, left: beforeHeld ? 0 : null, cameTop: null, leftTop: null };
+  let cameTop: ListRow | null = null;
+  let leftTop: ListRow | null = null;
+  let busiest: ListRow | null = null;
+  let quietest: ListRow | null = null;
+  for (const row of rows) {
+    if (row.impressions === 0) notShown += 1;
+    if (row.clicks > 0 && (!busiest || row.clicks > busiest.clicks)) busiest = row;
+    if (row.impressions >= TRACKED_QUIET_SHOWN_LEAST && (!quietest || row.clicks / row.impressions < quietest.clicks / quietest.impressions)) quietest = row;
+    const shownThen = row.previousImpressions ?? 0;
+    const nowFirst = onFirstPage(row.position, row.impressions);
+    if (nowFirst) firstPage.now += 1;
+    if (!beforeHeld) continue;
+    clicksBefore += row.previousClicks ?? 0;
+    shownBefore += shownThen;
+    if (row.previousPosition !== null) placeBefore += row.previousPosition * shownThen;
+    const thenFirst = onFirstPage(row.previousPosition, shownThen);
+    if (thenFirst) firstPage.before = (firstPage.before ?? 0) + 1;
+    if (nowFirst && !thenFirst) {
+      firstPage.came = (firstPage.came ?? 0) + 1;
+      if (!cameTop || row.clicks > cameTop.clicks) cameTop = row;
+    }
+    if (!nowFirst && thenFirst) {
+      firstPage.left = (firstPage.left ?? 0) + 1;
+      if (!leftTop || (row.previousClicks ?? 0) > (leftTop.previousClicks ?? 0)) leftTop = row;
+    }
+    // Clicks gained and lost, where the span before is a fair base: a third of now's clicks or more, as Pages' movers.
+    const previous = row.previousClicks ?? 0;
+    if (previous > 0 && previous * 3 >= row.clicks) {
+      const change = row.clicks - previous;
+      if (change > 0 && (!up || change > up.clicks - (up.previousClicks ?? 0))) up = row;
+      if (change < 0 && (!down || change < down.clicks - (down.previousClicks ?? 0))) down = row;
+    }
+    // Places moved, where Google showed it enough in both spans for its place to mean something.
+    if (row.positionChange !== null && row.impressions >= TRACKED_PLACE_SHOWN_LEAST && shownThen >= TRACKED_PLACE_SHOWN_LEAST) {
+      if (row.positionChange > 0 && (!rose || row.positionChange > (rose.positionChange ?? 0))) rose = row;
+      if (row.positionChange < 0 && (!fell || row.positionChange < (fell.positionChange ?? 0))) fell = row;
+    }
+  }
+  firstPage.cameTop = cameTop ? moveOf(cameTop) : null;
+  firstPage.leftTop = leftTop ? moveOf(leftTop) : null;
+  return {
+    before: beforeHeld ? { clicks: clicksBefore, impressions: shownBefore, position: shownBefore > 0 ? placeBefore / shownBefore : null } : null,
+    movers: beforeHeld ? { up: up ? moveOf(up) : null, down: down ? moveOf(down) : null } : null,
+    places: beforeHeld ? { up: rose ? moveOf(rose) : null, down: fell ? moveOf(fell) : null } : null,
+    firstPage,
+    busiest: busiest ? moveOf(busiest) : null,
+    quietest: quietest ? { ...moveOf(quietest), impressions: quietest.impressions } : null,
+    notShown,
+  };
+}
 
 /** A page that moved, as `pageMovers` holds it. */
 export type MovedPage = MovedRow & { title?: string };
@@ -632,8 +741,19 @@ export function summarise(
     kindType?: (kind: string) => ClassificationType | null;
     /** A list of pages: each type counts a page once, however many of its sections Google listed (2026-10-04). */
     pageList?: boolean;
+    /**
+     * A list of pages' Classification for any page, for the span before's clicks by Classification: added up over the
+     * whole span before, as Classifications' own read does (`readDemand`), never only over the pages listed now. Counted
+     * over today's pages, Performance said Cupboard Handles had 574 clicks in September where Classifications said 595
+     * (18 November 2026): the clicks of pages that left the list after September went missing.
+     */
+    kindOfPage?: (page: string) => string;
+    /** A short list read whole (countries, devices): its span before's totals and the rows clicked, for Countries and devices' boxes. */
+    splitList?: boolean;
     /** The whole list of searches, every one (the "all" rule): What Hakken sees' own figures over it (`Summary.wholeList`). */
     wholeList?: boolean;
+    /** A tracked list: its own figures over every row it tracks (`Summary.trackedList`). */
+    trackedList?: boolean;
   },
 ): Summary {
   const bands = emptyBands();
@@ -671,8 +791,16 @@ export function summarise(
     }
     entry.clicks += row.clicks;
     entry.impressions += row.impressions;
-    if (entry.previousClicks !== null) entry.previousClicks += row.previousClicks ?? 0;
+    if (entry.previousClicks !== null && !context.kindOfPage) entry.previousClicks += row.previousClicks ?? 0;
     kinds.set(kind, entry);
+  }
+  if (before && context.kindOfPage && context.pageList) {
+    for (const row of before) {
+      const kind = context.kindOfPage(row.key);
+      const entry = kinds.get(kind) ?? { kind, rows: 0, clicks: 0, impressions: 0, previousClicks: 0 };
+      entry.previousClicks = (entry.previousClicks ?? 0) + row.clicks;
+      kinds.set(kind, entry);
+    }
   }
   summary.kinds = [...kinds.values()].sort((left, right) => right.rows - left.rows || right.clicks - left.clicks);
   if (context.kindType) summary.types = countsByType(summary.kinds, context.kindType);
@@ -688,6 +816,12 @@ export function summarise(
     summary.clickedRows = clicked.length;
     summary.halfRows = halfOf(clicked);
     summary.pageMovers = before ? pageMoversOf(listed) : null;
+  }
+  if (context.trackedList) summary.trackedList = trackedListOf(listed, before !== null);
+  if (context.splitList) {
+    summary.beforeTotals = before ? beforeTotalsOf(before) : null;
+    summary.clickedRows = listed.filter((row) => row.clicks > 0).length;
+    summary.clickedBefore = before ? before.filter((row) => row.clicks > 0).length : null;
   }
   if (context.pages) {
     const pages = new Set<string>();

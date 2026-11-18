@@ -6,6 +6,7 @@ import { useAction } from "convex/react";
 import { getFunctionName, type FunctionArgs, type FunctionReference, type FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { SHORT_NAME, shortTitle } from "@/convex/utils/pageNames";
+import { readOnly } from "@/src/lib/leaveWarning";
 import { pageForPath, useSearchConsoleHref } from "./useSearchConsole";
 
 /**
@@ -122,7 +123,8 @@ export function useLiveAsk<Action extends LiveAction>(
     let asked = inFlight.get(flightKey);
     if (!asked) {
       // The ask is the action's own arguments, carried as text so a new object each render asks nothing new.
-      asked = (run as unknown as (args: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>>)(JSON.parse(askKey) as FunctionArgs<Action>)
+      // A read: leaving the page while it's on its way never asks "Leave site?" (`readOnly`).
+      asked = readOnly((run as unknown as (args: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>>)(JSON.parse(askKey) as FunctionArgs<Action>))
         // Our own server failing is not Google being busy: say so, and offer to ask again.
         .catch(() => ({ ok: false, problem: "FAILED" }) as unknown as FunctionReturnType<Action>)
         .finally(() => inFlight.delete(flightKey));
@@ -166,7 +168,7 @@ export function useLiveAsks<Action extends LiveAction>(
       const flightKey = `${actionName}|${key}`;
       let asked = inFlight.get(flightKey);
       if (!asked) {
-        asked = (run as unknown as (args: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>>)(JSON.parse(askKey) as FunctionArgs<Action>)
+        asked = readOnly((run as unknown as (args: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>>)(JSON.parse(askKey) as FunctionArgs<Action>))
           // Our own server failing is not Google being busy: say so, and offer to ask again.
           .catch(() => ({ ok: false, problem: "FAILED" }) as unknown as FunctionReturnType<Action>)
           .finally(() => inFlight.delete(flightKey));

@@ -117,9 +117,19 @@ supports source dimensions, filters and report selection without database
 ownership policy; caller modules establish that policy. A provider cap is
 not evidence that the entire underlying population has been observed.
 
-`searchConsoleKeep.keepsSearch` retains a detailed search when it has clicks,
-its position is at most twenty, or multiple pages appeared. Tracked searches
-also qualify through the surrounding keep logic. The collector derives a
+**Every search's lines are kept** (Anthony, 18 November 2026: "keep every
+search in the kept lists"). From 5 October to 18 November 2026 a keep rule
+(`keepsSearch`, finish-off plan round two, D) dropped a search with no click,
+a position past twenty and one page: about one line in nine, judged day by
+day, so a month's kept keywords never matched Google's live answer for the
+same days. It is gone from the nightly collection (`searchConsoleSync.ts`),
+the long periods (`searchConsoleLongLists.ts`) and the tidy. The days kept
+were asked again for their searches (`searchConsolePageRefetch:refetchPairs`).
+The one limit left is a memory guard, `MOST_PAIRS_HELD` (400,000 searches by
+page in one long period): past it the searches shown least go first, never
+one clicked or tracked, a search let go stays out unless it comes back with
+a click, and the run's log and every Search Console screen say how many
+(`searchesLetGo` on the connection). No website on dev has reached it. The collector derives a
 search's figures from its search/page pairs, while requesting pages and
 website totals separately so rare queries withheld by Google do not erase
 those totals. Never rebuild an exact website total by summing only retained

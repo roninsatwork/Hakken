@@ -10750,6 +10750,11 @@
         "rankedKeywordsTotal": "ricerche posizionate",
         "top3": "ricerche nella top 3 di Google",
         "pages": "pagine",
+        "countries": "paesi",
+        "deviceClicks": "clic nel paese scelto",
+        "pageClicks": "clic sulle tue pagine",
+        "trackedKeywordClicks": "clic dalle parole chiave che monitori",
+        "trackedPageClicks": "clic sulle pagine che monitori",
         "backlinks": "link",
         "referringDomains": "siti che rimandano",
         "linkingWebsites": "siti che rimandano",
@@ -10926,7 +10931,10 @@
         "wentOnPercent": "è andato al passaggio successivo",
         "timesDone": "volte",
         "addedPerHundred": "aggiunte al carrello ogni 100 visite",
-        "servicesLookedAt": "servizi che le persone hanno guardato"
+        "servicesLookedAt": "servizi che le persone hanno guardato",
+        "notIndexedPages": "pagine non su Google",
+        "checkedPages": "pagine controllate",
+        "notIndexedClicks": "clic sulle pagine non su Google"
       }
     },
     "sidePanel": {
@@ -15523,7 +15531,7 @@
       "trackedKeywords": "Parole chiave monitorate",
       "trackedPages": "Pagine monitorate",
       "volatility": "Volatilità",
-      "services": "Domanda per servizio",
+      "services": "Classificazioni",
       "indexing": "Indicizzazione"
     },
     "kinds": {
@@ -15603,7 +15611,6 @@
         },
         "note": {
           "searches": "Google nasconde le ricerche fatte da poche persone. Contano comunque nei tuoi totali.",
-          "classification": "Le pagine contano i clic da ogni paese, non solo dal tuo paese principale.",
           "look": "Solo i risultati con dettagli in più, come prezzi o stelle."
         },
         "noBefore": "Questa suddivisione non ha dati per {when}.",
@@ -15644,7 +15651,7 @@
           "pages": "pagine"
         },
         "splitLabel": "Suddividi per",
-        "compareWith": "Confronta con",
+        "show": "Mostra",
         "against": {
           "clicks": "Clic",
           "pages": "Pagine"
@@ -15711,7 +15718,6 @@
       "title": "Pagine",
       "description": "Ogni pagina che Google ha mostrato in queste date. Spunta le pagine per disegnarle nel grafico. Cliccane una per vedere tutto su di lei.",
       "searchPlaceholder": "Cerca pagine…",
-      "everyCountry": "Queste cifre contano ogni paese, come le tue pagine. Il paese che hai scelto ha avuto {clicks} clic da solo.",
       "chart": {
         "tickLabel": "Disegna {name} nel grafico",
         "tickHeading": "Nel grafico",
@@ -15725,21 +15731,47 @@
       },
       "eye": {
         "clicked": "Pagine che hanno avuto un clic",
-        "half": "Pagine che fanno metà dei tuoi clic"
+        "half": "Pagine che fanno metà dei tuoi clic",
+        "yourPages": "Le tue pagine"
       }
     },
     "places": {
       "title": "Paesi e dispositivi",
-      "description": "Da dove sono arrivati i clic, e su cosa: la quota dei clic di questo sito per ogni paese e dispositivo.",
-      "countries": "Paesi",
-      "devices": "Dispositivi",
+      "description": "Ogni paese in cui Google ha mostrato il tuo sito in queste date. Spunta i paesi per disegnarli nel grafico.",
+      "devicesIn": "Dispositivi · {country}",
       "searchCountries": "Cerca paesi…",
       "searchDevices": "Cerca dispositivi…",
       "unknownCountry": "Sconosciuto",
+      "clicksBefore": "Clic · {before}",
       "deviceNames": {
         "DESKTOP": "Computer",
         "MOBILE": "Cellulare",
         "TABLET": "Tablet"
+      },
+      "boxes": {
+        "clicks": "Clic",
+        "inCountry": "{country}",
+        "outOf100": "Su ogni 100 clic",
+        "others": "Dagli altri paesi",
+        "clicked": "Paesi con un clic",
+        "clickedOf": "{count} su {of}",
+        "more": "▲ {change} in più rispetto a {before}",
+        "fewer": "▼ {change} in meno rispetto a {before}",
+        "same": "Come {before}",
+        "nothingBefore": "Niente da confrontare con {before}"
+      },
+      "chart": {
+        "tickLabel": "Disegna {name} nel grafico",
+        "tickHeading": "Nel grafico",
+        "tickLimit": "Puoi disegnare fino a {most} paesi alla volta.",
+        "hint": "{count, plural, =0 {Spunta un paese nella tabella per disegnarlo qui.} =1 {Il paese che hai spuntato nella tabella: {when}.} other {I # paesi che hai spuntato nella tabella: {when}.}}",
+        "nothingTicked": "Spunta un paese nella tabella per disegnarlo qui. Puoi spuntarne fino a {most}.",
+        "waiting": "Chiediamo a Google i giorni di ogni paese.",
+        "failed": "Google non ha risposto per {names}. Riprova tra un minuto."
+      },
+      "eye": {
+        "others": "Altri paesi",
+        "deviceIn": "{device} · {country}"
       }
     },
     "table": {
@@ -15774,6 +15806,11 @@
       "topKeyword": "Parola chiave principale",
       "yourPages": "Tue pagine",
       "asked": "Chiesto a Google per queste date",
+      "pairsCut": "Google dà al massimo {most} coppie di parola chiave e pagina. Alcune parole chiave minori non sono contate qui.",
+      "pairsCutFile": "Google dà al massimo {most} coppie di parola chiave e pagina. Alcune parole chiave minori mancano nel file.",
+      "pagesCut": "Google dà al massimo {most} pagine in {when}. Alcune pagine con pochi clic non sono contate qui.",
+      "countriesCut": "Google dà al massimo {most} paesi in {when}. Alcuni paesi con pochi clic non sono contati qui.",
+      "devicesCut": "Google dà al massimo {most} dispositivi in {when}. Alcuni dispositivi con pochi clic non sono contati qui.",
       "band": "Fascia",
       "brand": "Brand",
       "dates": "Date",
@@ -15820,7 +15857,6 @@
       "share": "Quota",
       "noClicks": "Nessun clic in queste date.",
       "keywordsFor": "Parole chiave che hanno portato visitatori a questa pagina",
-      "namedFor": "Dei {clicks} clic di questa pagina, {named} vengono da parole chiave che Google nomina nel tuo paese principale. Gli altri vengono da altri paesi, o da ricerche che Google tiene private. Clicca una parola chiave per vedere ogni tua pagina a cui ha portato visitatori.",
       "keywordsHint": "Clicca una parola chiave per vedere ogni tua pagina a cui ha portato visitatori.",
       "pagesHint": "Ogni tua pagina che Google ha mostrato per questa parola chiave. Cliccane una per vedere tutto su di lei, o per seguirla.",
       "showAllCountries": "Mostra tutti i {count} paesi",
@@ -15911,7 +15947,8 @@
       "keptTo": "I dati fino al {day} sono ancora qui. Non arriva niente di nuovo finché non viene ricollegato.",
       "keptNone": "Non arriva niente di nuovo finché non viene ricollegato.",
       "historyKept": "Totali dal {from}, ricerche e pagine dal {day}; i periodi più lunghi sono chiesti a Google, che conserva 16 mesi.",
-      "disconnectTitle": "Scollegare Search Console?"
+      "disconnectTitle": "Scollegare Search Console?",
+      "searchesLetGo": "Google ha mandato più ricerche di quante ne stiano insieme per gli ultimi 3, 6 o 12 mesi. Le {count} mostrate meno sono fuori da quegli elenchi, ma i tuoi totali le contano ancora."
     },
     "keywords": {
       "title": "Parole chiave",
@@ -16167,20 +16204,27 @@
     "tracked": {
       "keywords": {
         "title": "Parole chiave monitorate",
-        "description": "Le parole chiave che monitori, e come è andata ognuna in queste date rispetto ai giorni prima. Clicca una parola chiave in Parole chiave per monitorarla. Togli la spunta qui per smettere di monitorarne una.",
+        "description": "Le parole chiave che monitori, e come è andata ognuna in queste date. Spunta le parole chiave per disegnarle nel grafico. Cliccane una per vedere tutto su di lei.",
         "searchPlaceholder": "Cerca tra le parole chiave monitorate…",
-        "empty": "Non monitori ancora nessuna parola chiave. Cliccane una in Parole chiave per monitorarla."
+        "empty": "Non monitori ancora nessuna parola chiave. Aprine una in Parole chiave e premi Segui questa parola chiave.",
+        "eye": {
+          "all": "Le parole chiave che monitori",
+          "onChart": "le parole chiave nel grafico",
+          "firstPage": "Nella prima pagina di Google"
+        }
       },
       "pages": {
         "title": "Pagine monitorate",
-        "description": "Le pagine che monitori, e come è andata ognuna in queste date rispetto ai giorni prima. Clicca una pagina in Pagine per monitorarla. Togli la spunta qui per smettere di monitorarne una.",
+        "description": "Le pagine che monitori, e come è andata ognuna in queste date. Spunta le pagine per disegnarle nel grafico. Cliccane una per vedere tutto su di lei.",
         "searchPlaceholder": "Cerca tra le pagine monitorate…",
-        "empty": "Non monitori ancora nessuna pagina. Cliccane una in Pagine per monitorarla."
+        "empty": "Non monitori ancora nessuna pagina. Aprine una in Pagine e premi Segui questa pagina.",
+        "eye": {
+          "all": "Le pagine che monitori",
+          "onChart": "le pagine nel grafico"
+        }
       },
-      "figures": {
-        "shown": "Volte in cui Google le ha mostrate",
-        "ctr": "Clic per ogni volta mostrate",
-        "position": "La media di Google"
+      "eye": {
+        "notShown": "Mai mostrate"
       }
     },
     "volatility": {
@@ -16219,7 +16263,7 @@
       "weekdays": "Nei giorni feriali",
       "recent": "Gli ultimi 28 giorni",
       "earlier": "I 28 giorni prima",
-      "others": "Gli altri servizi",
+      "others": "Le altre classificazioni",
       "beforeIt": "Prima",
       "place": "Posizione {place}",
       "topThree": "Posizioni da 1 a 3",
@@ -16307,7 +16351,8 @@
         "connect": "Collegalo",
         "seeStrategy": "Vedi la strategia",
         "seeCannibalisation": "Vedi la cannibalizzazione delle parole chiave",
-        "openSearchConsole": "Apri Search Console"
+        "openSearchConsole": "Apri Search Console",
+        "seeReasonPages": "Vedi le pagine"
       },
       "keywords": {
         "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {gli ultimi 3 mesi} last6Months {gli ultimi 6 mesi} other {gli ultimi 12 mesi}}.",
@@ -16442,82 +16487,254 @@
       },
       "services": {
         "noDemand": "Google non ha mostrato le tue pagine in queste date.",
-        "shownMore": "Google ti ha mostrato il {a}% in più dei giorni precedenti, e i clic sono passati da {c} a {b}.",
-        "shownFewer": "Google ti ha mostrato il {a}% in meno dei giorni precedenti, e i clic sono passati da {c} a {b}.",
-        "bestWorst": "Tra i tuoi servizi, l'interesse ha tenuto meglio per {text}, {countC, plural, =1 {in crescita del} other {in calo del}} {a}%, ed è sceso di più per {more}, in calo del {b}%.",
-        "growBest": "Metti l'impegno del prossimo trimestre su {text}."
+        "topClicks": "{text} ha ricevuto più clic. Sono {a} su ogni 100 clic sulle tue pagine."
       },
       "indexing": {
-        "noIndexing": "Le tue pagine che portano clienti non sono ancora state controllate con Google: il primo controllo settimanale è in arrivo.",
-        "indexedOf": "Google ha indicizzato {a} delle tue {b} pagine che portano clienti.",
-        "notIndexed": "{text} non è indicizzata, quindi non può comparire nei risultati di Google.",
-        "oldestRead": "La pagina che Google ha letto da più tempo è {text}, il {day1}: una modifica fatta dopo non è ancora nei risultati.",
-        "fixIndexing": "Controlla {text} in Search Console e chiedi a Google di indicizzarla.",
-        "askRead": "Chiedi a Google di rileggere {text} in Search Console."
+        "noChecks": "Nessuna delle tue pagine è ancora controllata con Google.",
+        "allIn": "Tutte le {a} pagine controllate finora sono su Google.",
+        "biggest": "{text} è il motivo più comune dato da Google. Sono {a} delle {b} pagine non su Google.",
+        "reasonsTied": "Google ha dato {a} motivi diversi per le {b} pagine non su Google.",
+        "seeReason": "Guarda le pagine a cui Google ha dato questo motivo.",
+        "reasonPages": "Google ha dato {text} per {a} delle tue pagine.",
+        "reasonClicked": "{a} di queste hanno ricevuto comunque clic.",
+        "reasonNone": "Google non ha dato {text} per nessuna pagina controllata finora."
       }
     },
     "everyCountry": {
       "pages": "Le pagine contano i clic da ogni paese, non solo dal tuo paese principale. Google include le ricerche che tiene private solo quando non si sceglie un paese."
     },
     "services": {
-      "title": "Domanda per servizio",
-      "description": "Quante volte Google ti ha mostrato per ognuno dei tuoi servizi {period} contro {before}, e cosa hanno cliccato i clienti.",
-      "readyMade": "La domanda per servizio compare quando Google ha inviato alcuni giorni del periodo.",
-      "search": "Trova un servizio",
-      "tableTitle": "{count, plural, one {# servizio} other {# servizi}} · {name} contro {before}",
+      "title": "Classificazioni",
+      "description": "Quante volte Google ha mostrato ognuna delle tue classificazioni, e i clic che hanno ricevuto.",
+      "search": "Trova una classificazione…",
       "download": "Scarica CSV",
-      "noMatch": "Nessun servizio corrisponde",
       "empty": "Google non ha mostrato le tue pagine in queste date.",
-      "guides": "Guide e articoli",
-      "other": "Tutto il resto",
-      "notSorted": "Non classificate",
-      "seeInsights": "Vedi le scoperte di Insights sulla domanda",
+      "unclassifiedHover": "Pagine non ancora in una classificazione",
+      "squaresHint": "Sulle tue pagine, in {when}, ci sono {count} {noun}. Ogni quadrato è 1 su 100 {noun}.",
+      "boxes": {
+        "more": "▲ {change} in più rispetto a {before}",
+        "fewer": "▼ {change} in meno rispetto a {before}",
+        "higher": "▲ {change} punti in più rispetto a {before}",
+        "lower": "▼ {change} punti in meno rispetto a {before}",
+        "better": "▲ {change} posizioni meglio rispetto a {before}",
+        "worse": "▼ {change} posizioni peggio rispetto a {before}",
+        "same": "Nessuna variazione rispetto a {before}",
+        "nothingBefore": "Niente da confrontare con {before}",
+        "tooOld": "Google conserva 16 mesi, quindi non c'è niente da confrontare."
+      },
+      "show": {
+        "label": "Mostra",
+        "all": "Ogni classificazione",
+        "more": "Più clic",
+        "fewer": "Meno clic"
+      },
       "columns": {
-        "service": "Servizio",
-        "shown": "Volte mostrato",
-        "change": "Variazione",
-        "clicks": "Clic",
-        "clicksBefore": "Clic prima"
+        "category": "Categoria",
+        "categoryTitle": "Classificazione",
+        "shownUpTitle": "Impressioni, su o giù rispetto a {before}",
+        "clicksUpTitle": "Clic, su o giù rispetto a {before}",
+        "pagesTitle": "Pagine mostrate da Google in {when}"
       },
-      "chart": {
-        "title": "Quante volte Google ti ha mostrato, per servizio",
-        "hint": "{name} contro {before}.",
-        "before": "I giorni precedenti",
-        "now": "Gli ultimi giorni"
-      },
-      "home": "Pagina principale"
+      "csv": {
+        "shownBefore": "Impressioni in {before}",
+        "clicksBefore": "Clic in {before}"
+      }
     },
     "indexing": {
       "title": "Indicizzazione",
-      "description": "Se Google ha indicizzato ogni pagina che porta richieste, e quando l'ha letta l'ultima volta. Dal controllo URL di Search Console, una volta a settimana.",
-      "of": "{a} su {b}",
-      "search": "Trova una pagina",
-      "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Le tue pagine che portano clienti",
-      "download": "Scarica CSV",
-      "noMatch": "Nessuna pagina corrisponde",
-      "empty": "Le tue pagine che portano clienti vengono controllate con Google una volta a settimana. Il primo controllo è in arrivo.",
-      "indexed": "Indicizzata",
-      "notIndexed": "Non indicizzata",
-      "notAsked": "Non ancora chiesto",
-      "unknown": "Google non l'ha detto",
-      "otherCanonical": "Google mostra un'altra pagina al suo posto",
-      "seeInsights": "Vedi le scoperte di Insights sull'indicizzazione",
-      "figures": {
-        "indexed": "Pagine che portano clienti indicizzate",
-        "indexedDetail": "secondo Google oggi",
-        "readThisMonth": "Lette da Google questo mese",
-        "readThisMonthDetail": "nei 30 giorni prima del controllo",
+      "description": "Quali tue pagine sono su Google, e perché alcune no.",
+      "boxes": {
         "notIndexed": "Non indicizzate",
-        "noneMissing": "nessuna",
-        "checked": "Controllate",
-        "checkedOn": "una volta a settimana; l'ultima il {day}",
-        "notYet": "il primo controllo è in arrivo"
+        "reasons": "{count, plural, one {Google ha dato # motivo. È nella tabella qui sotto.} other {Google ha dato # motivi. Sono nella tabella qui sotto.}}",
+        "noReasons": "Google non ha segnalato problemi per le pagine controllate finora.",
+        "notChecked": "Non ancora controllate con Google.",
+        "indexed": "Indicizzate",
+        "indexedDetail": "Google può mostrarle nella ricerca.",
+        "biggest": "Il motivo più comune. Sono {pages} delle {all} pagine non indicizzate.",
+        "clicks": "Clic sulle pagine non indicizzate",
+        "clicksShare": "Circa 1 su {oneIn} dei clic sulle tue pagine in {dates}.",
+        "clicksMost": "La maggior parte dei clic sulle tue pagine in {dates}.",
+        "clicksNone": "Nessuno dei clic sulle tue pagine in {dates}."
       },
-      "columns": {
-        "page": "Pagina",
-        "indexed": "Indicizzata",
-        "lastRead": "Ultima lettura di Google",
-        "why": "Perché no"
+      "progress": {
+        "checked": "Finora sono controllate {checked} delle tue {known} pagine. Le altre lo saranno entro il {day} circa.",
+        "allChecked": "Tutte le tue {known} pagine sono controllate. Google viene chiesto di nuovo per ognuna, a turno.",
+        "none": "Non abbiamo ancora chiesto a Google delle tue pagine. I primi controlli partono stanotte, con l'aggiornamento notturno.",
+        "noneOff": "Non abbiamo ancora chiesto a Google delle tue pagine. I primi controlli partono quando vengono attivati per questo sito.",
+        "fullReport": "Rapporto completo in Search Console"
+      },
+      "chart": {
+        "title": "Pagine non indicizzate ogni giorno",
+        "hint": "I motivi nella tabella qui sotto, giorno per giorno, da quando sono iniziati i controlli il {day}.",
+        "hintNone": "I motivi nella tabella qui sotto, giorno per giorno, quando inizieranno i controlli.",
+        "show": "Mostra",
+        "every": "Ogni motivo",
+        "nothingTicked": "Spunta un motivo nel menu Mostra per disegnarlo qui.",
+        "figure": "Pagine",
+        "day": "Giorno",
+        "empty": "Ancora niente da mostrare."
+      },
+      "table": {
+        "title": "Perché le pagine non sono indicizzate",
+        "search": "Cerca motivi…",
+        "reason": "Motivo",
+        "source": "Origine",
+        "pages": "Pagine",
+        "clicks": "Clic",
+        "clicksHover": "Clic in {dates}",
+        "shown": "Mostrate",
+        "impressions": "Impressioni",
+        "crawled": "Scansione",
+        "lastCrawled": "Ultima scansione",
+        "download": "Scarica tutto (CSV)",
+        "noMatch": "Nessun risultato per questa ricerca.",
+        "empty": "Ancora nessun motivo da mostrare."
+      },
+      "sources": {
+        "website": "Sito web",
+        "google": "Sistemi di Google"
+      },
+      "reasons": {
+        "serverError": {
+          "words": "Errore del server (5xx)",
+          "short": "5xx",
+          "means": "Il tuo sito non ha risposto quando Google ha chiesto queste pagine."
+        },
+        "redirectError": {
+          "words": "Errore di reindirizzamento",
+          "short": "Errore di reindirizzamento",
+          "means": "Questi link mandano le persone in giro in tondo, o in un vicolo cieco."
+        },
+        "robots": {
+          "words": "Bloccata da robots.txt",
+          "short": "robots.txt",
+          "means": "Il tuo sito dice a Google di non visitare queste pagine."
+        },
+        "noindex": {
+          "words": "Esclusa in base al tag ‘noindex’",
+          "short": "Noindex",
+          "means": "Queste pagine dicono a Google di non mostrarle."
+        },
+        "soft404": {
+          "words": "Soft 404",
+          "short": "Soft 404",
+          "means": "Queste pagine ci sono, ma a Google sembrano vuote."
+        },
+        "unauthorized": {
+          "words": "Bloccata a causa di richiesta non autorizzata (401)",
+          "short": "401",
+          "means": "Google deve accedere per vedere queste pagine."
+        },
+        "notFound": {
+          "words": "Non trovata (404)",
+          "short": "404",
+          "means": "Queste pagine non ci sono più. Chi le apre vede un errore."
+        },
+        "forbidden": {
+          "words": "Bloccata a causa di accesso vietato (403)",
+          "short": "403",
+          "means": "Il tuo sito non lascia che Google veda queste pagine."
+        },
+        "other4xx": {
+          "words": "Bloccata a causa di un altro problema 4xx",
+          "short": "4xx",
+          "means": "Il tuo sito ha detto di no quando Google ha chiesto queste pagine."
+        },
+        "removed": {
+          "words": "Bloccata dallo strumento di rimozione delle pagine",
+          "short": "Rimosse",
+          "means": "Qualcuno ha chiesto a Google di nascondere queste pagine per un po'."
+        },
+        "alternate": {
+          "words": "Pagina alternativa con tag canonico appropriato",
+          "short": "Alternativa",
+          "means": "Queste pagine indicano a Google una pagina principale. Va bene così."
+        },
+        "redirect": {
+          "words": "Pagina con reindirizzamento",
+          "short": "Reindirizzamento",
+          "means": "Questi vecchi link portano a un'altra pagina. Google mostra quella al loro posto."
+        },
+        "duplicate": {
+          "words": "Pagina duplicata senza URL canonico selezionato dall'utente",
+          "short": "Duplicata",
+          "means": "Queste pagine ne copiano un'altra, e non dicono qual è la principale."
+        },
+        "googleChose": {
+          "words": "Pagina duplicata, Google ha scelto un URL canonico diverso da quello dell'utente",
+          "short": "Scelta di Google",
+          "means": "Hai scelto una pagina principale, ma Google ne ha scelta un'altra."
+        },
+        "crawled": {
+          "words": "Sottoposta a scansione, ma attualmente non indicizzata",
+          "short": "Scansionate",
+          "means": "Google ha visitato queste pagine, ma per ora ha scelto di non mostrarle."
+        },
+        "discovered": {
+          "words": "Rilevata, ma attualmente non indicizzata",
+          "short": "Rilevate",
+          "means": "Google conosce queste pagine, ma non le ha ancora visitate."
+        },
+        "unknown": {
+          "words": "URL sconosciuto a Google",
+          "short": "Sconosciute",
+          "means": "Google non ha traccia di queste pagine."
+        }
+      },
+      "reason": {
+        "back": "Torna a Indicizzazione",
+        "boxes": {
+          "pages": "Pagine",
+          "pagesDetail": "Su {checked} pagine controllate finora.",
+          "lastShown": "Ultima volta mostrate",
+          "lastShownDetail": "Non mostrate nella ricerca dal {day}.",
+          "neverShown": "Google non le ha mostrate nella ricerca.",
+          "stillClicked": "Clic ricevuti lo stesso",
+          "stillClickedDetail": "In {dates}, da chi le ha viste nella ricerca.",
+          "sitemap": "Nella tua sitemap",
+          "sitemapStill": "La tua sitemap chiede ancora a Google di mostrarle.",
+          "sitemapAsks": "La tua sitemap chiede a Google di mostrarle.",
+          "sitemapNone": "La tua sitemap non ne elenca nessuna.",
+          "clicks": "Clic",
+          "lastVisited": "Ultima visita",
+          "lastVisitedDetail": "Google non è più tornato da allora.",
+          "neverVisited": "Google non le ha visitate.",
+          "picked": "Google ha scelto un'altra pagina",
+          "pickedDetail": "Google mostra quella pagina al loro posto.",
+          "inGoogle": "Portano a una pagina su Google",
+          "inGoogleRest": "{count, plural, one {L'altra porta a una pagina non ancora controllata.} other {Le altre # portano a pagine non ancora controllate.}}",
+          "inGoogleAll": "Ognuna porta a una pagina su Google.",
+          "stillShown": "Ancora mostrate a {month}",
+          "stillShownDetail": "{count, plural, one {L'altra non è stata mostrata a {month}.} other {Le altre # non sono state mostrate a {month}.}}",
+          "linked": "Con link dalle tue pagine",
+          "linkedDetail": "I link dalle tue pagine aiutano Google a trovarle."
+        },
+        "chart": {
+          "impressions": "Impressioni ogni giorno",
+          "clicks": "Clic ogni giorno",
+          "hint": "{count, plural, one {Quanto spesso Google ha mostrato questa pagina ogni giorno.} other {Quanto spesso Google ha mostrato queste pagine ogni giorno.}}",
+          "from": "Ogni giorno è conservato dal {day}.",
+          "show": "Mostra",
+          "showImpressions": "Impressioni",
+          "showClicks": "Clic",
+          "day": "Giorno",
+          "empty": "Niente da mostrare per queste date."
+        },
+        "table": {
+          "title": "Esempi",
+          "search": "Cerca pagine…",
+          "page": "Pagina",
+          "main": "Pagina principale",
+          "mainHover": "La pagina che Google mostra al suo posto",
+          "lastShown": "Ultima volta",
+          "lastShownHover": "L'ultimo giorno in cui Google l'ha mostrata nella ricerca",
+          "days": "Giorni",
+          "daysHover": "Giorni in cui Google l'ha mostrata, sui {days} dal {day}",
+          "daysOf": "{days} su {of}",
+          "home": "Pagina iniziale",
+          "empty": "Nessuna delle {checked} pagine controllate finora ha questa risposta.",
+          "noMatch": "Nessun risultato per questa ricerca."
+        }
       }
     }
   },

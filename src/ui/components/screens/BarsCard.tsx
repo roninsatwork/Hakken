@@ -14,7 +14,7 @@ type BarRow = { label: string } & Record<string, unknown>;
  * step 7). Visits' who, a page's who looks and its visitors, and both of Products' charts each wrote their own until then. It's given
  * plain figures and reads nothing. Each bar says its figure. The hover lists every series, and a card that needs more hands over its own.
  */
-export function BarsCard({ title, hint, exportName, csvHeading, csv, host, waiting, controls, nothingTicked = null, rows, series, figure, drawnColumn = false, totalOf, readout, stacked = false, labels, anything, empty }: {
+export function BarsCard({ title, hint, exportName, csvHeading, csv, host, waiting, controls, nothingTicked = null, rows, series, figure, drawnColumn = false, totalOf, readout, stacked = false, upright = false, labels, anything, empty }: {
   title: string;
   hint: string;
   exportName: string;
@@ -39,6 +39,8 @@ export function BarsCard({ title, hint, exportName, csvHeading, csv, host, waiti
   /** The hover, for a card whose figures need more than a row a series. */
   readout?: (point: { row: Record<string, unknown>; heading: ReactNode }) => ChartReadoutTableProps;
   stacked?: boolean;
+  /** The bars stood up, the rows along the bottom: a count each day (`ChartExplorer`'s `upright`). */
+  upright?: boolean;
   /** Each bar's words. A number with thousands, unless it says otherwise. */
   labels?: (value: number, key: string, row: Record<string, unknown>) => string | null;
   anything: boolean;
@@ -70,7 +72,7 @@ export function BarsCard({ title, hint, exportName, csvHeading, csv, host, waiti
       readout={readout ?? standard}
       anything={anything}
       empty={empty}
-      bars={{ labels: labels ?? ((value: number) => (Number.isFinite(value) ? formatNumber(value) : null)), stacked }}
+      bars={{ labels: labels ?? ((value: number) => (Number.isFinite(value) ? formatNumber(value) : null)), stacked, upright }}
     />
   );
 }

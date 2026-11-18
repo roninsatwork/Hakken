@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
 import { seenAdvice, type Seen, type SeenPhrase, type SeenTarget } from "@/convex/utils/hakkenSees";
+import { useSpanName } from "../../analytics/_components/VisitsCharts";
 import { formatNumber, formatShortDay } from "../../sites/_components/siteFormat";
 import { useSearchConsoleHref, useSearchConsolePeriodWords, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 import { useNoteAdvice } from "../../_components/useNoteAdvice";
@@ -45,8 +46,15 @@ export function SearchConsoleSees({ screen, eye, seen, data, links }: {
   const periodWords = useSearchConsolePeriodWords(range.period);
   useNoteAdvice(siteId, `searchConsole.seen.${screen}`, seen);
   const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
+  // The dates and the span before by their names where they have one ("October", "September"), as the redone boxes say
+  // them (writing-guide.md, "Name the dates"). With only "The month before" and "The 28 days before" to go on, the eye's
+  // first press on Demand by Classification sent the reader to "the 28 days before" for Last month (18 November 2026).
+  const spanName = useSpanName();
+  const nowName = spanName({ from: range.from, to: range.to });
+  const beforeName = spanName(range.before);
   const words = useMemo(() => ({
-    before: capital(periodWords.before),
+    before: beforeName ?? capital(periodWords.before),
+    ...(nowName ? { now: nowName } : {}),
     website: tw("website"),
     clicks: tw("clicks"),
     shown: tw("shown"),
@@ -65,7 +73,7 @@ export function SearchConsoleSees({ screen, eye, seen, data, links }: {
     "average.7": tw("averageSteps.day"),
     "average.4": tw("averageSteps.week"),
     "average.3": tw("averageSteps.month"),
-  }), [periodWords.before, tw]);
+  }), [beforeName, nowName, periodWords.before, tw]);
   // The same figures keep the same object, so the eye works them out again only when they change.
   const worded = useMemo(() => (data && typeof data === "object" && !Array.isArray(data) ? { ...(data as Record<string, unknown>), words } : data), [data, words]);
   const page = worded !== undefined && worded !== null

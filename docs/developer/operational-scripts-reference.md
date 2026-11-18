@@ -52,9 +52,10 @@ Each row is a package key and its actual configured command. Arguments after `--
 | `npm run check:layering` | `node scripts/check-layering.mjs` |
 | `npm run check:screen-kit` | `node scripts/check-screen-kit.mjs` |
 | `npm run check:reading` | `node scripts/check-reading-age.mjs` |
+| `npm run check:words` | `node scripts/check-word-style.mjs` |
 | `npm run check:orphans` | `knip --include files,dependencies,unlisted --no-config-hints` |
 | `npm run check:fences` | `node scripts/strip-verticals.mjs --check` |
-| `npm run check:guards` | `npm run check:encoding && npm run check:pagination && npm run check:layering && npm run check:screen-kit && npm run check:messages && npm run check:reading && npm run check:orphans && npm run check:fences` |
+| `npm run check:guards` | `npm run check:encoding && npm run check:pagination && npm run check:layering && npm run check:screen-kit && npm run check:messages && npm run check:reading && npm run check:words && npm run check:orphans && npm run check:fences` |
 | `npm run check:theme` | `node scripts/check-theme-record.mjs` |
 | `npm run theme:pull` | `node scripts/theme-pull.mjs` |
 | `npm run drawing-kit` | `node scripts/drawing-kit.mjs` |
@@ -103,6 +104,8 @@ The guard family covers encoding, pagination, import layering, the shared screen
 The deterministic local-auth commands have three different effects. Seed calls a backend mutation to create/update test users. Cleanup calls another mutation and reports queued cleanup. State launches Chromium through Playwright, signs in selected deterministic roles and saves session files under `e2e/.auth`. The state command does not merely print a diagnostic report. These session files contain credentials and should not become documentation attachments or committed fixtures.
 
 The auth helper requires `LOCAL_TEST_AUTH_SECRET`. Backend URL resolution checks `LOCAL_TEST_AUTH_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_URL`, a value in `.env.local`, then a loopback fallback. Browser base selection checks `LOCAL_TEST_AUTH_BASE_URL` before its localhost default. The command name does not itself lock execution to a particular database. The defaults also use different ports for the backend and browser app. Consult the [Local Test Auth Runbook](../operator/local-test-auth-runbook.md) before a separately authorized testing workflow, and do not copy actual environment values into a guide.
+
+Search Console's page checks (`convex/searchConsolePageChecks.ts`; search-console-indexing-v1-plan-2026-11-18.md) ask Google's URL inspection about each page of a website, up to 1,600 a day for each, and only where the backend's `SEARCH_CONSOLE_PAGE_CHECKS` setting says so: `on` for every website, or the websites' hold ids, comma separated. Unset, nothing asks Google. Once set, each website's checks start after its nightly Search Console run; `npx convex run searchConsolePageChecks:startPageChecks '{"siteId":"<hold id>"}'` starts one website's day of checks at once. Each check uses that website's Google allowance, so read the allowance rule in AGENTS.md before starting one.
 
 ## Theme, Drawings And Generated Work
 

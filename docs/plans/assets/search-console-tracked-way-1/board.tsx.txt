@@ -1,0 +1,637 @@
+// Three ways each to draw Search Console → Tracked keywords and Tracked pages, from the app's real parts, on More Handles'
+// real figures: the United Kingdom, web results, 17 August to 16 November 2026 against the 3 months before. Today More Handles
+// tracks one page and no keywords, so these show 10 of its keywords and 8 of its pages as if tracked (the one page it really
+// tracks among them). Every chart over dates marks Google's updates, as the app's do. Nothing here is built.
+import { useMemo, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { FileText, Search } from "lucide-react";
+import DATA from "../data/board.json";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { ChangeLine } from "@/src/ui/components/screens/Change";
+import { Checkbox } from "@/src/ui/components/screens/Checkbox";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
+import { HundredGrid, type HundredGroup } from "@/src/ui/components/screens/HundredGrid";
+import { ChangeBars, type ChangeBar } from "@/src/ui/components/screens/ChangeBars";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { tickColumn, TickActions, TickCount, type TableTicks } from "@/src/ui/components/screens/TableTicks";
+import { CHART_COMPARATOR_GREY } from "@/src/ui/components/charts/chartPalette";
+import { outOfTotal } from "@/convex/utils/outOfTotal";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { weekStart } from "@/convex/utils/searchConsolePacks";
+import { formatNumber, formatShortDay, toCsv } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+import { datedRow } from "@/src/app/(dashboard)/app/sites/_components/datedRows";
+import { SITE_SERIES_COLOURS, SiteStackedAreaChart } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
+import { SiteGainLossChart, type GainLossSeries, type GainLossStep } from "@/src/app/(dashboard)/app/sites/_components/SiteGainLossChart";
+import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
+import { useSitePager } from "@/src/app/(dashboard)/app/sites/_components/useSitePagedTable";
+import { useSiteSearch } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
+import { useSiteSortedList, type SiteSortColumns } from "@/src/app/(dashboard)/app/sites/_components/useSiteSort";
+import { SiteViewSwitch } from "@/src/app/(dashboard)/app/sites/_components/SiteViewSwitch";
+import { PLOTTED_COLOURS } from "@/src/app/(dashboard)/app/analytics/_components/AllPagesParts";
+import { everyDay, lineOf } from "@/src/app/(dashboard)/app/search-console/_components/PerformanceParts";
+import { figureColumns, keywordColumn, pageColumn, type ListRow } from "@/src/app/(dashboard)/app/search-console/_components/SearchConsoleTables";
+import { formatPosition } from "@/src/app/(dashboard)/app/search-console/_components/searchConsoleFormat";
+import { pageLabel } from "@/src/app/(dashboard)/app/search-console/_components/searchConsoleRecords";
+import { CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
+
+export const SITE = "gs7s64z25gddkrkcarvpfjxw7x8fqkwn";
+const HOST = "morehandles.co.uk";
+const FROM = "2026-08-17";
+const TO = "2026-11-16";
+const BEFORE_FROM = "2026-05-17";
+const BEFORE_TO = "2026-08-16";
+/** The dates by their name, as the date menu and the redone boxes say them on Last 3 months. */
+const NOW = "the last 3 months";
+const BEFORE = "the 3 months before";
+const KEYWORD_LIMIT = 200;
+const PAGE_LIMIT = 100;
+const MOST = 5;
+/** Google's updates are read 14 days either side, as the Google updates screen reads them (`updateWindowDays`). */
+const WINDOW = 14;
+const fmt = formatNumber;
+const oneDecimal = (value: number) => formatPosition(Math.round(value * 10) / 10);
+const per100 = (part: number, whole: number) => (whole > 0 ? (100 * part) / whole : 0);
+
+// ——— The figures ———
+
+type Day = { day: string; clicks: number; impressions: number; position: number };
+type Totals = { clicks: number; impressions: number; position: number };
+type Item = { key: string; name: string; days: Day[]; before: Day[]; now: Totals; was: Totals };
+type Kind = "keywords" | "pages";
+type Update = { _id: string; title: string; startedOn: string; finishedOn: string | null };
+
+const BOARD = DATA as unknown as { keywords: Item[]; pages: Item[]; updates: Update[] };
+const ITEMS: Record<Kind, Item[]> = { keywords: BOARD.keywords, pages: BOARD.pages };
+const UPDATES = BOARD.updates.filter((update) => update.startedOn >= FROM && update.startedOn <= TO).sort((a, b) => b.startedOn.localeCompare(a.startedOn));
+
+const withCtr = (days: readonly Day[]) => days.map((day) => ({ ...day, ctr: day.impressions > 0 ? day.clicks / day.impressions : 0 }));
+const shift = (day: string, by: number) => new Date(Date.parse(`${day}T00:00:00Z`) + by * 86_400_000).toISOString().slice(0, 10);
+
+function totalsOf(days: readonly Day[]): Totals {
+  const clicks = days.reduce((sum, day) => sum + day.clicks, 0);
+  const impressions = days.reduce((sum, day) => sum + day.impressions, 0);
+  const weighed = days.reduce((sum, day) => sum + day.position * day.impressions, 0);
+  return { clicks, impressions, position: impressions > 0 ? weighed / impressions : 0 };
+}
+const between = (item: Item, from: string, to: string) => totalsOf([...item.before, ...item.days].filter((day) => day.day >= from && day.day <= to));
+const groupTotals = (items: readonly Item[], pick: (item: Item) => Totals): Totals => {
+  const clicks = items.reduce((sum, item) => sum + pick(item).clicks, 0);
+  const impressions = items.reduce((sum, item) => sum + pick(item).impressions, 0);
+  const weighed = items.reduce((sum, item) => sum + pick(item).position * pick(item).impressions, 0);
+  return { clicks, impressions, position: impressions > 0 ? weighed / impressions : 0 };
+};
+
+/** A table's row, in the list's own shape, so the app's own columns draw it. */
+type Row = ListRow & { name: string };
+function rowOf(item: Item): Row {
+  const { now, was } = item;
+  const shownBefore = was.impressions > 0;
+  return {
+    key: item.key, name: item.name, title: item.name === item.key ? undefined : item.name,
+    clicks: now.clicks, impressions: now.impressions, ctr: now.impressions > 0 ? now.clicks / now.impressions : 0, position: now.position,
+    band: "4-10", previousClicks: shownBefore ? was.clicks : null, change: shownBefore ? now.clicks - was.clicks : now.clicks,
+    previousPosition: shownBefore ? was.position : null, positionChange: shownBefore && now.impressions > 0 ? was.position - now.position : null,
+    share: 0, count: null, top: null, tracked: true, kind: null, volume: null, estimate: null, brand: null, usualCtr: null, expected: null,
+    topShare: null, next: null, nextShare: null, verdict: null, gap: null,
+  } as unknown as Row;
+}
+
+// ——— The weeks the charts step by, Monday to Sunday, as the app's weekly charts do ———
+
+type Week = { day: string; lastDay: string; days: number };
+const WEEKS: Week[] = (() => {
+  const weeks = new Map<string, Week>();
+  for (let day = FROM; day <= TO; day = shift(day, 1)) {
+    const key = weekStart(day);
+    const week = weeks.get(key) ?? { day: key, lastDay: day, days: 0 };
+    week.lastDay = day;
+    week.days += 1;
+    weeks.set(key, week);
+  }
+  return [...weeks.values()];
+})();
+const weekRow = (week: Week, values: Record<string, unknown>) => datedRow({ day: week.day, lastDay: week.lastDay, ...(week.days < 7 ? { readout: `${formatShortDay(week.day)}, ${week.days === 1 ? "1 day" : `${week.days} days`}`, part: true } : {}) }, values);
+const weekTotals = (item: Item, week: Week) => between(item, week.day, week.lastDay);
+const weekBefore = (week: Week): Week => ({ day: shift(week.day, -7), lastDay: shift(week.day, -1), days: 7 });
+
+// ——— Shared pieces ———
+
+const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
+
+/** "▼ 7% fewer than the 3 months before", as the redone boxes say it. */
+function MoveLine({ now, before, count = false, neutral = false }: { now: number; before: number; count?: boolean; neutral?: boolean }) {
+  const by = now - before;
+  const size = count || before === 0 ? fmt(Math.abs(by)) : `${Math.round((Math.abs(by) / before) * 100)}%`;
+  if (by === 0 || size === "0%") return <ChangeLine by={0}>No change since {BEFORE}</ChangeLine>;
+  return <ChangeLine by={by} neutral={neutral}>{by > 0 ? `▲ ${size} more than ${BEFORE}` : `▼ ${size} fewer than ${BEFORE}`}</ChangeLine>;
+}
+function RateLine({ now, before }: { now: number; before: number }) {
+  const by = Math.round((now - before) * 10) / 10;
+  if (by === 0) return <ChangeLine by={0}>No change since {BEFORE}</ChangeLine>;
+  return <ChangeLine by={by}>{by > 0 ? `▲ ${oneDecimal(by)} points higher than ${BEFORE}` : `▼ ${oneDecimal(-by)} points lower than ${BEFORE}`}</ChangeLine>;
+}
+function PlaceLine({ now, before }: { now: number; before: number }) {
+  const by = Math.round((before - now) * 10) / 10;
+  if (by === 0) return <ChangeLine by={0}>No change since {BEFORE}</ChangeLine>;
+  return <ChangeLine by={by}>{by > 0 ? `▲ ${oneDecimal(by)} places better than ${BEFORE}` : `▼ ${oneDecimal(-by)} places worse than ${BEFORE}`}</ChangeLine>;
+}
+
+/** The four boxes, for everything tracked together. */
+function Boxes({ kind }: { kind: Kind }) {
+  const now = groupTotals(ITEMS[kind], (item) => item.now);
+  const was = groupTotals(ITEMS[kind], (item) => item.was);
+  return (
+    <FigureRow>
+      <Figure label="Clicks" value={fmt(now.clicks)} detail={<MoveLine now={now.clicks} before={was.clicks} />} />
+      <Figure label="Impressions" value={fmt(now.impressions)} detail={<MoveLine now={now.impressions} before={was.impressions} />} />
+      <Figure label="Click-through rate" value={`${oneDecimal(per100(now.clicks, now.impressions))}%`} detail={<RateLine now={per100(now.clicks, now.impressions)} before={per100(was.clicks, was.impressions)} />} />
+      <Figure label="Average position" value={oneDecimal(now.position)} detail={<PlaceLine now={now.position} before={was.position} />} />
+    </FigureRow>
+  );
+}
+
+const TITLES: Record<Kind, string> = { keywords: "Tracked keywords", pages: "Tracked pages" };
+function Page({ kind, description, boxes, children }: { kind: Kind; description: string; boxes?: ReactNode; children: ReactNode }) {
+  const [result, setResult] = useState<"web" | "news">("web");
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader icon={kind === "keywords" ? <Search className="h-5 w-5 text-brand" /> : <FileText className="h-5 w-5 text-brand" />} title={TITLES[kind]} description={description} />
+      <SiteViewSwitch label="Kind of result" options={[{ value: "web", label: "Web" }, { value: "news", label: "News" }]} value={result} onChange={setResult} />
+      {boxes ?? <Boxes kind={kind} />}
+      {children}
+    </div>
+  );
+}
+
+// ——— The table: lean, one line a row, Track kept as unticking is what the page is for ———
+
+const SORTS: SiteSortColumns<Row, "key" | "clicks" | "change" | "impressions" | "position" | "positionChange"> = {
+  key: { value: (row) => row.name, first: "asc" },
+  clicks: { value: (row) => row.clicks, first: "desc" },
+  change: { value: (row) => row.change, first: "desc" },
+  impressions: { value: (row) => row.impressions, first: "desc" },
+  position: { value: (row) => (row.impressions > 0 ? row.position : null), first: "asc" },
+  positionChange: { value: (row) => row.positionChange, first: "desc" },
+};
+
+function TrackedTable({ kind, ticks, figures = ["clicks", "change", "impressions", "position"], opening = "clicks" }: {
+  kind: Kind;
+  ticks?: TableTicks;
+  figures?: Array<"clicks" | "change" | "impressions" | "position" | "moved">;
+  opening?: "clicks" | "positionChange";
+}) {
+  const t = useTranslations("searchConsole");
+  const say = (key: string, values?: Record<string, string | number>) => t(key, values as never);
+  const [tracked, setTracked] = useState<ReadonlySet<string>>(() => new Set(ITEMS[kind].map((item) => item.key)));
+  const rows = useMemo(() => ITEMS[kind].map(rowOf), [kind]);
+  const [search, setSearch, term] = useSiteSearch();
+  const matches = wordStartMatcher(term.toLowerCase());
+  const matching = useMemo(() => (matches ? rows.filter((row) => matches(row.name.toLowerCase()) || matches(row.key.toLowerCase())) : rows), [rows, matches]);
+  const order = useSiteSortedList(matching, SORTS, { opening, name: (row) => row.name });
+  const pages = useSitePager(order.rows);
+  const recordHref = () => "#";
+  const noun = kind === "keywords" ? "keywords" : "pages";
+  const trackColumn: DataTableColumn<Row> = {
+    key: "track",
+    header: say("track.column"),
+    className: "w-[72px]",
+    cell: (row) => {
+      const on = tracked.has(row.key);
+      // A page is named by its address, as the app's Track box names it (`pageLabel`).
+      const name = kind === "keywords" ? row.key : pageLabel(row.key, HOST);
+      return (
+        <span className="flex" onClick={(event) => event.stopPropagation()}>
+          <Checkbox label={on ? say("track.untrackLabel", { name }) : say("track.trackLabel", { name })} labelHidden checked={on}
+            onChange={(next) => setTracked((was) => { const set = new Set(was); if (next) set.add(row.key); else set.delete(row.key); return set; })} />
+        </span>
+      );
+    },
+  };
+  const nameColumn = kind === "keywords" ? keywordColumn<Row>(say("table.keyword"), recordHref) : pageColumn<Row>(say("table.page"), HOST, recordHref);
+  // Track goes to the row's end on every way, so it never sits beside the chart's tick boxes (as Keywords' Way 2 drew it),
+  // and the name comes first, as on every redone table.
+  const columns = [nameColumn, ...(figureColumns(say, figures) as unknown as DataTableColumn<Row>[]), trackColumn];
+  const limit = kind === "keywords" ? KEYWORD_LIMIT : PAGE_LIMIT;
+  return (
+    <DataTable
+      rows={pages.pageRows}
+      rowKey={(row) => row.key}
+      search={{ value: search, onChange: setSearch, placeholder: kind === "keywords" ? "Search tracked keywords…" : "Search tracked pages…" }}
+      cardHeader={(
+        <TableBar
+          footer={pages.footer}
+          noun={noun}
+          actions={(
+            <>
+              {ticks ? <TickActions ticks={ticks} rows={pages.pageRows ?? []} rowKey={(row) => row.key} /> : null}
+              <ListDownload
+                label="Download all (CSV)"
+                fileName={`${HOST}-search-console-tracked-${noun}`}
+                rows={order.rows}
+                columns={[
+                  { header: kind === "keywords" ? "Keyword" : "Page", value: (row) => row.key },
+                  { header: "Clicks", value: (row) => row.clicks },
+                  { header: "Up or down", value: (row) => row.change ?? "" },
+                  { header: "Impressions", value: (row) => row.impressions },
+                  { header: "Position", value: (row) => (row.impressions > 0 ? Math.round(row.position * 10) / 10 : "") },
+                ]}
+              />
+            </>
+          )}
+        >
+          <span className="text-[12px] text-foreground">· {say("track.count", { count: fmt(tracked.size), limit: fmt(limit) })}</span>
+          {ticks ? <TickCount ticks={ticks} /> : null}
+        </TableBar>
+      )}
+      sort={order.tableSort}
+      empty={{ icon: kind === "keywords" ? <Search className="h-8 w-8 text-muted/30" /> : <FileText className="h-8 w-8 text-muted/30" />, label: term ? "Nothing matches that search." : "Nothing in these dates." }}
+      footer={pages.footer}
+      columns={ticks ? [tickColumn<Row>(ticks, { rowKey: (row) => row.key, label: (row) => `Draw ${kind === "keywords" ? row.key : row.name} on the chart`, heading: "On the chart" }), ...columns] : columns}
+    />
+  );
+}
+
+// ——— Way 1 · tick them to draw them, like Keywords and Pages ———
+
+const SHOWN = ["clicks", "impressions", "position"] as const;
+type Shown = (typeof SHOWN)[number];
+const SHOWN_NAMES: Record<Shown, string> = { clicks: "Clicks", impressions: "Impressions", position: "Average position" };
+const COUNT_WORDS: Record<Kind, string[]> = {
+  keywords: ["", "The keyword", "The two keywords", "The three keywords", "The four keywords", "The five keywords"],
+  pages: ["", "The page", "The two pages", "The three pages", "The four pages", "The five pages"],
+};
+
+function Ticked({ kind, ticks }: { kind: Kind; ticks: TableTicks }) {
+  const [shown, setShown] = useState<Shown>("clicks");
+  const [against, setAgainst] = useState<"none" | "before">("none");
+  const items = ticks.keys.map((key) => ITEMS[kind].find((item) => item.key === key)).filter((item): item is Item => Boolean(item));
+  const lines: DaysLine[] = [
+    ...items.map((item, at) => ({ key: `row${at}`, name: item.name, colour: PLOTTED_COLOURS[at] ?? CHART_COMPARATOR_GREY, ...lineOf(everyDay(withCtr(item.days), FROM, TO), shown) })),
+    ...(against === "before" ? items.map((item, at) => ({
+      key: `before${at}`, name: `${item.name}, ${BEFORE}`, colour: PLOTTED_COLOURS[at] ?? CHART_COMPARATOR_GREY, dashed: true, under: true, gaps: true,
+      ...lineOf(everyDay(withCtr(item.before), BEFORE_FROM, BEFORE_TO), shown),
+    })) : []),
+  ];
+  const noun = kind === "keywords" ? "keyword" : "page";
+  const hint = [
+    items.length === 0 ? `Tick a ${noun} in the table to draw it here.` : `${COUNT_WORDS[kind][items.length]} you've ticked in the table, in ${NOW}.`,
+    ...(against === "before" && items.length > 0 ? [`The dashed lines are ${BEFORE}, lined up by date.`] : []),
+    ...(shown === "position" ? ["Lower is better. 1 is the top of Google."] : []),
+  ].join(" ");
+  const counted = shown !== "position";
+  return (
+    <DaysChart
+      title={`${SHOWN_NAMES[shown]} each week`}
+      hint={hint}
+      exportName={`${HOST}-search-console-tracked-${kind}`}
+      csvDay="Week starting"
+      host={HOST}
+      step="week"
+      waiting={null}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: shown, options: SHOWN.map((value) => ({ value, label: SHOWN_NAMES[value] })), onChange: (next) => setShown(next as Shown) },
+        { kind: "select", key: "against", label: "Compare with", value: against, options: [{ value: "none", label: "No comparison" }, { value: "before", label: "The 3 months before" }], onChange: (next) => setAgainst(next as "none" | "before") },
+      ]}
+      nothingTicked={items.length === 0 ? `Tick a ${noun} in the table to draw it here. You can tick up to ${MOST}.` : null}
+      lines={lines}
+      figure={SHOWN_NAMES[shown]}
+      format={counted ? fmt : oneDecimal}
+      plain={counted}
+      empty="Nothing to show for these dates."
+      height={300}
+    />
+  );
+}
+
+const topThree = (kind: Kind) => [...ITEMS[kind]].sort((a, b) => b.now.clicks - a.now.clicks).slice(0, 3).map((item) => item.key);
+
+function WayTicked({ kind }: { kind: Kind }) {
+  const [keys, setKeys] = useState<string[]>(() => topThree(kind));
+  const ticks: TableTicks = { keys, set: (next) => setKeys(next.slice(0, MOST)), most: MOST, limit: `You can draw up to ${MOST} ${kind} at once.` };
+  return (
+    <Page kind={kind} description={`The ${kind} you track, and how each did in these dates. Tick ${kind} to draw them on the chart.`}>
+      <Ticked kind={kind} ticks={ticks} />
+      <TrackedTable kind={kind} ticks={ticks} />
+    </Page>
+  );
+}
+export const K1 = () => <WayTicked kind="keywords" />;
+export const P1 = () => <WayTicked kind="pages" />;
+
+// ——— Keywords, Way 2 · where they sit on Google ———
+
+type Place = "first" | "second" | "further" | "none";
+const PLACES: Place[] = ["first", "second", "further", "none"];
+const PLACE_NAMES: Record<Place, string> = { first: "First page", second: "Second page", further: "Further down", none: "Not shown" };
+const PLACE_COLOURS: Record<Place, string> = { first: SITE_SERIES_COLOURS[0], second: SITE_SERIES_COLOURS[1], further: SITE_SERIES_COLOURS[2], none: CHART_SERIES_SLATE };
+const placeOf = (totals: Totals): Place => (totals.impressions === 0 ? "none" : totals.position <= 10 ? "first" : totals.position <= 20 ? "second" : "further");
+/** A move of under one place reads as no move, as the boxes round it. */
+const movedBy = (item: Item) => (item.now.impressions > 0 && item.was.impressions > 0 ? Math.round((item.was.position - item.now.position) * 10) / 10 : null);
+
+function PlaceBoxes() {
+  const items = ITEMS.keywords;
+  const count = (pick: (item: Item) => Totals, place: Place) => items.filter((item) => placeOf(pick(item)) === place).length;
+  const first = count((item) => item.now, "first");
+  const firstBefore = count((item) => item.was, "first");
+  const second = count((item) => item.now, "second");
+  const secondBefore = count((item) => item.was, "second");
+  const up = items.filter((item) => (movedBy(item) ?? 0) >= 1).length;
+  const down = items.filter((item) => (movedBy(item) ?? 0) <= -1).length;
+  return (
+    <FigureRow>
+      <Figure label="On Google's first page" value={`${fmt(first)} of ${fmt(items.length)}`} detail={<MoveLine now={first} before={firstBefore} count />} />
+      <Figure label="On the second page" value={`${fmt(second)} of ${fmt(items.length)}`} detail={<MoveLine now={second} before={secondBefore} count neutral />} />
+      <Figure label="Went up" value={fmt(up)} detail={<span className="text-secondary">A place or more since {BEFORE}</span>} />
+      <Figure label="Went down" value={fmt(down)} detail={<span className="text-secondary">A place or more since {BEFORE}</span>} />
+    </FigureRow>
+  );
+}
+
+function PlacesEachWeek() {
+  const rows = WEEKS.map((week) => {
+    const counts: Record<Place, number> = { first: 0, second: 0, further: 0, none: 0 };
+    for (const item of ITEMS.keywords) counts[placeOf(weekTotals(item, week))] += 1;
+    return weekRow(week, counts);
+  });
+  const total = ITEMS.keywords.length;
+  // A band no keyword sat in all along stays out of the key.
+  const drawn = PLACES.filter((place) => rows.some((row) => Number(row[place]) > 0));
+  return (
+    <MapCard
+      title="Where your keywords sat on Google each week"
+      hint={`Each band is how many of your ${fmt(total)} keywords sat there that week. The first page is places 1 to 10.`}
+      exportName={`${HOST}-search-console-tracked-keywords-places`}
+      csv={() => toCsv(["Week starting", ...PLACES.map((place) => PLACE_NAMES[place])], rows.map((row) => [row.day, ...PLACES.map((place) => Number(row[place]))]))}
+      host={HOST}
+    >
+      <SiteStackedAreaChart data={rows} series={drawn.map((place) => ({ key: place, name: PLACE_NAMES[place], colour: PLACE_COLOURS[place] }))} height={260} />
+    </MapCard>
+  );
+}
+
+function PlaceMovers() {
+  const rows: ChangeBar[] = ITEMS.keywords
+    .map((item) => ({ item, by: movedBy(item) }))
+    .filter((entry): entry is { item: Item; by: number } => entry.by !== null && entry.by !== 0)
+    .sort((a, b) => b.by - a.by)
+    .map(({ item, by }) => ({
+      key: item.key,
+      label: item.name,
+      detail: `${oneDecimal(item.was.position)} → ${oneDecimal(item.now.position)}`,
+      change: by,
+      hover: `${item.name} sat at ${oneDecimal(item.was.position)} in ${BEFORE}, and at ${oneDecimal(item.now.position)} in ${NOW}`,
+    }));
+  return (
+    <MapCard
+      title="Keywords that went up or down"
+      hint={`How many places each keyword moved since ${BEFORE}.`}
+      exportName={`${HOST}-search-console-tracked-keywords-moved`}
+      csv={() => toCsv(["Keyword", "Position before", "Position now"], ITEMS.keywords.map((item) => [item.name, oneDecimal(item.was.position), oneDecimal(item.now.position)]))}
+      host={HOST}
+    >
+      <ChangeBars rows={rows} lostLabel="Lower on Google" gainedLabel="Higher on Google" />
+    </MapCard>
+  );
+}
+
+export function K2() {
+  return (
+    <Page kind="keywords" description="The keywords you track, where they sit on Google, and which went up or down." boxes={<PlaceBoxes />}>
+      <PlacesEachWeek />
+      <PlaceMovers />
+      <TrackedTable kind="keywords" figures={["position", "moved", "clicks", "impressions"]} opening="positionChange" />
+    </Page>
+  );
+}
+
+// ——— Pages, Way 2 · where the clicks go ———
+
+const NAMED_PAGES = 5;
+/** The busiest pages by name, the rest together, so the key stays short. */
+function busiestAndRest(read: (item: Item) => number): Array<{ key: string; name: string; items: Item[] }> {
+  const ranked = [...ITEMS.pages].sort((a, b) => read(b) - read(a));
+  const named = ranked.slice(0, NAMED_PAGES).map((item) => ({ key: item.key, name: item.name, items: [item] }));
+  const rest = ranked.slice(NAMED_PAGES);
+  return rest.length > 0 ? [...named, { key: "rest", name: `The other ${fmt(rest.length)}`, items: rest }] : named;
+}
+
+function ClicksEachWeek() {
+  const groups = busiestAndRest((item) => item.now.clicks);
+  // A week the dates hold only part of is its own days' clicks, as the app's weekly charts draw it.
+  const rows = WEEKS.map((week) => weekRow(week, Object.fromEntries(groups.map((group) => [group.key, group.items.reduce((sum, item) => sum + weekTotals(item, week).clicks, 0)]))));
+  return (
+    <MapCard
+      title="Clicks to your pages each week"
+      hint={`Each band is a page. The top edge is all ${fmt(ITEMS.pages.length)} pages together.`}
+      exportName={`${HOST}-search-console-tracked-pages-each-week`}
+      csv={() => toCsv(["Week starting", ...groups.map((group) => group.name)], rows.map((row) => [row.day, ...groups.map((group) => Number(row[group.key]))]))}
+      host={HOST}
+    >
+      <SiteStackedAreaChart data={rows} series={groups.map((group, at) => ({ key: group.key, name: group.name, colour: group.key === "rest" ? CHART_SERIES_SLATE : SITE_SERIES_COLOURS[at] }))} height={280} />
+    </MapCard>
+  );
+}
+
+function PageSquares() {
+  const [compare, setCompare] = useState<"before" | "none">("before");
+  const groups = busiestAndRest((item) => item.now.clicks);
+  const values = groups.map((group) => group.items.reduce((sum, item) => sum + item.now.clicks, 0));
+  const before = groups.map((group) => group.items.reduce((sum, item) => sum + item.was.clicks, 0));
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const totalBefore = before.reduce((sum, value) => sum + value, 0);
+  const counts = outOfTotal(values);
+  const countsBefore = outOfTotal(before);
+  const compared = compare === "before";
+  const squares: HundredGroup[] = groups.map((group, at) => ({
+    key: group.key,
+    name: group.name,
+    count: counts[at] ?? 0,
+    colour: group.key === "rest" ? CHART_SERIES_SLATE : SITE_SERIES_COLOURS[at] ?? CHART_COMPARATOR_GREY,
+    ...(compared ? { was: <span className="font-mono">{countsBefore[at] ?? 0}</span> } : {}),
+    readout: [
+      { value: fmt(values[at] ?? 0), label: `Clicks in ${NOW}` },
+      { value: `${oneDecimal(per100(values[at] ?? 0, total))} in 100`, label: capital(NOW) },
+      ...(compared ? [{ value: `${oneDecimal(per100(before[at] ?? 0, totalBefore))} in 100`, label: capital(BEFORE) }] : []),
+    ],
+  }));
+  return (
+    <MapCard
+      title="Out of every 100 clicks"
+      hint={`All your clicks to these pages in ${NOW}. That's ${fmt(total)} clicks. Each square is 1 in every 100.`}
+      exportName={`${HOST}-search-console-tracked-pages-out-of-100`}
+      csv={() => toCsv(["Page", "Clicks", "Squares"], squares.map((group, at) => [group.name, values[at] ?? 0, group.count]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "compare", label: "Compare with", value: compare, options: [{ value: "before", label: "The 3 months before" }, { value: "none", label: "No comparison" }], onChange: (next) => setCompare(next as "before" | "none") },
+      ]}
+    >
+      <HundredGrid groups={squares} cells={100} nowLabel={capital(NOW)} wasLabel={compared ? capital(BEFORE) : ""} label="Out of every 100 clicks" />
+    </MapCard>
+  );
+}
+
+export function P2() {
+  return (
+    <Page kind="pages" description="The pages you track, and which of them bring you the most clicks.">
+      <ClicksEachWeek />
+      <PageSquares />
+      <TrackedTable kind="pages" />
+    </Page>
+  );
+}
+
+// ——— Way 3 · what Google's updates did to them ———
+
+/** Orange is up and grey is down, as the up-and-down bars below draw them. */
+const GAIN_LOSS: GainLossSeries[] = [
+  { key: "new", name: "Shown again", colour: SITE_SERIES_COLOURS[4] },
+  { key: "up", name: "Went up", colour: SITE_SERIES_COLOURS[0] },
+  { key: "down", name: "Went down", colour: CHART_COMPARATOR_GREY },
+  { key: "lost", name: "Not shown", colour: CHART_SERIES_SLATE },
+];
+
+/** Each week against the week before: up or down a place or more, shown again, or not shown at all. */
+function MovesEachWeek() {
+  const steps: GainLossStep[] = WEEKS.map((week) => {
+    const counts = { new: 0, up: 0, down: 0, lost: 0 };
+    for (const item of ITEMS.keywords) {
+      const now = weekTotals(item, week);
+      const was = between(item, weekBefore(week).day, weekBefore(week).lastDay);
+      if (now.impressions > 0 && was.impressions === 0) counts.new += 1;
+      else if (now.impressions === 0 && was.impressions > 0) counts.lost += 1;
+      else if (now.impressions > 0 && was.position - now.position >= 1) counts.up += 1;
+      else if (now.impressions > 0 && now.position - was.position >= 1) counts.down += 1;
+    }
+    return { day: week.day, lastDay: week.lastDay, label: formatShortDay(week.day), counts };
+  });
+  return (
+    <MapCard
+      title="Keywords that went up or down each week"
+      hint="Each bar sets a week against the one before it. A keyword counts when it moved a place or more."
+      exportName={`${HOST}-search-console-tracked-keywords-each-week`}
+      csv={() => toCsv(["Week starting", ...GAIN_LOSS.map((entry) => entry.name)], steps.map((step) => [step.day, ...GAIN_LOSS.map((entry) => step.counts?.[entry.key] ?? 0)]))}
+      host={HOST}
+    >
+      <SiteGainLossChart steps={steps} series={GAIN_LOSS.filter((entry) => steps.some((step) => (step.counts?.[entry.key] ?? 0) > 0))} netLabel="Up less down" startLegend="Went up" height={260} />
+    </MapCard>
+  );
+}
+
+/** One line for everything tracked together, with the 3 months before laid under it. */
+function TogetherEachWeek({ kind }: { kind: Kind }) {
+  const [shown, setShown] = useState<Shown>("clicks");
+  const [against, setAgainst] = useState<"none" | "before">("before");
+  const sumDays = (pick: (item: Item) => Day[], from: string, to: string) => {
+    const byDay = new Map<string, Day>();
+    for (const item of ITEMS[kind]) for (const day of pick(item)) {
+      const was = byDay.get(day.day) ?? { day: day.day, clicks: 0, impressions: 0, position: 0 };
+      const impressions = was.impressions + day.impressions;
+      byDay.set(day.day, { day: day.day, clicks: was.clicks + day.clicks, impressions, position: impressions > 0 ? (was.position * was.impressions + day.position * day.impressions) / impressions : 0 });
+    }
+    return everyDay(withCtr([...byDay.values()]), from, to);
+  };
+  const name = `Your ${fmt(ITEMS[kind].length)} ${kind}`;
+  const lines: DaysLine[] = [
+    { key: "now", name, colour: PLOTTED_COLOURS[0], ...lineOf(sumDays((item) => item.days, FROM, TO), shown) },
+    ...(against === "before" ? [{ key: "before", name: `${name}, ${BEFORE}`, colour: PLOTTED_COLOURS[0], dashed: true, under: true, gaps: true, ...lineOf(sumDays((item) => item.before, BEFORE_FROM, BEFORE_TO), shown) }] : []),
+  ];
+  const hint = [
+    `All your tracked ${kind} together, in ${NOW}.`,
+    ...(against === "before" ? [`The dashed line is ${BEFORE}, lined up by date.`] : []),
+    ...(shown === "position" ? ["Lower is better. 1 is the top of Google."] : []),
+  ].join(" ");
+  return (
+    <DaysChart
+      title={`${SHOWN_NAMES[shown]} each week`}
+      hint={hint}
+      exportName={`${HOST}-search-console-tracked-${kind}-together`}
+      csvDay="Week starting"
+      host={HOST}
+      step="week"
+      waiting={null}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: shown, options: SHOWN.map((value) => ({ value, label: SHOWN_NAMES[value] })), onChange: (next) => setShown(next as Shown) },
+        { kind: "select", key: "against", label: "Compare with", value: against, options: [{ value: "none", label: "No comparison" }, { value: "before", label: "The 3 months before" }], onChange: (next) => setAgainst(next as "none" | "before") },
+      ]}
+      nothingTicked={null}
+      lines={lines}
+      figure={SHOWN_NAMES[shown]}
+      format={shown === "position" ? oneDecimal : fmt}
+      plain={shown !== "position"}
+      empty="Nothing to show for these dates."
+      height={280}
+    />
+  );
+}
+
+const longDay = (day: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`));
+
+function UpdateMovers({ kind }: { kind: Kind }) {
+  const [which, setWhich] = useState<string>(() => (UPDATES.find((update) => update.finishedOn) ?? UPDATES[0])._id);
+  const [show, setShow] = useState<"clicks" | "position">("clicks");
+  const update = UPDATES.find((entry) => entry._id === which) ?? UPDATES[0];
+  const finished = update.finishedOn;
+  const before = { from: shift(update.startedOn, -WINDOW), to: shift(update.startedOn, -1) };
+  const after = finished ? { from: shift(finished, 1), to: shift(finished, WINDOW) } : null;
+  const rows: ChangeBar[] = after ? ITEMS[kind]
+    .map((item) => ({ item, was: between(item, before.from, before.to), now: between(item, after.from, after.to) }))
+    .map((entry) => ({ ...entry, by: show === "clicks" ? entry.now.clicks - entry.was.clicks : entry.was.impressions > 0 && entry.now.impressions > 0 ? Math.round((entry.was.position - entry.now.position) * 10) / 10 : 0 }))
+    .filter((entry) => entry.by !== 0)
+    .sort((a, b) => b.by - a.by)
+    .map(({ item, was, now, by }) => ({
+      key: item.key,
+      label: item.name,
+      detail: show === "clicks" ? `${fmt(was.clicks)} → ${fmt(now.clicks)}` : `${oneDecimal(was.position)} → ${oneDecimal(now.position)}`,
+      change: by,
+      hover: show === "clicks"
+        ? `${item.name} had ${fmt(was.clicks)} ${was.clicks === 1 ? "click" : "clicks"} in the 14 days before, and ${fmt(now.clicks)} in the 14 days after`
+        : `${item.name} sat at ${oneDecimal(was.position)} in the 14 days before, and at ${oneDecimal(now.position)} in the 14 days after`,
+    })) : [];
+  const hint = after
+    ? `It ran from ${longDay(update.startedOn)} to ${longDay(finished as string)}. Each bar sets the 14 days before it against the 14 days after.`
+    : `It began on ${longDay(update.startedOn)}.`;
+  return (
+    <MapCard
+      title="Before and after a Google update"
+      hint={hint}
+      exportName={`${HOST}-search-console-tracked-${kind}-update`}
+      csv={() => toCsv([kind === "keywords" ? "Keyword" : "Page", "Before", "After"], rows.map((row) => [row.label, row.detail.split(" → ")[0], row.detail.split(" → ")[1]]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "update", label: "Update", value: which, options: UPDATES.map((entry) => ({ value: entry._id, label: entry.title })), onChange: (next) => setWhich(next) },
+        { kind: "select", key: "show", label: "Show", value: show, options: [{ value: "clicks", label: "Clicks" }, { value: "position", label: "Average position" }], onChange: (next) => setShow(next as "clicks" | "position") },
+      ]}
+      message={after ? (rows.length === 0 ? "Nothing moved." : null) : "Google hasn't finished this update yet. Come back 14 days after it ends."}
+    >
+      <ChangeBars rows={rows} lostLabel={show === "clicks" ? "Lost clicks" : "Lower on Google"} gainedLabel={show === "clicks" ? "Gained clicks" : "Higher on Google"} />
+    </MapCard>
+  );
+}
+
+export function K3() {
+  return (
+    <Page kind="keywords" description="The keywords you track, and how Google's updates moved them.">
+      <MovesEachWeek />
+      <UpdateMovers kind="keywords" />
+      <TrackedTable kind="keywords" />
+    </Page>
+  );
+}
+export function P3() {
+  return (
+    <Page kind="pages" description="The pages you track, and how Google's updates moved them.">
+      <TogetherEachWeek kind="pages" />
+      <UpdateMovers kind="pages" />
+      <TrackedTable kind="pages" />
+    </Page>
+  );
+}
+
+export const WAYS = { K1, K2, K3, P1, P2, P3 };
+export const PATHS: Record<string, string> = {
+  K1: `/app/search-console/${SITE}/tracked/keywords`, K2: `/app/search-console/${SITE}/tracked/keywords`, K3: `/app/search-console/${SITE}/tracked/keywords`,
+  P1: `/app/search-console/${SITE}/tracked/pages`, P2: `/app/search-console/${SITE}/tracked/pages`, P3: `/app/search-console/${SITE}/tracked/pages`,
+};

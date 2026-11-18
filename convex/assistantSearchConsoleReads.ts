@@ -5,11 +5,15 @@ import { holdFor } from "./assistantReads";
 import type { SiteReader } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
 import { readPerformance } from "./searchConsoleReads";
+import { countryNameOf } from "./utils/countryCodes";
 import { readList } from "./searchConsoleLists";
 import { namedRows } from "./searchConsolePeriodBooks";
 import { readCurve, readNewLost, readUpdates } from "./searchConsoleChanges";
 import { readDemand } from "./searchConsoleDemand";
+import { readPageKinds } from "./pageKinds";
+import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { readVolatility } from "./searchConsoleVolatility";
+import { askIndexing } from "./searchConsoleIndexing";
 import { SEARCH_CONSOLE_SCREENS, SEARCH_CONSOLE_SEGMENT } from "./utils/searchConsoleAskScreens";
 import type { ListRow } from "./utils/searchConsoleViews";
 import { calendarPeriodValidator, periodSpan, spanBefore, stepOf, ukDay } from "./utils/calendarPeriods";
@@ -85,7 +89,8 @@ export const searchConsoleScreenInternal = internalQuery({
       spanBefore: { from: before.from, to: before.to },
       figuresTo: connection.newestDay,
       link: `/app/search-console/${hold._id}${segment ? `/${segment}` : ""}?period=${period}${keyPart}`,
-      rule: "These are the figures the screen shows, for Google's web results in the website's main home country, but a page's figures, which are every country's: Google only counts the searches it keeps private in a page's figures when no country is chosen. So a website's pages add up to more than its clicks in its home country. A click is a visit from Google, not a sale. Give them with the link, in plain words; never money.",
+      // Pages and a page's own screen follow the country too since 18 November 2026 (search-console-pages-way-1-plan).
+      rule: "These are the figures the screen shows, for Google's web results in the website's main home country, its pages too. Google ties no page to the searches it keeps private, so the website's pages add up to fewer clicks than the country's own total. A click is a visit from Google, not a sale. Give them with the link, in plain words; never money.",
     };
     const site = reader(ctx, args.companyId);
     const ask = { searchType: "web" as const, from, to, period };
@@ -113,14 +118,40 @@ export const searchConsoleScreenInternal = internalQuery({
     }
 
     if (args.screen === "services") {
-      const demand = await readDemand(site, { siteId: hold._id, period });
-      if (!demand) return { ...base, services: [], note: "The figures are still being added up." };
-      const nameOf = (row: (typeof demand.services)[number]) => (row.kind === "GUIDES" ? "Guides" : row.kind === "OTHER" ? (demand.classified ? "Pages not sorted yet" : "Other pages") : row.kind === "SERVICE" && row.id === "/" ? "Home page" : (row.kind === "SERVICE" ? row.name?.split("|")[0].trim() : row.name) || row.id);
+      // Demand by Classification (search-console-demand-by-classification-way-2-plan-2026-11-18.md): the main home country's
+      // own pages, by Classification, beside the country's own clicks, which they never add up to.
+      const demand = await readDemand(ctx, hold._id, { from, to, period });
+      if (!demand) return { ...base, classifications: [], note: "The home country's pages for these dates aren't added up yet: open the screen to see them." };
+      const figures = await readPerformance(site, { siteId: hold._id, ...ask });
+      const kinds = await readPageKinds(ctx, hold._id);
+      const nameOf = (kind: string) => (kind === NOT_SORTED_KIND ? "Unclassified" : kinds?.nameOf(kind) ?? `${kind.charAt(0)}${kind.slice(1).toLowerCase().replace(/_/g, " ")}`);
+      // Both sides of the gap worked out here, so an answer says them as figures (Ask Hakken's first answer on 18 November
+      // 2026 said why the parts add up to less, but with no figure and a muddled share).
+      const pageClicks = demand.rows.reduce((sum, row) => sum + row.clicks, 0);
+      const countryClicks = figures.totals?.clicks ?? null;
       return {
         ...base,
+        rule: `${base.rule} So the Classifications add up to fewer clicks than countryClicks: clicksOnPages is what Google tied to a page, and clicksFromSearchesGoogleKeepsPrivate is the rest. Say both as figures when asked why.`,
         listFrom: demand.from,
         listTo: demand.to,
-        services: demand.services.map((row) => ({ service: nameOf(row), timesShown: row.shown, timesShownBefore: row.shownBefore, clicks: row.clicks, clicksBefore: row.clicksBefore })),
+        countryClicks,
+        clicksOnPages: pageClicks,
+        clicksFromSearchesGoogleKeepsPrivate: countryClicks === null ? null : Math.max(0, countryClicks - pageClicks),
+        countryClicksBefore: demand.comparable ? (figures.previous?.clicks ?? null) : null,
+        classifications: demand.rows.map((row) => ({ classification: nameOf(row.kind), timesShown: row.impressions, timesShownBefore: row.impressionsBefore, clicks: row.clicks, clicksBefore: row.clicksBefore, pages: row.pages })),
+      };
+    }
+
+    if (args.screen === "indexing") {
+      // Indexing (search-console-indexing-v1-plan-2026-11-18.md): Google's page checks, problems only, the reasons in
+      // Google's own words with a plain line each; with a key, one reason's own page.
+      const indexing = await askIndexing(ctx, hold._id, { from, to, period, ...(args.key ? { key: args.key } : {}) });
+      const own = "link" in indexing && typeof indexing.link === "string" ? indexing.link : null;
+      return {
+        ...base,
+        ...indexing,
+        link: `/app/search-console/${hold._id}/${own ?? "indexing"}?period=${period}`,
+        rule: `${base.rule} On Indexing every count is of the pages Google was asked about one at a time, up to 1,600 a day, never Google's own totals for the website, which it gives apps no way to read. Name each reason in Google's own words, then say what it means in plain words, as its means line does; say "in Google" rather than "indexed" in a sentence. Clicks and times shown follow the dates, the website's home country's own pages.`,
       };
     }
 
@@ -171,12 +202,35 @@ export const searchConsoleScreenInternal = internalQuery({
       };
     }
 
+    if (args.screen === "places") {
+      // Countries and devices (search-console-countries-and-devices-way-1-plan-2026-11-18.md), as the screen reads them:
+      // every country Google showed the website in, and the devices in the main home country.
+      const [countries, devices] = await Promise.all([
+        readList(ctx, hold._id, { ...ask, dimension: "country", sort: "clicks", direction: "desc" }),
+        readList(ctx, hold._id, { ...ask, dimension: "device", sort: "clicks", direction: "desc" }),
+      ]);
+      if (countries.live || devices.live) return { ...base, note: "These dates are not a ready-made period: open the screen to read them." };
+      if (countries.preparing || devices.preparing) return { ...base, note: "The figures are still being added up." };
+      // A list of rows read a part at a time (`ListRows`): sliced whole here, a few hundred countries at most.
+      const countryRows = countries.rows.slice(0, countries.rows.length);
+      const clickedCountries = countryRows.filter((row) => row.clicks > 0).length;
+      return {
+        ...base,
+        rule: `${base.rule} The countries are every country Google showed the website in; the devices are the main home country's alone.`,
+        countriesShown: countries.listed,
+        countriesWithAClick: clickedCountries,
+        countries: countryRows.slice(0, ROWS).map((row) => ({ ...rowOf(row), name: countryNameOf(row.key) ?? row.key.toUpperCase() })),
+        devices: devices.rows.slice(0, devices.rows.length).map(rowOf),
+      };
+    }
+
     // The lists: keywords, pages, brand and non-brand, position bands, and one search's or page's own row.
     const dimension = args.screen === "pages" || args.screen === "page" ? ("page" as const) : ("query" as const);
     const wanted = args.screen === "keyword" || args.screen === "page" ? args.key?.trim() : args.search?.trim();
     if ((args.screen === "keyword" || args.screen === "page") && !wanted) return { ok: false, problem: `Name the ${args.screen === "keyword" ? "search" : "page"} to read, as key.` };
-    const list = await readList(ctx, hold._id, { ...ask, dimension, sort: "clicks", direction: "desc", ...(wanted ? { q: wanted } : {}) });
-    if (list.live) return { ...base, note: "These dates are not a ready-made period: open the screen to read them." };
+    // Pages and a page's own row: the country's own pages (`inCountry`), kept by the collector, as the screens read them.
+    const list = await readList(ctx, hold._id, { ...ask, dimension, sort: "clicks", direction: "desc", ...(wanted ? { q: wanted } : {}), ...(dimension === "page" ? { inCountry: true } : {}) });
+    if (list.live) return { ...base, note: dimension === "page" ? "The home country's pages for these dates aren't added up yet: open the screen to see them." : "These dates are not a ready-made period: open the screen to read them." };
     if (list.preparing) return { ...base, note: "The figures are still being added up." };
     const rows = await namedRows(list, list.rows.slice(0, args.screen === "keyword" || args.screen === "page" ? 200 : ROWS));
     const summary = list.summary;
@@ -200,10 +254,18 @@ export const searchConsoleScreenInternal = internalQuery({
     }
 
     const whole = summary?.wholeList;
+    // Pages' boxes are the country's own figures, Performance's read: its pages share out only the clicks Google ties to a page.
+    const boxes = args.screen === "pages" ? await readPerformance(site, { siteId: hold._id, ...ask }) : null;
     return {
       ...base,
       ...held,
       totals: summary ? { searches: summary.rows, clicks: summary.clicks, clicksBefore: summary.previousClicks, timesShown: summary.impressions, place: round(summary.position) } : null,
+      ...(boxes ? {
+        countryClicks: boxes.totals?.clicks ?? null,
+        countryClicksBefore: boxes.previous?.clicks ?? null,
+        // Ask Hakken's first answer on Pages (18 November 2026) called the pages' 1,946 "your entire website", beside 7,124.
+        pagesRule: "totals.clicks is only what Google tied to a page. The website's own clicks in the country are countryClicks, and the rest came from searches Google keeps private. Never call the pages' total the website's.",
+      } : {}),
       ...(args.screen === "brand" || args.screen === "keywords" ? { brandAndNonBrand: summary?.brand ?? null, mostMoved: whole?.movers ?? null } : {}),
       ...(args.screen === "bands" || args.screen === "keywords" ? {
         searchesInEachBand: summary?.bands ?? null,

@@ -10,10 +10,10 @@ import SearchConsoleTrackedKeywordsPage from "./[siteId]/tracked/keywords/page";
 import SearchConsoleTrackedPagesPage from "./[siteId]/tracked/pages/page";
 
 /**
- * Search Console's screens hold to the looks Anthony approved on the
- * "Search Console — keywords and pages" canvas (design-drift-plan D4): each
- * screen, rendered with sample rows in English, reads as the outline saved
- * beside its board in docs/plans/assets/search-console-redesign/look/.
+ * Search Console's screens hold to the looks Anthony approved (design-drift-plan D4): each screen, rendered with sample
+ * rows in English, reads as the outline saved beside its board. Tracked keywords and Tracked pages were approved on the
+ * "Search Console — keywords and pages" canvas, then again as Way 1 on 18 November 2026; their outlines are in
+ * docs/plans/assets/search-console-tracked-way-1/look/.
  */
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "" }));
@@ -29,7 +29,8 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
 
-const PLAN = "search-console-redesign";
+/** Tracked keywords and Tracked pages, as Anthony chose them on 18 November 2026 (search-console-tracked-way-1-plan-2026-11-18.md). */
+const TRACKED_PLAN = "search-console-tracked-way-1";
 
 function answer(queries: Record<string, unknown>) {
   vi.mocked(useQuery).mockImplementation(answerQueries(queries));
@@ -55,7 +56,7 @@ afterEach(() => {
 });
 
 describe("Search Console's approved looks", () => {
-  it("19 · Tracked keywords", async () => {
+  it("Tracked keywords, Way 1", async () => {
     at("/app/search-console/site_1/tracked/keywords");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
@@ -64,10 +65,10 @@ describe("Search Console's approved looks", () => {
     });
     const { container } = render(<SearchConsoleTrackedKeywordsPage />);
     await screen.findByText("ai agency");
-    await expectApprovedLook(container, PLAN, "TrackedKeywords", "Search Console → Tracked keywords");
+    await expectApprovedLook(container, TRACKED_PLAN, "TrackedKeywords", "Search Console → Tracked keywords");
   });
 
-  it("20 · Tracked pages", async () => {
+  it("Tracked pages, Way 1", async () => {
     at("/app/search-console/site_1/tracked/pages");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
@@ -76,6 +77,6 @@ describe("Search Console's approved looks", () => {
     });
     const { container } = render(<SearchConsoleTrackedPagesPage />);
     await screen.findAllByText(/ai-agency/);
-    await expectApprovedLook(container, PLAN, "TrackedPages", "Search Console → Tracked pages");
+    await expectApprovedLook(container, TRACKED_PLAN, "TrackedPages", "Search Console → Tracked pages");
   });
 });

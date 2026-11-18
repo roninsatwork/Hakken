@@ -1,16 +1,22 @@
-// npm run check:drawing -- <board.dc.html> [...] (docs/plans/active/design-drift-plan.md, D2)
+// npm run check:drawing -- <board.dc.html | canvas.json> [...] (docs/plans/active/design-drift-plan.md, D2)
 //
 // Fails a drawing that strays from the app: a class the app's stylesheet does
 // not have, a colour outside the record of the look and the chart palette, a
 // font the app does not use, a table that would scroll sideways, a cluttered
 // table (more than the name and five more columns, a heading over ten letters,
-// a cell with two lines, a name that wraps), or a line of words over a reading
-// age of 14. Run it on every board before a canvas is
-// published; build the kit first (`npm run drawing-kit`).
+// a cell with two lines, a name that wraps), a line of words over a reading
+// age of 14, or words that break the writing guide's machine-checkable rules
+// (scripts/word-style.mjs: a month left unnamed, a colon or dash joining two
+// ideas, Hakken talking about itself, a sentence said twice, "Compare with"
+// offering something that isn't a period). Given a canvas's canvas.json, it
+// holds the canvas's notes to the same words rules (docs/developer/writing-guide.md).
+// Run it on every board and canvas.json before a canvas is published; build
+// the kit first (`npm run drawing-kit`).
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { drawingLines, MOST_READING_AGE, readingAge, tooHard } from "./reading-age.mjs";
+import { isPeriodChoice, saidTwice, styleFaults } from "./word-style.mjs";
 import { ROOT, readThemeRecord } from "./theme-record.mjs";
 
 const KIT_CSS = path.join(ROOT, "docs/design/drawing-kit/build/kit.css");
@@ -156,11 +162,37 @@ export function checkDrawing(html, { kitCss, colours, appSource = "" }) {
     for (const line of drawingLines(html)) {
       if (tooHard(line)) problems.push(`reading age ${readingAge(line).toFixed(1)}, and the most is ${MOST_READING_AGE}. Say it more simply: "${line}"`);
     }
+    // The words rules judge our words, not a table's rows: a row's name is the website's own title, as it wrote it.
+    const ours = drawingLines(html.replace(/<tbody\b[\s\S]*?<\/tbody>/g, "\n"));
+    for (const line of ours) for (const { fix } of styleFaults(line)) problems.push(`${fix} "${line}"`);
+    for (const sentence of saidTwice(ours)) problems.push(`said more than once on one board. Say it once, where it belongs: "${sentence}"`);
+    // "Compare with" is only ever a period on the redone screens: September, the same days last year, no comparison.
+    for (const menu of html.matchAll(/<select\b[^>]*aria-label="Compare with"[^>]*>([\s\S]*?)<\/select>/g)) {
+      const choices = [...menu[1].matchAll(/<option\b[^>]*>([^<]*)<\/option>/g)].map((option) => option[1].trim());
+      const others = choices.filter((choice) => !isPeriodChoice(choice));
+      if (others.length > 0) problems.push(`"Compare with" offers ${others.map((choice) => `"${choice}"`).join(", ")}, which isn't a period. Compare with is only for a period. Use Show for another choice.`);
+    }
   }
 
   const counted = new Map();
   for (const problem of problems) counted.set(problem, (counted.get(problem) ?? 0) + 1);
   return [...counted].map(([problem, times]) => (times > 1 ? `${problem} (${times} times)` : problem));
+}
+
+/** Kinds of note on a canvas that aren't words to read: a title, or a shape the person drew. */
+const NOT_A_NOTE = new Set(["title1", "rect", "oval", "pen", "line", "arrow", "image"]);
+
+/** The problems in a canvas's notes (its canvas.json), each paragraph held to the reading age and the words rules. */
+export function checkCanvasNotes(index) {
+  const problems = [];
+  for (const [id, note] of Object.entries(index.notes ?? {})) {
+    if (NOT_A_NOTE.has(note.kind) || typeof note.text !== "string") continue;
+    for (const paragraph of note.text.split(/\n+/).map((part) => part.trim()).filter(Boolean)) {
+      if (tooHard(paragraph)) problems.push(`note "${id}": reading age ${readingAge(paragraph).toFixed(1)}, and the most is ${MOST_READING_AGE}. Say it more simply: "${paragraph}"`);
+      for (const { fix } of styleFaults(paragraph)) problems.push(`note "${id}": ${fix} "${paragraph}"`);
+    }
+  }
+  return problems;
 }
 
 /** Every component's source, to tell the app's own marker classes from invented ones. */
@@ -174,7 +206,7 @@ function appSourceText(dir) {
 
 function main(files) {
   if (files.length === 0) {
-    console.error("Usage: npm run check:drawing -- <board.dc.html> [...]");
+    console.error("Usage: npm run check:drawing -- <board.dc.html | canvas.json> [...]");
     process.exit(2);
   }
   if (!existsSync(KIT_CSS)) {
@@ -186,7 +218,9 @@ function main(files) {
   const colours = allowedColours(readThemeRecord(), `${readFileSync(CHART_PALETTE, "utf8")}\n${readFileSync(GOOGLE_MARK, "utf8")}`);
   let failed = 0;
   for (const file of files) {
-    const problems = checkDrawing(readFileSync(file, "utf8"), { kitCss, colours, appSource });
+    const problems = file.endsWith(".json")
+      ? checkCanvasNotes(JSON.parse(readFileSync(file, "utf8")))
+      : checkDrawing(readFileSync(file, "utf8"), { kitCss, colours, appSource });
     if (problems.length === 0) {
       console.log(`✓ ${file}`);
     } else {

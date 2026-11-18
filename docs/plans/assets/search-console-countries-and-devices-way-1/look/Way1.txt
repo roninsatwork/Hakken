@@ -1,0 +1,23 @@
+# Search Console → Countries and devices — the approved look (board "Way1" of docs/plans/assets/search-console-countries-and-devices-way-1/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Countries and devices
+choice: Kind of result: Web | Video | News | Discover | Google News
+figures
+  figure: Clicks
+  figure: Out of every # clicks
+  figure: From other countries
+  figure: Countries with a click
+chart-card: Clicks each day
+filter: Show
+filter: Compare with
+search: Search countries…
+table: On the chart | Country | Clicks | Up or down | Shown | CTR | Position
+  table-bar
+    download: Download all (CSV)
+  table-footer
+search: Search devices…
+table: Device | Clicks | Up or down | Shown | CTR | Position
+  table-bar: Devices in the United Kingdom
+    download: Download all (CSV)
+  table-footer

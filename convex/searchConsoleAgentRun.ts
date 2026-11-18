@@ -9,7 +9,8 @@ import { bookStep, stepKey } from "./collectionSteps";
 import { planParts, startParts } from "./searchConsoleSettlePlan";
 import { shiftDay } from "./searchConsoleDays";
 import { countriesPastLimit } from "./searchConsoleCountries";
-import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
+import { countryNameOf } from "./utils/countryCodes";
+import { DAILY_CHECKS } from "./utils/pageIndexChecks";
 
 /**
  * The Search Console Collector's job (docs/plans/active/search-console-plan.md
@@ -68,13 +69,8 @@ const siteArgs = {
 
 /** A country as a run's lines name it: "United Kingdom (GBR)", or the code alone where no name is known. */
 export function countryLabel(code: string): string {
-  const alpha2 = ALPHA3_TO_ALPHA2[code.toUpperCase()];
-  try {
-    const name = alpha2 ? new Intl.DisplayNames(["en-GB"], { type: "region" }).of(alpha2) : undefined;
-    return name ? `${name} (${code.toUpperCase()})` : code.toUpperCase();
-  } catch {
-    return code.toUpperCase();
-  }
+  const name = countryNameOf(code);
+  return name ? `${name} (${code.toUpperCase()})` : code.toUpperCase();
 }
 
 /** The countries kept ready, as a sentence of a run's objective ("Then …") or summary ("With …"); nothing without any. */
@@ -230,6 +226,7 @@ export async function beginSiteRun(ctx: MutationCtx, agentId: Id<"agents">, site
  * screen opens them behind (`searchConsoleSettling.ts`).
  */
 export async function afterDays(ctx: ActionCtx, run: SiteStep): Promise<void> {
+  await startDayChecks(ctx, run);
   const summary = `Collected ${run.host}, ${days(run.from, run.top)}: ${count(run.rows)} rows from ${count(run.requests)} asks to Google.${countriesLine(run.countries, "With")} ${NOT_HISTORY}`;
   try {
     if (await ctx.runQuery(internal.searchConsoleSettling.reportsBuilt, { connectionId: run.connectionId })) {
@@ -253,6 +250,27 @@ export async function afterDays(ctx: ActionCtx, run: SiteStep): Promise<void> {
     await startParts(ctx, run.connectionId, plan, { runId: run.runId, workflowExecutionId: run.workflowExecutionId, companyId: run.companyId, summary });
   } catch (error: unknown) {
     await finishRun(ctx, run.runId, run.workflowExecutionId, "FAILED", `The days came in, but adding them up stopped: ${failureSummary(error)} The next run adds them up again.`);
+  }
+}
+
+/**
+ * The day's page checks, once a website's newest days are in (search-console-indexing-v1-plan-2026-11-18.md): a
+ * watched chain of their own, a line on the run when they start. Only where they're switched on
+ * (`SEARCH_CONSOLE_PAGE_CHECKS`); a fault here never stops the run.
+ */
+async function startDayChecks(ctx: ActionCtx, run: SiteStep): Promise<void> {
+  try {
+    const started = await ctx.runMutation(internal.searchConsolePageChecks.startPageChecks, { connectionId: run.connectionId });
+    if (started !== "STARTED") return;
+    await ctx.runMutation(internal.roleRuns.logRunLine, {
+      runId: run.runId,
+      companyId: run.companyId,
+      heading: "Page checks",
+      detail: `Started: up to ${count(DAILY_CHECKS)} of ${run.host}'s pages asked of Google's URL inspection today, four at once, as steps of their own.`,
+      failed: false,
+    });
+  } catch {
+    // The run's days are in: the checks start again with the next night's run.
   }
 }
 

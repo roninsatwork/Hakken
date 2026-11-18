@@ -70,6 +70,8 @@ function stepFunction(chain: StepChain) {
       return internal.searchConsoleSteps.fillSiteStep;
     case "SC_SETTLE":
       return internal.searchConsoleSettle.settlePart;
+    case "SC_CHECKS":
+      return internal.searchConsolePageChecks.checkPagesStep;
     case "INSIGHTS":
       return internal.insightsRunWorker.continueRun;
   }

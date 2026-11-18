@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useMutation } from "convex/react";
+import { readOnly } from "@/src/lib/leaveWarning";
 import { usePathname } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -29,7 +30,8 @@ export function useNoteAdvice(siteId: Id<"companyWebsites"> | null | undefined, 
     noted.add(key);
     // Nobody pressed anything: a failure is reported once, never shown, and tried again the next time the box shows.
     void action
-      .run(() => note({ siteId, screen, path, seen, ...(currency ? { currency } : {}) }), { key, suppressErrorToast: true, backgroundRetry: true })
+      // Bookkeeping, not a person's change: leaving while it's on its way never asks "Leave site?" (`readOnly`).
+      .run(() => readOnly(note({ siteId, screen, path, seen, ...(currency ? { currency } : {}) }), "mutation"), { key, suppressErrorToast: true, backgroundRetry: true })
       .then((outcome) => {
         if (!outcome.ok) noted.delete(key);
       });

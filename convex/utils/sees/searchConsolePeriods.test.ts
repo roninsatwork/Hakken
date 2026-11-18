@@ -6,12 +6,18 @@ import { pageDataFor } from "./pageData";
 import { pageFindings } from "./pageFindings";
 import { performanceSplits, type PerformanceRaw } from "@/src/app/(dashboard)/app/search-console/_components/performanceSees";
 import { keywordBands } from "@/src/app/(dashboard)/app/search-console/_components/keywordSees";
+import { placesPageData, type PlaceRow } from "@/src/app/(dashboard)/app/search-console/_components/placesSees";
+import { demandPageData, demandParts } from "@/src/app/(dashboard)/app/search-console/_components/demandSees";
+import type { DemandRow } from "@/convex/utils/searchConsoleDemand";
+import { countryName } from "@/src/app/(dashboard)/app/search-console/_components/countries";
 import type { ListRow } from "@/src/app/(dashboard)/app/search-console/_components/SearchConsoleTables";
+import { tickedUpdateOf, trackedPageData } from "@/src/app/(dashboard)/app/search-console/_components/trackedSees";
+import { figuresOf, shapeRows, trackedListOf, withTracked, type SourceRow } from "../searchConsoleViews";
+import { pageName } from "./own/searchConsolePages";
 
 const performance = readFixture("moreHandlesSearchConsolePerformance");
 const keywords = readFixture("moreHandlesSearchConsoleKeywords");
 const curve = readFixture("moreHandlesSearchConsoleCurve");
-const services = readFixture("moreHandlesSearchConsoleServices");
 const updates = readFixture("moreHandlesSearchConsoleUpdates");
 const newLost = readFixture("moreHandlesSearchConsoleNewLost");
 const devices = readFixture("moreHandlesSearchConsoleDevices");
@@ -20,8 +26,16 @@ const roninsPerformance = readFixture("roninsSearchConsolePerformance");
 const splitsRead = readFixture("moreHandlesSearchConsolePerformanceSplits") as Record<string, unknown>;
 /** "more handles" on its own screen, as Google answered on 17 November 2026: its figures and every page shown for it. */
 const keywordScreen = readFixture("moreHandlesSearchConsoleKeywordScreen") as Record<string, unknown>;
+/** The United Kingdom's own pages, each against its dates before, and its own figures, as Google answered on 18 November 2026. */
 const pagesRead = readFixture("moreHandlesSearchConsolePages") as Record<string, unknown>;
 const pageScreen = readFixture("moreHandlesSearchConsolePageScreen") as Record<string, unknown>;
+/** Every country, and the United Kingdom's devices, each against its dates before, as Google answered on 18 November 2026. */
+const placesRead = readFixture("moreHandlesSearchConsolePlaces") as Record<string, unknown>;
+/** The United Kingdom's pages by Classification, each against its dates before, and its own figures, as Google answered on 18 November 2026. */
+const demandRead = readFixture("moreHandlesSearchConsoleDemand") as {
+  kindNames: Record<string, string>;
+  periods: Record<string, { from: string; to: string; comparable: boolean; rows: DemandRow[]; totals: { clicks: number; impressions: number } | null; previous: { clicks: number; impressions: number } | null }>;
+};
 
 /**
  * Search Console's own findings on every period its date menu offers, on More Handles' own figures as its reads answered
@@ -121,32 +135,26 @@ const keywordsListPage = (period: Period) => {
   return { summary: list.summary, rows: list.rows, picked: true, website: { clicks: website.clicks }, ticked: [{ name: "door handles", clicks: 38, previousClicks: 22 }], names: KEYWORD_NAMES };
 };
 /**
- * Pages (search-console-pages-way-1-plan-2026-11-17.md): the page list as its own read answered on 17 November 2026,
- * every country's, with the span before's totals, the pages clicked, the few that make half the clicks and the two that
- * moved most; the home page ticked onto the chart with its October clicks against September's; and the names the page
- * says things by. That day More Handles' Last 6 months and Last 12 months have no span before: Google has no figures
- * for it from 11 August 2025 to 22 April 2026 (`googleHasSpan`), and the 12 months before are past its sixteen.
+ * Pages (search-console-pages-way-1-plan-2026-11-17.md), following the country menu since 18 November 2026: the United
+ * Kingdom's own pages as the page's read asked Google for them that day (`inCountry`), with the span before's totals, the
+ * pages clicked, the few that make half the clicks and the two that moved most; the country's own clicks, the boxes'; the
+ * home page ticked onto the chart with its own clicks against the span before's, as its row has them; and the names the
+ * page says things by. Google tied only 1,946 of the United Kingdom's 7,124 October clicks to a page. That day More
+ * Handles' Last 6 months and Last 12 months have no span before: Google has no figures for it from 11 August 2025 to 22
+ * April 2026 (`googleHasSpan`), and the 12 months before are past its sixteen.
  */
 const PAGES_NAMES = {
-  allPages: "All your pages", clicked: "Pages that got a click", half: "Pages that make half your clicks", home: "Home page",
+  allPages: "All your pages", clicked: "Pages that got a click", half: "Pages that make half your clicks", home: "Home page", hidden: "Searches Google hides",
   kinds: (pagesRead.kindNames ?? {}) as Record<string, string>,
 };
-const pagesPage = (period: Period) => {
-  const list = at(pagesRead, period) as { summary: unknown; rows: unknown[]; comparable: boolean };
-  // The ticked page's span before comes back only where Google has figures for it, as the page list's does.
-  return { summary: list.summary, rows: list.rows, picked: true, ticked: [{ name: "Home page", clicks: 396, previousClicks: list.comparable ? 327 : null }], names: PAGES_NAMES };
+const pagesPage = (period: PlacesPeriod) => {
+  const list = at(pagesRead, period as Period) as { summary: unknown; rows: unknown[]; comparable: boolean; website: { clicks: number }; home: { clicks: number; previousClicks: number | null } };
+  return { summary: list.summary, rows: list.rows, picked: true, website: { clicks: list.website.clicks }, ticked: [{ name: "Home page", ...list.home }], names: PAGES_NAMES };
 };
 const curvePage = (period: Period) => {
   const { points, before } = at(curve, period) as { points: Array<{ position: number }>; before: Array<{ position: number }> | null };
   const placed = (list: Array<{ position: number }>) => list.map((point) => ({ ...point, name: `Place ${point.position}` }));
   return { points: placed(points), before: before ? placed(before) : null, names: PLACE_NAMES };
-};
-const servicesPage = (period: Period) => {
-  const answer = at(services, period) as { from: string; to: string; services: Array<{ kind: string; name: string | null; shown: number; shownBefore: number | null; clicks: number; clicksBefore: number | null }> };
-  return {
-    services: answer.services.map((row) => ({ name: row.kind === "OTHER" ? "Not sorted" : row.name, impressions: row.shown, impressionsBefore: row.shownBefore, clicks: row.clicks, clicksBefore: row.clicksBefore, sorted: row.kind !== "OTHER" })),
-    from: answer.from, to: answer.to, names: { others: "The other services" },
-  };
 };
 type Update = { title: string; startedOn: string; finishedOn: string | null; state: string; before: { clicks: number; position: number } | null; after: { clicks: number; position: number } | null; volatility?: { before: number | null; during: number | null } };
 const updatesPage = (period: Period) => ({
@@ -234,6 +242,50 @@ const pageScreenPage = (period: Period) => {
   };
 };
 
+/**
+ * Countries and devices (search-console-countries-and-devices-way-1-plan-2026-11-18.md): every country Google showed More
+ * Handles in, the United Kingdom chosen in the menu, its devices, and the three busiest countries after it ticked onto the
+ * chart, each country's clicks before as the ticked series answers them. Built as the page builds them (`placesPageData`),
+ * with its English names. On 18 November 2026 Google had Monday 16 November as its newest day, so This week is one day;
+ * Last 6 months and Last 12 months have no dates before (Google has no figures for the website from 11 August 2025 to
+ * 22 April 2026).
+ */
+type PlacesPeriod = Period | "thisWeek";
+const PLACES_PERIODS: PlacesPeriod[] = ["thisWeek", ...ALL];
+const englishName = (code: string) => countryName(code, "en") ?? "Unknown";
+const DEVICE_WORDS: Record<string, string> = { MOBILE: "Mobile", DESKTOP: "Desktop", TABLET: "Tablet" };
+type PlacesList = { comparable: boolean; summary: { clicks: number; beforeTotals: { clicks: number } | null; clickedBefore: number | null }; rows: PlaceRow[] };
+const placesPage = (period: PlacesPeriod) => {
+  const read = (placesRead as Record<PlacesPeriod, { countries: PlacesList; devices: PlacesList }>)[period];
+  const countries = read.countries.rows.map((row) => ({ ...row, name: englishName(row.key) }));
+  const devices = read.devices.rows.map((row) => ({ ...row, name: DEVICE_WORDS[row.key] ?? row.key }));
+  const ticked = [...countries].filter((row) => row.key !== "gbr" && row.clicks > 0).sort((left, right) => right.clicks - left.clicks).slice(0, 3)
+    .map((row) => ({ name: row.name, clicks: row.clicks, previousClicks: read.countries.comparable ? (row.previousClicks ?? 0) : null }));
+  return placesPageData({
+    chosen: "gbr", countries, summary: read.countries.summary, comparable: read.countries.comparable,
+    devices, devicesComparable: read.devices.comparable, ticked,
+    names: {
+      chosen: "United Kingdom", others: "Other countries", clicked: "Countries with a click",
+      devices: Object.fromEntries(devices.map((row) => [row.key, `${row.name} in the United Kingdom`])),
+    },
+  });
+};
+
+/**
+ * Demand by Classification (search-console-demand-by-classification-way-2-plan-2026-11-18.md): the United Kingdom's own
+ * pages by Classification, as Google answered on 18 November 2026 (one ask for each period and its dates before), and its
+ * own figures, the boxes'. The Classifications share out only the clicks Google tied to a page. Built as the page builds
+ * them (`demandParts`, `demandPageData`), with its English names. Last 6 months and Last 12 months have no dates before.
+ */
+const demandPage = (period: PlacesPeriod) => {
+  const one = demandRead.periods[period];
+  const parts = demandParts(one.rows, one.previous, one.comparable, {
+    kind: (kind) => (kind === "NOT_SORTED" ? "Unclassified" : demandRead.kindNames[kind] ?? kind),
+    sorted: (kind) => kind !== "NOT_SORTED",
+  });
+  return demandPageData({ parts, totals: one.totals, previous: one.previous, names: { others: "The other Classifications", allPages: "All your pages", hidden: "Searches Google hides" } });
+};
+
 // ── Each page, on every period ─────────────────────────────────────────────────────────────────────────────────────
 
 describe("Search Console finds the biggest things on every period the date menu offers (More Handles, 3 November 2026)", () => {
@@ -285,13 +337,6 @@ describe("Search Console finds the biggest things on every period the date menu 
     clean(lines);
     expect(lines.some((line) => line.startsWith("Place 1: ")), lines.join("\n")).toBe(true);
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
-  });
-
-  test.each(ALL)("Demand by service: %s", (period) => {
-    const lines = said("searchConsole.services", period, servicesPage(period));
-    clean(lines);
-    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(NO_FAIR_BEFORE.includes(period) ? 2 : 4);
-    if (!NO_FAIR_BEFORE.includes(period)) expect(lines.some((line) => /: clicks (up|down) .*The other services: (up|down)/.test(line)), lines.join("\n")).toBe(true);
   });
 
   test.each(ALL)("Google updates: %s", (period) => {
@@ -370,23 +415,92 @@ describe("Search Console finds the biggest things on every period the date menu 
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
   });
 
-  test.each(ALL)("Pages: %s", (period) => {
-    const lines = said("searchConsole.pages", period, pagesPage(period));
+  test.each(PLACES_PERIODS)("Pages: %s", (period) => {
+    const page = pagesPage(period);
+    const before = period === "thisWeek" ? "The same days last week" : BEFORE[period as Period];
+    expectEyeHolds("searchConsole.pages", { ...page, words: { ...wordsFor(period === "thisWeek" ? "lastWeek" : period as Period), before } });
+    const findings: Finding[] = pageFindings("searchConsole.pages", pageDataFor({ ...page, words: { before } }, "searchConsole.pages"));
+    const lines = findings.map(findingWords);
+    if (PRINT) console.log(`\nsearchConsole.pages · ${period}\n  ${lines.join("\n  ")}`);
     clean(lines);
-    const compared = (at(pagesRead, period) as { comparable: boolean }).comparable;
+    const compared = (at(pagesRead, period as Period) as { comparable: boolean }).comparable;
     // How few of the pages Google showed got a click, and how few make half the clicks: on every period.
     expect(lines.some((line) => line.startsWith("Pages that got a click")), lines.join("\n")).toBe(true);
     expect(lines.some((line) => line.startsWith("Pages that make half your clicks")), lines.join("\n")).toBe(true);
-    // The Classification with most clicks, by its own name.
-    expect(lines.some((line) => /^(Blog|Cupboard Handles|Handles|Locks|Brand|Other Ironmongery|Buy By Brand|Door Knobs|Hinges|Window Furniture|Electrical|Lighting)( holds|: clicks)/.test(line)), lines.join("\n")).toBe(true);
+    // The Classification with most clicks, by its own name, its share of the clicks on the pages, never of the boxes'.
+    expect(lines.some((line) => /^(Blog|Cupboard Handles|Handles|Locks|Brand|Other Ironmongery|Buy By Brand|Door Knobs|Hinges|Window Furniture|Electrical|Lighting)( holds [\d.]+% of the list's clicks on your pages|: clicks)/.test(line)), lines.join("\n")).toBe(true);
+    // The clicks Google tied to no page, said once, as Demand by Classification's eye says them; never "private".
+    expect(lines.filter((line) => line.startsWith("Searches Google hides holds")), lines.join("\n")).toHaveLength(1);
+    expect(lines.some((line) => /private/i.test(line)), lines.join("\n")).toBe(false);
     if (compared) {
-      // Every page's clicks against the span before, and the ticked home page, only where that span is held.
-      expect(lines.some((line) => /^All your pages: clicks (up|down)/.test(line)), lines.join("\n")).toBe(true);
-      expect(lines.some((line) => line.startsWith("Home page: clicks up")), lines.join("\n")).toBe(true);
+      // Every page's clicks against the span before, where that span is held and they moved 2% or more: This month's 997
+      // against 1,008 didn't.
+      const { clicks, beforeTotals } = (at(pagesRead, period as Period) as { summary: { clicks: number; beforeTotals: { clicks: number } } }).summary;
+      const moved = Math.abs(clicks - beforeTotals.clicks) / beforeTotals.clicks >= 0.02;
+      expect(lines.some((line) => /^All your pages: clicks (up|down)/.test(line)), lines.join("\n")).toBe(moved);
+      if (period === "lastMonth") expect(moved).toBe(true);
     } else {
       expect(lines.some((line) => /: clicks (up|down)/.test(line)), lines.join("\n")).toBe(false);
     }
     // At least four things on every period: with no span before, a Classification Google shows a lot but people click less.
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
+  });
+
+  test.each(PLACES_PERIODS)("Countries and devices: %s", (period) => {
+    const page = placesPage(period);
+    const before = period === "thisWeek" ? "The same days last week" : BEFORE[period as Period];
+    expectEyeHolds("searchConsole.places", { ...page, words: { ...wordsFor(period === "thisWeek" ? "lastWeek" : period as Period), before } });
+    const findings: Finding[] = pageFindings("searchConsole.places", pageDataFor({ ...page, words: { before } }, "searchConsole.places"));
+    const lines = findings.map(findingWords);
+    if (PRINT) console.log(`\nsearchConsole.places · ${period}\n  ${lines.join("\n  ")}`);
+    clean(lines);
+    const compared = (placesRead as Record<string, { countries: { comparable: boolean } }>)[period].countries.comparable;
+    // The headline, on every period: the United Kingdom's share of every country's clicks, against its share before where held.
+    expect(lines[0], lines.join("\n")).toMatch(compared ? /^United Kingdom: [\d.]+% of all the clicks, from [\d.]+% the span before\.$/ : /^United Kingdom holds [\d.]+% of the list's clicks\.$/);
+    // The busiest device's share of the United Kingdom's clicks, named with it, on every period.
+    expect(lines.some((line) => line.startsWith("Mobile in the United Kingdom")), lines.join("\n")).toBe(true);
+    // How many countries sent a click: always without dates before, and where it moved a tenth or more with them (Last
+    // month's 99 against 118); a move of two or three countries ranks below the rest.
+    const clicked = page.clicked;
+    const clickedMoved = clicked.countriesBefore !== null && Math.abs(clicked.countries - clicked.countriesBefore) >= clicked.countriesBefore / 10;
+    if (!compared || clickedMoved) expect(lines.some((line) => line.startsWith("Countries with a click")), lines.join("\n")).toBe(true);
+    if (compared) {
+      // A country abroad that gained or lost most clicks, over the whole list, or a ticked one: This week's one day moved
+      // no country abroad five clicks.
+      if (period !== "thisWeek") expect(lines.some((line) => /^(?!United Kingdom)[A-Z][^:]+: clicks (up|down)/.test(line)), lines.join("\n")).toBe(true);
+    } else {
+      // No dates before: nothing said to have moved.
+      expect(lines.some((line) => / (up|down) [\d.]+%|the span before/.test(line)), lines.join("\n")).toBe(false);
+    }
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
+  });
+
+  test.each(PLACES_PERIODS)("Demand by Classification: %s", (period) => {
+    const page = demandPage(period);
+    const before = period === "thisWeek" ? "The same days last week" : BEFORE[period as Period];
+    expectEyeHolds("searchConsole.services", { ...page, words: { ...wordsFor(period === "thisWeek" ? "lastWeek" : period as Period), before } });
+    const findings: Finding[] = pageFindings("searchConsole.services", pageDataFor({ ...page, words: { before } }, "searchConsole.services"));
+    const lines = findings.map(findingWords);
+    if (PRINT) console.log(`\nsearchConsole.services · ${period}\n  ${lines.join("\n  ")}`);
+    clean(lines);
+    const compared = page.website?.clicksBefore !== null && page.website?.clicksBefore !== undefined;
+    // The headline, on every period: the Classification with the most clicks and its share of the pages' clicks.
+    expect(lines[0], lines.join("\n")).toMatch(/^[A-Z][^:]*(: [\d.]+% of all the clicks on your pages, from [\d.]+% the span before| holds [\d.]+% of the list's clicks on your pages)\.$/);
+    // The clicks Google tied to no page, said once, as Keywords' eye says them; never a part called Private searches.
+    expect(lines.filter((line) => line.startsWith("Searches Google hides holds")), lines.join("\n")).toHaveLength(1);
+    expect(lines.some((line) => /private/i.test(line)), lines.join("\n")).toBe(false);
+    // Pages not in a Classification yet are in the figures, never named.
+    expect(lines.some((line) => line.includes("Unclassified")), lines.join("\n")).toBe(false);
+    if (compared) {
+      // The Classification that gained or lost most clicks, beside the other Classifications' own move: This week's one
+      // day moved none of them ten clicks.
+      if (period !== "thisWeek") expect(lines.some((line) => /: clicks (up|down) .*; The other Classifications: (up|down)/.test(line)), lines.join("\n")).toBe(true);
+    } else {
+      // No dates before: nothing said to have moved.
+      expect(lines.some((line) => / (up|down) [\d.]+%|the span before/.test(line)), lines.join("\n")).toBe(false);
+    }
+    // A Classification Google shows a lot but people click less, against all the pages: on every period but This week's one day.
+    if (period !== "thisWeek") expect(lines.some((line) => /for every 1,000 times shown [\d.]+, against [\d.]+ for All your pages/.test(line)), lines.join("\n")).toBe(true);
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
   });
 
@@ -403,6 +517,87 @@ describe("Search Console finds the biggest things on every period the date menu 
  * (read through Ask Hakken's Search Console read, `assistantReads.searchConsoleInternal`, on 3 November 2026: the
  * identity these tests' figures were read with holds More Handles' company only).
  */
+// ── Tracked keywords and Tracked pages ──────────────────────────────────────────────────────────────────────────
+
+type TrackedTotals = { clicks: number; impressions: number; position: number };
+type TrackedEntry = {
+  key: string; title?: string; now: TrackedTotals | null; previous: TrackedTotals | null;
+  ticked?: boolean; days?: Array<{ day: string; clicks: number }>; daysBefore?: Array<{ day: string; clicks: number }>;
+};
+type TrackedPeriod = {
+  from: string; to: string; comparable: boolean; website: { clicks: number } | null;
+  updates: Array<{ title: string; startedOn: string; finishedOn: string | null }>; keywords: TrackedEntry[]; pages: TrackedEntry[];
+};
+const trackedRead = readFixture("moreHandlesSearchConsoleTracked") as { periods: Record<PlacesPeriod, TrackedPeriod> };
+const TRACKED_NAMES = { keywords: "Your tracked keywords", pages: "Your tracked pages" };
+
+/**
+ * A tracked screen's figures, built as its read and the screen build them (search-console-tracked-way-1-plan-2026-11-18.md):
+ * the rows shaped as the list shapes them, the summary with its tracked figures over every row, the three busiest ticked
+ * onto the chart, and their clicks either side of the newest finished Google update, off their own days.
+ */
+function trackedPage(period: PlacesPeriod, kind: "keywords" | "pages") {
+  const one = trackedRead.periods[period];
+  const entries = one[kind];
+  const source = (pick: (entry: TrackedEntry) => TrackedTotals | null): SourceRow[] => entries.flatMap((entry) => {
+    const totals = pick(entry);
+    return totals && (totals.impressions > 0 || totals.clicks > 0) ? [{ key: entry.key, clicks: totals.clicks, impressions: totals.impressions, positionSum: totals.position * totals.impressions }] : [];
+  });
+  const keys = new Set(entries.map((entry) => entry.key));
+  const before = one.comparable ? source((entry) => entry.previous) : null;
+  const titleOf = (key: string) => entries.find((entry) => entry.key === key)?.title;
+  const rows = shapeRows(withTracked(source((entry) => entry.now), keys), before, { tracked: keys, brandWords: null })
+    .map((row) => (titleOf(row.key) ? { ...row, title: titleOf(row.key) } : row));
+  const tracked = trackedListOf(rows, before !== null);
+  // The read names the rows that moved, a page with its title (`namedTracked`).
+  const titled = <T extends { key: string } | null>(row: T): T => (row && titleOf(row.key) ? { ...row, title: titleOf(row.key) } : row);
+  const named = {
+    ...tracked,
+    movers: tracked.movers ? { up: titled(tracked.movers.up), down: titled(tracked.movers.down) } : null,
+    places: tracked.places ? { up: titled(tracked.places.up), down: titled(tracked.places.down) } : null,
+    firstPage: { ...tracked.firstPage, cameTop: titled(tracked.firstPage.cameTop), leftTop: titled(tracked.firstPage.leftTop) },
+    busiest: titled(tracked.busiest),
+    quietest: titled(tracked.quietest),
+  };
+  const summary = { rows: rows.length, ...figuresOf(rows, before !== null), trackedList: named };
+  const nameOf = (key: string) => (kind === "pages" ? pageName({ key, title: titleOf(key) }, { home: "Home page" }) : key);
+  const ticked = entries.filter((entry) => entry.ticked).sort((left, right) => (right.now?.clicks ?? 0) - (left.now?.clicks ?? 0))
+    .map((entry) => ({ key: entry.key, days: entry.days ?? [], daysBefore: entry.daysBefore ?? [], failed: false, clicks: entry.now?.clicks ?? 0, previousClicks: one.comparable ? (entry.previous?.clicks ?? 0) : null }));
+  return trackedPageData({
+    page: { summary, rows: rows.slice(0, 25), picked: true },
+    countryClicks: one.website?.clicks ?? null,
+    ticked: ticked.map((row) => ({ name: nameOf(row.key), clicks: row.clicks, previousClicks: row.previousClicks })),
+    update: tickedUpdateOf(ticked, one.updates, one.to, 14, nameOf),
+    names: { allTracked: TRACKED_NAMES[kind], firstPage: "On Google's first page", notShown: "Not shown at all", home: "Home page", onChart: `the ${kind} on the chart` },
+  });
+}
+
+describe("Tracked keywords and Tracked pages find the biggest things on every period (More Handles, 18 November 2026)", () => {
+  for (const kind of ["keywords", "pages"] as const) {
+    const screen = kind === "keywords" ? "searchConsole.trackedKeywords" : "searchConsole.trackedPages";
+    test.each(PLACES_PERIODS)(`Tracked ${kind}: %s`, (period) => {
+      const page = trackedPage(period, kind);
+      const before = period === "thisWeek" ? "The same days last week" : BEFORE[period as Period];
+      expectEyeHolds(screen, { ...page, words: { ...wordsFor(period === "thisWeek" ? "lastWeek" : period as Period), before } });
+      const findings: Finding[] = pageFindings(screen, pageDataFor({ ...page, words: { before } }, screen));
+      const lines = findings.map(findingWords);
+      if (PRINT) console.log(`\n${screen} · ${period}\n  ${lines.join("\n  ")}`);
+      clean(lines);
+      expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
+      // Everything tracked together, on every period: against the dates before where they're held, as a share of the
+      // country's clicks either way.
+      expect(lines.some((line) => line.startsWith(TRACKED_NAMES[kind])), lines.join("\n")).toBe(true);
+      // Keywords on Google's first page, on every period.
+      if (kind === "keywords") expect(lines.some((line) => line.startsWith("On Google's first page")), lines.join("\n")).toBe(true);
+      // The newest Google update that finished with its 14 days after inside the dates: September's spam update, from the
+      // last 3 months on. The November core update was still rolling out on 18 November 2026.
+      if (["last3Months", "last6Months", "last12Months"].includes(period)) {
+        expect(lines.some((line) => line.startsWith("September 2026 spam update")), lines.join("\n")).toBe(true);
+      }
+    });
+  }
+});
+
 describe("Search Console's overview on Ronins' figures, every period (3 November 2026)", () => {
   test.each(["lastWeek", "lastMonth", "last3Months", "last6Months", "last12Months", "thisMonth"] as Period[])("%s", (period) => {
     const data = at(roninsPerformance, period);

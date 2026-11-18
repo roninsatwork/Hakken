@@ -519,7 +519,7 @@ describe("collecting", () => {
     expect(seen.filter((entry) => entry.searchType === "web")).toEqual([]);
   });
 
-  test("only the searches kept are kept: clicked, in the top 20, or on two pages or more (store less round two, D)", async () => {
+  test("every search's lines are kept, clicked or not, deep or not, on one page or many (the keep rule went on 18 November 2026)", async () => {
     const { t, siteId, admin } = await setup();
     const page = (path: string) => `https://acme-shop.test${path}`;
     fakeGoogle({ figures: { "sc-domain:acme-shop.test": { web: { [NEWEST]: {
@@ -542,9 +542,10 @@ describe("collecting", () => {
       expect(lines.every((record) => typeof record.keys === "string")).toBe(true);
       return await Promise.all(lines.map(async (record) => await lineKeywordsInQuery(ctx, siteId, undefined, record.start, record.keys)));
     });
-    expect(kept.flat().sort()).toEqual(["almost there", "plumber leeds", "two pages", "two pages"]);
+    // "deep and lonely" — no click, place 35, one page — was dropped by the keep rule from 5 October to 18 November 2026.
+    expect(kept.flat().sort()).toEqual(["almost there", "deep and lonely", "plumber leeds", "two pages", "two pages"]);
     const seen = await t.run(async (ctx) => (await ctx.db.query("searchConsoleSeen").collect()).filter((entry) => entry.kind === "query").map((entry) => entry.key));
-    expect(seen).not.toContain("deep and lonely");
+    expect(seen).toContain("deep and lonely");
   });
 
   test("the ready-made periods are built after each run: searches from the pairs, with their pages", async () => {

@@ -1,8 +1,11 @@
 import type { FindingFact } from "../findings";
-import { measureWords } from "../measures";
-import { firstOfEachList, isNumber, isRow, moved, named, partOf, round1, rowsOf, type OwnFound, type Row } from "./shared";
-import { FAIR_BEFORE, LEAST_CHANGE, PLACES_MOVED, RATE_UNDER, SHOWN_LEAST, SPLIT_SHARE_LEAST, WEBSITE_PLACES_MOVED, against, apartWhole, changeOf, fairBefore, namesOf, ratesApart, smallRates, text, wordsOf, type Words } from "./searchConsoleShared";
+import { isNumber, isRow, moved, named, partOf, round1, rowsOf, type OwnFound, type Row } from "./shared";
+import { FAIR_BEFORE, LEAST_CHANGE, RATE_UNDER, SHOWN_LEAST, SPLIT_SHARE_LEAST, WEBSITE_PLACES_MOVED, against, apartWhole, changeOf, fairBefore, namesOf, newAgainstLost, placeAgainst, ratesApart, shareMoved, smallRates, text, wordsOf, type Words } from "./searchConsoleShared";
 import { pagesFindings } from "./searchConsolePages";
+import { placesFindings } from "./searchConsolePlaces";
+import { indexingFindings, reasonFindings } from "./searchConsoleIndexing";
+import { demandFindings } from "./searchConsoleDemand";
+import { trackedFindings } from "./searchConsoleTracked";
 
 /**
  * Search Console's pages with rules of their own (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6; Anthony,
@@ -26,46 +29,6 @@ import { pagesFindings } from "./searchConsolePages";
 // ---------------------------------------------------------------------------
 // Shared to the section
 // ---------------------------------------------------------------------------
-
-/** A share of a whole against its share before: "Brand: 9.1% of all the clicks, from 9.2% the span before". */
-function shareMoved(list: string, name: string, measure: string, share: number, shareBefore: number, score: number): OwnFound {
-  const words = measureWords(measure);
-  return {
-    id: `shareMoved:${list}:${measure}:${name}`, kind: "shareMoved", list, score,
-    params: { name, measure, share: round1(share), shareBefore: round1(shareBefore) },
-    facts: [
-      { key: "share", value: round1(share), unit: "percent", label: `${name}: its share of all the ${words}` },
-      { key: "shareBefore", value: round1(shareBefore), unit: "percent", label: `${name}: its share of all the ${words}, the span before` },
-    ],
-  };
-}
-
-/** New against lost, with the span before's where held. */
-function newAgainstLost(list: string, measure: string, gained: number, lost: number, before: { gained: number; lost: number } | null, score: number): OwnFound {
-  const words = measureWords(measure);
-  return {
-    id: `newLost:${list}:${measure}`, kind: "newLost", list, score,
-    params: { measure, gained, lost, ...(before ? { gainedBefore: before.gained, lostBefore: before.lost } : {}) },
-    facts: [
-      { key: "gained", value: gained, unit: "count", label: `${words}: new` },
-      { key: "lost", value: lost, unit: "count", label: `${words}: lost` },
-      ...(before ? [
-        { key: "gainedBefore", value: before.gained, unit: "count" as const, label: `${words}: new, the span before` },
-        { key: "lostBefore", value: before.lost, unit: "count" as const, label: `${words}: lost, the span before` },
-      ] : []),
-    ],
-  };
-}
-
-/**
- * A place set against another (the span before's, before an update), said when it moved a third of a place or more: as
- * a place on Google, where the higher number is the worse, so the panel's colour turns round and its arrow follows the
- * number (`placeOnGoogle`, as Visibility's own rules set a place beside another).
- */
-function placeAgainst(list: string, name: string, now: number | null | undefined, before: number | null | undefined, score: number, other: string, least = PLACES_MOVED): OwnFound | null {
-  if (!isNumber(now) || !isNumber(before) || now <= 0 || before <= 0 || Math.abs(now - before) < least) return null;
-  return against(list, name, "placeOnGoogle", now, before, score + Math.min(0.5, Math.abs(now - before) / 6), other);
-}
 
 /** Figures a day over the newest `days` days of a daily list, against the same number of days before them inside it. */
 function newestAgainstEarlier(days: Row[], field: string, span: number): { now: number; before: number } | null {
@@ -401,80 +364,6 @@ function curveFindings(data: Row): OwnFound[] {
     .filter((one) => one.move >= Math.log(1.2))
     .sort((left, right) => right.move - left.move)[0];
   if (movedMost) found.push({ ...ratesApart("before", nameOf(movedMost.point), movedMost.point.clicks as number, movedMost.point.impressions as number, movedMost.then.clicks as number, movedMost.then.impressions as number, 0, beforeName, small), score: 1.0 + Math.min(0.4, movedMost.move) });
-  return found;
-}
-
-// ---------------------------------------------------------------------------
-// Demand by service
-// ---------------------------------------------------------------------------
-
-/** A service with this many clicks the span before, or times shown, is enough to trust a move. */
-const SERVICE_CLICKS = 20;
-
-function servicesFindings(data: Row): OwnFound[] {
-  const found: OwnFound[] = [];
-  const words = wordsOf(data);
-  const names = namesOf(data);
-  const others = text(names, "others", "The other services");
-  // Pages not sorted yet are in the totals, never named: Hakken's own housekeeping (Anthony, 2026-11-03).
-  const all = rowsOf(data.services).filter((row) => isNumber(row.impressions) && isNumber(row.clicks));
-  const services = all.filter((row) => named(row) && row.sorted !== false);
-  const total = (field: string, rows = all) => rows.reduce((sum, row) => sum + (isNumber(row[field]) ? (row[field] as number) : 0), 0);
-  const [shown, clicks] = [total("impressions"), total("clicks")];
-  const fair = fairBefore(shown, total("impressionsBefore")) && total("clicksBefore") > 0;
-
-  if (fair) {
-    // The headline: the service whose clicks moved most, weighed by the clicks it gained or lost, against the rest.
-    const movers = services
-      .filter((row) => isNumber(row.clicksBefore) && (row.clicksBefore as number) >= SERVICE_CLICKS)
-      .map((row) => ({ row, by: (row.clicks as number) - (row.clicksBefore as number) }))
-      .filter((one) => Math.abs(one.by) >= 5 && Math.abs(one.by / (one.row.clicksBefore as number)) >= 0.05)
-      .sort((left, right) => Math.abs(right.by) - Math.abs(left.by));
-    const restChange = (row: Row) => {
-      const before = total("clicksBefore") - (row.clicksBefore as number);
-      return before > 0 ? changeOf(clicks - (row.clicks as number), before) : 0;
-    };
-    const head = movers[0];
-    if (head) found.push(moved("services", named(head.row)!, "clicks", head.row.clicks as number, head.row.clicksBefore as number, 1.4 + Math.min(0.4, Math.abs(head.by) / Math.max(1, total("clicksBefore")) * 5), { name: others, change: restChange(head.row) }));
-    // The biggest move the other way, where there is one.
-    const otherWay = movers.find((one) => head && Math.sign(one.by) !== Math.sign(head.by));
-    if (otherWay) found.push(moved("servicesOther", named(otherWay.row)!, "clicks", otherWay.row.clicks as number, otherWay.row.clicksBefore as number, 1.0 + Math.min(0.4, Math.abs(otherWay.by) / Math.max(1, total("clicksBefore")) * 5), { name: others, change: restChange(otherWay.row) }));
-    // A service Google showed more while people clicked it less: the clicks, not the demand.
-    const split = services
-      .filter((row) => isNumber(row.impressionsBefore) && (row.impressionsBefore as number) > 0 && isNumber(row.clicksBefore) && (row.clicksBefore as number) >= SERVICE_CLICKS)
-      .map((row) => ({ row, shown: changeOf(row.impressions as number, row.impressionsBefore as number), clicked: changeOf(row.clicks as number, row.clicksBefore as number) }))
-      .filter((one) => one.shown >= 0.05 && one.clicked <= -0.1 && one.row !== head?.row)
-      .sort((left, right) => (right.shown - right.clicked) - (left.shown - left.clicked))[0];
-    if (split) found.push(moved("servicesShown", named(split.row)!, "impressions", split.row.impressions as number, split.row.impressionsBefore as number, 1.1 + Math.min(0.4, split.shown - split.clicked), { name: text(words, "clicks", "Clicks"), change: split.clicked }));
-    // The service whose share of every time Google showed the website moved most.
-    const shownBefore = total("impressionsBefore");
-    const shares = services
-      .filter((row) => isNumber(row.impressionsBefore))
-      .map((row) => ({ row, share: (100 * (row.impressions as number)) / shown, before: (100 * (row.impressionsBefore as number)) / shownBefore }))
-      .filter((one) => Math.abs(one.share - one.before) >= 1)
-      .sort((left, right) => Math.abs(right.share - right.before) - Math.abs(left.share - left.before))[0];
-    if (shares) found.push(shareMoved("servicesShare", named(shares.row)!, "impressions", shares.share, shares.before, 0.8 + Math.min(0.4, Math.abs(shares.share - shares.before) / 10)));
-  } else {
-    // Without a fair span before: the service with most of the clicks.
-    const top = [...services].sort((left, right) => (right.clicks as number) - (left.clicks as number))[0];
-    if (top && clicks > 0) found.push(partOf("servicesClicks", named(top)!, "clicks", top.clicks as number, clicks, 1.0));
-  }
-  // Clicked far more or less often than the other services, for the times Google showed it: the most and the least.
-  const rated = services
-    .filter((row) => (row.impressions as number) >= SHOWN_LEAST * 10 && shown - (row.impressions as number) > 0)
-    .map((row) => {
-      const rate = (row.clicks as number) / (row.impressions as number);
-      const rest = (clicks - (row.clicks as number)) / (shown - (row.impressions as number));
-      return { row, rate, rest, weight: Math.abs(Math.log(Math.max(0.01, rate / Math.max(1e-6, rest)))) * Math.sqrt((row.impressions as number) / shown) };
-    })
-    .filter((one) => one.rest > 0 && (one.rate / one.rest >= 1.5 || one.rate / one.rest <= 1 / 1.5));
-  const ranked = firstOfEachList(
-    [...rated].sort((left, right) => right.weight - left.weight).map((one) => ({ ...one, list: one.rate > one.rest ? "above" : "below" })),
-    2,
-  );
-  for (const one of ranked) {
-    found.push({ ...ratesApart(`rate${one.list}`, named(one.row)!, one.row.clicks as number, one.row.impressions as number, clicks - (one.row.clicks as number), shown - (one.row.impressions as number), 0, others, smallRates(clicks, shown)), score: 0.9 + Math.min(0.4, one.weight) });
-  }
   return found;
 }
 
@@ -851,7 +740,8 @@ export const SEARCH_CONSOLE_OWN: Readonly<Record<string, { general: boolean; fin
   "searchConsole.performance": { general: false, find: performanceFindings },
   "searchConsole.brand": { general: false, find: brandFindings },
   "searchConsole.ctrCurve": { general: false, find: curveFindings },
-  "searchConsole.services": { general: false, find: servicesFindings },
+  // Demand by Classification since 18 November 2026 (search-console-demand-by-classification-way-2-plan-2026-11-18.md).
+  "searchConsole.services": { general: false, find: demandFindings },
   "searchConsole.updates": { general: false, find: updatesFindings },
   "searchConsole.keyword": { general: false, find: recordFindings("keyword") },
   "searchConsole.page": { general: false, find: recordFindings("page") },
@@ -859,5 +749,12 @@ export const SEARCH_CONSOLE_OWN: Readonly<Record<string, { general: boolean; fin
   "searchConsole.bands": { general: false, find: bandsFindings },
   "searchConsole.keywords": { general: false, find: keywordsFindings },
   "searchConsole.pages": { general: false, find: pagesFindings },
+  "searchConsole.places": { general: false, find: placesFindings },
+  // Indexing and a reason's own page since 18 November 2026 (search-console-indexing-v1-plan-2026-11-18.md).
+  "searchConsole.indexing": { general: false, find: indexingFindings },
+  "searchConsole.indexingReason": { general: false, find: reasonFindings },
   "searchConsole.volatility": { general: false, find: volatilityFindings },
+  // Tracked keywords and Tracked pages since 18 November 2026 (search-console-tracked-way-1-plan-2026-11-18.md).
+  "searchConsole.trackedKeywords": { general: false, find: trackedFindings("keywords") },
+  "searchConsole.trackedPages": { general: false, find: trackedFindings("pages") },
 };

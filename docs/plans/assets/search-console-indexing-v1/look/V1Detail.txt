@@ -1,0 +1,18 @@
+# Search Console → Indexing → a reason — the approved look (board "V1Detail" of docs/plans/assets/search-console-indexing-v1/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Indexing
+  page-header: ‹the record's name›
+figures
+  figure: Pages
+  figure: Still shown in November
+  figure: Clicks
+  figure: In your sitemap
+chart-card: Impressions each day
+filter: Show
+search: Search pages…
+table: Page | Last shown | Days | Clicks | Shown
+  table-bar: Examples
+    download: Download all (CSV)
+  table-footer

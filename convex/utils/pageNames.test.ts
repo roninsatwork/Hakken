@@ -26,6 +26,9 @@ describe("a page's title, short, for a chart's key (Anthony, 17 November 2026: \
     ["Cupboard Handles and Knobs | More Handles", "Cupboard Handles and Knobs"],
     ["What is a Spindle and what kind do I need? - Our Blog", "What is a Spindle and what…"],
     ["Hinges", "Hinges"],
+    // A non-breaking space beside the bar, as More Handles' titles have it (18 November 2026), and an en dash.
+    ["Door Handles |\u00a0More Handles", "Door Handles"],
+    ["Garden Chairs \u2013 Our Shop", "Garden Chairs"],
     ["| More Handles", "| More Handles"],
     ["Supercalifragilisticexpialidociousandmore words", "Supercalifragilisticexpialid…"],
   ])("%s", (title, short) => expect(shortTitle(title)).toBe(short));

@@ -3,15 +3,14 @@
 import { useMemo } from "react";
 import { FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import { tickColumn } from "@/src/ui/components/screens/TableTicks";
-import { TABLE_PAGE_KEY } from "../../../sites/_components/useSiteParam";
-import { PagesBoxes, PagesCountryLine, usePageChartNames } from "../../_components/PagesParts";
+import { PagesBoxes, usePageChartNames } from "../../_components/PagesParts";
+import { useSearchConsoleSiteFigures } from "../../_components/SearchConsoleFigures";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { type ChipId, figureColumns, pageColumn, useSearchConsoleList, type ListRow } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
-import { MOST_TICKED, TickedDaysCard, useTickedDays, useTickedRows } from "../../_components/TickedDays";
+import { MOST_TICKED, TickedDaysCard, useListOpening, useTickedDays, useTickedRows } from "../../_components/TickedDays";
 import { pagesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 /**
@@ -21,44 +20,50 @@ import { pagesSees } from "@/convex/utils/sees/searchConsoleScreens";
  * clicks, 255 by device), and the page never said so.
  */
 const CHIPS: readonly ChipId[] = ["tracked", "band", "pageType"];
-/** Pages ticked as the page opens: its busiest three, as the board Anthony chose draws. */
-const OPENING_TICKED = 3;
 
 /**
  * Pages (search-console-plan.md §13.2), as Anthony chose it on 17 November 2026 (the canvas's Way 1;
- * search-console-pages-way-1-plan-2026-11-17.md): four boxes counting every country, as the table does, against the
- * span before; a line saying what the country chosen had alone; the pages ticked in the table drawn day by day, with
- * the span before under them, opening on the three with the most clicks; and every page Google showed in the dates
- * chosen, on one line each: its clicks, how they moved, the times shown, click-through rate and position. Track, its
- * keywords and the top one are on the page's own screen, which each row opens (AGENTS.md "Tables are lean").
+ * search-console-pages-way-1-plan-2026-11-17.md): four boxes for the country chosen, Performance's own, against the dates
+ * before; the pages ticked in the table drawn day by day, with the span before under them, opening on the three with the
+ * most clicks; and every page Google showed in the dates chosen, on one line each: its clicks, how they moved, the times
+ * shown, click-through rate and position. Track, its keywords and the top one are on the page's own screen, which each
+ * row opens (AGENTS.md "Tables are lean").
+ *
+ * Every figure follows the country menu since 18 November 2026, as Demand by Classification's do: the boxes are the
+ * country's own totals, and the table, the chart and the eye share out only the clicks Google ties to a page in that
+ * country (`inCountry`). No row or line stands for the difference, and no sentence says how it's counted: the eye says it once.
  */
 export default function SearchConsolePagesPage() {
   const t = useTranslations("searchConsole");
-  const list = useSearchConsoleList({ dimension: "page", chips: CHIPS });
+  const list = useSearchConsoleList({ dimension: "page", chips: CHIPS, inCountry: true });
+  // The boxes: the website's figures for the dates, kind of result and country chosen, Performance's read.
+  const site = useSearchConsoleSiteFigures();
   const recordHref = useRecordHref(list.siteId);
   const host = list.status?.host ?? "";
   const icon = <FileText className="h-8 w-8 text-muted/30" />;
-  const params = useSearchParams();
   // The three busiest pages, read once as the list first shows in its own order, on its first page.
-  const firstPage = (params.get(TABLE_PAGE_KEY) ?? "1") === "1";
-  const opening = list.order.key === "clicks" && list.order.direction === "desc" && !list.filtered && firstPage && list.table.pageRows
-    ? list.table.pageRows.filter((row) => row.clicks > 0).slice(0, OPENING_TICKED).map((row) => row.key)
-    : null;
+  const opening = useListOpening(list);
   const ticks = useTickedRows(t("pages.chart.tickLimit", { most: MOST_TICKED }), opening);
   const { rows: ticked, retry } = useTickedDays("page", ticks.keys);
   const nameOf = usePageChartNames(ticks.keys, host);
-  // The eye's figures: the list's, and the ticked pages' clicks against the span before, by the names the chart says;
-  // and the names the page says things by, each Classification's among them (pages not sorted yet are never named).
+  // The eye's figures: the list's, the country's clicks from the boxes (the gap Google leaves, said once), and the ticked
+  // pages' clicks against the span before, by the names the chart says; and the names the page says things by, each
+  // Classification's among them (pages not sorted yet are never named).
   const choices = list.pageKinds.choices;
   const names = useMemo(() => ({
-    allPages: t("performance.eye.allPages"), clicked: t("pages.eye.clicked"), half: t("pages.eye.half"), home: t("pages.chart.homePage"),
+    // "Your pages", not "All your pages": the pages share out only what Google ties to one, and an answer read "All your
+    // pages" as the whole website (18 November 2026).
+    allPages: t("pages.eye.yourPages"), clicked: t("pages.eye.clicked"), half: t("pages.eye.half"), home: t("pages.chart.homePage"),
+    hidden: t("performance.squares.groups.hidden"),
     kinds: Object.fromEntries((choices ?? []).map((choice) => [choice.id, choice.name])),
   }), [t, choices]);
+  const countryClicks = site.problem ? null : (site.figures?.totals?.clicks ?? null);
   const seesData = useMemo(() => (list.pageData ? {
     ...list.pageData,
+    ...(countryClicks !== null ? { website: { clicks: countryClicks } } : {}),
     ticked: ticked.filter((row) => row.clicks !== null).map((row) => ({ name: nameOf(row.key), clicks: row.clicks, previousClicks: row.previousClicks })),
     names,
-  } : undefined), [list.pageData, ticked, nameOf, names]);
+  } : undefined), [list.pageData, countryClicks, ticked, nameOf, names]);
 
   return (
     <SearchConsoleListScreen
@@ -66,12 +71,7 @@ export default function SearchConsolePagesPage() {
       icon={<FileText className="h-5 w-5 text-brand" />}
       title={t("pages.title")}
       description={t("pages.description")}
-      heroes={(
-        <>
-          <PagesBoxes summary={list.summary} days={list.range.days} preparing={list.preparing} />
-          <PagesCountryLine />
-        </>
-      )}
+      heroes={<PagesBoxes read={site} />}
       table={{
         list,
         chips: CHIPS,

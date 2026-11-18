@@ -2,7 +2,6 @@ import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import { EVERY_COUNTRY_LISTS, GOOGLE_DIMENSIONS } from "./searchConsoleApi";
 import { shiftDay } from "./searchConsoleDays";
-import { keepsSearch, keptLines } from "./searchConsoleKeep";
 import { askLive, countryFilters } from "./searchConsoleReads";
 import type { SearchConsoleList, SearchType } from "./searchConsoleSchema";
 import { addRowsInto, fromGoogle, type GoogleRow, type Row } from "./utils/searchConsolePacks";
@@ -15,17 +14,17 @@ import { RowSums, Terms, type SavedSums } from "./utils/searchConsoleSums";
  *
  * Google gives at most 50,000 rows an ask, and one ask for a busy website's
  * 90 days of searches and pages is cut there: measured on 2026-10-07
- * (step 3.1), one ask for morehandles.co.uk's lost 43% of the searches the
- * keep rule keeps; the same days asked a week at a time and added up lost
- * none with a click, every page and every tracked search. So the pairs are
+ * (step 3.1), one ask for morehandles.co.uk's lost 43% of the searches then
+ * kept; the same days asked a week at a time and added up lost none with a
+ * click, every page and every tracked search. So the pairs are
  * always asked in weekly pieces — a week still cut, a day at a time; a page,
  * country, device or appearance list once a period, and in pieces only when
  * its answer is cut. Pieces never
  * cross a period's edge, so one set answers every period.
  *
- * Each period's pairs then keep the searches the keep rule keeps on the
- * period's own figures, and every tracked search (`keptLines`), as the days
- * are kept.
+ * Each period keeps every search's pairs, as the days kept do (Anthony,
+ * 18 November 2026: the keep rule went, `searchConsoleKeep.ts`), unless its
+ * pairs pass what one job can hold (`MOST_PAIRS_HELD`), which says so.
  */
 
 export type Span = { from: string; to: string };
@@ -42,12 +41,15 @@ const ASKS_AT_ONCE = 4;
 
 /**
  * The most search-and-page pairs one period holds while its weeks are added up
- * (collection-reliability-plan.md, RR2). Past it, the searches the keep rule
- * could not keep on what has come in so far — no click, one page, an average
- * position past 20, not tracked — go, those seen least first, down to half of
- * it, and the build says so. Only a website far past kordatackle.com's size
- * reaches it; until 2026-10-15 such a year was held whole, and would have run
- * its step out of memory.
+ * (collection-reliability-plan.md, RR2): a guard on a job's memory, not a rule
+ * about what is kept. Past it, the searches seen least so far go, down to half
+ * of it, never one with a click or one the company tracks, and a search let go
+ * stays out of that period unless it comes back with a click, so every click
+ * stays in the lists. The
+ * build says so in the run's log and on the website's Search Console screens
+ * (`searchesLetGo`). Only a website far past kordatackle.com's size reaches
+ * it: on dev none ever has, to 18 November 2026. Until 2026-10-15 such a year
+ * was held whole, and would have run its step out of memory.
  */
 export const MOST_PAIRS_HELD = 400_000;
 
@@ -59,7 +61,7 @@ export const MOST_PAIRS_HELD = 400_000;
  */
 export const PAIRS_RESERVE_MS = 3 * 60 * 1000;
 
-/** Where a long period's pairs stood when a job's time ran short: the pieces added (`at` of `of`), and the running sums saved for the next job (SL4). */
+/** Where a long period's pairs stood when a job's time ran short: the pieces added (`at` of `of`), and the running sums saved for the next job (SL4), and whether the memory guard let any searches go. */
 export type PairsCarry = { at: number; of: number; saved: Id<"_storage">; pruned: boolean };
 
 /**
@@ -76,8 +78,8 @@ export class PairsPaused extends Error {
   }
 }
 
-/** A period's pairs as saved between jobs: each search's and page's text once, the sums by number. */
-export type SavedPairs = { keys: string[]; pages: string[]; sums: SavedSums };
+/** A period's pairs as saved between jobs: each search's and page's text once, the sums by number, and the searches let go. */
+export type SavedPairs = { keys: string[]; pages: string[]; sums: SavedSums; letGo?: string[] };
 
 /**
  * One period's search-and-page pairs added up as Google's answers come in,
@@ -92,12 +94,26 @@ export class PairSums {
   private keys = new Terms();
   private pages = new Terms();
   private sums = new RowSums(this.keys, this.pages);
+  /**
+   * The searches the memory guard let go (`prune`), none with a click yet: kept out of the period from then on, unless
+   * one comes back with a click, which it keeps whole, as it had none before.
+   */
+  private gone = new Set<string>();
 
   get size(): number {
     return this.sums.size;
   }
 
+  /** How many searches the memory guard let go. */
+  get letGo(): number {
+    return this.gone.size;
+  }
+
   add(key: string, page: string, clicks: number, impressions: number, positionSum: number): void {
+    if (this.gone.size > 0 && this.gone.has(key)) {
+      if (clicks === 0) return;
+      this.gone.delete(key);
+    }
     this.sums.add(this.keys.numberOf(key), this.pages.numberOf(page), clicks, impressions, positionSum);
   }
 
@@ -118,7 +134,7 @@ export class PairSums {
 
   /** The sums to save between jobs (SL4). */
   saved(): SavedPairs {
-    return { keys: this.keys.texts, pages: this.pages.texts, sums: this.sums.saved() };
+    return { keys: this.keys.texts, pages: this.pages.texts, sums: this.sums.saved(), ...(this.gone.size > 0 ? { letGo: [...this.gone] } : {}) };
   }
 
   /** Sums saved before, back as they were: the same rows in the same order with the same figures. */
@@ -127,30 +143,31 @@ export class PairSums {
     sums.keys = Terms.of(saved.keys);
     sums.pages = Terms.of(saved.pages);
     sums.sums = RowSums.restored(sums.keys, sums.pages, saved.sums);
+    sums.gone = new Set(saved.letGo ?? []);
     return sums;
   }
 
   /**
-   * Pairs held cut back to half of `most` when past it: the searches that could not be kept on their figures so far,
-   * the least seen first. The ones left keep their order, and the texts of those gone are let go. True when any went.
+   * Pairs held cut back to half of `most` when past it (the memory guard, `MOST_PAIRS_HELD`): the searches seen least so
+   * far go first, never one with a click or one the company tracks. The ones left keep their order; a search gone is
+   * kept out from then on, unless it comes back with a click (`add`). True when any went.
    */
   prune(tracked: ReadonlySet<string>, most: number = MOST_PAIRS_HELD): boolean {
     if (this.sums.size <= most) return false;
-    const searches = new Map<number, { clicks: number; impressions: number; positionSum: number; pages: number }>();
-    this.sums.forEach((key, _page, clicks, impressions, positionSum) => {
+    const searches = new Map<number, { clicks: number; impressions: number; pages: number }>();
+    this.sums.forEach((key, _page, clicks, impressions) => {
       const one = searches.get(key);
       if (one) {
         one.clicks += clicks;
         one.impressions += impressions;
-        one.positionSum += positionSum;
         one.pages += 1;
       } else {
-        searches.set(key, { clicks, impressions, positionSum, pages: 1 });
+        searches.set(key, { clicks, impressions, pages: 1 });
       }
     });
     const text = this.keys.texts;
     const unkept = [...searches.entries()]
-      .filter(([key, figures]) => !tracked.has(text[key]) && !keepsSearch(figures))
+      .filter(([key, figures]) => figures.clicks === 0 && !tracked.has(text[key]))
       .sort((left, right) => left[1].impressions - right[1].impressions || (text[left[0]] < text[right[0]] ? -1 : 1));
     const gone = new Set<number>();
     let size = this.sums.size;
@@ -160,6 +177,7 @@ export class PairSums {
       size -= figures.pages;
     }
     if (gone.size === 0) return false;
+    for (const key of gone) this.gone.add(text[key]);
     const held = { keys: this.keys, pages: this.pages, sums: this.sums };
     this.keys = new Terms();
     this.pages = new Terms();
@@ -213,12 +231,16 @@ function daysOf(span: Span): Span[] {
 
 const spanKey = (span: Span) => `${span.from}|${span.to}`;
 
-type Scope = { searchType: SearchType; list: SearchConsoleList; country: string | undefined };
+/**
+ * `inCountry`: the list in the country built, Google's country filter on, even for a list kept of every country — the main
+ * home country's own pages, for Demand by Classification (search-console-demand-by-classification-way-2-plan-2026-11-18.md).
+ */
+type Scope = { searchType: SearchType; list: SearchConsoleList; country: string | undefined; inCountry?: boolean };
 
 /** One ask of Google for a list's days: Google's rows and whether Google may have cut them; null when Google would not answer. */
 async function askedOf(ctx: ActionCtx, google: Google, scope: Scope, span: Span): Promise<{ rows: GoogleRow[]; cut: boolean } | null> {
-  // The pages are every country's, whichever country is built (`EVERY_COUNTRY_LISTS`, 2026-11-17).
-  const everyCountry = EVERY_COUNTRY_LISTS.has(scope.list);
+  // The pages are every country's, whichever country is built (`EVERY_COUNTRY_LISTS`, 2026-11-17), but where asked in it.
+  const everyCountry = EVERY_COUNTRY_LISTS.has(scope.list) && scope.inCountry !== true;
   const filters = everyCountry ? [] : countryFilters(scope.country);
   const answer = await askLive(ctx, google, {
     startDate: span.from,
@@ -307,8 +329,11 @@ export async function longListRows(
   tracked: readonly string[],
   /** When the job must stop by: the pairs pause `PAIRS_RESERVE_MS` before it, for the next job to carry on (`PairsPaused`). */
   stopAt?: number,
-  /** Set when a period's pairs passed `MOST_PAIRS_HELD` and its least-seen unkeepable searches went (RR2). */
-  held: { pruned: boolean } = { pruned: false },
+  /**
+   * Set when a period's pairs passed `MOST_PAIRS_HELD` and its least-seen searches went (RR2), with `letGo` the most
+   * searches let go from any one period; `asked` once the pairs were all asked of Google and added up.
+   */
+  held: { pruned: boolean; letGo?: number; asked?: boolean } = { pruned: false },
   /** The pairs a job before paused at (`PairsPaused`): carried on from there. */
   carry?: PairsCarry,
 ): Promise<Map<string, Row[]> | null> {
@@ -351,7 +376,10 @@ export async function longListRows(
     // Finished late: what follows gets a job of its own, the pairs carried to it whole.
     if (pauseAt !== undefined && first < pieces.length && Date.now() > pauseAt) await pause(pieces.length);
     await letGoCarried();
-    spans.forEach((span, which) => out.set(spanKey(span), keptLines(periods[which].rows(), new Set(tracked))));
+    spans.forEach((span, which) => out.set(spanKey(span), periods[which].rows()));
+    const letGo = Math.max(0, ...periods.map((one) => one.letGo));
+    if (letGo > 0) held.letGo = Math.max(held.letGo ?? 0, letGo);
+    held.asked = true;
     return out;
   }
   for (const span of spans) {

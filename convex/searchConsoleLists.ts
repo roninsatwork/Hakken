@@ -10,17 +10,18 @@ import { requireMySite } from "./siteAccess";
 import { listPageArgs, pageOfList, sortDirectionArg } from "./siteListPages";
 import { VOLATILITY_PERIOD, searchTypeValidator, type SearchType } from "./searchConsoleSchema";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
+import { askGoogle, countryFilter, inParts, listFilters, liveRows, type Filter, type ListKind, type LiveProblem } from "./searchConsoleLiveAsks";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
 import { beforeOf, daysIn, historyLimitDay, periodOf } from "./searchConsoleDays";
 export { periodOf } from "./searchConsoleDays";
 import { periodFromParts, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
-import { keySeriesAnswer, namedMovers, totalsOf } from "./searchConsoleSpans";
+import { keySeriesAnswer, namedMovers, namedTracked, totalsOf } from "./searchConsoleSpans";
 import { curveRows, keywordFiguresOf, keywordListOf, type KeywordParts } from "./searchConsoleKeywordList";
 import type { ListRows } from "./searchConsoleKeywordTable";
-import { BookNames, asText, namedRows, textsFrom, wholeBook } from "./searchConsolePeriodBooks";
+import { BookNames, BookShelf, keysAsText, namedRows, textsFrom } from "./searchConsolePeriodBooks";
 import { SORT_KEYS, sortRows, type SortKey } from "./searchConsoleSorts";
 import { checkedLongest, consoleLimitsOf, consoleLimitsValidator, viewRulesOf, type ConsoleLimits } from "./searchConsoleLimits";
-import { UNKNOWN, factsFor } from "./searchConsoleFacts";
+import { factKeys, factsFor, factsWanted, withFacts, withFactsKnown, withListFacts } from "./searchConsoleFacts";
 import { pageKindSetupValidator, readPageKinds, readPageKindSetup } from "./pageKinds";
 import { classificationTypeValidator } from "./pagesSchema";
 import { loadSite } from "./websiteSiteRows";
@@ -46,9 +47,9 @@ import {
   type ViewContext,
 } from "./utils/searchConsoleViews";
 import { brandWordsOf, connectionOf, sitesKeywordsOf, trackedOf } from "./searchConsoleListSources";
-import { GOOGLE_DIMENSIONS, LISTS_OF } from "./searchConsoleApi";
+import { GOOGLE_MOST_ROWS, LISTS_OF } from "./searchConsoleApi";
 import { EXPORT_FIELDS, exportFileName, exportValue } from "./utils/searchConsoleExport";
-import { bySide, fromGoogle, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
+import { bySide, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
 import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds, type PageKindSetup } from "./utils/pageKinds";
 import { withTitles } from "./pageTitles";
 import { calendarPeriodValidator, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
@@ -75,24 +76,10 @@ import { calendarPeriodValidator, ukDay, type CalendarPeriod } from "./utils/cal
  * Google with the country filter, as other dates are.
  */
 
-/**
- * Convex carries at most 8,192 items in one array, between functions and to
- * the screen — so a long list travels in parts of 8,000 and is joined where
- * it is read. One website's live list for one country held 8,833 searches
- * (2026-10-03), and a download of every keyword is longer still.
- */
-const PART_ROWS = 8_000;
-function inParts<T>(rows: readonly T[]): T[][] {
-  const parts: T[][] = [];
-  for (let at = 0; at < rows.length; at += PART_ROWS) parts.push(rows.slice(at, at + PART_ROWS));
-  return parts;
-}
-
 /** Rows a short list (countries, devices, kinds of search appearance) holds whole. */
 const SPLIT_ROWS = 500;
 
 const listKindValidator = v.union(v.literal("query"), v.literal("page"), v.literal("country"), v.literal("device"), v.literal("appearance"));
-type ListKind = "query" | "page" | "country" | "device" | "appearance";
 
 const viewValidator = v.optional(v.union(...VIEWS.map((view) => v.literal(view))));
 
@@ -108,6 +95,8 @@ const rowValidator = v.object({
   previousClicks: nullable(v.number()),
   change: nullable(v.number()),
   previousPosition: nullable(v.number()),
+  /** Its impressions in the dates before, for a tracked list's boxes (`ListRow.previousImpressions`). */
+  previousImpressions: v.optional(nullable(v.number())),
   positionChange: nullable(v.number()),
   share: v.number(),
   count: nullable(v.number()),
@@ -133,6 +122,9 @@ const sortValidator = v.optional(v.union(...SORT_KEYS.map((key) => v.literal(key
 export const brandSplitValidator = v.object({ brandClicks: v.number(), nonBrandClicks: v.number(), brandImpressions: v.number(), nonBrandImpressions: v.number() });
 const movedValidator = v.union(v.null(), v.object({ key: v.string(), clicks: v.number(), previousClicks: v.number() }));
 const pageMovedValidator = v.union(v.null(), v.object({ key: v.string(), clicks: v.number(), previousClicks: v.number(), title: v.optional(v.string()) }));
+const trackedMoveValidator = v.union(v.null(), v.object({
+  key: v.string(), clicks: v.number(), previousClicks: v.number(), position: v.union(v.number(), v.null()), previousPosition: v.union(v.number(), v.null()), title: v.optional(v.string()),
+}));
 
 /** What a page's hero boxes read: figures over every row its rule lists (`summarise`). */
 const summaryValidator = v.object({
@@ -169,9 +161,25 @@ const summaryValidator = v.object({
   /** The span before's rows added up (`Summary.beforeTotals`): a list's own boxes against it. */
   beforeTotals: v.optional(v.union(v.null(), v.object({ clicks: v.number(), impressions: v.number(), position: v.union(v.number(), v.null()) }))),
   clickedRows: v.optional(v.number()),
-  halfRows: v.optional(v.union(v.number(), v.null())),
+  halfRows: v.optional(v.union(v.number(), v.null())), clickedBefore: v.optional(v.union(v.number(), v.null())),
   /** The pages that gained and lost most clicks (`Summary.pageMovers`), named, with their titles. */
   pageMovers: v.optional(v.union(v.null(), v.object({ up: pageMovedValidator, down: pageMovedValidator }))),
+  /** A tracked list's own figures over every row it tracks (`Summary.trackedList`), its rows named. */
+  trackedList: v.optional(v.object({
+    before: v.union(v.null(), v.object({ clicks: v.number(), impressions: v.number(), position: v.union(v.number(), v.null()) })),
+    movers: v.union(v.null(), v.object({ up: trackedMoveValidator, down: trackedMoveValidator })),
+    places: v.union(v.null(), v.object({ up: trackedMoveValidator, down: trackedMoveValidator })),
+    firstPage: v.object({
+      now: v.number(), before: v.union(v.number(), v.null()), came: v.union(v.number(), v.null()), left: v.union(v.number(), v.null()),
+      cameTop: trackedMoveValidator, leftTop: trackedMoveValidator,
+    }),
+    busiest: trackedMoveValidator,
+    quietest: v.union(v.null(), v.object({
+      key: v.string(), clicks: v.number(), previousClicks: v.number(), position: v.union(v.number(), v.null()), previousPosition: v.union(v.number(), v.null()),
+      impressions: v.number(), title: v.optional(v.string()),
+    })),
+    notShown: v.number(),
+  })),
 });
 
 const filterArgs = {
@@ -204,6 +212,8 @@ const listArgs = {
   period: v.optional(calendarPeriodValidator),
   /** One country, Google's `gbr`; missing for all countries. */
   country: v.optional(v.string()),
+  /** A list of pages in the country chosen alone, as Pages shows them (18 November 2026), never every country's. */
+  inCountry: v.optional(v.boolean()),
   ...filterArgs,
   sort: sortValidator,
   direction: sortDirectionArg,
@@ -218,6 +228,7 @@ type Ask = {
   from: string;
   to: string;
   country?: string;
+  inCountry?: boolean;
   sort?: SortKey;
   direction?: "asc" | "desc";
   missed?: "searched" | "untracked";
@@ -286,6 +297,11 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   // One keyword's pages, or one page's keywords: asked of Google when opened, for every period
   // (keep-less-history-plan.md, 5.1; Anthony, 2026-10-08: "ok lets do this one").
   if (within) return live;
+  // The country's own pages (Pages, 18 November 2026): the main home country's web pages are kept for each ready-made
+  // period (`countryPage`); another country, another kind of result, or a period not kept yet is asked of Google with the
+  // country's filter. The every-country `page` list stays for the screens not redone yet.
+  const inCountry = args.inCountry === true && dimension === "page";
+  if (inCountry && (country !== undefined || args.searchType !== "web")) return live;
   // A list of keywords as columns, never a row a keyword (step 4b): a busy website's would outgrow a read.
   let held: KeywordParts | null = null;
   if (dimension === "query" && !how.rows) {
@@ -298,11 +314,13 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     if ("asRows" in keywords) held = keywords.asRows;
     else return { ...keywords, live: false, preparing: false, pageKinds: null };
   }
+  // Each whole book read once, however many of the lists below name it (speed fixes, 18 November 2026).
+  const shelf = new BookShelf(ctx);
   const read = async (which: "NOW" | "BEFORE") => (held
-    ? await periodFromParts(ctx, companyWebsiteId, args.searchType, dimension, which === "NOW" ? held.now : held.before, country)
-    : await readPeriod(ctx, companyWebsiteId, args.searchType, dimension, period, which, country));
+    ? await periodFromParts(ctx, companyWebsiteId, args.searchType, dimension, which === "NOW" ? held.now : held.before, country, true, shelf)
+    : await readPeriod(ctx, companyWebsiteId, args.searchType, inCountry ? "countryPage" : dimension, period, which, country, shelf));
   let now = await read("NOW");
-  if (!now) return { ...empty, live: false, preparing: true };
+  if (!now) return inCountry ? live : { ...empty, live: false, preparing: true };
   let before = await read("BEFORE");
   // Only the pairs of keywords two or more pages were shown for, kept ready, and how many pages Google showed at all.
   let competing = view !== "competing" ? null
@@ -310,16 +328,22 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     : await readPeriod(ctx, companyWebsiteId, args.searchType, "competing", period, "NOW", country);
   if (view === "competing" && !competing) return { ...empty, live: false, preparing: true };
   // Keywords and pages as tokens of their build's book (core-data-normalisation-plan.md §5.1), joined, grouped and
-  // sorted by token. Lists from two builds — one rebuilt while the other waited on Google — are read as text instead.
-  if (new Set([now, before, competing].flatMap((list) => (list?.book ? [list.book.builtAt] : []))).size > 1) {
-    now = await asText(ctx, now);
-    before = before ? await asText(ctx, before) : null;
-    competing = competing ? await asText(ctx, competing) : null;
+  // sorted by token. Lists from two builds — one rebuilt while the other waited on Google — are joined by their keys as
+  // text, each from its own build's book of that kind, read once (`keysAsText`): never every book whole, which was 14.4 MB
+  // for More Handles' pages in October against September (speed fixes, 18 November 2026). The rows on screen name their
+  // top keyword or page from the dates' own book, as before.
+  const twoBuilds = new Set([now, before, competing].flatMap((list) => (list?.book ? [list.book.builtAt] : []))).size > 1;
+  if (twoBuilds) {
+    now = await keysAsText(shelf, now, { tops: true });
+    before = before ? await keysAsText(shelf, before, { tops: false }) : null;
+    competing = competing ? await keysAsText(shelf, competing, { tops: false, pages: true }) : null;
   }
   const names = now.book ? new BookNames(ctx, now.book) : null;
+  // Whether the keys are still places in the book, or text.
+  const keysAreTokens = names !== null && !twoBuilds && dimension === "query";
   const trackedTexts = dimension === "query" || dimension === "page" ? await trackedOf(ctx, companyWebsiteId, dimension) : new Set<string>();
   // The company's tracked searches as tokens, where the book holds them: up to 200 look-ups, each a small record.
-  const tracked = names && dimension === "query"
+  const tracked = keysAreTokens && names
     ? new Set(await Promise.all([...trackedTexts].map(async (text) => await names.tokenOf("query", text))))
     : trackedTexts;
   const brandWords = dimension === "query" ? await brandWordsOf(ctx, companyWebsiteId) : null;
@@ -337,8 +361,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   }
   if (view === "missed" && context.missedList === "searched") context.sitesKeywords = await sitesKeywordsOf(ctx, companyWebsiteId, limits.missedKeywords);
   // A search, and Missed demand's match with Sites, read every keyword's text: the keyword book whole (§5.5).
-  const textOf = names && dimension === "query" && (args.q?.trim() || (view === "missed" && context.missedList === "searched"))
-    ? textsFrom(await wholeBook(ctx, names.scope, "query"))
+  const textOf = keysAreTokens && names && (args.q?.trim() || (view === "missed" && context.missedList === "searched"))
+    ? textsFrom(await shelf.whole(names.scope, "query"))
     : undefined;
   context.textOf = textOf;
   // A view that compares or counts pages weighs each page once, its section links folded in.
@@ -349,8 +373,10 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     ...context,
     brandWords,
     pageList: dimension === "page",
-    ...(pageKinds ? { kindType: pageKinds.typeOf } : {}),
+    splitList: dimension === "country" || dimension === "device",
+    ...(pageKinds ? { kindType: pageKinds.typeOf, kindOfPage: (page: string) => pageKinds.kindOf(page) } : {}),
     wholeList: view === "all" && dimension === "query",
+    trackedList: view === "tracked",
   });
   // The four searches What Hakken sees moved most, named as the rows on screen are: the rest stay tokens.
   const movers = summary.wholeList?.movers;
@@ -362,6 +388,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   }
   // The two pages that moved most, named, each with its title where the website has one.
   if (summary.pageMovers) summary.pageMovers = await namedMovers(ctx, companyWebsiteId, summary.pageMovers, names);
+  // A tracked list's movers and the busiest onto and off the first page, named as the rows on screen are.
+  if (summary.trackedList) summary.trackedList = await namedTracked(ctx, companyWebsiteId, summary.trackedList, names, dimension === "page");
   const sorted = sortRows(filterRows(listed, args, textOf), args.sort, args.direction, pageKinds);
   // A keyword's pages, or a page's keywords, hold their own limit; every other list the list limit.
   const most = within ? limits.pairedRows : limits.listRows;
@@ -439,18 +467,19 @@ export const searchConsoleListPage = tenantQuery({
 
 /**
  * A short list whole — countries, devices, kinds of search appearance — for
- * a page holding several tables. With a country, its devices and kinds of
- * search appearance; its countries are asked of Google (`live`): a country
- * keeps no country list of its own.
+ * a page holding several tables, with its summary (Countries and devices'
+ * boxes, 2026-11-18). With a country, its devices and kinds of search
+ * appearance; its countries are asked of Google (`live`).
  */
 export const searchConsoleSplitList = tenantQuery({
   args: listArgs,
-  returns: v.object({ rows: v.array(rowValidator), preparing: v.boolean(), ...answerFacts }),
+  returns: v.object({ rows: v.array(rowValidator), preparing: v.boolean(), summary: v.optional(v.union(summaryValidator, v.null())), ...answerFacts }),
   handler: async (ctx, args) => {
     checkedRange(args.from, args.to);
     const site = await requireMySite(ctx, args.siteId);
     const list = await readList(ctx, site.hold._id, args);
-    return { rows: await namedRows(list, list.rows.slice(0, SPLIT_ROWS)), preparing: list.preparing, current: true, named: list.named, listed: list.listed, comparable: list.comparable, live: list.live, from: list.from, to: list.to };
+    const { preparing, summary, named, listed, comparable, live, from, to } = list;
+    return { rows: await namedRows(list, list.rows.slice(0, SPLIT_ROWS)), preparing, summary, current: true, named, listed, comparable, live, from, to };
   },
 });
 
@@ -495,8 +524,6 @@ export const liveTarget = internalQuery({
   },
 });
 
-type LiveProblem = "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY";
-
 /** What a live ask needs of the website: written out, as the actions in this file read it through `internal`. */
 type LiveTarget = {
   connectionId: Id<"searchConsoleConnections">;
@@ -511,126 +538,8 @@ type LiveTarget = {
 };
 
 type LiveListAnswer =
-  | { ok: true; rows: ListRow[][]; cut: number | null; named: number; comparable: boolean; summary: Summary }
+  | { ok: true; rows: ListRow[][]; cut: number | null; named: number; comparable: boolean; summary: Summary; keywordsApart?: true; pairsCut?: number; listCut?: number }
   | { ok: false; problem: LiveProblem };
-
-/** A filter asked of Google with a list: one keyword, one page, one country or one device. */
-type Filter = { dimension: "query" | "page" | "country" | "device" | "searchAppearance"; key: string };
-
-/** One of Google's lists for any dates, as rows: `everyCountry` asks it of no country, a page's figures (`EVERY_COUNTRY_LISTS`). */
-async function askGoogle(
-  ctx: ActionCtx,
-  target: { connectionId: Id<"searchConsoleConnections">; property: string },
-  searchType: SearchType,
-  list: "pair" | "page" | "country" | "device" | "appearance",
-  from: string,
-  to: string,
-  given: readonly Filter[] = [],
-  how: { everyCountry?: boolean } = {},
-): Promise<{ ok: true; rows: PackedRow[] } | { ok: false; problem: LiveProblem }> {
-  const filters = how.everyCountry ? given.filter((filter) => filter.dimension !== "country") : given;
-  const answer = await askLive(ctx, target, {
-    startDate: from,
-    endDate: to,
-    type: searchType,
-    dimensions: [...GOOGLE_DIMENSIONS[list]],
-    ...(filters.length > 0
-      ? { dimensionFilterGroups: [{ filters: filters.map((filter) => ({ dimension: filter.dimension, operator: "equals", expression: filter.key })) }] }
-      : {}),
-  }, how);
-  return answer.ok ? { ok: true, rows: fromGoogle(answer.rows, list === "pair") } : answer;
-}
-
-/** The country filter a live list carries, checked: none for all countries. */
-function countryFilter(country: string | undefined): Filter[] {
-  const code = checkedCountry(country);
-  return code === undefined ? [] : [{ dimension: "country", key: code }];
-}
-
-
-/**
- * A list's rows for any dates, added up as the ready-made periods are:
- * searches from the pairs, pages Google's own — and the pairs, for the views
- * that read them.
- */
-async function liveRows(
-  ctx: ActionCtx,
-  target: { connectionId: Id<"searchConsoleConnections">; property: string },
-  searchType: SearchType,
-  dimension: ListKind,
-  from: string,
-  to: string,
-  filters: readonly Filter[],
-  within?: { kind: "query" | "page"; key: string },
-): Promise<{ ok: true; rows: PeriodRow[]; pairs: PackedRow[] } | { ok: false; problem: LiveProblem }> {
-  if (dimension === "country" || dimension === "device" || dimension === "appearance") {
-    const split = await askGoogle(ctx, target, searchType, dimension, from, to, filters);
-    return split.ok ? { ...split, pairs: [] } : split;
-  }
-  if (within) {
-    // One keyword's pages, or one page's keywords: its pairs, keyed by the other side.
-    const pairs = await askGoogle(ctx, target, searchType, "pair", from, to, [...filters, { dimension: within.kind, key: within.key }]);
-    if (!pairs.ok) return pairs;
-    return {
-      ok: true,
-      rows: pairs.rows.map((pair) => ({ ...pair, key: within.kind === "query" ? (pair.page ?? "") : pair.key, page: undefined })),
-      pairs: pairs.rows,
-    };
-  }
-  // A list of pages asks for its pages beside the pairs, at the same time: the pages of every country, their
-  // searches the country's (`EVERY_COUNTRY_LISTS`).
-  const [pairs, pages] = await Promise.all([
-    askGoogle(ctx, target, searchType, "pair", from, to, filters),
-    dimension === "page" ? askGoogle(ctx, target, searchType, "page", from, to, filters, { everyCountry: true }) : null,
-  ]);
-  if (!pairs.ok) return pairs;
-  const side = bySide(pairs.rows, dimension);
-  if (!pages) return { ok: true, rows: [...side.values()].map((summed) => ({ ...summed })), pairs: pairs.rows };
-  if (!pages.ok) return pages;
-  return {
-    ok: true,
-    rows: pages.rows.map((row) => ({ ...row, count: side.get(row.key)?.count ?? 0, top: side.get(row.key)?.top ?? "" })),
-    pairs: pairs.rows,
-  };
-}
-
-/** The keys Sites' facts are looked up for: the rows with the most clicks, up to the website's limit (`consoleLiveFactsRows`). */
-function factKeys(rows: readonly { key: string; clicks: number }[], most: number): string[] {
-  return [...rows].sort((left, right) => right.clicks - left.clicks).slice(0, most).map((row) => row.key);
-}
-
-/** A live list's rows with Sites' intent and searches a month, or page type and estimated visits, beside the first few thousand. */
-async function withFacts(
-  ctx: ActionCtx,
-  target: { websiteId: Id<"websites">; place: number },
-  kind: "query" | "page",
-  rows: PeriodRow[],
-  most: number,
-): Promise<PeriodRow[]> {
-  const facts = await factsFor(ctx, target, kind, factKeys(rows, most));
-  return rows.map((row) => {
-    const known = facts.get(row.key);
-    if (!known) return row;
-    return { ...row, kind: known.kind, ...(kind === "query" ? { volume: known.number } : { estimate: known.number }) };
-  });
-}
-
-/** The same, on rows a page's rule has listed: so a rule that keeps few rows looks up few. */
-async function withListFacts(
-  ctx: ActionCtx,
-  target: { websiteId: Id<"websites">; place: number },
-  kind: "query" | "page",
-  rows: ListRow[],
-  most: number,
-): Promise<ListRow[]> {
-  const facts = await factsFor(ctx, target, kind, factKeys(rows, most));
-  return rows.map((row) => {
-    const known = facts.get(row.key);
-    if (!known) return row;
-    const number = known.number === UNKNOWN ? null : known.number;
-    return { ...row, kind: known.kind, ...(kind === "query" ? { volume: number } : { estimate: number }) };
-  });
-}
 
 /**
  * Each row's count across the whole website, kept beside the list it is in
@@ -700,6 +609,9 @@ async function withKeptCounts(
  * fixes, 2026-10-03: looking them up for every row Google returned made a
  * year of Pages competing wait half a minute).
  */
+/** The rules that read a live list's pairs whatever it lists: Shown but not clicked's click rate by place, Pages competing's pages. */
+const PAIR_VIEWS: ReadonlySet<View> = new Set(["lowCtr", "competing"]);
+
 export const searchConsoleLiveList = tenantAction({
   args: {
     siteId: v.id("companyWebsites"),
@@ -712,17 +624,36 @@ export const searchConsoleLiveList = tenantAction({
     to: v.string(),
     period: v.optional(calendarPeriodValidator),
     country: v.optional(v.string()),
+    inCountry: listArgs.inCountry,
     device: v.optional(v.string()),
+    /**
+     * A list of pages without each page's keywords and top one, which only its download shows: asked when it's downloaded
+     * (`searchConsoleLivePageKeywords`). Google's pairs were 5.4 of Pages' 7.4 seconds for More Handles in October (speed
+     * fixes, 18 November 2026). The rules that read the pairs ask for them whatever this says.
+     */
+    keywordsApart: v.optional(v.boolean()),
   },
   returns: v.union(
     v.object({
       ok: v.literal(true),
-      /** In parts of 8,000 (`PART_ROWS`): join them to read the list. */
+      /** In parts of 8,000 (`inParts`): join them to read the list. */
       rows: v.array(v.array(rowValidator)),
       cut: v.union(v.number(), v.null()),
       named: v.number(),
       comparable: v.boolean(),
       summary: summaryValidator,
+      /** Each page's keywords and top one left out, to be asked when the list is downloaded (`keywordsApart`). */
+      keywordsApart: v.optional(v.literal(true)),
+      /**
+       * The list read Google's keyword-and-page pairs, and they stopped at its most an ask (`GOOGLE_MOST_ROWS`), the
+       * fewest clicks left out: the screen says so (Anthony, 18 November 2026: "add it for completeness").
+       */
+      pairsCut: v.optional(v.number()),
+      /**
+       * The list Google answered itself, its pages, countries or devices, stopped at its most an ask (`GOOGLE_MOST_ROWS`),
+       * the fewest clicks left out: the screen says so in the same place (review fixes, 18 November 2026).
+       */
+      listCut: v.optional(v.number()),
     }),
     v.object({ ok: v.literal(false), problem: v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY")) }),
   ),
@@ -734,10 +665,7 @@ export const searchConsoleLiveList = tenantAction({
     const within = args.within;
     const dimension = within ? (within.kind === "query" ? "page" : "query") : (VIEW_LIST[view] ?? args.dimension);
     const kind = dimension === "query" || dimension === "page" ? dimension : null;
-    const filters: Filter[] = [
-      ...countryFilter(args.country),
-      ...(args.device ? [{ dimension: "device" as const, key: args.device }] : []),
-    ];
+    const filters = listFilters(args.country, args.device);
     const target: LiveTarget | null = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind, view });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     const { limits } = target;
@@ -748,19 +676,33 @@ export const searchConsoleLiveList = tenantAction({
     // Handles' Last 6 months, 2026-11-17).
     const beforeHeld: boolean = before.from >= historyLimitDay(Date.now())
       && await ctx.runQuery(internal.searchConsoleSpans.googleHasDays, { companyId, siteId: args.siteId, from: before.from, to: before.to });
-    const [now, earlier] = await Promise.all([
-      liveRows(ctx, target, args.searchType, dimension, args.from, args.to, filters, within),
+    // Each page's keywords only where a rule reads the pairs, or the screen didn't ask for them apart; never for the dates
+    // before, whose pairs no list of pages reads (speed fixes, 18 November 2026).
+    const pageKeywords = !args.keywordsApart || within !== undefined || PAIR_VIEWS.has(view);
+    const how = { within, inCountry: args.inCountry === true };
+    // Only the facts the screen shows (`factsWanted`): none on a list of pages once the website has Classifications.
+    const want = kind ? factsWanted(kind, view, target.pageKinds !== null) : null;
+    const facts = kind && want ? target.facts : null;
+    // The "all" rule lists every row Google answered, in its order: their facts are looked up as soon as the answer for the
+    // dates is in, while the dates before are still being asked.
+    const askedNow = liveRows(ctx, target, args.searchType, dimension, args.from, args.to, filters, { ...how, pageKeywords });
+    const early = view === "all" && kind && want && facts
+      ? askedNow.then(async (answer) => (answer.ok ? await factsFor(ctx, facts, kind, factKeys(answer.rows, limits.liveFactsRows), want) : null))
+      : null;
+    const [now, earlier, earlyFacts] = await Promise.all([
+      askedNow,
       beforeHeld
-        ? liveRows(ctx, target, args.searchType, dimension, before.from, before.to, filters, within)
+        ? liveRows(ctx, target, args.searchType, dimension, before.from, before.to, filters, { ...how, pageKeywords: false })
         : { ok: false as const, problem: "GOOGLE_REFUSED" as const },
+      early,
     ]);
     if (!now.ok) return now;
     // One keyword's pages, or one page's keywords: each row's count across the whole website — a page's keywords,
     // a keyword's pages — from the list kept for the dates, when they are a ready-made period (5.1).
     const counted = within ? await withKeptCounts(ctx, companyId, args, within.kind === "query" ? "page" : "query", now.rows, limits.pairedRows) : now.rows;
     // Real against estimated chooses its rows by Sites' estimates: those are looked up before its rule; every other page's after.
-    const factsFirst = view === "estimates" && kind !== null && target.facts !== null;
-    const rows = factsFirst && kind && target.facts ? await withFacts(ctx, target.facts, kind, counted, limits.liveFactsRows) : counted;
+    const factsFirst = view === "estimates" && kind !== null && want !== null && facts !== null;
+    const rows = factsFirst && kind && want && facts ? await withFacts(ctx, facts, kind, counted, limits.liveFactsRows, want) : counted;
     const tracked = new Set(target.tracked);
     const earlierRows = earlier.ok ? earlier.rows : null;
     const pageKinds = dimension === "page" && target.pageKinds ? pageKindsFrom(target.pageKinds) : null;
@@ -774,17 +716,25 @@ export const searchConsoleLiveList = tenantAction({
     const weighed = dimension === "page" && VIEWS_BY_WHOLE_PAGE.has(view) ? withSectionsInPages(shaped) : shaped;
     const ruled = applyView(view, weighed, context);
     // A page's classification stays its kind once the website has any; Sites' type only names the rest.
-    const listed = !factsFirst && kind && target.facts ? withPageKinds(await withListFacts(ctx, target.facts, kind, ruled, limits.liveFactsRows), pageKinds) : ruled;
+    const listed = factsFirst || !kind || !want || !facts ? ruled
+      : withPageKinds(earlyFacts ? withFactsKnown(ruled, earlyFacts, kind, want) : await withListFacts(ctx, facts, kind, ruled, limits.liveFactsRows, want), pageKinds);
     const sorted = sortRows(listed, undefined, undefined);
     const named = listed.reduce((sum, row) => sum + row.clicks, 0);
     const summary = summarise(listed, weighed, earlierRows, {
       ...context,
       brandWords: target.brandWords,
       pageList: dimension === "page",
-      ...(pageKinds ? { kindType: pageKinds.typeOf } : {}),
+      splitList: dimension === "country" || dimension === "device",
+      ...(pageKinds ? { kindType: pageKinds.typeOf, kindOfPage: (page: string) => pageKinds.kindOf(page) } : {}),
+      trackedList: view === "tracked",
     });
     const most = within ? limits.pairedRows : limits.listRows;
-    return { ok: true as const, rows: inParts(sorted.slice(0, most)), cut: sorted.length > most ? most : null, named, comparable: earlier.ok, summary };
+    return {
+      ok: true as const, rows: inParts(sorted.slice(0, most)), cut: sorted.length > most ? most : null, named, comparable: earlier.ok, summary,
+      ...(dimension === "page" && !pageKeywords ? { keywordsApart: true as const } : {}),
+      ...(now.pairsCut ? { pairsCut: GOOGLE_MOST_ROWS } : {}),
+      ...(now.listCut ? { listCut: GOOGLE_MOST_ROWS } : {}),
+    };
   },
 });
 
@@ -859,11 +809,10 @@ export const searchConsoleKeySplits = tenantAction({
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     checkedLongest(args.from, args.to, target.limits);
     const filters: Filter[] = [{ dimension: args.dimension, key: args.key }];
-    // A page's devices are every country's, as its figures are (`EVERY_COUNTRY_LISTS`); a keyword's follow the country.
-    const everyCountry = args.dimension === "page";
+    // Its devices follow the country, a page's too since 18 November 2026, as its figures do.
     const [countries, devices] = await Promise.all([
       askGoogle(ctx, target, args.searchType, "country", args.from, args.to, filters),
-      askGoogle(ctx, target, args.searchType, "device", args.from, args.to, everyCountry ? filters : [...filters, ...inCountry], { everyCountry }),
+      askGoogle(ctx, target, args.searchType, "device", args.from, args.to, [...filters, ...inCountry]),
     ]);
     if (!countries.ok) return countries;
     if (!devices.ok) return devices;
@@ -955,7 +904,7 @@ export const searchConsoleKeySeries = tenantAction({
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,
-    dimension: v.union(v.literal("query"), v.literal("page")),
+    dimension: v.union(v.literal("query"), v.literal("page"), v.literal("country")), // A country's: Countries and devices' ticks (2026-11-18).
     key: v.string(),
     from: v.string(),
     to: v.string(),
@@ -967,21 +916,21 @@ export const searchConsoleKeySeries = tenantAction({
   handler: async (ctx, args): Promise<Infer<typeof keySeriesAnswer>> => {
     checkedRange(args.from, args.to);
     checkedCountry(args.country);
+    if (args.dimension === "country") checkedCountry(args.key); // A country's own days: its code, and no second country beside it.
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
     const target: LiveTarget | null = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     checkedLongest(args.from, args.to, target.limits);
     const before = beforeOf(args.from, args.to, args.period);
-    // A page's days are every country's, as the page list is (`EVERY_COUNTRY_LISTS`); a keyword's are the country's.
-    const everyCountry = args.dimension === "page";
+    // A keyword's days and a page's are the country's, as Pages' list is since 18 November 2026.
     const answer = await askLive(ctx, target, {
       startDate: before.from,
       endDate: args.to,
       type: args.searchType,
       dimensions: ["date"],
-      dimensionFilterGroups: [{ filters: [{ dimension: args.dimension, operator: "equals", expression: args.key }, ...(everyCountry ? [] : countryFilters(args.country))] }],
-    }, { everyCountry });
+      dimensionFilterGroups: [{ filters: [{ dimension: args.dimension, operator: "equals", expression: args.key }, ...(args.dimension === "country" ? [] : countryFilters(args.country))] }],
+    });
     if (!answer.ok) return answer;
     const all = answer.rows
       .map((row) => ({ day: row.keys[0] ?? "", clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position }))

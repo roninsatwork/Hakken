@@ -2,46 +2,49 @@
 
 import { FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { TrackedFigures } from "../../../_components/SearchConsoleFigures";
+import { tickColumn } from "@/src/ui/components/screens/TableTicks";
+import { usePageChartNames } from "../../../_components/PagesParts";
 import { SearchConsoleListScreen } from "../../../_components/SearchConsoleListTable";
-import { SearchConsoleEveryCountry } from "../../../_components/SearchConsoleEveryCountry";
 import { pageLabel, useRecordHref } from "../../../_components/searchConsoleRecords";
 import { type ChipId, figureColumns, pageColumn, trackColumn, TrackedCount, useSearchConsoleList, useSearchConsoleTracking, type ListRow } from "../../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../../_components/SearchConsoleSees";
+import { MOST_TICKED, TickedDaysCard, useListOpening, useTickedDays, useTickedRows, useTickedUpdate } from "../../../_components/TickedDays";
+import { TrackedBoxes, useTrackedSeesData } from "../../../_components/TrackedParts";
 import { trackedSees } from "@/convex/utils/sees/searchConsoleScreens";
 
 /** A search box only, as drawn: no filter chips. */
 const CHIPS: readonly ChipId[] = [];
 
 /**
- * Tracked pages (drawn 2026-10-03, "Tracked pages"): only the pages the
- * company ticked on Pages — Search Console's own list, never Sites' — each
- * with how it did in the dates chosen against the days before, and the four
- * figures for them together above. Unticking one stops tracking it and it
- * leaves the list; each row opens the page's own screen, whose way back
- * returns here as it was left.
- * The table is lean (the table rule, AGENTS.md "Tables are lean", 2026-11-17): Track stays, as unticking is what this
- * page is for; the click rate, the count and the top one are on the row's own screen.
+ * Tracked pages (drawn 2026-10-03), as Anthony chose it on 18 November 2026 (the canvas's Way 1;
+ * search-console-tracked-way-1-plan-2026-11-18.md): only the pages the company tracks — Search Console's own list, never
+ * Visibility's — in the country chosen, as Pages counts them since the same day (`inCountry`). Four boxes for them
+ * together against the dates before, Pages' own; the pages ticked in the table drawn day by day with Google's updates
+ * marked, opening on the three with the most clicks; and a lean table, one line a row, with Track at the row's end so it
+ * never sits beside the chart's tick box. Unticking Track stops tracking a page and it leaves the list; each row opens
+ * the page's own screen, whose way back returns here as it was left. With nothing tracked, the table's line says how to
+ * track one, and nothing else is drawn.
  */
 export default function SearchConsoleTrackedPagesPage() {
   const t = useTranslations("searchConsole");
-  const list = useSearchConsoleList({ dimension: "page", view: "tracked", chips: CHIPS });
+  const list = useSearchConsoleList({ dimension: "page", view: "tracked", chips: CHIPS, inCountry: true });
   const tracking = useSearchConsoleTracking(list.siteId);
   const recordHref = useRecordHref(list.siteId);
   const host = list.status?.host ?? "";
+  const ticks = useTickedRows(t("pages.chart.tickLimit", { most: MOST_TICKED }), useListOpening(list));
+  const { rows: ticked, retry } = useTickedDays("page", ticks.keys);
+  const nameOf = usePageChartNames(ticks.keys, host);
+  const update = useTickedUpdate(ticked, nameOf);
+  const seesData = useTrackedSeesData({ list, ticked, update, nameOf, kind: "pages" });
+  const none = tracking.counts?.pages.count === 0;
 
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="trackedPages" seen={list.summary && list.range.period !== "custom" ? trackedSees(list.summary, list.range.period, "pages") : null} data={list.pageData} />}
+      sees={<SearchConsoleSees screen="trackedPages" seen={list.summary && list.range.period !== "custom" ? trackedSees(list.summary, list.range.period, "pages") : null} data={seesData} />}
       icon={<FileText className="h-5 w-5 text-brand" />}
       title={t("tracked.pages.title")}
       description={t("tracked.pages.description")}
-      heroes={
-        <>
-          <SearchConsoleEveryCountry />
-          <TrackedFigures summary={list.summary} days={list.range.days} />
-        </>
-      }
+      heroes={none ? null : <TrackedBoxes summary={list.summary} />}
       table={{
         list,
         chips: CHIPS,
@@ -50,8 +53,9 @@ export default function SearchConsoleTrackedPagesPage() {
         rowHref: (row) => recordHref("pages/page", row.key),
         beside: <TrackedCount tracking={tracking} kind="page" />,
         markTracked: false,
+        ticks,
         emptyIcon: <FileText className="h-8 w-8 text-muted/30" />,
-        emptyLabel: tracking.counts?.pages.count === 0 ? t("tracked.pages.empty") : undefined,
+        emptyLabel: none ? t("tracked.pages.empty") : undefined,
         download: [
           { header: t("table.page"), field: "key" },
           { header: t("table.clicks"), field: "clicks" },
@@ -64,11 +68,25 @@ export default function SearchConsoleTrackedPagesPage() {
           { header: t("table.topKeyword"), field: "top" },
         ],
         columns: [
-          trackColumn(t, tracking, "page", (row) => pageLabel(row.key, host)),
+          tickColumn<ListRow>(ticks, { rowKey: (row) => row.key, label: (row) => t("pages.chart.tickLabel", { name: row.title ?? pageLabel(row.key, host) }), heading: t("pages.chart.tickHeading") }),
           pageColumn<ListRow>(t("table.page"), host, recordHref),
           ...figureColumns(t, ["clicks", "change", "impressions", "position"]),
+          trackColumn(t, tracking, "page", (row) => pageLabel(row.key, host)),
         ],
       }}
-    />
+    >
+      {list.summary && !none ? (
+        <TickedDaysCard
+          words="searchConsole.pages.chart"
+          ticked={ticked}
+          host={host}
+          heldFrom={list.status?.connection?.daysFrom ?? null}
+          retry={retry}
+          exportName={`${host}-search-console-tracked-pages`}
+          nameOf={nameOf}
+          compare
+        />
+      ) : null}
+    </SearchConsoleListScreen>
   );
 }

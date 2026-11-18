@@ -71,3 +71,45 @@ export function ratesApart(list: string, name: string, clicks: number, shown: nu
 export const SPLIT_SHARE_LEAST = 0.05;
 /** A click rate this far under the rest's is worth saying. */
 export const RATE_UNDER = 0.8;
+
+/** A share of a whole against its share before: "Brand: 9.1% of all the clicks, from 9.2% the span before". */
+export function shareMoved(list: string, name: string, measure: string, share: number, shareBefore: number, score: number): OwnFound {
+  const words = measureWords(measure);
+  return {
+    id: `shareMoved:${list}:${measure}:${name}`, kind: "shareMoved", list, score,
+    params: { name, measure, share: round1(share), shareBefore: round1(shareBefore) },
+    facts: [
+      { key: "share", value: round1(share), unit: "percent", label: `${name}: its share of all the ${words}` },
+      { key: "shareBefore", value: round1(shareBefore), unit: "percent", label: `${name}: its share of all the ${words}, the span before` },
+    ],
+  };
+}
+
+// Moved here from `searchConsole.ts` on 18 November 2026, so Tracked keywords' and Tracked pages' rules share them.
+
+/** New against lost, with the span before's where held. */
+export function newAgainstLost(list: string, measure: string, gained: number, lost: number, before: { gained: number; lost: number } | null, score: number): OwnFound {
+  const words = measureWords(measure);
+  return {
+    id: `newLost:${list}:${measure}`, kind: "newLost", list, score,
+    params: { measure, gained, lost, ...(before ? { gainedBefore: before.gained, lostBefore: before.lost } : {}) },
+    facts: [
+      { key: "gained", value: gained, unit: "count", label: `${words}: new` },
+      { key: "lost", value: lost, unit: "count", label: `${words}: lost` },
+      ...(before ? [
+        { key: "gainedBefore", value: before.gained, unit: "count" as const, label: `${words}: new, the span before` },
+        { key: "lostBefore", value: before.lost, unit: "count" as const, label: `${words}: lost, the span before` },
+      ] : []),
+    ],
+  };
+}
+
+/**
+ * A place set against another (the span before's, before an update), said when it moved a third of a place or more: as
+ * a place on Google, where the higher number is the worse, so the panel's colour turns round and its arrow follows the
+ * number (`placeOnGoogle`, as Visibility's own rules set a place beside another).
+ */
+export function placeAgainst(list: string, name: string, now: number | null | undefined, before: number | null | undefined, score: number, other: string, least = PLACES_MOVED): OwnFound | null {
+  if (!isNumber(now) || !isNumber(before) || now <= 0 || before <= 0 || Math.abs(now - before) < least) return null;
+  return against(list, name, "placeOnGoogle", now, before, score + Math.min(0.5, Math.abs(now - before) / 6), other);
+}

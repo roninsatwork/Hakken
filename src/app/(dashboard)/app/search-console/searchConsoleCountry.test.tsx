@@ -291,6 +291,8 @@ describe("a country the website does not keep ready", () => {
     expect(await screen.findByText("plumber maputo")).toBeInTheDocument();
     expect(actions.searchConsoleLiveList).toHaveBeenCalledWith(expect.objectContaining({ dimension: "query", country: "moz", from: "2026-08-01", to: "2026-08-31" }));
     expect(screen.getByText("searchConsole.table.asked")).toBeInTheDocument();
+    // Google's pairs weren't cut, so no line says so.
+    expect(screen.queryByText(/searchConsole\.table\.pairsCut/)).not.toBeInTheDocument();
     await waitFor(() => expect(actions.searchConsoleLiveDays).toHaveBeenCalledWith(expect.objectContaining({ country: "moz" })));
 
     // A search is worked out from Google's answer: neither the server nor Google is asked again.
@@ -301,6 +303,68 @@ describe("a country the website does not keep ready", () => {
     expect(screen.getByText("plumber maputo")).toBeInTheDocument();
     expect(actions.searchConsoleLiveList).toHaveBeenCalledTimes(1);
     expect(askedOf("searchConsoleListPage").every((args) => !("q" in args))).toBe(true);
+  });
+
+  // Anthony, 18 November 2026: "add it for completeness". Google gives at most 50,000 keyword-and-page pairs an ask, and a
+  // list built from them says so when it reached that, beside "Asked of Google for these dates".
+  it("a list asked of Google whose keyword-and-page pairs stopped at Google's most says so, once", async () => {
+    at("/app/search-console/site_1/keywords", "country=moz");
+    actions = {
+      searchConsoleLiveDays: vi.fn().mockResolvedValue({ ok: true, days: [], totals: FIGURES, previous: null, named: null }),
+      searchConsoleLiveList: vi.fn().mockResolvedValue({ ok: true, rows: [{ ...ROW, key: "plumber maputo" }], cut: null, named: 8, comparable: true, summary: SUMMARY, pairsCut: 50_000 }),
+    };
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleReads:searchConsolePerformance": { days: [], totals: null, previous: null, named: null, live: true },
+      "searchConsoleLists:searchConsoleListPage": { ...LIST, rows: [], total: 0, pages: 0, named: null, listed: 0, summary: null, from: null, to: null, live: true },
+      "searchConsoleTracking:searchConsoleTracking": TRACKING,
+    });
+    render(<SearchConsoleKeywordsPage />);
+    expect(await screen.findByText("plumber maputo")).toBeInTheDocument();
+    expect(screen.getAllByText("searchConsole.table.pairsCut 50,000")).toHaveLength(1);
+    await waitFor(() => expect(actions.searchConsoleLiveDays).toHaveBeenCalled());
+  });
+
+  // Review fixes, 18 November 2026: every list asked of Google that reached its 50,000 says so, once, in the same place,
+  // by what it holds. A list of pages cut leaves its keywords short too: its line is said, never the pairs' beside it.
+  it("a list of pages asked of Google whose pages stopped at Google's most says so, once, in place of the pairs' line", async () => {
+    at("/app/search-console/site_1/pages", "country=moz");
+    actions = {
+      searchConsoleLiveDays: vi.fn().mockResolvedValue({ ok: true, days: [], totals: FIGURES, previous: null, named: null }),
+      searchConsoleLiveList: vi.fn().mockResolvedValue({
+        ok: true, rows: [[{ ...ROW, key: "https://acme-shop.test/maputo/" }]], cut: null, named: 8, comparable: true, summary: SUMMARY, pairsCut: 50_000, listCut: 50_000,
+      }),
+    };
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleReads:searchConsolePerformance": { days: [], totals: null, previous: null, named: null, live: true },
+      "searchConsoleLists:searchConsoleListPage": { ...LIST, rows: [], total: 0, pages: 0, named: null, listed: 0, summary: null, from: null, to: null, live: true },
+      "searchConsoleTracking:searchConsoleTracking": TRACKING,
+      "pageTitles:pageTitlesFor": [],
+    });
+    render(<SearchConsolePagesPage />);
+    expect(await screen.findByText(/^searchConsole\.table\.pagesCut 50,000 /)).toBeInTheDocument();
+    expect(screen.getAllByText(/searchConsole\.table\.pagesCut/)).toHaveLength(1);
+    expect(screen.queryByText(/searchConsole\.table\.pairsCut/)).not.toBeInTheDocument();
+    await waitFor(() => expect(actions.searchConsoleLiveDays).toHaveBeenCalled());
+  });
+
+  it("Countries and devices asked of Google say a cut list once each, by what it holds; a whole one says nothing", async () => {
+    at("/app/search-console/site_1/countries-and-devices", "period=thisWeek");
+    const live = (args: { dimension: string }) => Promise.resolve({
+      ok: true, rows: [[{ ...ROW, key: args.dimension === "country" ? "gbr" : "MOBILE" }]], cut: null, named: 8, comparable: true, summary: SUMMARY,
+      ...(args.dimension === "country" ? { listCut: 50_000 } : {}),
+    });
+    actions = { searchConsoleLiveList: vi.fn(live) };
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleCountries:searchConsoleCountryChoices": { main: "gbr", ready: [] },
+      "searchConsoleLists:searchConsoleSplitList": { rows: [], preparing: false, current: true, named: 0, listed: 0, comparable: true, live: true, from: null, to: null },
+    });
+    render(<SearchConsolePlacesPage />);
+    expect(await screen.findByText(/^searchConsole\.table\.countriesCut 50,000 /)).toBeInTheDocument();
+    expect(screen.getAllByText(/searchConsole\.table\.countriesCut/)).toHaveLength(1);
+    expect(screen.queryByText(/searchConsole\.table\.devicesCut/)).not.toBeInTheDocument();
   });
 
   it("New and lost says the country isn't kept ready, in place of its figures, chart and table", () => {
@@ -353,6 +417,49 @@ describe("one country choice per page", () => {
       expect(screen.queryByRole("combobox", { name: /country/i })).not.toBeInTheDocument();
       unmount();
     }
+  });
+
+  it("Pages follows the country: its boxes are the country's own figures, and its pages and their days are the country's (18 November 2026)", async () => {
+    at("/app/search-console/site_1/pages", "country=irl");
+    actions = {
+      searchConsoleKeySeries: vi.fn().mockResolvedValue({ ok: true, days: PERFORMANCE.days, daysBefore: [], totals: FIGURES, previous: null, previousHeld: true }),
+    };
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleCountries:searchConsoleCountryChoices": { main: "gbr", ready: ["irl"] },
+      "searchConsoleReads:searchConsolePerformance": PERFORMANCE,
+      "searchConsoleLists:searchConsoleListPage": { ...LIST, rows: [{ ...ROW, key: "https://acme-shop.test/plumbers/" }] },
+      "searchConsoleTracking:searchConsoleTracking": TRACKING,
+      "pageTitles:pageTitlesFor": [],
+    });
+    render(<SearchConsolePagesPage />);
+    // The boxes are Performance's read for the country, never the pages added up (8 clicks here, Google tying no page to
+    // the searches it hides), and no line says how the page counts.
+    expect(screen.getByText("1,284")).toBeInTheDocument();
+    expect(askedOf("searchConsolePerformance").at(-1)).toMatchObject({ country: "irl" });
+    expect(screen.queryByText(/everyCountry/)).not.toBeInTheDocument();
+    // The pages are the country's own, and so are the days of the page ticked as it opens.
+    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ dimension: "page", country: "irl", inCountry: true });
+    await waitFor(() => expect(actions.searchConsoleKeySeries).toHaveBeenCalledWith(expect.objectContaining({ dimension: "page", key: "https://acme-shop.test/plumbers/", country: "irl" })));
+  });
+
+  // Review fixes, 18 November 2026: the squares and bands by Classification read the country's own pages, as Pages and
+  // Demand by Classification do, so they count the country the boxes count.
+  it("Performance follows the country: its Classifications are the country's own pages, and the squares say they're the clicks on your pages", () => {
+    at("/app/search-console/site_1", "country=irl&squaresSplit=classification");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleCountries:searchConsoleCountryChoices": { main: "gbr", ready: ["irl"] },
+      "searchConsoleReads:searchConsolePerformance": PERFORMANCE,
+      "searchConsoleLists:searchConsoleListPage": { ...LIST, summary: { ...SUMMARY, kinds: [{ kind: "SERVICE", clicks: 8, impressions: 100, previousClicks: 2, rows: 1 }] } },
+    });
+    render(<SearchConsolePerformancePage />);
+    expect(screen.getByText("1,284")).toBeInTheDocument();
+    expect(askedOf("searchConsolePerformance").at(-1)).toMatchObject({ country: "irl" });
+    expect(askedOf("searchConsoleListPage").filter((args) => args.dimension === "page").at(-1)).toMatchObject({ country: "irl", inCountry: true });
+    // The 8 clicks on the country's pages, fewer than its 1,284: never "All your clicks", and never "every country".
+    expect(screen.getByText(/^searchConsole\.services\.squaresHint searchConsole\.performance\.squares\.noun\.clicks \S+ 8$/)).toBeInTheDocument();
+    expect(screen.queryByText(/note\.classification|everyCountry/)).not.toBeInTheDocument();
   });
 
   it("a keyword's own screen has no Country filter either, and asks for its days and pages in the country chosen", async () => {

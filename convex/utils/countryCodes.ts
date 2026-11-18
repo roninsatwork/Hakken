@@ -40,3 +40,13 @@ export const GOOGLE_COUNTRIES: readonly string[] = Object.keys(ALPHA3_TO_ALPHA2)
 export function isGoogleCountry(code: string): boolean {
   return code === code.toLowerCase() && ALPHA3_TO_ALPHA2[code.toUpperCase()] !== undefined;
 }
+
+/** A country by its name in English, from Google's code ("gbr" reads "United Kingdom"), or the code where none is known. */
+export function countryNameOf(code: string): string | null {
+  const alpha2 = ALPHA3_TO_ALPHA2[code.toUpperCase()];
+  try {
+    return (alpha2 ? new Intl.DisplayNames(["en-GB"], { type: "region" }).of(alpha2) : undefined) ?? null;
+  } catch {
+    return null;
+  }
+}

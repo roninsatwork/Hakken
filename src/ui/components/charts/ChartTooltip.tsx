@@ -107,6 +107,11 @@ export function ChartReadoutTooltip({ active, payload, label, title, render }: P
  * Every chart's hover draws its lines with this, and so do bars drawn by hand
  * (the Sites Overview's), so the two read as one.
  */
+/**
+ * One line of a readout: its mark, its figure and what the figure counts. A label too long for the panel wraps onto a
+ * second line, never cut mid-sentence (Anthony, 18 November 2026, of Demand by Classification's bands: "Google keeps
+ * these searches private, so it doesn't say which pag…"; memory no-hidden-limits). A short one draws as before.
+ */
 export function ChartTooltipRow({ colour, value, label }: { colour?: string; value: ReactNode; label: ReactNode }) {
   return (
     <div className="flex items-center gap-2">
@@ -115,8 +120,8 @@ export function ChartTooltipRow({ colour, value, label }: { colour?: string; val
         className="h-[2px] w-3 shrink-0 rounded-full"
         style={{ backgroundColor: colour ?? "var(--color-muted)" }}
       />
-      <span className="text-[13px] font-semibold tabular-nums text-foreground">{value}</span>
-      <span className="truncate text-[12px] text-secondary">{label}</span>
+      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-foreground">{value}</span>
+      <span data-part-readout-label className="min-w-0 break-words text-[12px] text-secondary">{label}</span>
     </div>
   );
 }

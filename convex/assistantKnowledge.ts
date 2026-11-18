@@ -63,6 +63,40 @@ export const REALTIME_VOICE_STYLE = `You are speaking out loud, not writing.
   one you are speaking. Read it in whatever language you find it and answer
   in theirs; never read a stored passage out in its original language.`;
 
+/** The good answers the style shows, held to the screens' own word checks (`assistantAnswerStyle.test.ts`). */
+export const COMPANY_ANSWER_EXAMPLES = [
+  "Mobile does better in the United Kingdom. It got 4,014 clicks in October and sits on page one. Desktop got 2,824 and sits on page two.",
+  "The United Kingdom had 7,124 clicks in October, 5% fewer than September. Fewer people clicked for every 100 times Google showed your pages.",
+] as const;
+
+/**
+ * How an answer to the company's own people is written: typed Ask Hakken, and
+ * an agent answering a conversation in the app, never the website chat a
+ * visitor reads (docs/developer/writing-guide.md). The screens' rules, said to
+ * the model. Its answers came out as reports on 18 November 2026, with every
+ * figure right ("Device Breakdown (UK)", "Key Observations", "CTR", "-5.2%"),
+ * because nothing told a typed answer how to sound. The eye's writer is told
+ * the same in its own words (`SEES_FORMAT`, `utils/seesAsk.ts`).
+ */
+export const COMPANY_ANSWER_STYLE = `You are writing to someone who runs the business. Write the way a helpful person would say it out loud.
+
+- Start with the answer, in a plain sentence. No headings, and no bold words standing in for one, such as "Key Observations" or "Device Breakdown (UK)".
+- Short sentences, one idea each, for a reading age of 14. Never join two ideas with a colon, a semicolon or a dash. Write two sentences instead.
+- A list only when it names several things with a figure each, one to a line, such as "Garden chairs, 462 clicks".
+- Name the dates, such as "in October", "fewer than September" or "since Sunday 5 October". Never "the month before", "the previous period", "earlier" or "previously" when the dates have a name.
+- Say a change in words, such as "5% fewer than September" or "up from 212 to 258". Never a signed figure such as "-5.2%" or "+21.7%".
+- Use everyday words for what Google counts. Say clicks, impressions or times shown, clicks for every 100 times shown, place in Google, page one. Never "CTR", "SERP", "query", "attributed", "anonymised" or "KPI". Google's own names for a thing stay as names, such as Indexed, Organic Search or "Crawled - currently not indexed", with everyday words around them.
+- Say who and what, not how it's counted. "Half your sales come from 149 products", never "the products that make half the revenue". Never the system's words, such as list, row, span, step or measure.
+- Name the country, the page or the Classification you mean, such as "the United Kingdom". Never "that country" or "this segment". When two pages share a name, tell them apart by their address, such as "/garden-chairs.html".
+- Never call a part the whole. The clicks Google ties to your pages are not all your website's clicks.
+- Speak to them about their own website, as "your pages" or "your blog". Never "our" or "we", and never talk about yourself or the app.
+
+Bad: "Device Breakdown (UK). Mobile: Clicks 4,014, CTR 1.0%, Average Position 9.66 (Page 1)."
+Good: "${COMPANY_ANSWER_EXAMPLES[0]}"
+
+Bad: "The UK received fewer clicks (-5.2%), driven by a lower CTR."
+Good: "${COMPANY_ANSWER_EXAMPLES[1]}"`;
+
 /**
  * How an email reply is written: the door's own manners, added after the
  * instructions every door is given (assistant-foundation-plan.md, item 2).
@@ -153,8 +187,11 @@ export async function gatherInstructions(
     surface: AssistantSurface;
     /** The person whose own private note applies; absent for a visitor, a caller or a check (`shouldInjectPersonalNote`). */
     noteFor?: Id<"users">;
-    /** Speaking out loud adds how to speak, an email reply how to write one; nothing else changes. */
-    presentation: "WRITTEN" | "SPOKEN" | "EMAIL_REPLY";
+    /**
+     * Speaking out loud adds how to speak, an email reply how to write one, and an answer to the company's own people
+     * how the screens write (`COMPANY_ANSWER_STYLE`); nothing else changes.
+     */
+    presentation: "WRITTEN" | "SPOKEN" | "EMAIL_REPLY" | "COMPANY_ANSWER";
     /** An agent answering the conversation: its prompt, skills and own always memories. */
     agent?: {
       systemPrompt?: string | null;
@@ -218,7 +255,9 @@ export async function gatherInstructions(
         ? `${withFocus}\n\n====================\nSPEAKING OUT LOUD:\n\n${REALTIME_VOICE_STYLE}`
         : args.presentation === "EMAIL_REPLY"
           ? `${withFocus}\n\n====================\nWRITING THIS EMAIL REPLY:\n\n${emailReplyStyle(platformName)}`
-          : withFocus,
+          : args.presentation === "COMPANY_ANSWER"
+            ? `${withFocus}\n\n====================\nHOW TO WRITE YOUR ANSWER:\n\n${COMPANY_ANSWER_STYLE}`
+            : withFocus,
     platformName,
     company,
     companySkills: companySkills?.skills ?? [],

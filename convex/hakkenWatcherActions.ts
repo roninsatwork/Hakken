@@ -92,7 +92,8 @@ async function checkOne(ctx: ActionCtx, taskId: Id<"hakkenTasks">): Promise<Chec
     return "NOTHING_NEW";
   }
 
-  const read = await ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, { companyId: task.companyId, target: task.target, from, to });
+  // Every country's page figures, as the alert's numbers were chosen against (`targetDaysInternal`).
+  const read = await ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, { companyId: task.companyId, target: task.target, from, to, countries: "EVERY" });
   if (!read.ok) {
     await ctx.runMutation(internal.hakkenWatcher.recordCheckInternal, { taskId, judged: [], problem: read.problem });
     return "PROBLEM";
@@ -149,7 +150,7 @@ async function fourWeeks(
   const fourWeeksBack = shiftDay(day, 1 - TRIAL_DAYS);
   const from = task.oldestDay && task.oldestDay > fourWeeksBack ? task.oldestDay : fourWeeksBack;
   if (from > day) return null;
-  const read = await ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, { companyId: task.companyId, target: task.target, from, to: day });
+  const read = await ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, { companyId: task.companyId, target: task.target, from, to: day, countries: "EVERY" });
   if (!read.ok) return null;
   const byDay = new Map(read.days.map((entry) => [entry.day, task.measure === "visitors" ? entry.clicks : entry.impressions]));
   const values: number[] = [];

@@ -92,8 +92,8 @@ afterEach(() => {
 
 describe("Search Console's approved looks: pages and keywords", () => {
   it("1 · Pages", async () => {
-    // Way 1 (search-console-pages-way-1-plan-2026-11-17.md): the boxes every country's, the line under them, the busiest
-    // page ticked and drawn day by day, and the table with its tick boxes.
+    // Way 1 (search-console-pages-way-1-plan-2026-11-17.md): the boxes the country's own (Performance's read, since 18
+    // November 2026, with no line under them), the busiest page ticked and drawn day by day, and the table with its tick boxes.
     at("/app/search-console/site_1/pages");
     answer(
       {

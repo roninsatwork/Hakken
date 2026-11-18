@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { BANDS, figuresOf, filterRows, type Band, type Filters } from "@/convex/utils/searchConsoleViews";
+import { BANDS, figuresOf, filterRows, trackedListOf, type Band, type Filters } from "@/convex/utils/searchConsoleViews";
 import { exportFileName, exportValue, type ExportField } from "@/convex/utils/searchConsoleExport";
 import { PAGE_TYPES, RANK_INTENTS } from "@/convex/utils/siteShapes";
 import { useToast } from "@/src/context/ToastContext";
@@ -18,7 +18,7 @@ import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { usePageKinds, type PageKindsView } from "../../_components/usePageKinds";
-import { formatNumber } from "../../sites/_components/siteFormat";
+import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSiteListPage, useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
@@ -157,6 +157,8 @@ export function useSearchConsoleList(options: {
   within?: { kind: "query" | "page"; key: string } | null;
   opening?: SortKey;
   chips: readonly ChipId[];
+  /** A list of pages in the country chosen alone, never every country's (Pages, 18 November 2026). */
+  inCountry?: boolean;
 }) {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
@@ -180,6 +182,7 @@ export function useSearchConsoleList(options: {
     to: range.to,
     ...periodArg(range),
     ...countryArg(country),
+    ...(options.inCountry ? { inCountry: true } : {}),
   };
   // Other dates, or one device, are asked of Google: the periods are kept for the whole website and each country kept ready,
   // Pages competing included. One keyword's pages and one page's keywords are asked of Google for every period, their
@@ -201,9 +204,12 @@ export function useSearchConsoleList(options: {
   );
   if (server.result?.live && !toldLive && !ownDay) setLiveFor(baseKey);
   const isLive = !ownDay && (asksGoogle || toldLive || server.result?.live === true);
+  // A list of pages comes without each page's keywords and top one, which only its download shows: asked when it's
+  // downloaded, Google's slowest answer (speed fixes, 18 November 2026).
+  const pageList = options.dimension === "page" && within === undefined;
   const live = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
-    isLive && ready ? { ...base, ...(filters.missed ? { missed: filters.missed } : {}), ...(device ? { device } : {}) } : null,
+    isLive && ready ? { ...base, ...(filters.missed ? { missed: filters.missed } : {}), ...(device ? { device } : {}), ...(pageList ? { keywordsApart: true } : {}) } : null,
   );
   // Google's answer is asked once; what the company tracks follows every tick.
   const trackedNow = useQuery(api.searchConsoleTracking.searchConsoleTrackedKeys, isLive && ready ? { siteId, kind: within ? (within.kind === "query" ? "page" : "query") : options.dimension } : "skip");
@@ -240,7 +246,7 @@ export function useSearchConsoleList(options: {
     };
   const filtered = Boolean(term) || Object.keys(filters).some((key) => key !== "missed") || Boolean(device);
   const liveSummary = live.answer?.ok
-    ? (tracksOnly && listedLive ? { ...live.answer.summary, ...figuresOf(listedLive, live.answer.comparable) } : live.answer.summary)
+    ? (tracksOnly && listedLive ? { ...live.answer.summary, ...figuresOf(listedLive, live.answer.comparable), trackedList: trackedListOf(listedLive, live.answer.comparable) } : live.answer.summary)
     : null;
   const summary = isLive ? liveSummary : (server.result?.summary ?? null);
   const shownRows = table.pageRows ?? null;
@@ -263,10 +269,18 @@ export function useSearchConsoleList(options: {
     /** A kind of result keeping no searches (Google Images, Discover): the screen says so, not "being added up". */
     noSearches: server.result?.noSearches === true,
     live: isLive,
+    /** Google's keyword-and-page pairs stopped at its most an ask, for a list asked of Google that reads them: the table says so. */
+    pairsCut: isLive && live.answer?.ok ? (live.answer.pairsCut ?? null) : null,
+    /** Google's list of pages itself stopped at its most an ask: the table says so in place of the pairs' line. */
+    listCut: isLive && live.answer?.ok ? (live.answer.listCut ?? null) : null,
     retry: live.retry,
     download: { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction },
     /** A list asked of Google: every row, searched, filtered and ordered as on screen, for its download. */
     liveRows: isLive ? (liveOrder.rows ?? null) : null,
+    /** A list of pages asked of Google without each page's keywords: what its download asks for them (`searchConsoleLivePageKeywords`). */
+    pageKeywords: isLive && live.answer?.ok && live.answer.keywordsApart
+      ? { siteId, searchType: base.searchType, from: range.from, to: range.to, ...countryArg(country), ...(device ? { device } : {}) }
+      : null,
     /**
      * A list asked of Google: every row it answered, before the search and the chips, for a chart of the whole list (a
      * keyword's own screen's bands, search-console-keyword-screen-way-2-plan-2026-11-17.md). Undefined while it's asked.
@@ -296,9 +310,10 @@ export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view
 
 /**
  * The same summary, and whether it's still on its way: a page that must tell "loading" from "nothing to add up"
- * (Performance's squares and bands, search-console-performance-way-3-plan-2026-11-17.md) reads it so.
+ * (Performance's squares and bands, search-console-performance-way-3-plan-2026-11-17.md) reads it so. `inCountry`: a
+ * list of pages in the country chosen alone, as Pages reads it (review fixes, 18 November 2026: Performance's squares).
  */
-export function useSearchConsoleSummaryRead(ask: { dimension: "query" | "page"; view?: View; missed?: "searched" | "untracked" }): { summary: ListSummary | null; loading: boolean } {
+export function useSearchConsoleSummaryRead(ask: { dimension: "query" | "page"; view?: View; missed?: "searched" | "untracked"; inCountry?: boolean }): { summary: ListSummary | null; loading: boolean } {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
@@ -309,7 +324,8 @@ export function useSearchConsoleSummaryRead(ask: { dimension: "query" | "page"; 
   const readyMade = isReadyMade(range, status?.connection?.newestDay);
   const server = useQuery(api.searchConsoleLists.searchConsoleListPage, held && readyMade ? { ...base, page: 1, rows: 25 } : "skip");
   const asksGoogle = !readyMade || server?.live === true;
-  const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, held && asksGoogle ? base : null);
+  // The summary alone: a list of pages without each page's keywords, which no summary reads (speed fixes, 18 November 2026).
+  const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, held && asksGoogle ? { ...base, ...(ask.dimension === "page" ? { keywordsApart: true } : {}) } : null);
   if (asksGoogle) return { summary: live.answer?.ok ? live.answer.summary : null, loading: held && live.answer === undefined };
   return { summary: server?.summary ?? null, loading: held && server === undefined };
 }
@@ -520,7 +536,12 @@ type Figure = "clicks" | "change" | "impressions" | "ctr" | "position" | "moved"
  * headed "Shown", with Impressions on hover: "impressions is to long a
  * heading".
  */
-export function figureColumns(say: (key: string) => string, which: readonly Figure[]): DataTableColumn<ListRow>[] {
+export function figureColumns(
+  say: (key: string) => string,
+  which: readonly Figure[],
+  /** "The same" for clicks that didn't move, where a dash would read as not known: Countries and devices, as its board drew it. */
+  how: { same?: boolean } = {},
+): DataTableColumn<ListRow>[] {
   const all: Record<Figure, DataTableColumn<ListRow>> = {
     clicks: { key: "clicks", header: say("table.clicks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },
     change: {
@@ -529,7 +550,7 @@ export function figureColumns(say: (key: string) => string, which: readonly Figu
       align: "right",
       sortable: true,
       className: "whitespace-nowrap",
-      cell: (row) => <Change by={row.change} isNew={row.change !== null && row.previousClicks === null && row.clicks > 0} format={formatNumber} />,
+      cell: (row) => <Change by={row.change} isNew={row.change !== null && row.previousClicks === null && row.clicks > 0} same={how.same === true} format={formatNumber} />,
     },
     impressions: { key: "impressions", header: <ShownHeading say={say} />, align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
     ctr: { key: "ctr", header: say("table.ctr"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.ctr)}</span> },
@@ -579,12 +600,49 @@ export function SearchConsoleListDownload({ list, download }: {
 }) {
   const t = useTranslations("searchConsole.table");
   if (!list.live) return <SearchConsoleDownload ask={list.download} headers={download.map((entry) => entry.header)} fields={download.map((entry) => entry.field)} />;
+  const fileName = exportFileName(list.status?.host ?? "site", list.download.view, list.download.dimension, list.range.from, list.range.to);
+  const columns = download.map((entry) => ({ header: entry.header, value: (row: ListRow) => exportValue(row, entry.field) }));
+  const asksKeywords = list.pageKeywords !== null && download.some((entry) => entry.field === "count" || entry.field === "top");
+  if (asksKeywords && list.pageKeywords) return <PageKeywordsDownload ask={list.pageKeywords} rows={list.liveRows ?? undefined} fileName={fileName} columns={columns} />;
+  return <ListDownload label={t("download")} fileName={fileName} rows={list.liveRows ?? undefined} columns={columns} />;
+}
+
+/**
+ * A list of pages asked of Google, downloaded with each page's keywords and top one: those asked of Google when it's
+ * pressed (`searchConsoleLivePageKeywords`), the rows as on screen, in its order. The same button and words as a list
+ * kept ready (`SearchConsoleDownload`), "Preparing…" while it's asked.
+ */
+function PageKeywordsDownload({ ask, rows, fileName, columns }: {
+  ask: FunctionArgs<typeof api.searchConsoleLiveAsks.searchConsoleLivePageKeywords>;
+  rows: readonly ListRow[] | undefined;
+  fileName: string;
+  columns: Array<{ header: string; value: (row: ListRow) => string | number | null }>;
+}) {
+  const t = useTranslations("searchConsole.table");
+  const askKeywords = useAction(api.searchConsoleLiveAsks.searchConsoleLivePageKeywords);
+  const { run, isBusy } = useAdminAction({ scope: "search-console-download" });
+  const { showToast } = useToast();
   return (
-    <ListDownload
+    <DownloadButton
       label={t("download")}
-      fileName={exportFileName(list.status?.host ?? "site", list.download.view, list.download.dimension, list.range.from, list.range.to)}
-      rows={list.liveRows ?? undefined}
-      columns={download.map((entry) => ({ header: entry.header, value: (row: ListRow) => exportValue(row, entry.field) }))}
+      busyLabel={t("downloading")}
+      busy={isBusy()}
+      disabled={!rows || rows.length === 0}
+      onClick={async () => {
+        if (!rows) return;
+        const outcome = await run(() => askKeywords(ask), { fallbackMessage: t("downloadFailed") });
+        if (!outcome.ok) return;
+        if (!outcome.data.ok) {
+          showToast(t("downloadFailed"), "error");
+          return;
+        }
+        // A page Google tied no search to has none, as a list kept ready says it.
+        const byPage = new Map(outcome.data.pages.flat().map((page) => [page.key, page]));
+        const withKeywords = rows.map((row) => ({ ...row, count: byPage.get(row.key)?.count ?? 0, top: byPage.get(row.key)?.top ?? "" }));
+        saveTextFile(toCsv(columns.map((column) => column.header), withKeywords.map((row) => columns.map((column) => column.value(row)))), fileName.endsWith(".csv") ? fileName : `${fileName}.csv`);
+        // Google's pairs stopped at its most: the file's keyword counts leave its fewest clicks out, said once (18 November 2026).
+        if (outcome.data.pairsCut) showToast(t("pairsCutFile", { most: formatNumber(outcome.data.pairsCut) }), "info");
+      }}
     />
   );
 }
@@ -632,6 +690,21 @@ export function keywordColumn<Row extends { key: string }>(
     sortable: true,
     className: `${width} min-w-[160px]`,
     cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
+  };
+}
+
+/**
+ * A row's name that opens nothing — a country, a device — on one line: never narrower than 160 pixels, and cut with "…"
+ * when it's longer than its share of the table, the whole of it on hover, as `keywordColumn` cuts a keyword. Countries
+ * and devices take it (search-console-countries-and-devices-way-1-plan-2026-11-18.md).
+ */
+export function nameColumn<Row extends { name: string }>(header: string): DataTableColumn<Row> {
+  return {
+    key: "name",
+    header,
+    sortable: true,
+    className: `${CUT_COLUMN.first} min-w-[160px]`,
+    cell: (row) => <span className="block truncate text-[13px] text-foreground" title={row.name}>{row.name}</span>,
   };
 }
 

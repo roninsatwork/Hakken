@@ -60,7 +60,7 @@ describe("tidying the figures kept before 2026-10-05", () => {
     const counted = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
     // Counting changes nothing, so a record two steps would each remove is counted by both.
     // No country is read as all countries since all countries stopped being kept (search-console-home-countries-plan.md).
-    expect(counted?.tally).toEqual({ websites: 1, countries: 0, copies: 0, seen: 0, addresses: 5, imageDays: 0, imageSearches: 2, register: 1, unkept: 0 });
+    expect(counted?.tally).toEqual({ websites: 1, countries: 0, copies: 0, seen: 0, addresses: 5, imageDays: 0, imageSearches: 2, register: 1 });
     expect(await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).length)).toBe(before);
 
     const done = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: true });
@@ -90,10 +90,10 @@ describe("tidying the figures kept before 2026-10-05", () => {
 
     // A second run finds nothing left to do.
     const again = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
-    expect(again?.tally).toEqual({ websites: 1, countries: 0, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0, register: 0, unkept: 0 });
+    expect(again?.tally).toEqual({ websites: 1, countries: 0, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0, register: 0 });
   });
 
-  test("searches not kept go from the lines kept and the register, judged on the 90 days; a website without them is left alone (round two, D)", async () => {
+  test("every search's lines and register rows stay, whatever the 90 days hold (the keep rule went on 18 November 2026)", async () => {
     const { t, holdId } = await setup();
     const line = (keys: string[]) => ({
       companyWebsiteId: holdId, searchType: "web" as const, list: "pair" as const, grain: "DAY" as const, start: "2026-09-20", part: 0, fetchedAt: 1,
@@ -104,23 +104,19 @@ describe("tidying the figures kept before 2026-10-05", () => {
       for (const key of ["almost there", "deep and lonely"]) {
         await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: holdId, kind: "query", key, firstDay: "2026-09-20", lastDay: "2026-09-20" });
       }
+      // The 90 days: "almost there" at position 12, "deep and lonely" at 35 on one page, neither clicked. The keep rule
+      // judged by them until 18 November 2026, and took "deep and lonely" and the setup's "plumber leeds".
+      await ctx.db.insert("searchConsolePeriods", {
+        companyWebsiteId: holdId, searchType: "web", list: "query", period: "last3Months", which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
+        keys: ["almost there", "deep and lonely"], clicks: [0, 0], impressions: [10, 10], positionSums: [120, 350], counts: [1, 1], builtAt: 1,
+      });
     });
-    const linesOf = () => t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect())
+    await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: true });
+    const lines = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect())
       .filter((record) => record.start === "2026-09-20" && record.list === "pair").flatMap((record) => record.keys));
-    // No 90 days built yet: nothing judged, nothing removed.
-    expect((await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: true }))?.tally.unkept).toBe(0);
-    expect(await linesOf()).toEqual(["almost there", "deep and lonely"]);
-
-    // The 90 days: "almost there" at position 12, "deep and lonely" at 35 on one page, neither clicked.
-    await t.run(async (ctx) => await ctx.db.insert("searchConsolePeriods", {
-      companyWebsiteId: holdId, searchType: "web", list: "query", period: "last3Months", which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
-      keys: ["almost there", "deep and lonely"], clicks: [0, 0], impressions: [10, 10], positionSums: [120, 350], counts: [1, 1], builtAt: 1,
-    }));
-    // "deep and lonely", and the setup's "plumber leeds", missing from the 90 days: each a line and a register row.
-    expect((await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: true }))?.tally.unkept).toBe(4);
-    expect(await linesOf()).toEqual(["almost there"]);
+    expect(lines).toEqual(["almost there", "deep and lonely"]);
     const register = await t.run(async (ctx) => (await ctx.db.query("searchConsoleSeen").collect()).filter((row) => row.country === undefined && row.searchType === undefined).map((row) => row.key));
-    expect(register).toEqual(["almost there"]);
+    expect(register.sort()).toEqual(["almost there", "deep and lonely", "plumber leeds"]);
   });
 });
 

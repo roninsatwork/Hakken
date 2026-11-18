@@ -126,18 +126,24 @@ export const settlePart = internalAction({
           if (next !== undefined && runId) await ctx.runMutation(internal.roleRuns.logRunLine, { runId, heading: "Left out", detail: failed, failed: true });
         } else {
           const stopAt = args.stopAt ?? Date.now() + STAGE_BUDGET_MS;
-          const held = { pruned: false };
+          const held: { pruned: boolean; letGo?: number; asked?: boolean } = { pruned: false };
           const fresh = args.fresh ? { fresh: true } : {};
           written += await buildSitePeriods(ctx, args.holdId, args.newest, args.oldest, args.country, stage === "SHORT"
             ? { searchType: args.searchType, long: false, stopAt, careful: begun.careful, held }
             : { searchType: args.searchType, long: true, onlyLong: true, longGroup: stage === "NINETY" ? "QUARTERS" : "YEAR", stopAt, careful: begun.careful, held, ...(args.carry ? { carry: args.carry } : {}), ...fresh });
-          // A period's pairs past what one job may hold: never in silence (RR2).
+          // A period's pairs past what one job may hold: never in silence (RR2), in the run's log and on the website's
+          // screens, until the stage's pairs are next asked of Google and fit. A stage whose finished periods were kept
+          // as built, asking nothing, leaves what it said. Every search is kept otherwise (18 November 2026).
           const { runId } = await runOf(ctx, args.connectionId, args.token);
+          const letGo = held.pruned ? held.letGo ?? 0 : 0;
+          if (stage !== "SHORT" && (held.pruned || held.asked)) {
+            await ctx.runMutation(internal.searchConsoleSettling.noteSearchesLetGo, { connectionId: args.connectionId, stage: `${args.searchType}|${args.country ?? ""}|${stage}`, searches: letGo });
+          }
           if (held.pruned && runId) {
             await ctx.runMutation(internal.roleRuns.logRunLine, {
               runId,
               heading: "Too many searches to hold",
-              detail: `${stageName(part, stage)}: more than ${MOST_PAIRS_HELD.toLocaleString("en-GB")} searches by page came in, so the least-seen searches the keep rule could not keep yet — no click, one page, an average position past 20 — were let go as they came.`,
+              detail: `${stageName(part, stage)}: more than ${MOST_PAIRS_HELD.toLocaleString("en-GB")} searches by page came in, more than one job can hold, so the ${letGo.toLocaleString("en-GB")} seen least, none clicked so far and none tracked, were left out of the lists. The website's Search Console screens say so too.`,
               failed: true,
             });
           }
@@ -169,6 +175,8 @@ export const settlePart = internalAction({
         return null;
       }
     }
+    // In the deployment's log too: a settle with no run (a rebuild by hand, a screen's catch-up) has no other place to say it.
+    if (failed) console.warn(`[settle] ${args.connectionId}: ${failed}`);
     const settle = await ctx.runMutation(internal.searchConsoleSettling.partDone, {
       connectionId: args.connectionId, token: args.token, part: key, written, weekly, ...(failed ? { failed } : {}),
     });

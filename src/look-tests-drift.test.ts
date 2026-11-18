@@ -76,8 +76,11 @@ describe("approved looks", () => {
     const boards = Object.keys(canvas.boards).map((file) => file.replace(/\.dc\.html$/, ""));
     const saved = new Set(lookFiles.filter((look) => look.plan === "search-console-redesign").map((look) => look.board));
     // A board approved again in a later plan keeps its look there: Google updates with What Hakken sees and
-    // Volatility (search-console-volatility-plan.md §2.2).
-    const redrawn: Record<string, string> = { Updates: "search-console-volatility" };
+    // Volatility (search-console-volatility-plan.md §2.2); Tracked keywords and Tracked pages as Way 1
+    // (search-console-tracked-way-1-plan-2026-11-18.md).
+    const redrawn: Record<string, string> = {
+      Updates: "search-console-volatility", TrackedKeywords: "search-console-tracked-way-1", TrackedPages: "search-console-tracked-way-1",
+    };
     const savedLater = (board: string) => lookFiles.some((look) => look.plan === redrawn[board] && look.board === board);
     expect(boards.filter((board) => !saved.has(board) && !savedLater(board))).toEqual([]);
   });

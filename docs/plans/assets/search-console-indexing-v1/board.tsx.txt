@@ -1,0 +1,393 @@
+// Search Console → Indexing, like Google's own Page indexing report, as a template for any website: a summary of why
+// pages aren't indexed, and one page for every reason Google can give, built from a catalogue of Google's reasons. Drawn
+// from the app's real parts, on More Handles' figures only as the sample: Google's URL inspection answers for 1,244
+// pages on 18 November 2026, beside the saved figures for every page Google showed from 17 September to 16 November.
+// Every chart's menus, the tables' search, sort and pages, and the links between boards work when a board is played.
+// Nothing here is built into the app.
+import { useState, type ReactNode } from "react";
+import { FileSearch } from "lucide-react";
+import DATA from "../data/report.json";
+import { PageHeader, DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { TableBar, type TableNoun } from "@/src/ui/components/screens/TableBar";
+import { CHART_COMPARATOR_GREY, CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_EMERALD, CHART_SERIES_ORANGE, CHART_SERIES_ROSE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
+import { CUT_COLUMN, RecordLinkCell } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
+import { formatNumber, formatShortDay } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
+import { useSitePager } from "@/src/app/(dashboard)/app/sites/_components/useSitePagedTable";
+import { useSiteSearch } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
+import { useSiteSortedList, type SiteSortColumns } from "@/src/app/(dashboard)/app/sites/_components/useSiteSort";
+
+export const SITE = "gs7s64z25gddkrkcarvpfjxw7x8fqkwn";
+export const PATH = `/app/search-console/${SITE}/indexing`;
+const HOST = "morehandles.co.uk";
+const fmt = formatNumber;
+const T = DATA.totals;
+const CHECKED_ON = "18 November";
+const SINCE = "17 September";
+const CONSOLE_LINK = "https://search.google.com/search-console/index?resource_id=sc-domain%3Amorehandles.co.uk";
+
+// ——— Every reason Google's report can give, in its own words ———
+
+type Kind = "error" | "keptOut" | "duplicate" | "notChosen" | "unknown" | "indexed";
+type Source = "Website" | "Google systems";
+type ReasonInfo = { words: string; source: Source; kind: Kind; means: string; short: string };
+/**
+ * Google's reasons, exactly as its Page indexing report writes them, each with the Source the report gives it, its kind
+ * (which boxes its page shows) and one plain line in everyday words. A website shows whichever of them its pages have.
+ */
+const CATALOGUE: readonly ReasonInfo[] = [
+  { words: "Server error (5xx)", source: "Website", kind: "error", short: "5xx", means: "Your website broke when Google asked for these pages." },
+  { words: "Redirect error", source: "Website", kind: "error", short: "Redirect error", means: "These links send people round in a loop, or to a dead end." },
+  { words: "Blocked by robots.txt", source: "Website", kind: "keptOut", short: "robots.txt", means: "Your website tells Google not to visit these pages." },
+  { words: "Excluded by ‘noindex’ tag", source: "Website", kind: "keptOut", short: "Noindex", means: "These pages tell Google not to show them." },
+  { words: "Soft 404", source: "Website", kind: "error", short: "Soft 404", means: "These pages are there, but Google thinks they look empty." },
+  { words: "Blocked due to unauthorized request (401)", source: "Website", kind: "error", short: "401", means: "Google needs to sign in to see these pages." },
+  { words: "Not found (404)", source: "Website", kind: "error", short: "404", means: "These pages have gone. People who click them see an error." },
+  { words: "Blocked due to access forbidden (403)", source: "Website", kind: "error", short: "403", means: "Your website won't let Google see these pages." },
+  { words: "Blocked due to other 4xx issue", source: "Website", kind: "error", short: "4xx", means: "Your website said no when Google asked for these pages." },
+  { words: "Blocked by page removal tool", source: "Website", kind: "keptOut", short: "Removed", means: "Someone asked Google to hide these pages for a while." },
+  { words: "Alternate page with proper canonical tag", source: "Website", kind: "duplicate", short: "Alternate", means: "These pages point Google to a main page. That's as it should be." },
+  { words: "Page with redirect", source: "Website", kind: "duplicate", short: "Redirect", means: "These old links send people on to another page. Google shows that page instead." },
+  { words: "Duplicate without user-selected canonical", source: "Website", kind: "duplicate", short: "Duplicate", means: "These pages copy another, and don't say which is the main one." },
+  { words: "Duplicate, Google chose different canonical than user", source: "Google systems", kind: "duplicate", short: "Google's pick", means: "You picked a main page, but Google picked a different one." },
+  { words: "Crawled - currently not indexed", source: "Google systems", kind: "notChosen", short: "Crawled", means: "Google visited these pages, but chose not to show them yet." },
+  { words: "Discovered - currently not indexed", source: "Google systems", kind: "notChosen", short: "Discovered", means: "Google knows about these pages, but hasn't visited them yet." },
+  { words: "URL is unknown to Google", source: "Google systems", kind: "unknown", short: "Unknown", means: "Google has no record of these pages." },
+];
+const INDEXED: ReasonInfo = { words: "Submitted and indexed", source: "Website", kind: "indexed", short: "Indexed", means: "Google has saved these pages. They can come up in search." };
+const infoOf = (words: string): ReasonInfo => (words === INDEXED.words ? INDEXED : CATALOGUE.find((one) => one.words === words) ?? { words, source: "Google systems", kind: "notChosen", short: words, means: "" });
+
+type Checked = {
+  key: string; address: string; title: string | null; words: string; crawled: string | null; clicks: number; shown: number; days: number;
+  kind: string; last?: string | null; goesTo?: string | null; goesToIndexed?: boolean; inSitemap: boolean; linkedOwn: boolean; googleCanonical: string | null; userCanonical: string | null;
+};
+const ROWS = DATA.rows as Checked[];
+const pagesOf = (words: string) => ROWS.filter((row) => row.words === words);
+const clicksOf = (list: readonly Checked[]) => list.reduce((sum, row) => sum + row.clicks, 0);
+const shownOf = (list: readonly Checked[]) => list.reduce((sum, row) => sum + row.shown, 0);
+const newest = (values: ReadonlyArray<string | null | undefined>) => values.filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+
+/** The reasons this website's pages have, the most pages first, and the indexed pages. */
+type ReasonRow = ReasonInfo & { pages: number; clicks: number; shown: number; crawled: string | null };
+const rowOf = (info: ReasonInfo): ReasonRow => { const list = pagesOf(info.words); return { ...info, pages: list.length, clicks: clicksOf(list), shown: shownOf(list), crawled: newest(list.map((row) => row.crawled)) }; };
+const PRESENT: ReasonRow[] = CATALOGUE.map(rowOf).filter((row) => row.pages > 0).sort((left, right) => right.pages - left.pages);
+const indexed = rowOf(INDEXED);
+const notIndexedPages = PRESENT.reduce((sum, row) => sum + row.pages, 0);
+const notIndexedClicks = PRESENT.reduce((sum, row) => sum + row.clicks, 0);
+const biggest = PRESENT[0] ?? null;
+// Pages not indexed that Google gave no visit day for.
+const neverVisited = ROWS.filter((row) => row.words !== INDEXED.words && !row.crawled).length;
+
+/** Each reason's own board on the canvas, so the summary's rows open them. */
+const BOARD_OF: Record<string, string> = {
+  "URL is unknown to Google": "V1Detail.dc.html", "Page with redirect": "V1Redirect.dc.html", "Not found (404)": "V1NotFound.dc.html",
+  "Excluded by ‘noindex’ tag": "V1Noindex.dc.html", "Crawled - currently not indexed": "V1Crawled.dc.html",
+};
+
+const note = (words: ReactNode) => <span className="text-secondary">{words}</span>;
+const mono = (value: string, strong = false) => <span className={`font-mono text-[12px] ${strong ? "text-foreground" : "text-secondary"}`}>{value}</span>;
+const heading = (words: string, hover: string) => <span title={hover}>{words}</span>;
+const day = (value: string | null | undefined) => (value ? formatShortDay(value) : "–");
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const longDay = (value: string) => `${Number(value.slice(8))} ${MONTHS[Number(value.slice(5, 7)) - 1]}`;
+/** "About 1 in 390", rounded to a figure that's easy to read. */
+const oneIn = (part: number) => { const ratio = T.clicksAll / Math.max(1, part); const step = ratio > 1000 ? 100 : 10; return fmt(Math.round(ratio / step) * step); };
+const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
+
+// ——— A lean table, with its search ———
+
+function LeanTable<Row extends { key: string }, Key extends string>({ title, noun, rows, search: placeholder, columns, sorts, opening, download, empty = "Nothing matches that search." }: {
+  title: string;
+  noun: TableNoun;
+  rows: readonly Row[];
+  search: string;
+  columns: DataTableColumn<Row>[];
+  sorts: SiteSortColumns<Row, Key>;
+  opening: Key;
+  download: Array<{ header: string; value: (row: Row) => string | number | null | undefined }>;
+  empty?: string;
+}) {
+  const [search, setSearch, term] = useSiteSearch();
+  const words = term.toLowerCase();
+  const matching = rows.filter((row) => !words || JSON.stringify(row).toLowerCase().includes(words));
+  const { rows: ordered, tableSort } = useSiteSortedList(matching, sorts, { opening, name: (row) => row.key });
+  const pages = useSitePager(ordered);
+  return (
+    <DataTable
+      rows={pages.pageRows}
+      rowKey={(row) => row.key}
+      search={{ value: search, onChange: setSearch, placeholder }}
+      cardHeader={<TableBar footer={pages.footer} noun={noun} title={title} actions={<ListDownload label="Download all (CSV)" fileName={`${HOST}-indexing`} rows={ordered} columns={download} />} />}
+      sort={tableSort}
+      empty={{ icon: <FileSearch className="h-8 w-8 text-muted/30" />, label: term ? "Nothing matches that search." : empty }}
+      footer={pages.footer}
+      columns={columns}
+    />
+  );
+}
+
+// ——— The summary ———
+
+function SummaryPage({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader icon={<FileSearch className="h-5 w-5 text-brand" />} title="Indexing" description="Which of your pages are in Google, and why some aren't." />
+      <FigureRow>
+        <Figure label="Not indexed" value={fmt(notIndexedPages)} detail={note(`Google gave ${fmt(PRESENT.length)} ${plural(PRESENT.length, "reason", "reasons")}. ${plural(PRESENT.length, "It's", "They're")} in the table below.`)} />
+        <Figure label="Indexed" value={fmt(indexed.pages)} detail={note("Google can show these in search.")} />
+        {biggest ? <Figure label={biggest.words} value={fmt(biggest.pages)} detail={note(`The biggest reason, ${fmt(biggest.pages)} of the ${fmt(notIndexedPages)}.`)} /> : null}
+        <Figure label="Clicks on pages not indexed" value={fmt(notIndexedClicks)} detail={note(`About 1 in ${oneIn(notIndexedClicks)} of your clicks since ${SINCE}.`)} />
+      </FigureRow>
+      <div className="flex flex-col gap-1">
+        <p className="text-[13px] text-secondary">{`${fmt(T.asked)} of your ${fmt(T.shownPages)} pages are checked so far. The rest are done by about 1 December.`}</p>
+        <a href={CONSOLE_LINK} target="_blank" rel="noreferrer" className="w-fit text-[13px] text-secondary hover:text-foreground">Full report in Search Console</a>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const CHART_COLOURS = [CHART_SERIES_BLUE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET, CHART_SERIES_AMBER, CHART_SERIES_ROSE, CHART_SERIES_EMERALD, CHART_COMPARATOR_GREY];
+
+function VisitedCard() {
+  // Only the reasons pages aren't indexed (Anthony, 18 November 2026: "work from issues, not what is day to day normal"), each a
+  // tick box in Google's words; the key and hover use short names ("i hate long axis labels").
+  // A reason Google gave no visit day for (URL is unknown to Google) would only draw a flat line: the hint says so instead.
+  const answers = PRESENT.filter((one) => pagesOf(one.words).some((row) => row.crawled));
+  const colourOf = (at: number) => [CHART_SERIES_ORANGE, ...CHART_COLOURS][at % (CHART_COLOURS.length + 1)];
+  const [ticked, setTicked] = useState<string[]>(answers.map((one) => one.words));
+  const days = (DATA.crawlDays as Array<{ day: string }>).map((one) => one.day);
+  const lines: DaysLine[] = answers.map((one, at) => ({ one, at })).filter(({ one }) => ticked.includes(one.words)).map(({ one, at }) => ({
+    key: `r${at}`,
+    name: one.short,
+    colour: colourOf(at),
+    points: days.map((when) => ({ day: when, value: ROWS.filter((row) => row.words === one.words && row.crawled === when).length })),
+  }));
+  return (
+    <DaysChart
+      title="When Google last visited your pages"
+      hint={`Each page sits on the last day Google visited it. Google gave no day for the ${fmt(neverVisited)} it has no record of.`}
+      exportName={`${HOST}-indexing-last-crawled`}
+      csvDay="Day"
+      host={HOST}
+      step="day"
+      waiting={null}
+      controls={[{ kind: "ticks", key: "show", label: "Show", everyWord: "Every answer", choices: answers.map((one) => ({ key: one.words, label: one.words })), ticked, onChange: setTicked }]}
+      nothingTicked={ticked.length === 0 ? "Tick an answer in the Show menu to draw it here." : null}
+      lines={lines}
+      figure="Pages"
+      plain
+      empty="Nothing to show for these dates."
+      height={300}
+    />
+  );
+}
+
+const WHY_SORTS: SiteSortColumns<ReasonRow & { key: string }, "reason" | "source" | "pages" | "clicks" | "shown" | "crawled"> = {
+  reason: { value: (row) => row.words, first: "asc" },
+  source: { value: (row) => row.source, first: "asc" },
+  pages: { value: (row) => row.pages, first: "desc" },
+  clicks: { value: (row) => row.clicks, first: "desc" },
+  shown: { value: (row) => row.shown, first: "desc" },
+  crawled: { value: (row) => row.crawled, first: "desc" },
+};
+
+function WhyTable() {
+  const rows = PRESENT.map((row) => ({ ...row, key: row.words }));
+  return (
+    <LeanTable<(typeof rows)[number], keyof typeof WHY_SORTS>
+      title="Why pages aren't indexed"
+      noun="results"
+      rows={rows}
+      search="Search reasons…"
+      sorts={WHY_SORTS}
+      opening="pages"
+      download={[{ header: "Reason", value: (row) => row.words }, { header: "Source", value: (row) => row.source }, { header: "Pages", value: (row) => row.pages }, { header: "Clicks", value: (row) => row.clicks }, { header: "Impressions", value: (row) => row.shown }, { header: "Last crawled", value: (row) => row.crawled ?? "" }]}
+      columns={[
+        {
+          key: "reason", header: "Reason", sortable: true, className: `${CUT_COLUMN.first} min-w-[160px]`,
+          cell: (row) => (BOARD_OF[row.words] ? <RecordLinkCell cut href={BOARD_OF[row.words]} hover={row.means}>{row.words}</RecordLinkCell> : <span className="block truncate text-[13px] text-foreground" title={row.means}>{row.words}</span>),
+        },
+        { key: "source", header: "Source", sortable: true, cell: (row) => <span className="block truncate text-[13px] text-secondary">{row.source}</span> },
+        { key: "pages", header: "Pages", align: "right", sortable: true, cell: (row) => mono(fmt(row.pages), true) },
+        { key: "clicks", header: heading("Clicks", `Clicks since ${SINCE}`), align: "right", sortable: true, cell: (row) => mono(fmt(row.clicks)) },
+        { key: "shown", header: heading("Shown", "Impressions"), align: "right", sortable: true, cell: (row) => mono(fmt(row.shown)) },
+        { key: "crawled", header: heading("Crawled", "Last crawled"), align: "right", sortable: true, className: "whitespace-nowrap", cell: (row) => mono(day(row.crawled)) },
+      ]}
+    />
+  );
+}
+
+export function V1Summary() {
+  return (
+    <SummaryPage>
+      <VisitedCard />
+      <WhyTable />
+    </SummaryPage>
+  );
+}
+
+// ——— One page for any reason: its boxes by kind, worked out from Google's answer fields ———
+
+type Box = { label: string; value: string; detail: string };
+const pagesBox = (list: readonly Checked[]): Box => ({ label: "Pages", value: fmt(list.length), detail: `Out of the ${fmt(T.asked)} pages checked on ${CHECKED_ON}.` });
+const clicksBox = (list: readonly Checked[], label = "Clicks"): Box => ({ label, value: fmt(clicksOf(list)), detail: `About 1 in ${oneIn(clicksOf(list))} of your clicks since ${SINCE}.` });
+const sitemapBox = (list: readonly Checked[], listed: string): Box => {
+  const count = list.filter((row) => row.inSitemap).length;
+  return { label: "In your sitemap", value: fmt(count), detail: count > 0 ? listed : "Your sitemap doesn't list any of them." };
+};
+const visitedBox = (list: readonly Checked[]): Box => {
+  const last = newest(list.map((row) => row.crawled));
+  return { label: "Last visited", value: day(last), detail: last ? "Google hasn't been back since." : "Google hasn't been to them." };
+};
+
+/** The four boxes that matter for each kind of reason. */
+function boxesOf(info: ReasonInfo): Box[] {
+  const list = pagesOf(info.words);
+  if (info.kind === "error") {
+    const last = newest(list.map((row) => row.last));
+    return [
+      pagesBox(list),
+      { label: "Last shown", value: day(last), detail: last ? `Not shown in search since ${longDay(last)}.` : "Google didn't show them in search." },
+      { label: "Clicks they still got", value: fmt(clicksOf(list)), detail: `Since ${SINCE}, from people who saw them in search.` },
+      sitemapBox(list, "Your sitemap still asks Google to show them."),
+    ];
+  }
+  if (info.kind === "keptOut") return [pagesBox(list), sitemapBox(list, "Your sitemap asks Google to show them."), clicksBox(list), visitedBox(list)];
+  if (info.kind === "duplicate") {
+    const picked = list.filter((row) => row.googleCanonical && row.googleCanonical !== row.key).length;
+    const toIndexed = list.filter((row) => row.goesToIndexed).length;
+    return [
+      pagesBox(list),
+      { label: "Google picked another page", value: fmt(picked), detail: "Google shows that page in their place." },
+      { label: "Go to a page in Google", value: fmt(toIndexed), detail: `The other ${fmt(list.length - toIndexed)} go to pages not checked yet.` },
+      clicksBox(list),
+    ];
+  }
+  if (info.kind === "notChosen") {
+    const linked = list.filter((row) => row.linkedOwn).length;
+    return [pagesBox(list), sitemapBox(list, "Your sitemap asks Google to show them."), { label: "Linked from your pages", value: fmt(linked), detail: "Links from your own pages help Google find them." }, visitedBox(list)];
+  }
+  if (info.kind === "unknown") {
+    const codes = list.filter((row) => row.address.includes("?")).length;
+    const inNovember = list.filter((row) => (row.last ?? "") >= "2026-11-01").length;
+    return [
+      pagesBox(list),
+      { label: "Still shown in November", value: fmt(inNovember), detail: `The other ${fmt(list.length - inNovember)} were not shown in November.` },
+      clicksBox(list),
+      { label: "Codes on the end", value: fmt(codes), detail: `Links with a ? and codes on the end. The other ${fmt(list.length - codes)} don't have them.` },
+    ];
+  }
+  const week = list.filter((row) => (row.crawled ?? "") >= "2026-11-11").length;
+  const month = list.filter((row) => (row.crawled ?? "") < "2026-10-18").length;
+  return [
+    pagesBox(list),
+    { label: "Clicks", value: fmt(clicksOf(list)), detail: `About ${Math.round((4 * clicksOf(list)) / T.clicksAll)} in 4 of your clicks since ${SINCE}.` },
+    { label: "Crawled in the last 7 days", value: fmt(week), detail: `That is ${Math.round((10 * week) / Math.max(1, list.length))} in 10 of them.` },
+    { label: "Not crawled for over a month", value: fmt(month), detail: `That is about 1 in ${fmt(Math.round(list.length / Math.max(1, month) / 10) * 10)} of them.` },
+  ];
+}
+
+function ShownEachDayCard({ info }: { info: ReasonInfo }) {
+  const [show, setShow] = useState<"shown" | "clicks">("shown");
+  type Daily = { day: string; clicks: number; shown: number };
+  const days = (DATA.dailyBy as Record<string, Daily[]>)[info.words] ?? [];
+  const name = show === "shown" ? "Impressions" : "Clicks";
+  const count = pagesOf(info.words).length;
+  return (
+    <DaysChart
+      title={`${name} each day`}
+      hint={`How often Google showed ${plural(count, "this page", "these pages")} each day.`}
+      exportName={`${HOST}-indexing-days`}
+      csvDay="Day"
+      host={HOST}
+      step="day"
+      waiting={null}
+      controls={[{ kind: "select", key: "show", label: "Show", value: show, options: [{ value: "shown", label: "Impressions" }, { value: "clicks", label: "Clicks" }], onChange: (next) => setShow(next as typeof show) }]}
+      lines={[{ key: "now", name, colour: CHART_SERIES_ORANGE, points: days.map((one) => ({ day: one.day, value: one[show] })) }]}
+      figure={name}
+      plain
+      anything={(rows) => rows.some((row) => Number(row.now) > 0)}
+      empty="Nothing to show for these dates."
+      height={300}
+    />
+  );
+}
+
+const EXAMPLE_SORTS: SiteSortColumns<Checked, "page" | "main" | "crawled" | "last" | "days" | "clicks" | "shown"> = {
+  page: { value: (row) => row.key, first: "asc" },
+  main: { value: (row) => row.goesTo ?? row.googleCanonical ?? null, first: "asc" },
+  crawled: { value: (row) => row.crawled, first: "desc" },
+  last: { value: (row) => row.last ?? null, first: "desc" },
+  days: { value: (row) => row.days, first: "desc" },
+  clicks: { value: (row) => row.clicks, first: "desc" },
+  shown: { value: (row) => row.shown, first: "desc" },
+};
+// A page by its title before any "|", its address where it has none or shares one.
+const titleCount = ROWS.reduce((counts, row) => { const cut = row.title?.split("|")[0].trim(); if (cut) counts.set(cut, (counts.get(cut) ?? 0) + 1); return counts; }, new Map<string, number>());
+const pageName = (row: Checked) => { const cut = row.title?.split("|")[0].trim(); return row.key === "/" ? "Home page" : cut && titleCount.get(cut) === 1 ? cut : row.key; };
+const mainOf = (row: Checked) => row.goesTo ?? (row.googleCanonical && row.googleCanonical !== row.key ? row.googleCanonical : null);
+const COLUMNS: Record<string, DataTableColumn<Checked>> = {
+  page: { key: "page", header: "Page", sortable: true, className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (row) => <RecordLinkCell cut href="#" hover={row.title ? `${row.title}\n${row.address}` : row.address}>{pageName(row)}</RecordLinkCell> },
+  main: { key: "main", header: heading("Main page", "The page Google shows in its place"), sortable: true, className: "w-[28%] max-w-0", cell: (row) => <span className="block truncate text-[13px] text-secondary" title={mainOf(row) ?? ""}>{mainOf(row) === "/" ? "Home page" : mainOf(row) ?? "–"}</span> },
+  crawled: { key: "crawled", header: heading("Crawled", "Last crawled"), align: "right", sortable: true, className: "whitespace-nowrap", cell: (row) => mono(day(row.crawled)) },
+  last: { key: "last", header: heading("Last shown", "The last day Google showed it in search"), align: "right", sortable: true, className: "whitespace-nowrap", cell: (row) => mono(day(row.last)) },
+  days: { key: "days", header: heading("Days", `Days Google showed it, out of the 61 since ${SINCE}`), align: "right", sortable: true, cell: (row) => mono(`${row.days} of 61`) },
+  clicks: { key: "clicks", header: heading("Clicks", `Clicks since ${SINCE}`), align: "right", sortable: true, cell: (row) => mono(fmt(row.clicks), true) },
+  shown: { key: "shown", header: heading("Shown", "Impressions"), align: "right", sortable: true, cell: (row) => mono(fmt(row.shown)) },
+};
+/** Each kind's columns: what tells its pages apart. */
+const EXAMPLE_COLUMNS: Record<Kind, string[]> = {
+  error: ["page", "crawled", "last", "clicks", "shown"],
+  keptOut: ["page", "crawled", "clicks", "shown"],
+  duplicate: ["page", "main", "crawled", "clicks", "shown"],
+  notChosen: ["page", "crawled", "clicks", "shown"],
+  unknown: ["page", "last", "days", "clicks", "shown"],
+  indexed: ["page", "crawled", "clicks", "shown"],
+};
+const exampleDownload = [
+  { header: "Page", value: (row: Checked) => row.address }, { header: "Main page", value: (row: Checked) => mainOf(row) ?? "" },
+  { header: "Last crawled", value: (row: Checked) => row.crawled ?? "" }, { header: "Last shown", value: (row: Checked) => row.last ?? "" },
+  { header: "Clicks", value: (row: Checked) => row.clicks }, { header: "Impressions", value: (row: Checked) => row.shown },
+];
+
+/** One page for any of Google's reasons: its words as the title, a plain line, its four boxes, its days and its pages. */
+function ReasonDetail({ words }: { words: string }) {
+  const info = infoOf(words);
+  const list = pagesOf(words);
+  return (
+    <div className="flex flex-col gap-6">
+      <DetailHeader back={{ label: "Back to Indexing", href: "V1Summary.dc.html" }} icon={<FileSearch className="h-5 w-5 text-brand" />} title={info.words} description={info.means} />
+      {list.length > 0 ? (
+        <>
+          <FigureRow>
+            {boxesOf(info).map((box) => <Figure key={box.label} label={box.label} value={box.value} detail={note(box.detail)} />)}
+          </FigureRow>
+          <ShownEachDayCard info={info} />
+        </>
+      ) : null}
+      <LeanTable<Checked, keyof typeof EXAMPLE_SORTS>
+        title="Examples"
+        noun="pages"
+        rows={list}
+        search="Search pages…"
+        sorts={EXAMPLE_SORTS}
+        opening="shown"
+        download={exampleDownload}
+        empty={`None of the ${fmt(T.asked)} pages checked so far has this answer.`}
+        columns={EXAMPLE_COLUMNS[info.kind].map((key) => COLUMNS[key])}
+      />
+    </div>
+  );
+}
+
+export const V1Detail = () => <ReasonDetail words="URL is unknown to Google" />;
+export const V1Redirect = () => <ReasonDetail words="Page with redirect" />;
+export const V1NotFound = () => <ReasonDetail words="Not found (404)" />;
+export const V1Noindex = () => <ReasonDetail words="Excluded by ‘noindex’ tag" />;
+export const V1Crawled = () => <ReasonDetail words="Crawled - currently not indexed" />;
+
+export const WAYS = { V1Summary, V1Detail, V1Redirect, V1NotFound, V1Noindex, V1Crawled };

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAction, useQuery } from "convex/react";
+import { readOnly } from "@/src/lib/leaveWarning";
 import type { FunctionReturnType } from "convex/server";
 import { Radio } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -109,7 +110,8 @@ function useLiveFigures(ask: { siteId: string; device: string; list: LiveList })
     held.askedAt = Date.now();
     const asked = held.key;
     // Nobody pressed anything: a failure is said on the page, never as a toast, and asked again next minute.
-    const outcome = await run(() => askLive(JSON.parse(asked) as Parameters<typeof askLive>[0]), { key: `${asked}|${held.askedAt}`, suppressErrorToast: true });
+    // A read that saves nothing: leaving while it's on its way never asks "Leave site?" (`readOnly`, 18 November 2026).
+    const outcome = await run(() => readOnly(askLive(JSON.parse(asked) as Parameters<typeof askLive>[0])), { key: `${asked}|${held.askedAt}`, suppressErrorToast: true });
     held.asking = false;
     // An answer for what was asked before the choice changed is dropped.
     if (moment.current.key !== asked) return;

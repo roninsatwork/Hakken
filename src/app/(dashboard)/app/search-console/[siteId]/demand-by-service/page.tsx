@@ -1,140 +1,210 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import Link from "next/link";
-import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
-import { useQuery } from "convex/react";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Layers } from "lucide-react";
-import { api } from "@/convex/_generated/api";
+import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
+import { servicesSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { Change } from "@/src/ui/components/screens/Change";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Select } from "@/src/ui/components/screens/Select";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
-import { CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
-import { wordStartMatcher } from "@/convex/utils/wordStarts";
-import { servicesSees } from "@/convex/utils/sees/searchConsoleScreens";
-import { SiteBarChart } from "../../../sites/_components/SiteCharts";
-import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
+import { usePageKinds } from "../../../_components/usePageKinds";
+import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
+import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
-import { useSiteSearch } from "../../../sites/_components/useSiteParam";
-import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
-import { SearchConsoleGate } from "../../_components/SearchConsoleNotices";
+import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
+import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
+import { DemandBandsCard, DemandBoxes, DemandSquaresCard, useDemand } from "../../_components/DemandParts";
+import { demandPageData, demandParts, type DemandPart } from "../../_components/demandSees";
+import { GoogleCutLine } from "../../_components/GoogleCutLine";
+import { usePerformanceDates } from "../../_components/PerformanceParts";
+import { useSiteFiguresFor } from "../../_components/SearchConsoleFigures";
+import { LiveProblem, NothingOfKind, SearchConsoleGate, hasFigures } from "../../_components/SearchConsoleNotices";
+import { ShownHeading } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
-import { SearchConsoleEveryCountry } from "../../_components/SearchConsoleEveryCountry";
-import { countryArg, isReadyMade, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
-import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
-import { useOpeningPeriod } from "../../../sites/_components/useCalendarPeriod";
+import { periodArg, useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
-/** Below this many before, a change is said as a count, not a share. */
-const SHARE_FROM = 10;
+/** The table's Show menu: every row, or those whose clicks went up, or down, since the dates before. */
+const MOVED = ["all", "more", "fewer"] as const;
+type Moved = (typeof MOVED)[number];
+
+/** The table's sortable columns: the name A to Z, every figure and move the most first, as Search Console's lists. */
+const SORTS: SiteSortColumns<DemandPart, "name" | "shown" | "shownUp" | "clicks" | "clicksUp" | "pages"> = {
+  name: { value: (row) => row.name, first: "asc" },
+  shown: { value: (row) => row.impressions, first: "desc" },
+  shownUp: { value: (row) => (row.impressionsBefore === null ? null : row.impressions - row.impressionsBefore), first: "desc" },
+  clicks: { value: (row) => row.clicks, first: "desc" },
+  clicksUp: { value: (row) => (row.clicksBefore === null ? null : row.clicks - row.clicksBefore), first: "desc" },
+  pages: { value: (row) => row.pages, first: "desc" },
+};
+const nameOfRow = (row: DemandPart) => row.name;
 
 /**
- * Demand by service (docs/plans/active/insights-analyst-plan.md §4.4, phase
- * 9, drawn as the ScDemand board): how often Google showed the website for
- * each of its services in the dates chosen against the same days before, and
- * what buyers clicked — by the company's own page classifications, or by
- * Hakken's kinds of page until it has any. Ready-made dates only; Insights
- * reads the same figures for its findings about demand.
+ * Demand by Classification (search-console-plan.md §5; the page was Demand by service until Anthony renamed it on the
+ * canvas, 18 November 2026), as he chose it that day: the canvas's Way 2 ("I want way 2 for demand by classification";
+ * search-console-demand-by-classification-way-2-plan-2026-11-18.md). Every figure follows the country menu ("the country
+ * in scope"): Performance's four boxes for the country; what Google shows against what gets clicked; out of every 100
+ * clicks; and each Classification on one line, with its impressions, clicks and pages. The boxes are the country's own
+ * totals; the bands, squares and table share out only the clicks Google ties to a page, as Keywords does with the searches
+ * it names, with no part for the difference (Anthony, 18 November 2026: "yes i think so"). Its address stays
+ * `/demand-by-service`, so links keep working.
  */
-type ServiceRow = { id: string; name: string | null; kind: string; shown: number; shownBefore: number | null; clicks: number; clicksBefore: number | null };
-const moved = (now: number, before: number | null) => (before ? (now - before) / before : null);
-/** Its sortable columns (sites-table-sorting-plan.md): the service A to Z, each figure and change the most first. */
-const SORTS: SiteSortColumns<ServiceRow, "service" | "shown" | "shownChange" | "clicks" | "clicksChange"> = {
-  service: { value: (row) => row.name ?? row.id, first: "asc" },
-  shown: { value: (row) => row.shown, first: "desc" },
-  shownChange: { value: (row) => moved(row.shown, row.shownBefore), first: "desc" },
-  clicks: { value: (row) => row.clicks, first: "desc" },
-  clicksChange: { value: (row) => moved(row.clicks, row.clicksBefore), first: "desc" },
-};
-
 export default function SearchConsoleDemandPage() {
-  const t = useTranslations("searchConsole.services");
+  const t = useTranslations("searchConsole");
+  const ts = useTranslations("searchConsole.services");
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  // Demand by service is prepared per period: custom dates read the period the website opens on.
-  const opening = useOpeningPeriod();
-  const period = range.period === "custom" ? opening : range.period;
-  const periodWords = useSearchConsolePeriodWords(period);
-  const [country] = useSearchConsoleCountry();
-  const readyMade = isReadyMade(range, status?.connection?.newestDay);
-  const data = useQuery(api.searchConsoleDemand.searchConsoleDemand, status?.connection?.newestDay && readyMade ? { siteId, period, ...countryArg(country) } : "skip");
-  const [search, setSearch, term] = useSiteSearch();
-  // A service by its page's title before any "|", as Insights' Strategy names it; the home page by name.
-  const classified = data?.classified ?? false;
-  const nameOf = useCallback((row: { id: string; name: string | null; kind: string }) => {
-    if (row.kind === "GUIDES") return t("guides");
-    if (row.kind === "OTHER") return t(classified ? "notSorted" : "other");
-    if (row.kind === "SERVICE" && row.id === "/") return t("home");
-    return (row.kind === "SERVICE" ? row.name?.split("|")[0].trim() : row.name) || row.id;
-  }, [t, classified]);
-  const matches = wordStartMatcher(term.toLowerCase());
-  const matching = data?.services.filter((row) => !matches || matches(nameOf(row)));
-  const { rows, tableSort } = useSiteSortedList(matching, SORTS, { opening: "shown", name: nameOf });
-  const pages = useSitePager(data ? rows : undefined, { isLoading: data === undefined && readyMade });
   const host = status?.host ?? "";
-  const change = (now: number, before: number | null) => {
-    if (before === null) return <span className="font-mono text-[12px] text-muted">–</span>;
-    if (before < SHARE_FROM) return <Change by={now - before} same={now === before} />;
-    return <Change by={Math.round(((now - before) / before) * 100)} same={now === before} format={(value) => `${formatNumber(value)}%`} />;
-  };
-  const bars = (data?.services ?? []).slice(0, 10).map((row) => ({ label: nameOf(row), before: row.shownBefore ?? 0, now: row.shown }));
-  // The eye's figures: each service by the name the table shows, never the page's raw title ("Title | Brand") or an id
-  // (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6), as times shown and clicks; pages not sorted yet are
-  // in the totals and never named (Anthony, 2026-11-03: Hakken's own housekeeping is never a finding).
-  const tw = useTranslations("searchConsole.sees");
-  const seesData = useMemo(() => (data
-    ? {
-      services: data.services.map((row) => ({ name: nameOf(row), impressions: row.shown, impressionsBefore: row.shownBefore, clicks: row.clicks, clicksBefore: row.clicksBefore, sorted: row.kind !== "OTHER" })),
-      from: data.from,
-      to: data.to,
-      names: { others: tw("others") },
-    }
-    : undefined), [data, nameOf, tw]);
-  const csv = () => toCsv([t("columns.service"), t("chart.before"), t("chart.now")], bars.map((row) => [row.label, row.before, row.now]));
+  const held = Boolean(status && hasFigures(status));
+  // The boxes: the website's figures for the country chosen, Performance's own read. Demand is about web results.
+  const site = useSiteFiguresFor(held ? { siteId, searchType: "web", from: range.from, to: range.to, ...periodArg(range) } : null);
+  const demand = useDemand(held);
+  const pageKinds = usePageKinds(siteId);
+  const figures = site.problem ? undefined : site.figures;
+  const totals = figures?.totals ?? null;
+  const previous = figures?.previous ?? null;
+  const answer = demand.answer;
+  const { label } = pageKinds;
+  const parts = useMemo(() => {
+    if (!answer || !figures) return undefined;
+    // Hakken's "not judged yet" reads as Unclassified, as Performance's squares say it.
+    const kindOf = (kind: string) => (kind === "UNJUDGED" ? NOT_SORTED_KIND : kind);
+    return demandParts(answer.rows, previous, answer.comparable, {
+      kind: (kind) => label(kindOf(kind)),
+      sorted: (kind) => kindOf(kind) !== NOT_SORTED_KIND,
+    });
+  }, [answer, figures, previous, label]);
+  const seesData = useMemo(() => (parts
+    ? demandPageData({ parts, totals, previous, names: { others: t("sees.others"), allPages: t("performance.eye.allPages"), hidden: t("performance.squares.groups.hidden") } })
+    : undefined), [parts, totals, previous, t]);
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Layers className="h-5 w-5 text-brand" />} title={t("title")} description={t("description", { period: periodWords.period, before: periodWords.before })} />
+      <PageHeader icon={<Layers className="h-5 w-5 text-brand" />} title={ts("title")} description={ts("description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          {!readyMade ? <Notice>{t("readyMade")}</Notice> : null}
-          {/* Read from the page list, which is every country's. */}
-          <SearchConsoleEveryCountry />
-          <SearchConsoleSees screen="services" seen={data ? servicesSees(data.services.map((row) => ({ ...row, name: nameOf(row), service: row.kind === "SERVICE" }))) : null} data={seesData} />
-          <SearchConsoleChartCard
-            title={t("chart.title")}
-            hint={t("chart.hint", { name: periodWords.name, before: periodWords.before })}
-            exportName={`${host}-search-console-demand-by-service`}
-            csv={csv}
-            host={host}
-            from={data?.from ?? null}
-            to={data?.to ?? null}
-          >
-            <SiteBarChart data={bars} series={[{ key: "before", name: t("chart.before"), colour: CHART_SERIES_SLATE }, { key: "now", name: t("chart.now"), colour: CHART_SERIES_ORANGE }]} horizontal />
-          </SearchConsoleChartCard>
-          <DataTable
-            rows={pages.pageRows}
-            rowKey={(row) => row.id}
-            search={{ value: search, onChange: setSearch, placeholder: t("search") }}
-            cardHeader={<TableBar footer={pages.footer} noun="results" title={t("tableTitle", { count: rows?.length ?? 0, name: periodWords.name, before: periodWords.before })} actions={<ListDownload label={t("download")} fileName={`${host}-demand-by-service`} rows={rows} columns={[{ header: t("columns.service"), value: nameOf }, { header: t("columns.shown"), value: (row) => row.shown }, { header: t("chart.before"), value: (row) => row.shownBefore ?? "" }, { header: t("columns.clicks"), value: (row) => row.clicks }, { header: t("columns.clicksBefore"), value: (row) => row.clicksBefore ?? "" }]} />} />}
-            empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
-            footer={pages.footer}
-            sort={tableSort}
-            columns={[
-              { key: "service", header: t("columns.service"), sortable: true, cell: (row) => <span className="truncate text-[13px] text-foreground">{nameOf(row)}</span> },
-              { key: "shown", header: t("columns.shown"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.shown)}</span> },
-              { key: "shownChange", header: t("columns.change"), align: "right", sortable: true, cell: (row) => change(row.shown, row.shownBefore) },
-              { key: "clicks", header: t("columns.clicks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },
-              { key: "clicksChange", header: t("columns.change"), align: "right", sortable: true, cell: (row) => change(row.clicks, row.clicksBefore) },
-            ]}
-          />
-          <Link href="/app/insights/findings" className="w-fit text-[13px] text-secondary hover:text-foreground">{t("seeInsights")}</Link>
+          <SearchConsoleSees screen="services" seen={parts && range.period !== "custom" ? servicesSees(parts) : null} data={seesData} />
+          {site.problem ? (
+            <LiveProblem problem={site.problem} retry={site.retry} />
+          ) : figures && !totals ? (
+            <NothingOfKind from={range.from} to={range.to} />
+          ) : (
+            <>
+              <DemandBoxes figures={figures} />
+              {demand.problem ? <LiveProblem problem={demand.problem} retry={demand.retry} /> : null}
+              <DemandBandsCard parts={demand.problem ? [] : parts} host={host} />
+              <DemandSquaresCard parts={demand.problem ? [] : parts} host={host} />
+              <DemandTable parts={demand.problem ? [] : parts} host={host} cut={demand.cut} />
+            </>
+          )}
         </SearchConsoleGate>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The table, lean (AGENTS.md "Tables are lean"), as the board draws it: Category (Classification on hover), Shown, Up or
+ * down, Clicks, Up or down and Pages, one line a row, the most impressions first. A Classification opens Pages for it.
+ */
+function DemandTable({ parts, host, cut }: { parts: readonly DemandPart[] | undefined; host: string; cut: number | null }) {
+  const t = useTranslations("searchConsole");
+  const ts = useTranslations("searchConsole.services");
+  const siteId = useSearchConsoleSiteId();
+  const hrefOf = useSearchConsoleHref(siteId);
+  const router = useRouter();
+  const dates = usePerformanceDates();
+  const [search, setSearch, term] = useSiteSearch();
+  const [moved, setMoved] = useSiteParam<Moved>("moved", "all", MOVED);
+  const matching = useMemo(() => {
+    const matches = wordStartMatcher(term.toLowerCase());
+    return parts?.filter((row) => (!matches || matches(row.name))
+      && (moved === "all" || (row.clicksBefore !== null && (moved === "more" ? row.clicks > row.clicksBefore : row.clicks < row.clicksBefore))));
+  }, [parts, term, moved]);
+  const order = useSiteSortedList(matching, SORTS, { opening: "shown", name: nameOfRow });
+  const pages = useSitePager(order.rows, { isLoading: parts === undefined });
+  const href = (row: DemandPart) => hrefOf("pages", { kind: row.key });
+  const showWords: Record<Moved, string> = { all: ts("show.all"), more: ts("show.more"), fewer: ts("show.fewer") };
+  const figure = (value: number, tone = "text-secondary") => <span className={`font-mono text-[12px] ${tone}`}>{formatNumber(value)}</span>;
+  return (
+    <DataTable
+      rows={pages.pageRows}
+      rowKey={(row) => row.key}
+      search={{ value: search, onChange: setSearch, placeholder: ts("search") }}
+      filters={(
+        <div className="flex flex-wrap items-center gap-3">
+          <Select aria-label={ts("show.label")} chip={{ label: ts("show.label"), choice: moved === "all" ? null : showWords[moved] }} value={moved} onChange={(next) => setMoved(next as Moved)}>
+            {MOVED.map((value) => <option key={value} value={value}>{showWords[value]}</option>)}
+          </Select>
+        </div>
+      )}
+      cardHeader={
+        <TableBar
+          footer={pages.footer}
+          noun="classifications"
+          actions={(
+            <ListDownload
+              label={ts("download")}
+              fileName={`${host}-search-console-demand-by-classification`}
+              rows={order.rows}
+              columns={[
+                { header: ts("columns.categoryTitle"), value: (row) => row.name },
+                { header: t("table.impressions"), value: (row) => row.impressions },
+                { header: ts("csv.shownBefore", { before: dates.inBefore }), value: (row) => row.impressionsBefore },
+                { header: t("table.clicks"), value: (row) => row.clicks },
+                { header: ts("csv.clicksBefore", { before: dates.inBefore }), value: (row) => row.clicksBefore },
+                { header: t("table.pages"), value: (row) => row.pages },
+              ]}
+            />
+          )}
+        >
+          <GoogleCutLine most={cut} noun="pages" />
+        </TableBar>
+      }
+      sort={order.tableSort}
+      onRowClick={(row) => router.push(href(row))}
+      empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: term ? t("table.noMatch") : ts("empty") }}
+      footer={pages.footer}
+      columns={[
+        {
+          key: "name",
+          header: <span title={ts("columns.categoryTitle")}>{ts("columns.category")}</span>,
+          sortable: true,
+          className: `${CUT_COLUMN.first} min-w-[160px]`,
+          cell: (row) => <RecordLinkCell cut href={href(row)} hover={row.sorted ? row.name : ts("unclassifiedHover")}>{row.name}</RecordLinkCell>,
+        },
+        { key: "shown", header: <ShownHeading say={t} />, align: "right", sortable: true, cell: (row) => figure(row.impressions) },
+        {
+          key: "shownUp",
+          header: <span title={ts("columns.shownUpTitle", { before: dates.inBefore })}>{t("table.change")}</span>,
+          align: "right",
+          sortable: true,
+          className: "whitespace-nowrap",
+          cell: (row) => <Change by={row.impressionsBefore === null ? null : row.impressions - row.impressionsBefore} same format={formatNumber} />,
+        },
+        { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => figure(row.clicks, "text-foreground") },
+        {
+          key: "clicksUp",
+          header: <span title={ts("columns.clicksUpTitle", { before: dates.inBefore })}>{t("table.change")}</span>,
+          align: "right",
+          sortable: true,
+          className: "whitespace-nowrap",
+          cell: (row) => <Change by={row.clicksBefore === null ? null : row.clicks - row.clicksBefore} same format={formatNumber} />,
+        },
+        {
+          key: "pages",
+          header: <span title={ts("columns.pagesTitle", { when: dates.inNow })}>{t("table.pages")}</span>,
+          align: "right",
+          sortable: true,
+          cell: (row) => figure(row.pages),
+        },
+      ]}
+    />
   );
 }

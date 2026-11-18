@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useQuery } from "convex/react";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
@@ -15,13 +16,15 @@ import { everyDay, lineOf, usePerformanceDates } from "./PerformanceParts";
 import type { SiteFigures } from "./SearchConsoleFigures";
 import { formatPosition } from "./searchConsoleFormat";
 import { useLiveAsks } from "./searchConsoleRecords";
+import { tickedUpdateOf, type TickedUpdate } from "./trackedSees";
 import { countryArg, periodArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 
 /**
  * Rows ticked in a Search Console table, drawn day by day: Keywords' keywords (search-console-keywords-way-2-plan-
- * 2026-11-17.md) and Pages' pages (search-console-pages-way-1-plan-2026-11-17.md), as All pages draws ticked pages. One
- * part for both, from the shared `DaysChart` and `TableTicks`: Keywords lays the whole website beside its keywords,
- * Pages lays each page's span before under it.
+ * 2026-11-17.md), Pages' pages (search-console-pages-way-1-plan-2026-11-17.md) and Countries and devices' countries
+ * (search-console-countries-and-devices-way-1-plan-2026-11-18.md), as All pages draws ticked pages. One part for all
+ * three, from the shared `DaysChart` and `TableTicks`: Keywords lays the whole website beside its keywords, Pages and
+ * Countries lay each row's span before under it.
  */
 
 /** Rows on the chart at once, as All pages' pages. */
@@ -30,6 +33,26 @@ export const MOST_TICKED = 5;
 const PLOT_KEY = "plot";
 /** Held in the address when every tick was cleared on a page that opens with some ticked, so it stays cleared. */
 const NONE_TICKED = "\n";
+
+/** Rows ticked as a list's screen opens: its busiest three, as the boards Anthony chose draw them. */
+export const OPENING_TICKED = 3;
+
+/**
+ * A list's busiest rows with a click, read once as the list first shows in its own order on its first page: what Pages,
+ * Tracked keywords and Tracked pages open with ticked (search-console-tracked-way-1-plan-2026-11-18.md). Null once the
+ * list is sorted another way, searched, filtered or paged, so the ticks never follow the table about.
+ */
+export function useListOpening(list: {
+  order: { key: string; direction: string };
+  filtered: boolean;
+  table: { pageRows: ReadonlyArray<{ key: string; clicks: number }> | null | undefined };
+}): string[] | null {
+  const params = useSearchParams();
+  const firstPage = (params.get(TABLE_PAGE_KEY) ?? "1") === "1";
+  return list.order.key === "clicks" && list.order.direction === "desc" && !list.filtered && firstPage && list.table.pageRows
+    ? list.table.pageRows.filter((row) => row.clicks > 0).slice(0, OPENING_TICKED).map((row) => row.key)
+    : null;
+}
 
 /**
  * The rows ticked to draw, in the order ticked, and the tick that changes them; the table stays on its page. A page
@@ -61,10 +84,10 @@ export type TickedRow = { key: string; days: Day[] | null; daysBefore: Day[]; cl
 
 /**
  * Each ticked row's days, asked of Google once while the page is open (`searchConsoleKeySeries`, the read a row's own
- * screen makes), for the dates and kind of result chosen: a keyword's in the country chosen, a page's in every country,
- * as the page list counts them.
+ * screen makes), for the dates and kind of result chosen: a keyword's and a page's in the country chosen, as their lists
+ * count them (a page's since 18 November 2026), and a country's its own.
  */
-export function useTickedDays(dimension: "query" | "page", keys: readonly string[]): { rows: TickedRow[]; retry: () => void } {
+export function useTickedDays(dimension: "query" | "page" | "country", keys: readonly string[]): { rows: TickedRow[]; retry: () => void } {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
@@ -72,7 +95,7 @@ export function useTickedDays(dimension: "query" | "page", keys: readonly string
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const held = Boolean(status?.connection?.newestDay) && !range.waiting && range.days > 0;
   const asks = held
-    ? keys.map((key) => ({ siteId, searchType: kind, dimension, key, from: range.from, to: range.to, ...periodArg(range), ...(dimension === "query" ? countryArg(country) : {}) }))
+    ? keys.map((key) => ({ siteId, searchType: kind, dimension, key, from: range.from, to: range.to, ...periodArg(range), ...(dimension === "country" ? {} : countryArg(country)) }))
     : [];
   const { answers, retry } = useLiveAsks(api.searchConsoleLists.searchConsoleKeySeries, asks);
   // The same rows and answers keep the same list: the eye reads it.
@@ -93,6 +116,20 @@ export function useTickedDays(dimension: "query" | "page", keys: readonly string
   return { rows, retry };
 }
 
+/** The Google updates inside the page's dates, as the chart marks them, and the ticked rows either side of the newest finished (`tickedUpdateOf`). */
+export function useTickedUpdate(ticked: readonly TickedRow[], nameOf: (key: string) => string): TickedUpdate | null {
+  const status = useSearchConsoleStatus();
+  const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const language = useLocale();
+  const held = Boolean(status?.connection?.newestDay) && !range.waiting && range.days > 0;
+  const updates = useQuery(api.googleUpdates.listGoogleUpdatesBetween, held ? { from: range.from, to: range.to, language } : "skip");
+  const window = status?.limits.updateWindowDays ?? null;
+  return useMemo(
+    () => (updates && window !== null ? tickedUpdateOf(ticked, updates, range.to, window, nameOf) : null),
+    [updates, window, ticked, range.to, nameOf],
+  );
+}
+
 const SHOWN = ["clicks", "impressions", "position"] as const;
 type Shown = (typeof SHOWN)[number];
 const WHOLE = ["on", "off"] as const;
@@ -104,8 +141,8 @@ const AGAINST = ["before", "none"] as const;
  * lays each page's span before under it in its own colour, dashed (`compare`), as Performance lays the website's.
  */
 export function TickedDaysCard({ words, ticked, host, heldFrom, retry, exportName, nameOf = (key) => key, website, compare = false }: {
-  /** The page's words for its chart: `searchConsole.keywords.chart` or `searchConsole.pages.chart`. */
-  words: "searchConsole.keywords.chart" | "searchConsole.pages.chart";
+  /** The page's words for its chart: `searchConsole.keywords.chart`, `searchConsole.pages.chart` or `searchConsole.places.chart`. */
+  words: "searchConsole.keywords.chart" | "searchConsole.pages.chart" | "searchConsole.places.chart";
   ticked: readonly TickedRow[];
   host: string;
   heldFrom: string | null;

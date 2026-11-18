@@ -1,0 +1,4982 @@
+{
+ "recorded": "2026-11-18",
+ "about": "More Handles' United Kingdom on 18 November 2026, web results: the 10 keywords and 8 pages the Tracked keywords and Tracked pages boards draw as if tracked (only the black door handles page is), each asked of Google once a period through the app's own read (searchConsoleKeySeries: its figures for the dates and the dates before). Each period's three rows with most clicks are the ticked ones, as the screens open: their days are kept only for the 14 days either side of the newest Google update that finished inside the dates. The country's clicks are the Pages fixture's boxes, and the updates those kept on dev that began inside the dates.",
+ "periods": {
+  "thisWeek": {
+   "from": "2026-11-16",
+   "to": "2026-11-16",
+   "comparable": true,
+   "website": {
+    "clicks": 231
+   },
+   "updates": [],
+   "keywords": [
+    {
+     "key": "door handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 693,
+      "position": 13.534
+     },
+     "previous": {
+      "clicks": 2,
+      "impressions": 600,
+      "position": 13.343
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "brass door handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 18,
+      "position": 22.667
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 22,
+      "position": 29
+     }
+    },
+    {
+     "key": "door knobs",
+     "now": {
+      "clicks": 0,
+      "impressions": 10,
+      "position": 22.1
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 37,
+      "position": 16.108
+     }
+    },
+    {
+     "key": "cupboard handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 75,
+      "position": 15.173
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 92,
+      "position": 15.674
+     }
+    },
+    {
+     "key": "antique brass kitchen handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 41,
+      "position": 7.341
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 37,
+      "position": 10.216
+     }
+    },
+    {
+     "key": "art deco door handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 29,
+      "position": 4.897
+     },
+     "previous": {
+      "clicks": 2,
+      "impressions": 18,
+      "position": 8.111
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "front door furniture",
+     "now": {
+      "clicks": 1,
+      "impressions": 26,
+      "position": 7.808
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 33,
+      "position": 6.939
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 211,
+      "position": 7.256
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 243,
+      "position": 6.704
+     }
+    },
+    {
+     "key": "wardrobe handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 11,
+      "position": 18.636
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 16,
+      "position": 19.813
+     }
+    },
+    {
+     "key": "door furniture",
+     "now": {
+      "clicks": 0,
+      "impressions": 56,
+      "position": 12.661
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 41,
+      "position": 13.39
+     }
+    }
+   ],
+   "pages": [
+    {
+     "key": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+     "title": "Black Door Handles | Matt Black & Antique | More Handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 95,
+      "position": 43.105
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 47,
+      "position": 39.021
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/door-handles.html",
+     "title": "Door Handles | More Handles",
+     "now": {
+      "clicks": 3,
+      "impressions": 1386,
+      "position": 18.276
+     },
+     "previous": {
+      "clicks": 3,
+      "impressions": 961,
+      "position": 15.662
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+     "title": "Cupboard Handles and Knobs | More Handles",
+     "now": {
+      "clicks": 2,
+      "impressions": 923,
+      "position": 22.19
+     },
+     "previous": {
+      "clicks": 1,
+      "impressions": 928,
+      "position": 25.041
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/front-door-furniture.html",
+     "title": "Front Door Furniture & Accessories at More Handles",
+     "now": {
+      "clicks": 3,
+      "impressions": 364,
+      "position": 16.124
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 352,
+      "position": 12.207
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/handles/art-deco-door-knobs-handles.html",
+     "title": "Art Deco Door Handles & Art Deco Door Knobs at More Handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 84,
+      "position": 9.095
+     },
+     "previous": {
+      "clicks": 2,
+      "impressions": 53,
+      "position": 12.17
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+     "title": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 326,
+      "position": 15.828
+     },
+     "previous": {
+      "clicks": 2,
+      "impressions": 269,
+      "position": 14.29
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/black-cupboard-handles.html",
+     "title": "Black Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 415,
+      "position": 13.595
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 368,
+      "position": 12.614
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/hinges/specialist-hinges.html",
+     "title": "180 Degree Hinges | More Handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 61,
+      "position": 11.246
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 51,
+      "position": 14.941
+     }
+    }
+   ]
+  },
+  "lastWeek": {
+   "from": "2026-11-09",
+   "to": "2026-11-15",
+   "comparable": true,
+   "website": {
+    "clicks": 1401
+   },
+   "updates": [
+    {
+     "title": "November 2026 core update",
+     "startedOn": "2026-11-10",
+     "finishedOn": null
+    }
+   ],
+   "keywords": [
+    {
+     "key": "door handles",
+     "now": {
+      "clicks": 7,
+      "impressions": 3951,
+      "position": 13.233
+     },
+     "previous": {
+      "clicks": 9,
+      "impressions": 3328,
+      "position": 13.041
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "brass door handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 142,
+      "position": 24.775
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 114,
+      "position": 22.079
+     }
+    },
+    {
+     "key": "door knobs",
+     "now": {
+      "clicks": 5,
+      "impressions": 153,
+      "position": 21.673
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 155,
+      "position": 19.49
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "cupboard handles",
+     "now": {
+      "clicks": 5,
+      "impressions": 524,
+      "position": 13.368
+     },
+     "previous": {
+      "clicks": 3,
+      "impressions": 462,
+      "position": 12.706
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "antique brass kitchen handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 245,
+      "position": 8.412
+     },
+     "previous": {
+      "clicks": 2,
+      "impressions": 276,
+      "position": 10.453
+     }
+    },
+    {
+     "key": "art deco door handles",
+     "now": {
+      "clicks": 5,
+      "impressions": 152,
+      "position": 5.243
+     },
+     "previous": {
+      "clicks": 4,
+      "impressions": 158,
+      "position": 8.386
+     }
+    },
+    {
+     "key": "front door furniture",
+     "now": {
+      "clicks": 0,
+      "impressions": 180,
+      "position": 6.467
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 156,
+      "position": 8.865
+     }
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 1534,
+      "position": 6.595
+     },
+     "previous": {
+      "clicks": 1,
+      "impressions": 954,
+      "position": 7.616
+     }
+    },
+    {
+     "key": "wardrobe handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 136,
+      "position": 16.397
+     },
+     "previous": {
+      "clicks": 1,
+      "impressions": 106,
+      "position": 20.642
+     }
+    },
+    {
+     "key": "door furniture",
+     "now": {
+      "clicks": 0,
+      "impressions": 304,
+      "position": 14.247
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 382,
+      "position": 15.571
+     }
+    }
+   ],
+   "pages": [
+    {
+     "key": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+     "title": "Black Door Handles | Matt Black & Antique | More Handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 432,
+      "position": 38.521
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 453,
+      "position": 35.795
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/door-handles.html",
+     "title": "Door Handles | More Handles",
+     "now": {
+      "clicks": 9,
+      "impressions": 7661,
+      "position": 16.37
+     },
+     "previous": {
+      "clicks": 21,
+      "impressions": 6076,
+      "position": 16.679
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+     "title": "Cupboard Handles and Knobs | More Handles",
+     "now": {
+      "clicks": 14,
+      "impressions": 6835,
+      "position": 22.663
+     },
+     "previous": {
+      "clicks": 15,
+      "impressions": 6446,
+      "position": 24.019
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/front-door-furniture.html",
+     "title": "Front Door Furniture & Accessories at More Handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 2430,
+      "position": 13.547
+     },
+     "previous": {
+      "clicks": 3,
+      "impressions": 2418,
+      "position": 13.586
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/handles/art-deco-door-knobs-handles.html",
+     "title": "Art Deco Door Handles & Art Deco Door Knobs at More Handles",
+     "now": {
+      "clicks": 6,
+      "impressions": 399,
+      "position": 11.915
+     },
+     "previous": {
+      "clicks": 5,
+      "impressions": 374,
+      "position": 9.979
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+     "title": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 12,
+      "impressions": 1863,
+      "position": 15.735
+     },
+     "previous": {
+      "clicks": 8,
+      "impressions": 1758,
+      "position": 15.424
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/black-cupboard-handles.html",
+     "title": "Black Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 2,
+      "impressions": 2705,
+      "position": 12.336
+     },
+     "previous": {
+      "clicks": 5,
+      "impressions": 2366,
+      "position": 13.251
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/hinges/specialist-hinges.html",
+     "title": "180 Degree Hinges | More Handles",
+     "now": {
+      "clicks": 3,
+      "impressions": 482,
+      "position": 12.666
+     },
+     "previous": {
+      "clicks": 1,
+      "impressions": 445,
+      "position": 15.728
+     }
+    }
+   ]
+  },
+  "thisMonth": {
+   "from": "2026-11-01",
+   "to": "2026-11-16",
+   "comparable": true,
+   "website": {
+    "clicks": 3321
+   },
+   "updates": [
+    {
+     "title": "November 2026 core update",
+     "startedOn": "2026-11-10",
+     "finishedOn": null
+    }
+   ],
+   "keywords": [
+    {
+     "key": "door handles",
+     "now": {
+      "clicks": 19,
+      "impressions": 8679,
+      "position": 13.195
+     },
+     "previous": {
+      "clicks": 28,
+      "impressions": 7434,
+      "position": 12.755
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "brass door handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 291,
+      "position": 23.351
+     },
+     "previous": {
+      "clicks": 1,
+      "impressions": 227,
+      "position": 15.7
+     }
+    },
+    {
+     "key": "door knobs",
+     "now": {
+      "clicks": 5,
+      "impressions": 333,
+      "position": 20.345
+     },
+     "previous": {
+      "clicks": 3,
+      "impressions": 741,
+      "position": 12.881
+     }
+    },
+    {
+     "key": "cupboard handles",
+     "now": {
+      "clicks": 8,
+      "impressions": 1087,
+      "position": 13.323
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 347,
+      "position": 13.631
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "antique brass kitchen handles",
+     "now": {
+      "clicks": 3,
+      "impressions": 620,
+      "position": 9.418
+     },
+     "previous": {
+      "clicks": 6,
+      "impressions": 887,
+      "position": 7.706
+     }
+    },
+    {
+     "key": "art deco door handles",
+     "now": {
+      "clicks": 10,
+      "impressions": 361,
+      "position": 6.499
+     },
+     "previous": {
+      "clicks": 4,
+      "impressions": 296,
+      "position": 3.919
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "front door furniture",
+     "now": {
+      "clicks": 1,
+      "impressions": 401,
+      "position": 7.666
+     },
+     "previous": {
+      "clicks": 4,
+      "impressions": 492,
+      "position": 8.967
+     }
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "now": {
+      "clicks": 2,
+      "impressions": 2713,
+      "position": 7.062
+     },
+     "previous": {
+      "clicks": 2,
+      "impressions": 179,
+      "position": 19.564
+     }
+    },
+    {
+     "key": "wardrobe handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 270,
+      "position": 18.104
+     },
+     "previous": {
+      "clicks": 3,
+      "impressions": 191,
+      "position": 13.749
+     }
+    },
+    {
+     "key": "door furniture",
+     "now": {
+      "clicks": 0,
+      "impressions": 819,
+      "position": 15.145
+     },
+     "previous": {
+      "clicks": 4,
+      "impressions": 1294,
+      "position": 11.747
+     }
+    }
+   ],
+   "pages": [
+    {
+     "key": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+     "title": "Black Door Handles | Matt Black & Antique | More Handles",
+     "now": {
+      "clicks": 0,
+      "impressions": 1023,
+      "position": 37.595
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 107,
+      "position": 27.14
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/door-handles.html",
+     "title": "Door Handles | More Handles",
+     "now": {
+      "clicks": 36,
+      "impressions": 16196,
+      "position": 16.623
+     },
+     "previous": {
+      "clicks": 35,
+      "impressions": 11537,
+      "position": 14.586
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+     "title": "Cupboard Handles and Knobs | More Handles",
+     "now": {
+      "clicks": 37,
+      "impressions": 14931,
+      "position": 23.285
+     },
+     "previous": {
+      "clicks": 22,
+      "impressions": 9805,
+      "position": 17.438
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/front-door-furniture.html",
+     "title": "Front Door Furniture & Accessories at More Handles",
+     "now": {
+      "clicks": 9,
+      "impressions": 5600,
+      "position": 13.708
+     },
+     "previous": {
+      "clicks": 18,
+      "impressions": 5276,
+      "position": 12.238
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/handles/art-deco-door-knobs-handles.html",
+     "title": "Art Deco Door Handles & Art Deco Door Knobs at More Handles",
+     "now": {
+      "clicks": 12,
+      "impressions": 910,
+      "position": 10.643
+     },
+     "previous": {
+      "clicks": 8,
+      "impressions": 918,
+      "position": 7.934
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+     "title": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 24,
+      "impressions": 4247,
+      "position": 15.393
+     },
+     "previous": {
+      "clicks": 29,
+      "impressions": 4330,
+      "position": 11.537
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/black-cupboard-handles.html",
+     "title": "Black Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 9,
+      "impressions": 5888,
+      "position": 12.734
+     },
+     "previous": {
+      "clicks": 13,
+      "impressions": 5944,
+      "position": 11.816
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/hinges/specialist-hinges.html",
+     "title": "180 Degree Hinges | More Handles",
+     "now": {
+      "clicks": 5,
+      "impressions": 1052,
+      "position": 13.789
+     },
+     "previous": {
+      "clicks": 6,
+      "impressions": 991,
+      "position": 8.688
+     }
+    }
+   ]
+  },
+  "lastMonth": {
+   "from": "2026-10-01",
+   "to": "2026-10-31",
+   "comparable": true,
+   "website": {
+    "clicks": 7124
+   },
+   "updates": [],
+   "keywords": [
+    {
+     "key": "door handles",
+     "now": {
+      "clicks": 47,
+      "impressions": 14238,
+      "position": 13.101
+     },
+     "previous": {
+      "clicks": 38,
+      "impressions": 12157,
+      "position": 12.839
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "brass door handles",
+     "now": {
+      "clicks": 3,
+      "impressions": 512,
+      "position": 16.016
+     },
+     "previous": {
+      "clicks": 1,
+      "impressions": 1017,
+      "position": 14.068
+     }
+    },
+    {
+     "key": "door knobs",
+     "now": {
+      "clicks": 4,
+      "impressions": 1361,
+      "position": 14.025
+     },
+     "previous": {
+      "clicks": 4,
+      "impressions": 2080,
+      "position": 11.374
+     }
+    },
+    {
+     "key": "cupboard handles",
+     "now": {
+      "clicks": 4,
+      "impressions": 743,
+      "position": 14.856
+     },
+     "previous": {
+      "clicks": 6,
+      "impressions": 789,
+      "position": 12.109
+     }
+    },
+    {
+     "key": "antique brass kitchen handles",
+     "now": {
+      "clicks": 13,
+      "impressions": 1705,
+      "position": 7.704
+     },
+     "previous": {
+      "clicks": 11,
+      "impressions": 1455,
+      "position": 7.513
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "art deco door handles",
+     "now": {
+      "clicks": 12,
+      "impressions": 631,
+      "position": 4.177
+     },
+     "previous": {
+      "clicks": 7,
+      "impressions": 509,
+      "position": 4.648
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "front door furniture",
+     "now": {
+      "clicks": 6,
+      "impressions": 952,
+      "position": 8.997
+     },
+     "previous": {
+      "clicks": 10,
+      "impressions": 917,
+      "position": 8.722
+     }
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "now": {
+      "clicks": 4,
+      "impressions": 383,
+      "position": 19.021
+     },
+     "previous": {
+      "clicks": 5,
+      "impressions": 440,
+      "position": 16.955
+     }
+    },
+    {
+     "key": "wardrobe handles",
+     "now": {
+      "clicks": 5,
+      "impressions": 380,
+      "position": 16.034
+     },
+     "previous": {
+      "clicks": 8,
+      "impressions": 1055,
+      "position": 9.278
+     }
+    },
+    {
+     "key": "door furniture",
+     "now": {
+      "clicks": 6,
+      "impressions": 2294,
+      "position": 11.513
+     },
+     "previous": {
+      "clicks": 5,
+      "impressions": 2794,
+      "position": 12.106
+     }
+    }
+   ],
+   "pages": [
+    {
+     "key": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+     "title": "Black Door Handles | Matt Black & Antique | More Handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 530,
+      "position": 31.485
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 0,
+      "position": 0
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/door-handles.html",
+     "title": "Door Handles | More Handles",
+     "now": {
+      "clicks": 62,
+      "impressions": 24339,
+      "position": 15.467
+     },
+     "previous": {
+      "clicks": 47,
+      "impressions": 21252,
+      "position": 15.778
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+     "title": "Cupboard Handles and Knobs | More Handles",
+     "now": {
+      "clicks": 49,
+      "impressions": 21114,
+      "position": 18.54
+     },
+     "previous": {
+      "clicks": 82,
+      "impressions": 22848,
+      "position": 16.434
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/front-door-furniture.html",
+     "title": "Front Door Furniture & Accessories at More Handles",
+     "now": {
+      "clicks": 29,
+      "impressions": 10801,
+      "position": 12.549
+     },
+     "previous": {
+      "clicks": 37,
+      "impressions": 11795,
+      "position": 12.748
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/handles/art-deco-door-knobs-handles.html",
+     "title": "Art Deco Door Handles & Art Deco Door Knobs at More Handles",
+     "now": {
+      "clicks": 23,
+      "impressions": 1906,
+      "position": 7.969
+     },
+     "previous": {
+      "clicks": 23,
+      "impressions": 1677,
+      "position": 8.751
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+     "title": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 53,
+      "impressions": 8968,
+      "position": 11.732
+     },
+     "previous": {
+      "clicks": 62,
+      "impressions": 8312,
+      "position": 11.015
+     },
+     "ticked": true,
+     "days": [],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/black-cupboard-handles.html",
+     "title": "Black Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 17,
+      "impressions": 11455,
+      "position": 12.207
+     },
+     "previous": {
+      "clicks": 10,
+      "impressions": 12469,
+      "position": 11.578
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/hinges/specialist-hinges.html",
+     "title": "180 Degree Hinges | More Handles",
+     "now": {
+      "clicks": 11,
+      "impressions": 1911,
+      "position": 10.023
+     },
+     "previous": {
+      "clicks": 25,
+      "impressions": 1812,
+      "position": 10.77
+     }
+    }
+   ]
+  },
+  "last3Months": {
+   "from": "2026-08-17",
+   "to": "2026-11-16",
+   "comparable": true,
+   "website": {
+    "clicks": 22121
+   },
+   "updates": [
+    {
+     "title": "August 2026 spam update",
+     "startedOn": "2026-08-18",
+     "finishedOn": "2026-08-21"
+    },
+    {
+     "title": "September 2026 spam update",
+     "startedOn": "2026-09-24",
+     "finishedOn": "2026-10-08"
+    },
+    {
+     "title": "November 2026 core update",
+     "startedOn": "2026-11-10",
+     "finishedOn": null
+    }
+   ],
+   "keywords": [
+    {
+     "key": "door handles",
+     "now": {
+      "clicks": 118,
+      "impressions": 40596,
+      "position": 13.103
+     },
+     "previous": {
+      "clicks": 12,
+      "impressions": 6723,
+      "position": 15.765
+     },
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "brass door handles",
+     "now": {
+      "clicks": 20,
+      "impressions": 3606,
+      "position": 10.847
+     },
+     "previous": {
+      "clicks": 24,
+      "impressions": 4424,
+      "position": 10.949
+     }
+    },
+    {
+     "key": "door knobs",
+     "now": {
+      "clicks": 15,
+      "impressions": 4652,
+      "position": 13.331
+     },
+     "previous": {
+      "clicks": 33,
+      "impressions": 12087,
+      "position": 10.439
+     }
+    },
+    {
+     "key": "cupboard handles",
+     "now": {
+      "clicks": 19,
+      "impressions": 3270,
+      "position": 13.037
+     },
+     "previous": {
+      "clicks": 63,
+      "impressions": 10288,
+      "position": 7.658
+     }
+    },
+    {
+     "key": "antique brass kitchen handles",
+     "now": {
+      "clicks": 32,
+      "impressions": 4587,
+      "position": 7.896
+     },
+     "previous": {
+      "clicks": 23,
+      "impressions": 2441,
+      "position": 9.931
+     },
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 1
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "art deco door handles",
+     "now": {
+      "clicks": 34,
+      "impressions": 1788,
+      "position": 4.948
+     },
+     "previous": {
+      "clicks": 24,
+      "impressions": 1657,
+      "position": 5.353
+     },
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 1
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "front door furniture",
+     "now": {
+      "clicks": 25,
+      "impressions": 2869,
+      "position": 8.652
+     },
+     "previous": {
+      "clicks": 34,
+      "impressions": 3104,
+      "position": 7.636
+     }
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "now": {
+      "clicks": 14,
+      "impressions": 3764,
+      "position": 10.063
+     },
+     "previous": {
+      "clicks": 9,
+      "impressions": 1596,
+      "position": 19.748
+     }
+    },
+    {
+     "key": "wardrobe handles",
+     "now": {
+      "clicks": 19,
+      "impressions": 2205,
+      "position": 11.944
+     },
+     "previous": {
+      "clicks": 54,
+      "impressions": 6579,
+      "position": 10.535
+     }
+    },
+    {
+     "key": "door furniture",
+     "now": {
+      "clicks": 14,
+      "impressions": 7041,
+      "position": 12.514
+     },
+     "previous": {
+      "clicks": 5,
+      "impressions": 3700,
+      "position": 15.895
+     }
+    }
+   ],
+   "pages": [
+    {
+     "key": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+     "title": "Black Door Handles | Matt Black & Antique | More Handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 1553,
+      "position": 35.51
+     },
+     "previous": {
+      "clicks": 0,
+      "impressions": 0,
+      "position": 0
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/door-handles.html",
+     "title": "Door Handles | More Handles",
+     "now": {
+      "clicks": 166,
+      "impressions": 71857,
+      "position": 16.189
+     },
+     "previous": {
+      "clicks": 26,
+      "impressions": 22275,
+      "position": 20.173
+     },
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 4
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 6
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+     "title": "Cupboard Handles and Knobs | More Handles",
+     "now": {
+      "clicks": 205,
+      "impressions": 71970,
+      "position": 18.602
+     },
+     "previous": {
+      "clicks": 386,
+      "impressions": 131323,
+      "position": 20.094
+     },
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 4
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 5
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 5
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 5
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 1
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/front-door-furniture.html",
+     "title": "Front Door Furniture & Accessories at More Handles",
+     "now": {
+      "clicks": 93,
+      "impressions": 34409,
+      "position": 12.994
+     },
+     "previous": {
+      "clicks": 116,
+      "impressions": 40581,
+      "position": 15.195
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/handles/art-deco-door-knobs-handles.html",
+     "title": "Art Deco Door Handles & Art Deco Door Knobs at More Handles",
+     "now": {
+      "clicks": 67,
+      "impressions": 5457,
+      "position": 8.861
+     },
+     "previous": {
+      "clicks": 39,
+      "impressions": 5017,
+      "position": 9.394
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+     "title": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 174,
+      "impressions": 26080,
+      "position": 11.911
+     },
+     "previous": {
+      "clicks": 92,
+      "impressions": 15905,
+      "position": 13.431
+     },
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 4
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 5
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 3
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/black-cupboard-handles.html",
+     "title": "Black Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 46,
+      "impressions": 36932,
+      "position": 11.738
+     },
+     "previous": {
+      "clicks": 63,
+      "impressions": 38829,
+      "position": 10.687
+     }
+    },
+    {
+     "key": "https://www.morehandles.co.uk/hinges/specialist-hinges.html",
+     "title": "180 Degree Hinges | More Handles",
+     "now": {
+      "clicks": 45,
+      "impressions": 5706,
+      "position": 10.922
+     },
+     "previous": {
+      "clicks": 62,
+      "impressions": 7491,
+      "position": 13.608
+     }
+    }
+   ]
+  },
+  "last6Months": {
+   "from": "2026-05-17",
+   "to": "2026-11-16",
+   "comparable": false,
+   "website": {
+    "clicks": 45515
+   },
+   "updates": [
+    {
+     "title": "May 2026 core update",
+     "startedOn": "2026-05-21",
+     "finishedOn": "2026-06-02"
+    },
+    {
+     "title": "June 2026 spam update",
+     "startedOn": "2026-06-24",
+     "finishedOn": "2026-06-26"
+    },
+    {
+     "title": "August 2026 spam update",
+     "startedOn": "2026-08-18",
+     "finishedOn": "2026-08-21"
+    },
+    {
+     "title": "September 2026 spam update",
+     "startedOn": "2026-09-24",
+     "finishedOn": "2026-10-08"
+    },
+    {
+     "title": "November 2026 core update",
+     "startedOn": "2026-11-10",
+     "finishedOn": null
+    }
+   ],
+   "keywords": [
+    {
+     "key": "door handles",
+     "now": {
+      "clicks": 130,
+      "impressions": 47319,
+      "position": 13.481
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "brass door handles",
+     "now": {
+      "clicks": 44,
+      "impressions": 8030,
+      "position": 10.903
+     },
+     "previous": null
+    },
+    {
+     "key": "door knobs",
+     "now": {
+      "clicks": 48,
+      "impressions": 16739,
+      "position": 11.243
+     },
+     "previous": null
+    },
+    {
+     "key": "cupboard handles",
+     "now": {
+      "clicks": 82,
+      "impressions": 13558,
+      "position": 8.956
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "antique brass kitchen handles",
+     "now": {
+      "clicks": 55,
+      "impressions": 7028,
+      "position": 8.603
+     },
+     "previous": null
+    },
+    {
+     "key": "art deco door handles",
+     "now": {
+      "clicks": 58,
+      "impressions": 3445,
+      "position": 5.143
+     },
+     "previous": null
+    },
+    {
+     "key": "front door furniture",
+     "now": {
+      "clicks": 59,
+      "impressions": 5973,
+      "position": 8.124
+     },
+     "previous": null
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "now": {
+      "clicks": 23,
+      "impressions": 5360,
+      "position": 12.947
+     },
+     "previous": null
+    },
+    {
+     "key": "wardrobe handles",
+     "now": {
+      "clicks": 73,
+      "impressions": 8784,
+      "position": 10.889
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "door furniture",
+     "now": {
+      "clicks": 19,
+      "impressions": 10741,
+      "position": 13.679
+     },
+     "previous": null
+    }
+   ],
+   "pages": [
+    {
+     "key": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+     "title": "Black Door Handles | Matt Black & Antique | More Handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 1553,
+      "position": 35.51
+     },
+     "previous": null
+    },
+    {
+     "key": "https://www.morehandles.co.uk/door-handles.html",
+     "title": "Door Handles | More Handles",
+     "now": {
+      "clicks": 192,
+      "impressions": 94132,
+      "position": 17.131
+     },
+     "previous": null
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+     "title": "Cupboard Handles and Knobs | More Handles",
+     "now": {
+      "clicks": 591,
+      "impressions": 203293,
+      "position": 19.566
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 4
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 5
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 5
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 5
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 1
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/front-door-furniture.html",
+     "title": "Front Door Furniture & Accessories at More Handles",
+     "now": {
+      "clicks": 209,
+      "impressions": 74990,
+      "position": 14.185
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/handles/art-deco-door-knobs-handles.html",
+     "title": "Art Deco Door Handles & Art Deco Door Knobs at More Handles",
+     "now": {
+      "clicks": 106,
+      "impressions": 10474,
+      "position": 9.116
+     },
+     "previous": null
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+     "title": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 266,
+      "impressions": 41985,
+      "position": 12.487
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 4
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 5
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 3
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/black-cupboard-handles.html",
+     "title": "Black Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 109,
+      "impressions": 75761,
+      "position": 11.2
+     },
+     "previous": null
+    },
+    {
+     "key": "https://www.morehandles.co.uk/hinges/specialist-hinges.html",
+     "title": "180 Degree Hinges | More Handles",
+     "now": {
+      "clicks": 107,
+      "impressions": 13197,
+      "position": 12.447
+     },
+     "previous": null
+    }
+   ]
+  },
+  "last12Months": {
+   "from": "2025-11-17",
+   "to": "2026-11-16",
+   "comparable": false,
+   "website": {
+    "clicks": 52289
+   },
+   "updates": [
+    {
+     "title": "February 2026 Discover update",
+     "startedOn": "2026-02-05",
+     "finishedOn": "2026-02-27"
+    },
+    {
+     "title": "March 2026 spam update",
+     "startedOn": "2026-03-24",
+     "finishedOn": "2026-03-25"
+    },
+    {
+     "title": "March 2026 core update",
+     "startedOn": "2026-03-27",
+     "finishedOn": "2026-04-08"
+    },
+    {
+     "title": "May 2026 core update",
+     "startedOn": "2026-05-21",
+     "finishedOn": "2026-06-02"
+    },
+    {
+     "title": "June 2026 spam update",
+     "startedOn": "2026-06-24",
+     "finishedOn": "2026-06-26"
+    },
+    {
+     "title": "August 2026 spam update",
+     "startedOn": "2026-08-18",
+     "finishedOn": "2026-08-21"
+    },
+    {
+     "title": "September 2026 spam update",
+     "startedOn": "2026-09-24",
+     "finishedOn": "2026-10-08"
+    },
+    {
+     "title": "November 2026 core update",
+     "startedOn": "2026-11-10",
+     "finishedOn": null
+    }
+   ],
+   "keywords": [
+    {
+     "key": "door handles",
+     "now": {
+      "clicks": 130,
+      "impressions": 48238,
+      "position": 13.815
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "brass door handles",
+     "now": {
+      "clicks": 57,
+      "impressions": 10726,
+      "position": 11.201
+     },
+     "previous": null
+    },
+    {
+     "key": "door knobs",
+     "now": {
+      "clicks": 91,
+      "impressions": 22793,
+      "position": 10.477
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "cupboard handles",
+     "now": {
+      "clicks": 91,
+      "impressions": 17489,
+      "position": 9.011
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "antique brass kitchen handles",
+     "now": {
+      "clicks": 56,
+      "impressions": 7158,
+      "position": 8.695
+     },
+     "previous": null
+    },
+    {
+     "key": "art deco door handles",
+     "now": {
+      "clicks": 62,
+      "impressions": 3941,
+      "position": 5.567
+     },
+     "previous": null
+    },
+    {
+     "key": "front door furniture",
+     "now": {
+      "clicks": 77,
+      "impressions": 6782,
+      "position": 7.893
+     },
+     "previous": null
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "now": {
+      "clicks": 24,
+      "impressions": 5781,
+      "position": 13.722
+     },
+     "previous": null
+    },
+    {
+     "key": "wardrobe handles",
+     "now": {
+      "clicks": 86,
+      "impressions": 10306,
+      "position": 10.98
+     },
+     "previous": null
+    },
+    {
+     "key": "door furniture",
+     "now": {
+      "clicks": 23,
+      "impressions": 11992,
+      "position": 13.895
+     },
+     "previous": null
+    }
+   ],
+   "pages": [
+    {
+     "key": "https://www.morehandles.co.uk/door-handles/black-door-handles.html",
+     "title": "Black Door Handles | Matt Black & Antique | More Handles",
+     "now": {
+      "clicks": 1,
+      "impressions": 1553,
+      "position": 35.51
+     },
+     "previous": null
+    },
+    {
+     "key": "https://www.morehandles.co.uk/door-handles.html",
+     "title": "Door Handles | More Handles",
+     "now": {
+      "clicks": 193,
+      "impressions": 99516,
+      "position": 18.215
+     },
+     "previous": null
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs.html",
+     "title": "Cupboard Handles and Knobs | More Handles",
+     "now": {
+      "clicks": 702,
+      "impressions": 250071,
+      "position": 19.813
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 4
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 5
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 5
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 6
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 5
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 1
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/front-door-furniture.html",
+     "title": "Front Door Furniture & Accessories at More Handles",
+     "now": {
+      "clicks": 278,
+      "impressions": 87412,
+      "position": 14.249
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 0
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/handles/art-deco-door-knobs-handles.html",
+     "title": "Art Deco Door Handles & Art Deco Door Knobs at More Handles",
+     "now": {
+      "clicks": 115,
+      "impressions": 11979,
+      "position": 9.204
+     },
+     "previous": null
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/antique-brass-cupboard-handles.html",
+     "title": "Antique Brass Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 281,
+      "impressions": 45042,
+      "position": 12.691
+     },
+     "previous": null,
+     "ticked": true,
+     "days": [
+      {
+       "day": "2026-09-10",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-11",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-12",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-13",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-15",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-16",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-17",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-18",
+       "clicks": 2
+      },
+      {
+       "day": "2026-09-19",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-21",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-22",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-23",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-24",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-25",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-26",
+       "clicks": 1
+      },
+      {
+       "day": "2026-09-27",
+       "clicks": 4
+      },
+      {
+       "day": "2026-09-28",
+       "clicks": 3
+      },
+      {
+       "day": "2026-09-29",
+       "clicks": 0
+      },
+      {
+       "day": "2026-09-30",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-01",
+       "clicks": 4
+      },
+      {
+       "day": "2026-10-02",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-03",
+       "clicks": 5
+      },
+      {
+       "day": "2026-10-04",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-05",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-06",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-07",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-08",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-09",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-10",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-11",
+       "clicks": 3
+      },
+      {
+       "day": "2026-10-12",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-13",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-14",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-15",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-16",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-17",
+       "clicks": 0
+      },
+      {
+       "day": "2026-10-18",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-19",
+       "clicks": 2
+      },
+      {
+       "day": "2026-10-20",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-21",
+       "clicks": 1
+      },
+      {
+       "day": "2026-10-22",
+       "clicks": 3
+      }
+     ],
+     "daysBefore": []
+    },
+    {
+     "key": "https://www.morehandles.co.uk/cupboard-handles-knobs/cupboard-handles/black-cupboard-handles.html",
+     "title": "Black Cupboard and Cabinet Handles | More Handles",
+     "now": {
+      "clicks": 120,
+      "impressions": 86504,
+      "position": 11.141
+     },
+     "previous": null
+    },
+    {
+     "key": "https://www.morehandles.co.uk/hinges/specialist-hinges.html",
+     "title": "180 Degree Hinges | More Handles",
+     "now": {
+      "clicks": 130,
+      "impressions": 15568,
+      "position": 12.617
+     },
+     "previous": null
+    }
+   ]
+  }
+ }
+}

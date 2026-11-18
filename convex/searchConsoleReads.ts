@@ -279,7 +279,8 @@ export async function askLive(
   ctx: ActionCtx,
   target: { connectionId: Id<"searchConsoleConnections">; property: string },
   ask: LiveAsk,
-  how: { everyCountry?: boolean } = {},
+  /** `together`: Google's two pages asked at once (`queryAnalytics`). */
+  how: { everyCountry?: boolean; together?: boolean } = {},
 ): Promise<{ ok: true; rows: AnalyticsRow[] } | { ok: false; problem: "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY" }> {
   const asked = how.everyCountry
     ? ask
@@ -287,7 +288,7 @@ export async function askLive(
   for (const renew of [false, true]) {
     const token = await accessTokenFor(ctx, target.connectionId, renew);
     if (!token.ok) return { ok: false, problem: token.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" : "NOT_CONNECTED" };
-    const answer = await queryAnalytics(token.accessToken, target.property, asked);
+    const answer = await queryAnalytics(token.accessToken, target.property, asked, { together: how.together });
     if (answer.ok) return { ok: true, rows: answer.rows };
     if (answer.reason !== "EXPIRED") return { ok: false, problem: answer.reason === "BUSY" || answer.reason === "UNREACHABLE" ? "GOOGLE_BUSY" : "GOOGLE_REFUSED" };
   }

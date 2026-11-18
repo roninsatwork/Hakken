@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { ChartTooltip } from "./ChartTooltip";
+import { ChartTooltip, ChartTooltipRow, ChartTooltipSurface } from "./ChartTooltip";
 
 const payload = [
   { dataKey: "finished", name: "Finished", value: 12, color: "#3987e5" },
@@ -64,5 +64,22 @@ describe("ChartTooltip", () => {
 
     expect(screen.getByText("£12.50")).toBeInTheDocument();
     expect(screen.getByText("spent")).toBeInTheDocument();
+  });
+
+  it("wraps a long line onto a second one, never cutting it mid-sentence, and keeps a short one as it was", () => {
+    // Anthony, 18 November 2026, of Demand by Classification's bands: "Google keeps these searches private, so it doesn't say which pag…".
+    const long = "Google keeps these searches private, so it doesn't say which page they went to.";
+    render(
+      <ChartTooltipSurface heading="Private searches" wide>
+        <ChartTooltipRow value="251,047" label="Impressions" />
+        <ChartTooltipRow value="" label={long} />
+      </ChartTooltipSurface>,
+    );
+    const line = screen.getByText(long);
+    expect(line.className).not.toMatch(/\btruncate\b|whitespace-nowrap|text-ellipsis|overflow-hidden/);
+    expect(line.className).toContain("break-words");
+    // A short label reads whole, beside a figure that never gives way to it.
+    expect(screen.getByText("Impressions")).toBeInTheDocument();
+    expect(screen.getByText("251,047").className).toContain("shrink-0");
   });
 });

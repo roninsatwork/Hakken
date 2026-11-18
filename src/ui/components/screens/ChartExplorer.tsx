@@ -89,8 +89,12 @@ export function ChartExplorer({ title, hint, exportName, csv, host, from, to, st
     /** The step its windows are in, where it isn't the chart's: a daily chart's Up or down in weeks. */
     step?: ExplorerStep;
   };
-  /** Draw bars along rather than lines over time: each bar's own words, stacked for a split. */
-  bars?: { labels: (value: number, key: string, row: Record<string, unknown>) => string | null; stacked?: boolean };
+  /**
+   * Draw bars along rather than lines over time: each bar's own words, stacked for a split. `upright` stands them up, the
+   * rows along the bottom, for a count each day: Indexing's pages not indexed each day, as Google's own chart draws them
+   * (18 November 2026). Along is the default every other card draws.
+   */
+  bars?: { labels: (value: number, key: string, row: Record<string, unknown>) => string | null; stacked?: boolean; upright?: boolean };
   /** The lines' height, where the chart sits over a long table and should stay short: All pages' Views each day. */
   height?: number;
 }) {
@@ -113,7 +117,7 @@ export function ChartExplorer({ title, hint, exportName, csv, host, from, to, st
           {nothingTicked !== null ? <p className="py-10 text-center text-[13px] text-muted">{nothingTicked}</p> : (
             <>
               {!anything ? <p className="py-10 text-center text-[12px] text-muted">{empty}</p>
-                : bars ? <SiteBarChart horizontal data={data} series={series} stacked={bars.stacked} labels={bars.labels} readout={table} />
+                : bars ? <SiteBarChart horizontal={!bars.upright} data={data} series={series} stacked={bars.stacked} labels={bars.labels} readout={table} />
                   : <SiteLineChart data={data} series={series} height={height} sharedScale readout={table} keepEmptyRows breakGaps />}
               {scores ? <CompactList
                 rows={[...scores.rows]}

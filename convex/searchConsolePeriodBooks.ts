@@ -113,6 +113,25 @@ export async function wholeBook(ctx: { db: QueryCtx["db"] }, scope: BookScope, k
 }
 
 /**
+ * The whole books one read needs, each read once however many lists name it (speed fixes, 18 November 2026): a list of
+ * pages and its span before, from one build, read the same book of pages twice, 3.6 MB each time on More Handles.
+ */
+export class BookShelf {
+  private readonly books = new Map<string, Promise<string[]>>();
+
+  constructor(readonly ctx: { db: QueryCtx["db"] }) {}
+
+  whole(scope: BookScope, kind: BookKind): Promise<string[]> {
+    const key = [scope.companyWebsiteId, scope.country ?? "", scope.searchType, scope.builtAt, kind].join("|");
+    const held = this.books.get(key);
+    if (held) return held;
+    const reading = wholeBook(this.ctx, scope, kind);
+    this.books.set(key, reading);
+    return reading;
+  }
+}
+
+/**
  * Names for one request: tokens to their texts and texts to their tokens, each
  * book record read once however many rows ask (`termToken`).
  */
@@ -285,16 +304,36 @@ export function textsFrom(book: readonly string[]): (key: string) => string {
   };
 }
 
-/** A period's rows with their keywords and pages as text, from its build's books read whole: lists from two builds. */
-export async function asText<List extends { rows: PeriodRow[]; book: BookScope | null }>(ctx: { db: QueryCtx["db"] }, list: List): Promise<List> {
-  if (!list.book) return list;
-  const books = { query: textsFrom(await wholeBook(ctx, list.book, "query")), page: textsFrom(await wholeBook(ctx, list.book, "page")) };
-  const text = (value: string) => (tokenPlace(value)?.kind === "page" ? books.page(value) : books.query(value));
-  return {
-    ...list,
-    book: null,
-    rows: list.rows.map((row) => ({ ...row, key: text(row.key), ...(row.top !== undefined ? { top: text(row.top) } : {}), ...(row.page !== undefined ? { page: text(row.page) } : {}) })),
+/**
+ * A list read beside another build's (`readList`), its keys as text from its own build's book of their kind, read once
+ * on the shelf (speed fixes, 18 November 2026). Every book of every list read whole (`asText`) was 14.4 MB for More
+ * Handles' pages in October, its span before kept by another build: near a read's 16 MB. `tops` keeps each row's top
+ * as a place in the list's own book, and the book with it, for the list on screen to name the rows it shows; the span
+ * before's and Pages competing's tops are never shown, so they go. `pages` names Pages competing's pages too.
+ */
+export async function keysAsText<List extends { rows: PeriodRow[]; book: BookScope | null }>(shelf: BookShelf, list: List, keep: { tops: boolean; pages?: boolean }): Promise<List> {
+  const book = list.book;
+  if (!book) return list;
+  const kinds = new Set<BookKind>();
+  for (const row of list.rows) {
+    const at = tokenPlace(row.key);
+    if (at) kinds.add(at.kind);
+    if (kinds.size === 2) break;
+  }
+  if (keep.pages && list.rows.some((row) => row.page !== undefined && tokenPlace(row.page) !== null)) kinds.add("page");
+  const texts = new Map<BookKind, (key: string) => string>();
+  for (const kind of kinds) texts.set(kind, textsFrom(await shelf.whole(book, kind)));
+  const text = (value: string) => {
+    const at = tokenPlace(value);
+    return at ? texts.get(at.kind)!(value) : value;
   };
+  const rows = list.rows.map((row) => {
+    const named: PeriodRow = { ...row, key: text(row.key) };
+    if (!keep.tops) delete named.top;
+    if (keep.pages && row.page !== undefined) named.page = text(row.page);
+    return named;
+  });
+  return { ...list, rows, book: keep.tops ? book : null };
 }
 
 /**

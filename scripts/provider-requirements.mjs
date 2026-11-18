@@ -50,6 +50,9 @@ export const OPTIONAL_KEYS = [
   "FIRECRAWL_COST_PER_PAGE_USD", "WEB_SEARCH_COST_USD",
   // Google's real-visitor speed for the money pages (insights-analyst-plan.md phase 8): without it, PageSpeed refuses and speed waits.
   "PAGESPEED_API_KEY",
+  // Search Console's page checks for Indexing (search-console-indexing-v1-plan-2026-11-18.md): the websites whose pages are
+  // checked each night, by id, or "on" for all. Without it no page is checked, and Indexing says the checks aren't on yet.
+  "SEARCH_CONSOLE_PAGE_CHECKS",
 ];
 export const IGNORED_KEYS = new Set([
   "NODE_ENV", "VITEST", "IS_TEST", "NEXT_PUBLIC_APP_URL",

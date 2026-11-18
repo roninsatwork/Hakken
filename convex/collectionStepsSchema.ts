@@ -5,7 +5,7 @@ import { v, type Infer } from "convex/values";
  * The chains of steps a website's collection runs in, each watched
  * (collection-reliability-plan.md, RR1): Google Analytics' run and its two
  * fills, Search Console's run, its 16-month fill and each of its adding-up
- * jobs.
+ * jobs, and its page checks.
  */
 export const stepChainValidator = v.union(
   v.literal("GA_RUN"),
@@ -14,6 +14,8 @@ export const stepChainValidator = v.union(
   v.literal("SC_RUN"),
   v.literal("SC_FILL"),
   v.literal("SC_SETTLE"),
+  // Search Console's page checks, a day's at a time (search-console-indexing-v1-plan-2026-11-18.md).
+  v.literal("SC_CHECKS"),
   v.literal("INSIGHTS"),
 );
 export type StepChain = Infer<typeof stepChainValidator>;

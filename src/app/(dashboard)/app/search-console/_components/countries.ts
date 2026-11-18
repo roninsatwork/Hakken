@@ -25,3 +25,24 @@ export function regionName(alpha2: string, locale: string): string | null {
     return null;
   }
 }
+
+/**
+ * The countries English says with "the" before them: "in the United Kingdom", "in the Netherlands", but "in France"
+ * (Countries and devices' "Clicks in the United Kingdom" and "Devices in the United Kingdom", search-console-countries-and-
+ * devices-way-1-plan-2026-11-18.md). By their two-letter codes.
+ */
+const TAKES_THE = new Set([
+  "AE", "AX", "BQ", "BS", "CC", "CF", "CK", "DO", "EH", "FK", "FO", "GB", "GM", "GS", "HM", "IM", "IO", "KM", "KY", "MH",
+  "MP", "MV", "NL", "PH", "PN", "PS", "SB", "SC", "TC", "TF", "UM", "US", "VA", "VG", "VI",
+]);
+
+/**
+ * A country as a sentence says it after "in": "the United Kingdom" and "France" in English. Other languages get the
+ * name alone, and their words are written round it ("Clic · Regno Unito"). Null for a code nobody can name.
+ */
+export function countryInWords(code: string, locale: string): string | null {
+  const alpha2 = ALPHA3_TO_ALPHA2[code.toUpperCase()];
+  const name = alpha2 ? regionName(alpha2, locale) : null;
+  if (!name || !alpha2) return name;
+  return locale.startsWith("en") && TAKES_THE.has(alpha2) ? `the ${name}` : name;
+}

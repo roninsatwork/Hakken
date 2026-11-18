@@ -76,6 +76,10 @@ agent does it again. The why and the record of what was built:
 - **A table's rows are written out**, with holes (`{{rows.r3.tracked}}`)
   for what changes — never an `<sc-for>` or `<sc-if>` inside a table: a
   browser lifts it out, and the rows draw above the table or not at all.
+- **Words follow the [writing guide](./writing-guide.md)**, on the boards and
+  in the canvas notes. Run `npm run check:drawing -- <canvas.json>` as well
+  as on each board: it holds the notes to the reading age and the words
+  rules. Then read every line yourself.
 - **`npm run check:drawing -- <board>` on every board before publishing.**
   It fails a class the app does not have, a colour outside the record, a
   font other than the app's, a table that would scroll, a repeat inside

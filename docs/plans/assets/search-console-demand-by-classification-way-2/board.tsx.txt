@@ -1,0 +1,535 @@
+// Four ways to draw Search Console → Demand by Classification, from the app's real parts, on More Handles' real figures
+// for the United Kingdom (last month, against September). Every chart's menus really work when the board is played. Nothing here is
+// built into the app.
+import { useState, type ReactNode } from "react";
+import { Layers } from "lucide-react";
+import DATA from "../data/uk-demand.json";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
+import { PageMap, type PageMapBox } from "@/src/ui/components/screens/PageMap";
+import { HundredGrid, type HundredGroup } from "@/src/ui/components/screens/HundredGrid";
+import { HundredStrips, stripColour, type StripSegment } from "@/src/ui/components/screens/HundredStrips";
+import { ChangeBars, type ChangeBar } from "@/src/ui/components/screens/ChangeBars";
+import { DotGroups, dotGroupOf, type DotGroupKey } from "@/src/ui/components/screens/DotGroups";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { DownloadButton } from "@/src/ui/components/screens/DownloadButton";
+import { Select } from "@/src/ui/components/screens/Select";
+import { Change, ChangeLine } from "@/src/ui/components/screens/Change";
+import { SlopeChart, type SlopeLine } from "./parts/SlopeChart";
+import { CHART_COMPARATOR_GREY, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
+import { CUT_COLUMN, RecordLinkCell } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
+import { formatNumber } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+import { useSitePager } from "@/src/app/(dashboard)/app/sites/_components/useSitePagedTable";
+import { useSiteSearch } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
+import { useSiteSort } from "@/src/app/(dashboard)/app/sites/_components/useSiteSort";
+
+export const SITE = "gs7s64z25gddkrkcarvpfjxw7x8fqkwn";
+export const PATH = `/app/search-console/${SITE}/demand-by-service`;
+const HOST = "morehandles.co.uk";
+const noop = () => undefined;
+const csv = () => "";
+const fmt = formatNumber;
+const oneDecimal = (value: number) => (Math.round(value * 10) / 10).toFixed(1);
+const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+// ——— The figures: Google's UK pages for October and September, each in its Classification, and the UK's own totals ———
+
+type Service = { key: string; name: string; sorted: boolean; hidden: boolean; shown: number; shownBefore: number; clicks: number; clicksBefore: number; pages: number | null };
+/** What the hover says of the searches Google keeps private. */
+const PRIVATE_HOVER = "Google keeps these searches private, so it doesn't say which page they went to.";
+const PAGES_SUM = DATA.rows.reduce((sum, row) => ({ clicks: sum.clicks + row.clicks, shown: sum.shown + row.shown, clicksBefore: sum.clicksBefore + row.clicksBefore, shownBefore: sum.shownBefore + row.shownBefore }), { clicks: 0, shown: 0, clicksBefore: 0, shownBefore: 0 });
+const SERVICES: Service[] = [
+  ...DATA.rows.map((row) => ({
+    key: row.id,
+    name: row.name,
+    sorted: row.name !== "Unclassified",
+    hidden: false,
+    shown: row.shown,
+    shownBefore: row.shownBefore,
+    clicks: row.clicks,
+    clicksBefore: row.clicksBefore,
+    pages: row.pages,
+  })),
+  // The UK's own totals less its pages' sum: the searches Google won't tie to a page.
+  {
+    key: "private", name: "Private searches", sorted: false, hidden: true,
+    shown: DATA.site.shown - PAGES_SUM.shown, shownBefore: DATA.site.shownBefore - PAGES_SUM.shownBefore,
+    clicks: DATA.site.clicks - PAGES_SUM.clicks, clicksBefore: DATA.site.clicksBefore - PAGES_SUM.clicksBefore, pages: null,
+  },
+];
+const NAMED = SERVICES.filter((s) => s.sorted);
+/** Every row but Private searches: what a map, the dots and the slopes draw. */
+const CLASSIFIED = SERVICES.filter((s) => !s.hidden);
+const add = (pick: (s: Service) => number, list: readonly Service[] = SERVICES) => list.reduce((sum, s) => sum + pick(s), 0);
+const T = { shown: add((s) => s.shown), shownBefore: add((s) => s.shownBefore), clicks: add((s) => s.clicks), clicksBefore: add((s) => s.clicksBefore), pages: add((s) => s.pages) };
+/** Google's average position for the website in the UK in October and September, as Performance shows it. */
+const POSITION = { now: DATA.site.position, before: DATA.site.positionBefore };
+const ctr = (clicks: number, shown: number) => (shown > 0 ? clicks / shown : 0);
+
+/** Whole numbers that add up to the cells: the biggest leftovers get the spare ones. */
+function outOf(values: readonly number[], cells: number) {
+  const whole = values.reduce((total, value) => total + value, 0);
+  if (whole === 0) return values.map(() => 0);
+  const exact = values.map((value) => (cells * value) / whole);
+  const counts = exact.map(Math.floor);
+  let spare = cells - counts.reduce((total, value) => total + value, 0);
+  for (const { at } of exact.map((value, index) => ({ at: index, left: value - Math.floor(value) })).sort((a, b) => b.left - a.left)) { if (spare <= 0) break; counts[at] += 1; spare -= 1; }
+  return counts;
+}
+
+// ——— What every way shares ———
+
+function Page({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader icon={<Layers className="h-5 w-5 text-brand" />} title="Demand by Classification" description="How often Google showed each of your Classifications, and the clicks they got." />
+      <div className="flex flex-col gap-6">{children}</div>
+    </div>
+  );
+}
+
+/** A box's line under its figure, as Search Console's boxes write it. */
+function Against({ now, before, write, still = 0 }: { now: number; before: number; write: (change: number, up: boolean) => string; still?: number }) {
+  const by = now - before;
+  if (Math.abs(by) <= still) return <ChangeLine by={0}>No change since September</ChangeLine>;
+  return <ChangeLine by={by}>{`${by > 0 ? "▲" : "▼"} ${write(Math.abs(by), by > 0)}`}</ChangeLine>;
+}
+
+/** Today's four Search Console boxes, for the UK, as Performance shows them. */
+function WebsiteBoxes() {
+  const growth = (before: number) => (change: number, up: boolean) => `${Math.round((100 * change) / before)}% ${up ? "more" : "fewer"} than September`;
+  return (
+    <>
+      <FigureRow>
+        <Figure label="Clicks" value={fmt(T.clicks)} detail={<Against now={T.clicks} before={T.clicksBefore} write={growth(T.clicksBefore)} />} />
+        <Figure label="Impressions" value={fmt(T.shown)} detail={<Against now={T.shown} before={T.shownBefore} write={growth(T.shownBefore)} />} />
+        <Figure label="Click-through rate" value={percent(ctr(T.clicks, T.shown))} detail={<Against now={ctr(T.clicks, T.shown) * 100} before={ctr(T.clicksBefore, T.shownBefore) * 100} still={0.05} write={(change, up) => `${oneDecimal(change)} points ${up ? "higher" : "lower"} than September`} />} />
+        <Figure label="Average position" value={oneDecimal(POSITION.now)} detail={<ChangeLine by={POSITION.before - POSITION.now}>{`▼ ${oneDecimal(POSITION.now - POSITION.before)} places worse than September`}</ChangeLine>} />
+      </FigureRow>
+    </>
+  );
+}
+
+const SORT: Record<string, (s: Service) => number | string> = {
+  name: (s) => s.name.toLowerCase(), shown: (s) => s.shown, shownUp: (s) => s.shown - s.shownBefore, clicks: (s) => s.clicks, clicksUp: (s) => s.clicks - s.clicksBefore, pages: (s) => s.pages ?? -1,
+};
+
+/** The lean table every way shares: the service and five figures, one line a row. Every row opens Pages for that Classification. */
+function Table({ filterBy, filters }: { filterBy?: (s: Service) => boolean; filters?: ReactNode }) {
+  const order = useSiteSort({ name: "asc", shown: "desc", shownUp: "desc", clicks: "desc", clicksUp: "desc", pages: "desc" }, "shown");
+  const [search, setSearch, settled] = useSiteSearch();
+  const [show, setShow] = useState("all");
+  const term = settled.toLowerCase();
+  const read = SORT[order.key] ?? SORT.shown;
+  const sign = order.direction === "asc" ? 1 : -1;
+  const rows = SERVICES
+    .filter((s) => (!term || s.name.toLowerCase().split(/\s+/).some((word) => word.startsWith(term)))
+      && (filterBy ? filterBy(s) : show === "all" || (show === "more" ? s.clicks > s.clicksBefore : s.clicks < s.clicksBefore)))
+    .sort((a, b) => {
+      const left = read(a), right = read(b);
+      const moved = typeof left === "string" ? left.localeCompare(String(right)) : Number(left) - Number(right);
+      return sign * moved || b.shown - a.shown;
+    });
+  const paged = useSitePager(rows);
+  const classifications = rows.filter((s) => !s.hidden).length;
+  const SHOW_WORDS: Record<string, string> = { all: "Every Classification", more: "More clicks", fewer: "Fewer clicks" };
+  return (
+    <DataTable
+      rows={paged.pageRows}
+      rowKey={(row) => row.key}
+      cardHeader={<TableBar footer={{ ...paged.footer, totalCount: classifications }} noun={rows.some((s) => s.hidden) ? "classifications and private searches" : "classifications"} actions={<DownloadButton label="Download CSV" busyLabel="Downloading…" onClick={noop} />} />}
+      search={{ value: search, onChange: setSearch, placeholder: "Find a Classification…" }}
+      filters={<div className="flex flex-wrap items-center gap-3">{filters ?? (
+        <Select aria-label="Show" chip={{ label: "Show", choice: show === "all" ? null : SHOW_WORDS[show] }} value={show} onChange={setShow}>
+          {Object.entries(SHOW_WORDS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </Select>
+      )}</div>}
+      sort={order.tableSort}
+      onRowClick={noop}
+      empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: settled ? "Nothing matches that search." : "Google hasn't shown your pages in these dates." }}
+      footer={paged.footer}
+      columns={[
+        { key: "name", header: <span title="Classification">Category</span>, sortable: true, className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (s: Service) => (s.hidden ? <span className="block truncate text-[13px] text-foreground" title={PRIVATE_HOVER}>{s.name}</span> : <RecordLinkCell cut href="#" hover={s.sorted ? s.name : "Pages not in a Classification yet"}>{s.name}</RecordLinkCell>) },
+        { key: "shown", header: <span title="Impressions: the times Google showed it">Shown</span>, align: "right", sortable: true, cell: (s: Service) => <span className="font-mono text-[12px] text-secondary">{fmt(s.shown)}</span> },
+        { key: "shownUp", header: <span title="Impressions, up or down since September">Up or down</span>, align: "right", sortable: true, className: "whitespace-nowrap", cell: (s: Service) => <Change by={s.shown - s.shownBefore} same format={fmt} /> },
+        { key: "clicks", header: "Clicks", align: "right", sortable: true, cell: (s: Service) => <span className="font-mono text-[12px] text-foreground">{fmt(s.clicks)}</span> },
+        { key: "clicksUp", header: <span title="Clicks, up or down since September">Up or down</span>, align: "right", sortable: true, className: "whitespace-nowrap", cell: (s: Service) => <Change by={s.clicks - s.clicksBefore} same format={fmt} /> },
+        { key: "pages", header: <span title="Pages Google showed in October">Pages</span>, align: "right", sortable: true, cell: (s: Service) => (s.pages === null ? <span className="font-mono text-[12px] text-muted">–</span> : <span className="font-mono text-[12px] text-secondary">{fmt(s.pages)}</span>) },
+      ]}
+    />
+  );
+}
+
+// ——— Way 1: each service beside September, and a map of them ———
+
+const SHOW: Record<string, { title: string; figure: string; now: (s: Service) => number; before: (s: Service) => number; label: (value: number) => string }> = {
+  shown: { title: "Impressions for each Classification", figure: "Impressions", now: (s) => s.shown, before: (s) => s.shownBefore, label: fmt },
+  clicks: { title: "Clicks for each Classification", figure: "Clicks", now: (s) => s.clicks, before: (s) => s.clicksBefore, label: fmt },
+  ctr: { title: "Click-through rate for each Classification", figure: "Click-through rate", now: (s) => Math.round(ctr(s.clicks, s.shown) * 1000) / 10, before: (s) => Math.round(ctr(s.clicksBefore, s.shownBefore) * 1000) / 10, label: (value) => `${oneDecimal(value)}%` },
+};
+
+function WayOneBars() {
+  const [show, setShow] = useState("shown");
+  const [against, setAgainst] = useState("before");
+  const pick = SHOW[show];
+  const compared = against === "before";
+  const rows = [...SERVICES].sort((a, b) => pick.now(b) - pick.now(a)).map((s) => ({ label: s.name, before: pick.before(s), now: pick.now(s) }));
+  const series = [...(compared ? [{ key: "before", name: "September", colour: CHART_COMPARATOR_GREY }] : []), { key: "now", name: "October", colour: CHART_SERIES_ORANGE }];
+  return (
+    <BarsCard
+      title={pick.title}
+      hint={compared ? "October and September, side by side." : "October."}
+      exportName="search-console-demand-by-service"
+      csvHeading="Classification"
+      host={HOST}
+      waiting={null}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: show, options: [{ value: "shown", label: "Impressions" }, { value: "clicks", label: "Clicks" }, { value: "ctr", label: "Click-through rate" }], onChange: setShow },
+        { kind: "select", key: "compare", label: "Compare with", value: against, options: [{ value: "before", label: "September" }, { value: "none", label: "No comparison" }], onChange: setAgainst },
+      ]}
+      rows={rows}
+      series={series}
+      figure={pick.figure}
+      readout={({ row, heading }) => ({
+        heading,
+        ...(row.label === "Private searches" ? { note: PRIVATE_HOVER } : {}),
+        columns: [{ key: "figure", label: pick.figure, tone: "band" as const }],
+        rows: series.map((entry) => ({ key: entry.key, name: entry.name, colour: entry.colour, cells: { figure: { text: pick.label(Number(row[entry.key] ?? 0)) } } })),
+      })}
+      labels={(value) => pick.label(value)}
+      anything
+      empty="Nothing to show for these dates."
+    />
+  );
+}
+
+const MAP_READ: Record<string, { label: string; words: string; now: (s: Service) => number; before: (s: Service) => number }> = {
+  shown: { label: "Impressions", words: "impressions", now: (s) => s.shown, before: (s) => s.shownBefore },
+  clicks: { label: "Clicks", words: "clicks", now: (s) => s.clicks, before: (s) => s.clicksBefore },
+};
+
+function WayOneMap() {
+  const [countKey, setCount] = useState("shown");
+  const [colourKey, setColour] = useState("clicks");
+  const count = MAP_READ[countKey], colour = MAP_READ[colourKey];
+  const boxes: PageMapBox[] = CLASSIFIED.filter((s) => count.now(s) > 0).map((s) => ({
+    id: s.key, name: s.name, size: count.now(s), now: colour.now(s), before: colour.before(s), figure: `${fmt(count.now(s))} ${count.words}`,
+    readout: [{ value: fmt(s.shown), label: "Impressions in October" }, { value: fmt(s.shownBefore), label: "Impressions in September" }, { value: fmt(s.clicks), label: "Clicks in October" }, { value: fmt(s.clicksBefore), label: "Clicks in September" }],
+  }));
+  return (
+    <MapCard
+      title="All your Classifications"
+      hint={`Bigger boxes had more ${count.words}. Orange boxes got more ${colour.words} than in September, and grey boxes got fewer.`}
+      exportName="search-console-services-map"
+      csv={csv}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "count", label: "Count", value: countKey, options: Object.entries(MAP_READ).map(([value, one]) => ({ value, label: one.label })), onChange: setCount },
+        { kind: "select", key: "colour", label: "Colour shows", value: colourKey, options: Object.entries(MAP_READ).map(([value, one]) => ({ value, label: one.label })), onChange: setColour },
+      ]}
+    >
+      <PageMap boxes={boxes} />
+    </MapCard>
+  );
+}
+
+export function Way1() {
+  return (
+    <Page>
+      <WebsiteBoxes />
+      <WayOneBars />
+      <WayOneMap />
+      <Table />
+    </Page>
+  );
+}
+
+// ——— Way 2: what Google shows, and what gets clicked, as Performance shows it ———
+
+const GRID_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET, CHART_COMPARATOR_GREY];
+
+/** The biggest few by name, the rest together as "The other N", so the key stays short. */
+function topAndRest(read: (s: Service) => number, named: number) {
+  const ranked = [...SERVICES].sort((a, b) => read(b) - read(a));
+  const top = ranked.slice(0, named);
+  const rest = ranked.slice(named);
+  return { top, rest };
+}
+
+function WayTwoStrips() {
+  const [bottomKey, setBottom] = useState("clicks");
+  const [lit, setLit] = useState<string | null>(null);
+  const { top, rest } = topAndRest((s) => s.shown, 6);
+  const bottomOf = (s: Service) => (bottomKey === "clicks" ? s.clicks : s.pages ?? 0);
+  const impressions = [...top.map((s) => s.shown), add((s) => s.shown, rest)];
+  const bottoms = [...top.map(bottomOf), add(bottomOf, rest)];
+  const topCounts = outOf(impressions, 100), bottomCounts = outOf(bottoms, 100);
+  const allShown = add((s) => s.shown), allBottom = add(bottomOf);
+  const noun = bottomKey === "clicks" ? "clicks" : "pages";
+  const names = [...top.map((s) => s.name), `The other ${rest.length}`];
+  const segments: StripSegment[] = names.map((name, at) => ({
+    key: at === top.length ? "rest" : top[at].key,
+    name,
+    top: topCounts[at],
+    bottom: bottomCounts[at],
+    colour: stripColour(at === top.length ? 99 : at),
+    readout: [
+      { value: fmt(impressions[at]), label: "Impressions" },
+      { value: `${oneDecimal((100 * impressions[at]) / allShown)} in 100`, label: "Of all impressions" },
+      { value: fmt(bottoms[at]), label: bottomKey === "clicks" ? "Clicks" : "Pages" },
+      { value: `${oneDecimal((100 * bottoms[at]) / allBottom)} in 100`, label: `Of all ${noun}` },
+      ...(at < top.length && top[at].hidden ? [{ value: "", label: PRIVATE_HOVER }] : []),
+    ],
+  }));
+  return (
+    <MapCard
+      title={bottomKey === "clicks" ? "What Google shows, and what gets clicked" : "What Google shows, and how many pages it has"}
+      hint={`The top row is where 100 impressions went. The bottom row is the same for 100 ${noun}. Press one to keep it lit.`}
+      exportName="search-console-services-bands"
+      csv={csv}
+      host={HOST}
+      controls={[{ kind: "select", key: "against", label: "Show", value: bottomKey, options: [{ value: "clicks", label: "Clicks" }, { value: "pages", label: "Pages" }], onChange: setBottom }]}
+    >
+      <HundredStrips segments={segments} topLabel="Out of every 100 impressions" bottomLabel={`Out of every 100 ${noun}`} lit={lit} onLit={setLit} />
+    </MapCard>
+  );
+}
+
+function WayTwoSquares() {
+  const [show, setShow] = useState("clicks");
+  const [against, setAgainst] = useState("before");
+  const now = (s: Service) => (show === "clicks" ? s.clicks : s.shown);
+  const before = (s: Service) => (show === "clicks" ? s.clicksBefore : s.shownBefore);
+  const { top, rest } = topAndRest(now, 4);
+  const values = [...top.map(now), add(now, rest)];
+  const valuesBefore = [...top.map(before), add(before, rest)];
+  const counts = outOf(values, 100), countsBefore = outOf(valuesBefore, 100);
+  const compared = against === "before";
+  const noun = show === "clicks" ? "clicks" : "impressions";
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const totalBefore = valuesBefore.reduce((sum, value) => sum + value, 0);
+  const names = [...top.map((s) => s.name), `The other ${rest.length}`];
+  const groups: HundredGroup[] = names.map((name, at) => ({
+    key: at === top.length ? "rest" : top[at].key,
+    name,
+    count: counts[at],
+    colour: GRID_COLOURS[at] ?? CHART_COMPARATOR_GREY,
+    ...(compared ? { was: <span className="font-mono">{countsBefore[at]}</span> } : {}),
+    readout: [
+      { value: fmt(values[at]), label: `${noun === "clicks" ? "Clicks" : "Impressions"} in October` },
+      { value: `${oneDecimal((100 * values[at]) / total)} in 100`, label: "October" },
+      ...(compared ? [{ value: `${oneDecimal((100 * valuesBefore[at]) / totalBefore)} in 100`, label: "September" }] : []),
+      ...(at < top.length && top[at].hidden ? [{ value: "", label: PRIVATE_HOVER }] : []),
+    ],
+  }));
+  return (
+    <MapCard
+      title={`Out of every 100 ${noun}`}
+      hint={`All your ${noun} in October. That's ${fmt(total)} ${noun}. Each square is 1 in every 100.`}
+      exportName="search-console-services-out-of-100"
+      csv={csv}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: show, options: [{ value: "clicks", label: "Clicks" }, { value: "impressions", label: "Impressions" }], onChange: setShow },
+        { kind: "select", key: "compare", label: "Compare with", value: against, options: [{ value: "before", label: "September" }, { value: "none", label: "No comparison" }], onChange: setAgainst },
+      ]}
+    >
+      <HundredGrid groups={groups} cells={100} nowLabel="October" wasLabel={compared ? "September" : ""} label={`Out of every 100 ${noun}`} />
+    </MapCard>
+  );
+}
+
+export function Way2() {
+  return (
+    <Page>
+      <WebsiteBoxes />
+      <WayTwoStrips />
+      <WayTwoSquares />
+      <Table />
+    </Page>
+  );
+}
+
+// ——— Way 3: what moved, and which services get clicked ———
+
+/** The middle service by impressions, and the website's click-through rate: where the dots' lines fall. */
+const middleOf = (values: readonly number[]) => { const sorted = [...values].sort((a, b) => a - b); return sorted[Math.floor(sorted.length / 2)]; };
+const tidy = (value: number) => { const step = 10 ** Math.max(0, Math.floor(Math.log10(Math.max(1, value))) - 1); return Math.round(value / step) * step; };
+const MIDDLE = tidy(middleOf(NAMED.map((s) => s.shown)));
+// The pages' own click-through rate: the website's would count Private searches, which no Classification's clicks include.
+const SITE_RATE = ctr(PAGES_SUM.clicks, PAGES_SUM.shown) * 100;
+const GROUP_ORDER: DotGroupKey[] = ["rightHigh", "rightLow", "leftHigh", "leftLow"];
+
+function useGroups(acrossPick: string, upPick: string) {
+  const busy = tidy(MIDDLE * Number(acrossPick));
+  const rate = SITE_RATE * Number(upPick);
+  const split = { x: busy, y: rate };
+  const groupOf = (s: Service): DotGroupKey => dotGroupOf({ x: s.shown, y: ctr(s.clicks, s.shown) * 100 }, split);
+  const across = (more: boolean) => (more ? `${fmt(busy)} impressions or more` : `Under ${fmt(busy)} impressions`);
+  const up = (more: boolean) => (more ? `${oneDecimal(rate)} or more clicks for every 100` : `under ${oneDecimal(rate)} clicks for every 100`);
+  const names: Record<DotGroupKey, string> = {
+    rightHigh: `${across(true)}, and ${up(true)}`, rightLow: `${across(true)}, and ${up(false)}`,
+    leftHigh: `${across(false)}, and ${up(true)}`, leftLow: `${across(false)}, and ${up(false)}`,
+  };
+  return { busy, rate, split, groupOf, names };
+}
+
+function WayThreeMoves() {
+  const [show, setShow] = useState("clicks");
+  const now = (s: Service) => (show === "clicks" ? s.clicks : s.shown);
+  const before = (s: Service) => (show === "clicks" ? s.clicksBefore : s.shownBefore);
+  const word = show === "clicks" ? "clicks" : "impressions";
+  const rows: ChangeBar[] = NAMED.filter((s) => now(s) !== before(s))
+    .sort((a, b) => (now(b) - before(b)) - (now(a) - before(a)))
+    .map((s) => ({ key: s.key, label: s.name, detail: `${fmt(before(s))} → ${fmt(now(s))}`, change: now(s) - before(s), hover: `${fmt(before(s))} ${word} in September, ${fmt(now(s))} in October` }));
+  return (
+    <MapCard
+      title="What went up and down"
+      hint={`The Classifications whose ${word} went up or down since September.`}
+      exportName="search-console-services-up-and-down"
+      csv={csv}
+      host={HOST}
+      controls={[{ kind: "select", key: "show", label: "Show", value: show, options: [{ value: "clicks", label: "Clicks" }, { value: "impressions", label: "Impressions" }], onChange: setShow }]}
+      message={rows.length === 0 ? "Nothing moved for this choice." : null}
+    >
+      <ChangeBars rows={rows} lostLabel={`Fewer ${word}`} gainedLabel={`More ${word}`} />
+    </MapCard>
+  );
+}
+
+function WayThreeDots({ acrossPick, setAcross, upPick, setUp }: { acrossPick: string; setAcross: (next: string) => void; upPick: string; setUp: (next: string) => void }) {
+  const { split, names } = useGroups(acrossPick, upPick);
+  const said = new Set([...NAMED].sort((a, b) => b.clicks - a.clicks).slice(0, 6).map((s) => s.key));
+  return (
+    <MapCard
+      title="Which Classifications Google shows, and which get clicked"
+      hint="Each dot is a Classification. The further right, the more impressions it had. The higher up, the more clicks for every 100 impressions."
+      exportName="search-console-services-dots"
+      csv={csv}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "across", label: "Impressions from", value: acrossPick, options: [{ value: "0.5", label: `${fmt(tidy(MIDDLE / 2))}, half your middle Classification` }, { value: "1", label: `${fmt(MIDDLE)}, your middle Classification` }, { value: "2", label: `${fmt(tidy(MIDDLE * 2))}, twice your middle Classification` }], onChange: setAcross },
+        { kind: "select", key: "up", label: "Click-through rate from", value: upPick, options: [{ value: "0.5", label: `${oneDecimal(SITE_RATE / 2)}, half your pages` }, { value: "1", label: `${oneDecimal(SITE_RATE)}, all your pages` }, { value: "2", label: `${oneDecimal(SITE_RATE * 2)}, twice your pages` }], onChange: setUp },
+      ]}
+      under={<span className="text-[12px] text-secondary">Your {NAMED.length} Classifications. Pages not in one aren&apos;t drawn.</span>}
+    >
+      <DotGroups
+        points={NAMED.map((s) => ({ x: s.shown, y: ctr(s.clicks, s.shown) * 100, label: s.name, named: said.has(s.key) }))}
+        split={split}
+        names={names}
+        xLabel=""
+        yLabel="Click-through rate"
+        readout={{ x: "Impressions", y: "Click-through rate" }}
+        formatY={oneDecimal}
+        height={420}
+      />
+    </MapCard>
+  );
+}
+
+export function Way3() {
+  const [acrossPick, setAcross] = useState("1");
+  const [upPick, setUp] = useState("1");
+  const [group, setGroup] = useState("");
+  const { groupOf, names } = useGroups(acrossPick, upPick);
+  const pressed = (key: string) => setGroup(group === key ? "" : key);
+  const options = [{ value: "", label: "Every Classification" }, ...GROUP_ORDER.map((key) => ({ value: key, label: names[key] }))];
+  return (
+    <Page>
+      <FigureRow columns={4}>
+        {GROUP_ORDER.map((key) => {
+          const list = NAMED.filter((s) => groupOf(s) === key);
+          const clicks = add((s) => s.clicks, list);
+          const moved = clicks - add((s) => s.clicksBefore, list);
+          const since = moved === 0 ? "the same as September" : `${fmt(Math.abs(moved))} ${moved > 0 ? "more" : "fewer"} than September`;
+          return (
+            <div key={key} style={{ display: "contents" }} onClick={(event) => { event.preventDefault(); pressed(key); }}>
+              <Figure arrow={false} href="#" named emphasis={group === key} label={names[key]} value={`${list.length} ${list.length === 1 ? "Classification" : "Classifications"}`} detail={<span className="text-secondary">{fmt(clicks)} clicks, {since}.</span>} />
+            </div>
+          );
+        })}
+      </FigureRow>
+      <WayThreeMoves />
+      <WayThreeDots acrossPick={acrossPick} setAcross={setAcross} upPick={upPick} setUp={setUp} />
+      <Table
+        filterBy={(s) => !group || (s.sorted && groupOf(s) === group)}
+        filters={(
+          <Select aria-label="Show" chip={{ label: "Show", choice: group ? names[group as DotGroupKey] : null }} value={group} onChange={setGroup}>
+            {options.map((one) => <option key={one.value} value={one.value}>{one.label}</option>)}
+          </Select>
+        )}
+      />
+    </Page>
+  );
+}
+
+// ——— Way 4: then and now, a new shared part ———
+
+const SLOPE: Record<string, { title: string; noun: string; now: (s: Service) => number; before: (s: Service) => number; format: (value: number) => string; scale: "linear" | "log" }> = {
+  clicks: { title: "Clicks in September and October", noun: "Clicks", now: (s) => s.clicks, before: (s) => s.clicksBefore, format: fmt, scale: "log" },
+  impressions: { title: "Impressions in September and October", noun: "Impressions", now: (s) => s.shown, before: (s) => s.shownBefore, format: fmt, scale: "log" },
+  ctr: { title: "Click-through rate in September and October", noun: "Click-through rate", now: (s) => ctr(s.clicks, s.shown) * 100, before: (s) => ctr(s.clicksBefore, s.shownBefore) * 100, format: (value) => `${value.toFixed(2)}%`, scale: "linear" },
+};
+
+function WayFourSlopes() {
+  const [show, setShow] = useState("clicks");
+  const pick = SLOPE[show];
+  const lines: SlopeLine[] = NAMED.map((s) => {
+    const now = pick.now(s), before = pick.before(s);
+    const moved = show === "ctr" ? `${(now - before).toFixed(2)} points` : fmt(Math.abs(now - before));
+    return {
+      key: s.key,
+      name: s.name,
+      before,
+      now,
+      readout: [
+        { value: pick.format(before), label: `${pick.noun} in September` },
+        { value: pick.format(now), label: `${pick.noun} in October` },
+        { value: now === before ? "The same" : `${now > before ? "▲" : "▼"} ${show === "ctr" ? moved.replace("-", "") : moved}`, label: "Up or down" },
+      ],
+    };
+  });
+  return (
+    <MapCard
+      title={pick.title}
+      hint="Each line is a Classification, from September on the left to October on the right. Orange lines went up, and grey lines went down."
+      exportName="search-console-services-then-and-now"
+      csv={csv}
+      host={HOST}
+      controls={[{ kind: "select", key: "show", label: "Show", value: show, options: [{ value: "clicks", label: "Clicks" }, { value: "impressions", label: "Impressions" }, { value: "ctr", label: "Click-through rate" }], onChange: setShow }]}
+      under={<span className="text-[12px] text-secondary">Your {NAMED.length} Classifications. Pages not in one aren&apos;t drawn.</span>}
+    >
+      <SlopeChart lines={lines} beforeLabel="September" nowLabel="October" format={pick.format} scale={pick.scale} label={pick.title} />
+    </MapCard>
+  );
+}
+
+/** One service by name, as Live's Busiest page box writes one. */
+function NamedBox({ label, service, detail }: { label: string; service: Service; detail: string }) {
+  return <Figure named label={label} value={service.name} detail={<span className="text-secondary">{detail}</span>} />;
+}
+
+
+export function Way4() {
+  const busiest = [...NAMED].sort((a, b) => b.clicks - a.clicks)[0];
+  const gained = [...NAMED].sort((a, b) => (b.clicks - b.clicksBefore) - (a.clicks - a.clicksBefore))[0];
+  const lost = [...NAMED].sort((a, b) => (a.clicks - a.clicksBefore) - (b.clicks - b.clicksBefore))[0];
+  const more = NAMED.filter((s) => s.clicks > s.clicksBefore).length;
+  return (
+    <Page>
+      <FigureRow columns={4}>
+        <NamedBox label="Busiest Classification" service={busiest} detail={`${fmt(busiest.clicks)} clicks in October.`} />
+        <NamedBox label="Gained most clicks" service={gained} detail={`${fmt(gained.clicks - gained.clicksBefore)} more clicks than in September.`} />
+        <NamedBox label="Lost most clicks" service={lost} detail={`${fmt(lost.clicksBefore - lost.clicks)} fewer clicks than in September.`} />
+        <Figure label="Got more clicks" value={`${more} of ${NAMED.length}`} detail={<span className="text-secondary">{NAMED.length - more} of your Classifications got fewer clicks than in September.</span>} />
+      </FigureRow>
+      <WayFourSlopes />
+      <Table />
+    </Page>
+  );
+}
+
+export const WAYS = { Way1, Way2, Way3, Way4 };

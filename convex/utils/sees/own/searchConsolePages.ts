@@ -12,7 +12,7 @@ const PAGE_MOVED_LEAST = 5;
 const KIND_CLICKS_LEAST = 20;
 
 /** A page as the eye says it: its title, short, as the chart's key says it; else its address on the website; the home page in words. */
-function pageName(page: Row, names: Words): string {
+export function pageName(page: Row, names: Words): string {
   const key = String(page.key ?? "");
   let path = key;
   try {
@@ -26,10 +26,13 @@ function pageName(page: Row, names: Words): string {
 }
 
 /**
- * Pages (search-console-pages-way-1-plan-2026-11-17.md): every page Google showed in the dates chosen, every country's,
- * its four boxes and the pages ticked onto its chart. Every page's clicks against the span before's; how few pages got a
- * click, out of all Google showed, and how few make half of them; the pages that gained and lost most clicks, over the
- * whole list; the Classification with most clicks, and the one that moved most; and each page ticked onto the chart.
+ * Pages (search-console-pages-way-1-plan-2026-11-17.md): every page Google showed in the dates chosen, in the country chosen
+ * in the menu since 18 November 2026, its four boxes and the pages ticked onto its chart. Every page's clicks against the
+ * span before's; how few pages got a click, out of all Google showed, and how few make half of them; the pages that gained
+ * and lost most clicks, over the whole list; the Classification with most clicks, and the one that moved most; each page
+ * ticked onto the chart; and, once, how many of the country's clicks came from searches Google hides, which it ties to no
+ * page: why the boxes and the pages never add up, as Demand by Classification's eye says it. A share is of the clicks on the
+ * pages (`pageClicks`), never of the boxes' clicks.
  */
 export function pagesFindings(data: Row): OwnFound[] {
   const found: OwnFound[] = [];
@@ -61,8 +64,10 @@ export function pagesFindings(data: Row): OwnFound[] {
   const kindNames = isRow(names.kinds) ? names.kinds : {};
   const kinds = rowsOf(summary.kinds).filter((kind) => typeof kind.kind === "string" && typeof kindNames[kind.kind] === "string" && isNumber(kind.clicks));
   const busiest = [...kinds].sort((left, right) => (right.clicks as number) - (left.clicks as number))[0];
+  // Ranked above a page's own move since the gap joined the findings (18 November 2026): the table's Up or down shows a
+  // page's move, and nothing on the page shows a Classification's share.
   if (busiest && clicks !== null && clicks > 0 && (busiest.clicks as number) > 0) {
-    found.push(partOf("kind", kindNames[busiest.kind as string] as string, "clicks", busiest.clicks as number, clicks, 1.0 + Math.min(0.4, (busiest.clicks as number) / clicks)));
+    found.push(partOf("kind", kindNames[busiest.kind as string] as string, "pageClicks", busiest.clicks as number, clicks, 1.1 + Math.min(0.4, (busiest.clicks as number) / clicks)));
   }
   const kindMoved = kinds
     .filter((kind) => isNumber(kind.previousClicks) && fairBefore(kind.clicks as number, kind.previousClicks) && (kind.clicks as number) + kind.previousClicks >= KIND_CLICKS_LEAST
@@ -90,5 +95,12 @@ export function pagesFindings(data: Row): OwnFound[] {
     .sort((left, right) => Math.abs(changeOf(right.clicks as number, right.previousClicks as number)) - Math.abs(changeOf(left.clicks as number, left.previousClicks as number)));
   const most = ticked[0];
   if (most) found.push(moved("ticked", named(most)!, "clicks", most.clicks as number, most.previousClicks as number, 1.3 + Math.min(0.3, Math.abs(changeOf(most.clicks as number, most.previousClicks as number)) / 2)));
+  // The clicks Google tied to no page, said once: the country's clicks, the boxes', less its pages'. Ranked with the page's
+  // headlines, as Keywords' eye ranks it, so it's said on every period: why the boxes and the table never add up.
+  const website = isRow(data.website) ? data.website : null;
+  if (website && isNumber(website.clicks) && clicks !== null && website.clicks > clicks) {
+    const hidden = website.clicks - clicks;
+    found.push(partOf("hidden", text(names, "hidden", "Searches Google hides"), "clicks", hidden, website.clicks, 1.2 + Math.min(0.3, hidden / website.clicks / 2)));
+  }
   return found;
 }

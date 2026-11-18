@@ -1,0 +1,22 @@
+# Search Console → Demand by Classification — the approved look (board "Way2" of docs/plans/assets/search-console-demand-by-classification-way-2/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Classifications
+figures
+  figure: Clicks
+  figure: Impressions
+  figure: Click-through rate
+  figure: Average position
+chart-card: What Google shows, and what gets clicked
+filter: Show
+hundred-strips
+chart-card: Out of every # clicks
+filter: Show
+filter: Compare with
+hundred-grid
+search: Find a Classification…
+filter: Show
+table: Category | Shown | Up or down | Clicks | Up or down | Pages
+  table-bar
+    download: Download CSV
+  table-footer

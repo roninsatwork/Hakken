@@ -100,8 +100,9 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
     if (!resolved.ok) return { ok: false, problem: resolved.problem };
     const to = settledDay(Date.now(), resolved.newestDay);
     const from = shiftDay(to, -(TRIAL_DAYS - 1));
+    // Tried on every country's page figures, as the Watcher judges the alert (`targetDaysInternal`).
     const read = await input.ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, {
-      companyId: input.companyId, target: resolved.target, from, to,
+      companyId: input.companyId, target: resolved.target, from, to, countries: "EVERY",
     });
     if (!read.ok) return { ok: false, problem: read.problem };
 

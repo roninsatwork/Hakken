@@ -1,111 +1,170 @@
-import { v, type ObjectType } from "convex/values";
-import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
-import { requireMySite, type SiteReader } from "./siteAccess";
+import { v, type Infer } from "convex/values";
+import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { tenantAction, tenantQuery } from "./tenantFunctions";
+import { getActiveCompanyId } from "./authz";
+import { appError } from "./utils/appError";
+import { requireMySite } from "./siteAccess";
 import { checkedCountry } from "./searchConsoleCountries";
+import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
+import { beforeOf, historyLimitDay, periodOf } from "./searchConsoleDays";
 import { readPeriod } from "./searchConsolePeriodReads";
-import { classifyPages, readClassificationSetup } from "./pageClassifications";
-import { pagePath } from "./utils/siteShapes";
-import { calendarPeriodValidator } from "./utils/calendarPeriods";
+import { BookShelf } from "./searchConsolePeriodBooks";
+import { connectionOf } from "./searchConsoleListSources";
+import { checkedLongest } from "./searchConsoleLimits";
+import { factsFor } from "./searchConsoleFacts";
+import { readPageKinds } from "./pageKinds";
+import { pageKindsFrom, type PageKinds } from "./utils/pageKinds";
+import { fromGoogle } from "./utils/searchConsolePacks";
+import { GOOGLE_MOST_ROWS } from "./searchConsoleApi";
+import { demandOf, type DemandPage, type DemandRow } from "./utils/searchConsoleDemand";
+import { calendarPeriodValidator, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 
-/** The pages read to name and sort a website's pages: its pages, most clicks first. */
-const PAGES_READ = 900;
+/**
+ * Demand by Classification (search-console-demand-by-classification-way-2-plan-2026-11-18.md; the page was Demand by
+ * service until Anthony renamed it on the canvas, 18 November 2026): how often Google showed each of the website's
+ * Classifications in the country chosen, and the clicks they got, against the dates before. Its figures follow the
+ * country menu ("the country in scope"): the country's own pages, Google's country filter on, each sorted into its
+ * Classification by the rules every screen shares (`readPageKinds`), or by Hakken's page type until the website has
+ * any.
+ *
+ * The main home country's pages are kept by the collector for each ready-made period and its dates before
+ * (`countryPage`, `searchConsolePeriods.ts`). Another country, other dates, or a period not added up yet are asked of
+ * Google when chosen (`searchConsoleLiveDemand`): one ask for the dates and one for the dates before, 25,000 pages a
+ * request. Google leaves the searches it keeps private out of a country's pages, so their sum falls short of the
+ * country's clicks: the page shows the difference as Private searches, from the boxes' own figures.
+ */
 
-const serviceRow = v.object({
-  /** A classification's id; a service page's path; GUIDES; or OTHER. */
-  id: v.string(),
-  /** The classification's name or the service page's title; none for the guides and the rest, which the screen words. */
-  name: v.union(v.string(), v.null()),
-  kind: v.union(v.literal("CLASSIFICATION"), v.literal("SERVICE"), v.literal("GUIDES"), v.literal("OTHER")),
-  shown: v.number(),
-  shownBefore: v.union(v.number(), v.null()),
+const demandArgs = {
+  siteId: v.id("companyWebsites"),
+  from: v.string(),
+  to: v.string(),
+  period: v.optional(calendarPeriodValidator),
+  /** One of the website's home countries kept ready beside the main one, Google's code; missing for the main one. */
+  country: v.optional(v.string()),
+};
+
+const demandRow = v.object({
+  kind: v.string(),
   clicks: v.number(),
+  impressions: v.number(),
   clicksBefore: v.union(v.number(), v.null()),
+  impressionsBefore: v.union(v.number(), v.null()),
   pages: v.number(),
 });
 
-/**
- * Demand by service (docs/plans/active/insights-analyst-plan.md §4.4, phase 9,
- * drawn as the ScDemand board): how often Google showed the website for each
- * of its services in the dates chosen against the same days before, and what
- * buyers clicked — Search Console's own page list, each service page on its
- * own (a classification of service pages split into its services), then the
- * company's other page classifications; until it has any, Hakken's kinds of
- * page: each service page, the guides together, and the rest. Ready-made
- * periods only, for the main home country or a country kept ready.
- */
-const readDemandArgs = {
-    siteId: v.id("companyWebsites"),
-    period: calendarPeriodValidator,
-    country: v.optional(v.string()),
-  };
+const demandFigures = {
+  /** The days the pages count, as Google answered or the period was kept. */
+  from: v.string(),
+  to: v.string(),
+  /** Whether the dates before are held, so each Classification's move can be shown. */
+  comparable: v.boolean(),
+  rows: v.array(demandRow),
+};
 
+export type DemandAnswer = { from: string; to: string; comparable: boolean; rows: DemandRow[] };
+
+/** A page's Classification: its own, once the website has any; Hakken's page type, kept with it, until then. */
+const kindOfWith = (kinds: PageKinds | null) => (page: DemandPage) => (kinds ? kinds.kindOf(page.key) : page.kind || "UNJUDGED");
+
+/**
+ * The main home country's kept pages for a ready-made period, added up by Classification: the one read the screen and
+ * Ask Hakken both make. Null when they must be asked of Google: another country, other dates, or a period the collector
+ * hasn't added up yet.
+ */
+export async function readDemand(
+  ctx: { db: QueryCtx["db"] },
+  holdId: Id<"companyWebsites">,
+  args: { from: string; to: string; period?: CalendarPeriod; country?: string },
+): Promise<DemandAnswer | null> {
+  const country = checkedCountry(args.country);
+  const connection = await connectionOf(ctx, holdId);
+  if (!connection?.newestDay) return null;
+  // Only the main country's own pages are kept: an address naming it by its code reads them too.
+  if (country !== undefined && country !== connection.mainCountry) return null;
+  const period = periodOf(args.from, args.to, connection.newestDay, ukDay(), args.period);
+  if (!period) return null;
+  // The dates and the dates before of one build name one book of pages: read once (speed fixes, 18 November 2026).
+  const shelf = new BookShelf(ctx);
+  const now = await readPeriod(ctx, holdId, "web", "countryPage", period, "NOW", undefined, shelf);
+  if (!now) return null;
+  const before = await readPeriod(ctx, holdId, "web", "countryPage", period, "BEFORE", undefined, shelf);
+  const kinds = await readPageKinds(ctx, holdId);
+  return { from: now.from, to: now.to, comparable: before !== null, rows: demandOf(now.rows, before?.rows ?? null, kindOfWith(kinds)) };
+}
+
+/** The kept figures, or `live` when the page must ask Google (`searchConsoleLiveDemand`). */
 export const searchConsoleDemand = tenantQuery({
-  args: readDemandArgs,
-  returns: v.union(v.null(), v.object({
-    from: v.string(),
-    to: v.string(),
-    beforeFrom: v.union(v.string(), v.null()),
-    beforeTo: v.union(v.string(), v.null()),
-    classified: v.boolean(),
-    services: v.array(serviceRow),
-  })),
-  handler: async (ctx, args) => await readDemand(ctx, args),
+  args: demandArgs,
+  returns: v.union(v.object({ live: v.literal(true) }), v.object({ live: v.literal(false), ...demandFigures })),
+  handler: async (ctx, args) => {
+    checkedRange(args.from, args.to);
+    const site = await requireMySite(ctx, args.siteId);
+    const demand = await readDemand(ctx, site.hold._id, args);
+    return demand ? { live: false as const, ...demand } : { live: true as const };
+  },
 });
 
-/** Demand by service's figures: the one read the screen and Ask Hakken both make (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6). */
-export async function readDemand(ctx: SiteReader, args: ObjectType<typeof readDemandArgs>) {
-  const site = await requireMySite(ctx, args.siteId);
-  const holdId: Id<"companyWebsites"> = site.hold._id;
-  const country = checkedCountry(args.country);
-  const now = await readPeriod(ctx, holdId, "web", "page", args.period, "NOW", country);
-  if (!now) return null;
-  const before = await readPeriod(ctx, holdId, "web", "page", args.period, "BEFORE", country);
-  const held = await ctx.db.query("holdPages").withIndex("by_hold_clicks", (q) => q.eq("companyWebsiteId", holdId)).order("desc").take(PAGES_READ);
-  const byPath = new Map<string, Doc<"holdPages">>(held.map((page) => [page.page, page]));
-  const setup = await readClassificationSetup(ctx, holdId);
-  const classified = setup.classifications.length > 0;
-  const names = new Map<string, string>(setup.classifications.map((classification) => [classification._id, classification.name]));
-  // A classification of service pages is split into its services, a page each: "by service" means each one.
-  const services = new Set<string>(setup.classifications.filter((classification) => classification.type === "SERVICE").map((classification) => classification._id));
-  const paths = [...new Set([...now.rows, ...(before?.rows ?? [])].map((row) => pagePath(row.key)))];
-  const sortedPages = classified
-    ? new Map(classifyPages(setup, paths.map((path) => ({ page: path, clicks: 0, sitemapFile: byPath.get(path)?.sitemapFile }))).map((entry) => [entry.page, entry.result.classificationId]))
-    : null;
-  // Each page's service: its own page when it is one, its classification, the guides, or the rest.
-  const serviceOf = (path: string): { id: string; name: string | null; kind: "CLASSIFICATION" | "SERVICE" | "GUIDES" | "OTHER" } => {
-    const page = byPath.get(path);
-    if (sortedPages) {
-      const id = sortedPages.get(path) ?? null;
-      if (id && services.has(id)) return { id: path, name: page?.title ?? null, kind: "SERVICE" };
-      return id ? { id, name: names.get(id) ?? null, kind: "CLASSIFICATION" } : { id: "OTHER", name: null, kind: "OTHER" };
+const liveDemandAnswer = v.union(
+  v.object({
+    ok: v.literal(true),
+    ...demandFigures,
+    /**
+     * The dates' pages stopped at Google's most an ask (`GOOGLE_MOST_ROWS`), the fewest clicks left out: the table says so,
+     * as every list asked of Google (review fixes, 18 November 2026).
+     */
+    cut: v.optional(v.number()),
+  }),
+  v.object({ ok: v.literal(false), problem: v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY")) }),
+);
+
+/**
+ * The country's pages asked of Google, for the dates and the dates before at once, added up by Classification. The dates
+ * before are asked only where Google has figures for them (`googleHasDays`), and set against only where it answered.
+ * Without Classifications, a page's type is looked up for the pages with most clicks, up to the website's limit
+ * (`consoleLiveFactsRows`), as every live list of pages: the rest read as not judged yet.
+ */
+export const searchConsoleLiveDemand = tenantAction({
+  args: demandArgs,
+  returns: liveDemandAnswer,
+  handler: async (ctx, args): Promise<Infer<typeof liveDemandAnswer>> => {
+    checkedRange(args.from, args.to);
+    const country = checkedCountry(args.country);
+    const companyId = getActiveCompanyId(ctx.user);
+    if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
+    const target = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: "page" });
+    if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
+    checkedLongest(args.from, args.to, target.limits);
+    const before = beforeOf(args.from, args.to, args.period);
+    const beforeHeld: boolean = before.from >= historyLimitDay(Date.now())
+      && await ctx.runQuery(internal.searchConsoleSpans.googleHasDays, { companyId, siteId: args.siteId, from: before.from, to: before.to });
+    // The main country is filtered to by `askLive` itself, as every ask naming no country.
+    const ask = async (from: string, to: string) => await askLive(ctx, target, {
+      startDate: from,
+      endDate: to,
+      type: "web",
+      dimensions: ["page"],
+      ...(country ? { dimensionFilterGroups: [{ filters: countryFilters(country) }] } : {}),
+    });
+    const [now, earlier] = await Promise.all([ask(args.from, args.to), beforeHeld ? ask(before.from, before.to) : null]);
+    if (!now.ok) return now;
+    const pages: DemandPage[] = fromGoogle(now.rows, false);
+    const pagesBefore: DemandPage[] | null = earlier?.ok ? fromGoogle(earlier.rows, false) : null;
+    const kinds = target.pageKinds ? pageKindsFrom(target.pageKinds) : null;
+    if (!kinds && target.facts) {
+      const most = target.limits.liveFactsRows;
+      const busiest = (list: readonly DemandPage[]) => [...list].sort((left, right) => right.clicks - left.clicks).slice(0, most).map((page) => page.key);
+      // Each page's type alone: Demand shows no estimate (speed fixes, 18 November 2026).
+      const facts = await factsFor(ctx, target.facts, "page", [...new Set([...busiest(pages), ...busiest(pagesBefore ?? [])])], { kind: true, number: false });
+      for (const page of [...pages, ...(pagesBefore ?? [])]) {
+        const kind = facts.get(page.key)?.kind;
+        if (kind) page.kind = kind;
+      }
     }
-    if (page?.pageType === "SERVICE" || page?.pageType === "HOME" || path === "/") return { id: path, name: page?.title ?? null, kind: "SERVICE" };
-    if (page?.pageType === "ARTICLE") return { id: "GUIDES", name: null, kind: "GUIDES" };
-    return { id: "OTHER", name: null, kind: "OTHER" };
-  };
-  const rows = new Map<string, typeof serviceRow.type>();
-  const add = (key: string, shown: number, clicks: number, which: "now" | "before") => {
-    const service = serviceOf(pagePath(key));
-    const entry = rows.get(service.id) ?? { ...service, shown: 0, shownBefore: before ? 0 : null, clicks: 0, clicksBefore: before ? 0 : null, pages: 0 };
-    if (which === "now") {
-      entry.shown += shown;
-      entry.clicks += clicks;
-      entry.pages += 1;
-    } else {
-      entry.shownBefore = (entry.shownBefore ?? 0) + shown;
-      entry.clicksBefore = (entry.clicksBefore ?? 0) + clicks;
-    }
-    rows.set(service.id, entry);
-  };
-  for (const row of now.rows) add(row.key, row.impressions, row.clicks, "now");
-  for (const row of before?.rows ?? []) add(row.key, row.impressions, row.clicks, "before");
-  return {
-    from: now.from,
-    to: now.to,
-    beforeFrom: before?.from ?? null,
-    beforeTo: before?.to ?? null,
-    classified,
-    services: [...rows.values()].sort((a, b) => b.shown - a.shown),
-  };
-}
+    return {
+      ok: true as const, from: args.from, to: args.to, comparable: pagesBefore !== null, rows: demandOf(pages, pagesBefore, kindOfWith(kinds)),
+      ...(now.rows.length >= GOOGLE_MOST_ROWS ? { cut: GOOGLE_MOST_ROWS } : {}),
+    };
+  },
+});

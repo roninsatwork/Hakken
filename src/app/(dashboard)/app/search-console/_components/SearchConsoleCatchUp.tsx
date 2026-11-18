@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { readOnly } from "@/src/lib/leaveWarning";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -29,7 +30,8 @@ export function SearchConsoleCatchUp({ siteId, newestDay }: { siteId: Id<"compan
   const behind = state?.behind === true;
   useEffect(() => {
     // Asked once for these dates; the server asks for the work at most once in ten minutes whoever else is looking.
-    if (behind) request({ siteId, from: range.from, to: range.to, ...(period ? { period } : {}) }).catch(() => undefined);
+    // Bookkeeping, not a person's change: leaving while it's on its way never asks "Leave site?" (`readOnly`).
+    if (behind) readOnly(request({ siteId, from: range.from, to: range.to, ...(period ? { period } : {}) }), "mutation").catch(() => undefined);
   }, [behind, request, siteId, range.from, range.to, period]);
   if (!state?.behind || !state.heldTo || !state.newest) return null;
   const share = state.progress && state.progress.parts > 0 ? state.progress.done / state.progress.parts : 0;

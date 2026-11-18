@@ -1,0 +1,871 @@
+{
+ "recorded": "2026-11-18",
+ "about": "More Handles' United Kingdom on 18 November 2026: each period's pages by Classification, asked of Google once (searchConsoleLiveDemand), and the United Kingdom's own figures (searchConsolePerformance). Google's newest day was Monday 16 November.",
+ "kindNames": {
+  "wd7pt18wktvq97zt56hzk0v9xx8fp3cw": "Blog",
+  "wd7tn09d1q10x9jb132wqgdren8fpaar": "Brand",
+  "wd7v4vfhvptptqywkbhj0xasj98fqh3z": "Buy By Brand",
+  "wd7gypktgn56xbm5mnfn18nzpd8fpe7y": "Cupboard Handles",
+  "wd7rpxcppd92vnfm3bekvjw96s8fqk2s": "Door Knobs",
+  "wd7zysd1g7vd5gemq1e6csdesd8gdh2s": "Electrical",
+  "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3": "Handles",
+  "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4": "Hinges",
+  "wd7skb9qz4tsn4np0jzemv70b18gcspx": "Lighting",
+  "wd7vq3bf1scmtd2nydqagshzfs8fq789": "Locks",
+  "wd7pkyx3k3fhj5v26wcbynr8818fpeg3": "Other Ironmongery",
+  "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm": "Window Furniture"
+ },
+ "periods": {
+  "thisWeek": {
+   "from": "2026-11-16",
+   "to": "2026-11-16",
+   "comparable": true,
+   "rows": [
+    {
+     "clicks": 11,
+     "clicksBefore": 11,
+     "impressions": 5115,
+     "impressionsBefore": 4550,
+     "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+     "pages": 208
+    },
+    {
+     "clicks": 12,
+     "clicksBefore": 10,
+     "impressions": 4266,
+     "impressionsBefore": 3453,
+     "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+     "pages": 395
+    },
+    {
+     "clicks": 5,
+     "clicksBefore": 8,
+     "impressions": 3465,
+     "impressionsBefore": 2934,
+     "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+     "pages": 83
+    },
+    {
+     "clicks": 3,
+     "clicksBefore": 2,
+     "impressions": 2886,
+     "impressionsBefore": 1986,
+     "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+     "pages": 242
+    },
+    {
+     "clicks": 7,
+     "clicksBefore": 3,
+     "impressions": 2587,
+     "impressionsBefore": 2020,
+     "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+     "pages": 118
+    },
+    {
+     "clicks": 0,
+     "clicksBefore": 1,
+     "impressions": 2456,
+     "impressionsBefore": 1518,
+     "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+     "pages": 259
+    },
+    {
+     "clicks": 4,
+     "clicksBefore": 4,
+     "impressions": 2382,
+     "impressionsBefore": 1948,
+     "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+     "pages": 138
+    },
+    {
+     "clicks": 1,
+     "clicksBefore": 1,
+     "impressions": 1875,
+     "impressionsBefore": 1421,
+     "kind": "NOT_SORTED",
+     "pages": 466
+    },
+    {
+     "clicks": 3,
+     "clicksBefore": 4,
+     "impressions": 1525,
+     "impressionsBefore": 1048,
+     "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+     "pages": 140
+    },
+    {
+     "clicks": 0,
+     "clicksBefore": 0,
+     "impressions": 1095,
+     "impressionsBefore": 970,
+     "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+     "pages": 134
+    },
+    {
+     "clicks": 8,
+     "clicksBefore": 8,
+     "impressions": 871,
+     "impressionsBefore": 804,
+     "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+     "pages": 10
+    },
+    {
+     "clicks": 0,
+     "clicksBefore": 0,
+     "impressions": 589,
+     "impressionsBefore": 549,
+     "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+     "pages": 280
+    },
+    {
+     "clicks": 0,
+     "clicksBefore": 0,
+     "impressions": 84,
+     "impressionsBefore": 85,
+     "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+     "pages": 31
+    }
+   ],
+   "totals": {
+    "clicks": 231,
+    "impressions": 37768,
+    "ctr": 0.006116288921838593,
+    "position": 14.554517051472146
+   },
+   "previous": {
+    "clicks": 236,
+    "impressions": 29366,
+    "ctr": 0.008036504801471089,
+    "position": 12.995539058775455
+   }
+  },
+  "lastWeek": {
+   "from": "2026-11-09",
+   "to": "2026-11-15",
+   "comparable": true,
+   "rows": [
+    {
+     "clicks": 97,
+     "clicksBefore": 86,
+     "impressions": 34096,
+     "impressionsBefore": 30901,
+     "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+     "pages": 344
+    },
+    {
+     "clicks": 60,
+     "clicksBefore": 43,
+     "impressions": 26329,
+     "impressionsBefore": 24540,
+     "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+     "pages": 649
+    },
+    {
+     "clicks": 67,
+     "clicksBefore": 65,
+     "impressions": 21263,
+     "impressionsBefore": 18172,
+     "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+     "pages": 97
+    },
+    {
+     "clicks": 35,
+     "clicksBefore": 44,
+     "impressions": 15881,
+     "impressionsBefore": 13964,
+     "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+     "pages": 416
+    },
+    {
+     "clicks": 24,
+     "clicksBefore": 38,
+     "impressions": 15515,
+     "impressionsBefore": 13629,
+     "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+     "pages": 171
+    },
+    {
+     "clicks": 25,
+     "clicksBefore": 62,
+     "impressions": 13703,
+     "impressionsBefore": 12967,
+     "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+     "pages": 173
+    },
+    {
+     "clicks": 13,
+     "clicksBefore": 14,
+     "impressions": 12122,
+     "impressionsBefore": 12175,
+     "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+     "pages": 377
+    },
+    {
+     "clicks": 4,
+     "clicksBefore": 13,
+     "impressions": 10293,
+     "impressionsBefore": 10005,
+     "kind": "NOT_SORTED",
+     "pages": 887
+    },
+    {
+     "clicks": 12,
+     "clicksBefore": 6,
+     "impressions": 8806,
+     "impressionsBefore": 9065,
+     "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+     "pages": 224
+    },
+    {
+     "clicks": 4,
+     "clicksBefore": 9,
+     "impressions": 6843,
+     "impressionsBefore": 6938,
+     "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+     "pages": 180
+    },
+    {
+     "clicks": 50,
+     "clicksBefore": 91,
+     "impressions": 5771,
+     "impressionsBefore": 6213,
+     "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+     "pages": 15
+    },
+    {
+     "clicks": 1,
+     "clicksBefore": 2,
+     "impressions": 4538,
+     "impressionsBefore": 4437,
+     "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+     "pages": 567
+    },
+    {
+     "clicks": 1,
+     "clicksBefore": 1,
+     "impressions": 557,
+     "impressionsBefore": 463,
+     "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+     "pages": 71
+    }
+   ],
+   "totals": {
+    "clicks": 1401,
+    "impressions": 212174,
+    "ctr": 0.006603071064315138,
+    "position": 13.527274783903778
+   },
+   "previous": {
+    "clicks": 1462,
+    "impressions": 194171,
+    "ctr": 0.007529445694774194,
+    "position": 14.322720694645442
+   }
+  },
+  "thisMonth": {
+   "from": "2026-11-01",
+   "to": "2026-11-16",
+   "comparable": true,
+   "rows": [
+    {
+     "clicks": 213,
+     "clicksBefore": 241,
+     "impressions": 74027,
+     "impressionsBefore": 56743,
+     "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+     "pages": 443
+    },
+    {
+     "clicks": 121,
+     "clicksBefore": 149,
+     "impressions": 58046,
+     "impressionsBefore": 41555,
+     "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+     "pages": 849
+    },
+    {
+     "clicks": 148,
+     "clicksBefore": 160,
+     "impressions": 45039,
+     "impressionsBefore": 32935,
+     "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+     "pages": 101
+    },
+    {
+     "clicks": 88,
+     "clicksBefore": 51,
+     "impressions": 34287,
+     "impressionsBefore": 25139,
+     "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+     "pages": 534
+    },
+    {
+     "clicks": 76,
+     "clicksBefore": 84,
+     "impressions": 33839,
+     "impressionsBefore": 25232,
+     "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+     "pages": 211
+    },
+    {
+     "clicks": 111,
+     "clicksBefore": 75,
+     "impressions": 30357,
+     "impressionsBefore": 25651,
+     "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+     "pages": 184
+    },
+    {
+     "clicks": 28,
+     "clicksBefore": 47,
+     "impressions": 28150,
+     "impressionsBefore": 17449,
+     "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+     "pages": 490
+    },
+    {
+     "clicks": 18,
+     "clicksBefore": 25,
+     "impressions": 23279,
+     "impressionsBefore": 10232,
+     "kind": "NOT_SORTED",
+     "pages": 1154
+    },
+    {
+     "clicks": 23,
+     "clicksBefore": 35,
+     "impressions": 20630,
+     "impressionsBefore": 14205,
+     "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+     "pages": 288
+    },
+    {
+     "clicks": 13,
+     "clicksBefore": 15,
+     "impressions": 15742,
+     "impressionsBefore": 8578,
+     "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+     "pages": 213
+    },
+    {
+     "clicks": 153,
+     "clicksBefore": 123,
+     "impressions": 13559,
+     "impressionsBefore": 12046,
+     "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+     "pages": 16
+    },
+    {
+     "clicks": 3,
+     "clicksBefore": 1,
+     "impressions": 10151,
+     "impressionsBefore": 3456,
+     "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+     "pages": 650
+    },
+    {
+     "clicks": 2,
+     "clicksBefore": 2,
+     "impressions": 1152,
+     "impressionsBefore": 1190,
+     "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+     "pages": 83
+    }
+   ],
+   "totals": {
+    "clicks": 3321,
+    "impressions": 468797,
+    "ctr": 0.007084089701939219,
+    "position": 13.914227266812714
+   },
+   "previous": {
+    "clicks": 3692,
+    "impressions": 414231,
+    "ctr": 0.008912901255579616,
+    "position": 11.396039890785577
+   }
+  },
+  "lastMonth": {
+   "from": "2026-10-01",
+   "to": "2026-10-31",
+   "comparable": true,
+   "rows": [
+    {
+     "clicks": 462,
+     "clicksBefore": 595,
+     "impressions": 120229,
+     "impressionsBefore": 116245,
+     "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+     "pages": 636
+    },
+    {
+     "clicks": 282,
+     "clicksBefore": 305,
+     "impressions": 91451,
+     "impressionsBefore": 79892,
+     "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+     "pages": 1148
+    },
+    {
+     "clicks": 327,
+     "clicksBefore": 321,
+     "impressions": 66149,
+     "impressionsBefore": 58350,
+     "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+     "pages": 110
+    },
+    {
+     "clicks": 108,
+     "clicksBefore": 111,
+     "impressions": 54635,
+     "impressionsBefore": 46937,
+     "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+     "pages": 699
+    },
+    {
+     "clicks": 141,
+     "clicksBefore": 153,
+     "impressions": 53273,
+     "impressionsBefore": 50929,
+     "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+     "pages": 258
+    },
+    {
+     "clicks": 142,
+     "clicksBefore": 173,
+     "impressions": 52062,
+     "impressionsBefore": 48698,
+     "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+     "pages": 195
+    },
+    {
+     "clicks": 69,
+     "clicksBefore": 69,
+     "impressions": 40479,
+     "impressionsBefore": 32136,
+     "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+     "pages": 642
+    },
+    {
+     "clicks": 64,
+     "clicksBefore": 67,
+     "impressions": 32553,
+     "impressionsBefore": 30541,
+     "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+     "pages": 342
+    },
+    {
+     "clicks": 56,
+     "clicksBefore": 39,
+     "impressions": 25340,
+     "impressionsBefore": 20893,
+     "kind": "NOT_SORTED",
+     "pages": 1401
+    },
+    {
+     "clicks": 258,
+     "clicksBefore": 212,
+     "impressions": 24022,
+     "impressionsBefore": 24945,
+     "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+     "pages": 16
+    },
+    {
+     "clicks": 31,
+     "clicksBefore": 28,
+     "impressions": 20249,
+     "impressionsBefore": 16959,
+     "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+     "pages": 258
+    },
+    {
+     "clicks": 3,
+     "clicksBefore": 5,
+     "impressions": 9576,
+     "impressionsBefore": 6431,
+     "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+     "pages": 630
+    },
+    {
+     "clicks": 3,
+     "clicksBefore": 4,
+     "impressions": 1919,
+     "impressionsBefore": 2340,
+     "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+     "pages": 104
+    }
+   ],
+   "totals": {
+    "clicks": 7124,
+    "impressions": 842984,
+    "ctr": 0.008450931453028764,
+    "position": 12.158704079792736
+   },
+   "previous": {
+    "clicks": 7518,
+    "impressions": 821376,
+    "ctr": 0.009152933613838243,
+    "position": 11.674660569580801
+   }
+  },
+  "last3Months": {
+   "from": "2026-08-17",
+   "to": "2026-11-16",
+   "comparable": true,
+   "rows": [
+    {
+     "clicks": 1590,
+     "clicksBefore": 1846,
+     "impressions": 377118,
+     "impressionsBefore": 456958,
+     "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+     "pages": 1100
+    },
+    {
+     "clicks": 901,
+     "clicksBefore": 1016,
+     "impressions": 276694,
+     "impressionsBefore": 307222,
+     "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+     "pages": 1847
+    },
+    {
+     "clicks": 970,
+     "clicksBefore": 1039,
+     "impressions": 202021,
+     "impressionsBefore": 181331,
+     "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+     "pages": 141
+    },
+    {
+     "clicks": 442,
+     "clicksBefore": 362,
+     "impressions": 163638,
+     "impressionsBefore": 128054,
+     "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+     "pages": 358
+    },
+    {
+     "clicks": 365,
+     "clicksBefore": 334,
+     "impressions": 163605,
+     "impressionsBefore": 177724,
+     "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+     "pages": 1144
+    },
+    {
+     "clicks": 586,
+     "clicksBefore": 554,
+     "impressions": 162102,
+     "impressionsBefore": 172083,
+     "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+     "pages": 264
+    },
+    {
+     "clicks": 214,
+     "clicksBefore": 202,
+     "impressions": 119560,
+     "impressionsBefore": 131172,
+     "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+     "pages": 1026
+    },
+    {
+     "clicks": 193,
+     "clicksBefore": 290,
+     "impressions": 99714,
+     "impressionsBefore": 121968,
+     "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+     "pages": 520
+    },
+    {
+     "clicks": 130,
+     "clicksBefore": 87,
+     "impressions": 82332,
+     "impressionsBefore": 69390,
+     "kind": "NOT_SORTED",
+     "pages": 2247
+    },
+    {
+     "clicks": 741,
+     "clicksBefore": 844,
+     "impressions": 74454,
+     "impressionsBefore": 74238,
+     "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+     "pages": 17
+    },
+    {
+     "clicks": 99,
+     "clicksBefore": 125,
+     "impressions": 65252,
+     "impressionsBefore": 71115,
+     "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+     "pages": 397
+    },
+    {
+     "clicks": 11,
+     "clicksBefore": 4,
+     "impressions": 29688,
+     "impressionsBefore": 19985,
+     "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+     "pages": 899
+    },
+    {
+     "clicks": 14,
+     "clicksBefore": 15,
+     "impressions": 6555,
+     "impressionsBefore": 9092,
+     "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+     "pages": 146
+    }
+   ],
+   "totals": {
+    "clicks": 22121,
+    "impressions": 2593707,
+    "ctr": 0.00852871970503993,
+    "position": 12.33550705611698
+   },
+   "previous": {
+    "clicks": 23394,
+    "impressions": 2706781,
+    "ctr": 0.008642738367086218,
+    "position": 12.951791814705365
+   }
+  },
+  "last6Months": {
+   "from": "2026-05-17",
+   "to": "2026-11-16",
+   "comparable": false,
+   "rows": [
+    {
+     "clicks": 3436,
+     "clicksBefore": null,
+     "impressions": 834076,
+     "impressionsBefore": null,
+     "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+     "pages": 1359
+    },
+    {
+     "clicks": 1917,
+     "clicksBefore": null,
+     "impressions": 583916,
+     "impressionsBefore": null,
+     "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+     "pages": 2272
+    },
+    {
+     "clicks": 2009,
+     "clicksBefore": null,
+     "impressions": 383352,
+     "impressionsBefore": null,
+     "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+     "pages": 141
+    },
+    {
+     "clicks": 699,
+     "clicksBefore": null,
+     "impressions": 341329,
+     "impressionsBefore": null,
+     "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+     "pages": 1464
+    },
+    {
+     "clicks": 1140,
+     "clicksBefore": null,
+     "impressions": 334185,
+     "impressionsBefore": null,
+     "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+     "pages": 304
+    },
+    {
+     "clicks": 804,
+     "clicksBefore": null,
+     "impressions": 291692,
+     "impressionsBefore": null,
+     "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+     "pages": 396
+    },
+    {
+     "clicks": 416,
+     "clicksBefore": null,
+     "impressions": 250732,
+     "impressionsBefore": null,
+     "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+     "pages": 1242
+    },
+    {
+     "clicks": 483,
+     "clicksBefore": null,
+     "impressions": 221682,
+     "impressionsBefore": null,
+     "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+     "pages": 650
+    },
+    {
+     "clicks": 217,
+     "clicksBefore": null,
+     "impressions": 151722,
+     "impressionsBefore": null,
+     "kind": "NOT_SORTED",
+     "pages": 2856
+    },
+    {
+     "clicks": 1585,
+     "clicksBefore": null,
+     "impressions": 148692,
+     "impressionsBefore": null,
+     "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+     "pages": 18
+    },
+    {
+     "clicks": 224,
+     "clicksBefore": null,
+     "impressions": 136367,
+     "impressionsBefore": null,
+     "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+     "pages": 471
+    },
+    {
+     "clicks": 15,
+     "clicksBefore": null,
+     "impressions": 49673,
+     "impressionsBefore": null,
+     "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+     "pages": 1027
+    },
+    {
+     "clicks": 29,
+     "clicksBefore": null,
+     "impressions": 15647,
+     "impressionsBefore": null,
+     "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+     "pages": 152
+    }
+   ],
+   "totals": {
+    "clicks": 45515,
+    "impressions": 5300488,
+    "ctr": 0.008586945202026682,
+    "position": 12.650222960602873
+   },
+   "previous": null
+  },
+  "last12Months": {
+   "from": "2025-11-17",
+   "to": "2026-11-16",
+   "comparable": false,
+   "rows": [
+    {
+     "clicks": 3986,
+     "clicksBefore": null,
+     "impressions": 979996,
+     "impressionsBefore": null,
+     "kind": "wd7gypktgn56xbm5mnfn18nzpd8fpe7y",
+     "pages": 1425
+    },
+    {
+     "clicks": 2265,
+     "clicksBefore": null,
+     "impressions": 684974,
+     "impressionsBefore": null,
+     "kind": "wd7g22xtmm8vbey36yt0yq2qmn8fpzq3",
+     "pages": 2352
+    },
+    {
+     "clicks": 2315,
+     "clicksBefore": null,
+     "impressions": 431443,
+     "impressionsBefore": null,
+     "kind": "wd7pt18wktvq97zt56hzk0v9xx8fp3cw",
+     "pages": 142
+    },
+    {
+     "clicks": 791,
+     "clicksBefore": null,
+     "impressions": 389228,
+     "impressionsBefore": null,
+     "kind": "wd7pkyx3k3fhj5v26wcbynr8818fpeg3",
+     "pages": 1548
+    },
+    {
+     "clicks": 1321,
+     "clicksBefore": null,
+     "impressions": 388706,
+     "impressionsBefore": null,
+     "kind": "wd7v4vfhvptptqywkbhj0xasj98fqh3z",
+     "pages": 307
+    },
+    {
+     "clicks": 975,
+     "clicksBefore": null,
+     "impressions": 332317,
+     "impressionsBefore": null,
+     "kind": "wd7rpxcppd92vnfm3bekvjw96s8fqk2s",
+     "pages": 415
+    },
+    {
+     "clicks": 490,
+     "clicksBefore": null,
+     "impressions": 284940,
+     "impressionsBefore": null,
+     "kind": "wd7vq3bf1scmtd2nydqagshzfs8fq789",
+     "pages": 1290
+    },
+    {
+     "clicks": 589,
+     "clicksBefore": null,
+     "impressions": 261681,
+     "impressionsBefore": null,
+     "kind": "wd7g7tmxj10hpm1gcrpxwfgdbs8fq3e4",
+     "pages": 703
+    },
+    {
+     "clicks": 246,
+     "clicksBefore": null,
+     "impressions": 172861,
+     "impressionsBefore": null,
+     "kind": "NOT_SORTED",
+     "pages": 3123
+    },
+    {
+     "clicks": 1794,
+     "clicksBefore": null,
+     "impressions": 171272,
+     "impressionsBefore": null,
+     "kind": "wd7tn09d1q10x9jb132wqgdren8fpaar",
+     "pages": 18
+    },
+    {
+     "clicks": 248,
+     "clicksBefore": null,
+     "impressions": 155875,
+     "impressionsBefore": null,
+     "kind": "wd7j8x3m6zjrw1r64rgk5prfqx8fprjm",
+     "pages": 490
+    },
+    {
+     "clicks": 18,
+     "clicksBefore": null,
+     "impressions": 52617,
+     "impressionsBefore": null,
+     "kind": "wd7zysd1g7vd5gemq1e6csdesd8gdh2s",
+     "pages": 1038
+    },
+    {
+     "clicks": 31,
+     "clicksBefore": null,
+     "impressions": 17726,
+     "impressionsBefore": null,
+     "kind": "wd7skb9qz4tsn4np0jzemv70b18gcspx",
+     "pages": 154
+    }
+   ],
+   "totals": {
+    "clicks": 52289,
+    "impressions": 6096027,
+    "ctr": 0.008577553872382782,
+    "position": 12.68792641502408
+   },
+   "previous": null
+  }
+ }
+}

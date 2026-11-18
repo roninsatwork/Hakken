@@ -1,0 +1,16 @@
+# Search Console → Indexing — the approved look (board "V1Summary" of docs/plans/assets/search-console-indexing-v1/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Indexing
+figures
+  figure: Not indexed
+  figure: Indexed
+  figure: URL is unknown to Google
+  figure: Clicks on pages not indexed
+chart-card: Pages not indexed each day
+filter: Show
+search: Search reasons…
+table: Reason | Source | Pages | Clicks | Shown | Crawled
+  table-bar: Why pages aren't indexed
+    download: Download all (CSV)
+  table-footer

@@ -120,6 +120,13 @@ passed — `verify:env`, `lint:all`, `check` (6,430 tests), `test:coverage`,
 country read as all countries from 75% (B: "the UK searches are 50% of all
 countries for ronins").
 
+**D superseded — 18 November 2026.** Anthony dropped D ("You do it", to
+"keep every search in the kept lists"). Judged day by day, it left More
+Handles' Keywords for October at 26,652 keywords where Google, asked for the
+same days, gave 30,962. Every search is kept again, the days kept were asked
+of Google again for their searches, and the periods were built again. A, C,
+E, F and G stand. The record is PRODUCT.md's change log for 18 November 2026.
+
 ## Cost review, first items — built 2026-10-05 (night), and the next
 
 Agreed by Anthony on 2026-10-05 from the list of better ways ("lets do 1 and

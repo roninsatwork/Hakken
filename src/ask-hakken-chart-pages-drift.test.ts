@@ -30,16 +30,19 @@ const STILL_TO_DO = new Set([
   // Search Console's list screens outside the plan's ten.
   // Keywords left on 17 November 2026 with its redo (search-console-keywords-way-2-plan-2026-11-17.md), and Pages the same
   // day with its own (search-console-pages-way-1-plan-2026-11-17.md).
-  "searchConsole.record", "searchConsole.almost", "searchConsole.places",
-  "searchConsole.indexing", "searchConsole.demand", "searchConsole.competing", "searchConsole.estimates", "searchConsole.appearance",
-  "searchConsole.lowCtr", "searchConsole.trackedKeywords", "searchConsole.trackedPages", "searchConsole.types", "searchConsole.moves",
+  // Countries and devices left on 18 November 2026 with its redo (search-console-countries-and-devices-way-1-plan-2026-11-18.md),
+  // and Indexing the same day with its own (search-console-indexing-v1-plan-2026-11-18.md). Tracked keywords and Tracked pages
+  // left the same day with theirs (search-console-tracked-way-1-plan-2026-11-18.md).
+  "searchConsole.record", "searchConsole.almost",
+  "searchConsole.demand", "searchConsole.competing", "searchConsole.estimates", "searchConsole.appearance",
+  "searchConsole.lowCtr", "searchConsole.types", "searchConsole.moves",
   // Visibility's screens outside the plan's thirty-one.
   "visibility.keywordsBandsMoved", "visibility.pageRecord", "visibility.yourPages", "visibility.paidKeywords",
   // Insights' screens outside the plan's twenty.
   "insights.trackRecord", "insights.experiments", "insights.findingsSection", "insights.strategyService",
 ]);
 /** The list's size: lower it as pages leave, never raise it. */
-const STILL_TO_DO_MOST = 27;
+const STILL_TO_DO_MOST = 23;
 
 /**
  * Pages that show no one website's own figures, and so carry no eye (Anthony, 2026-11-03: "We dont need the eye on non

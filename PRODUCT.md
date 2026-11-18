@@ -817,6 +817,31 @@ running against the Sonae deployment.
 
 ## Change Log
 
+* **2026-11-18 (Search Console)** — **Every search kept: the keep rule is
+  gone.** Anthony chose it on 18 November 2026 ("You do it", to "keep every
+  search in the kept lists"). Since 5 October (finish-off plan, store less
+  round two, D) the collector had dropped a search's daily lines when it got
+  no click, ranked below place 20 and was shown for one of the website's
+  pages: about one line in nine. It was judged day by day, which a period
+  asked of Google can't repeat, so the kept lists never matched Google's own
+  answer for the same days. More Handles' Keywords for October showed 26,652
+  keywords where Google, asked for 1 to 31 October, gave 30,962, with the
+  same 1,946 clicks. Now every search's lines are kept, in the nightly
+  collection and in the long periods, and the tidy takes none. The 60 days
+  kept were asked of Google again for their searches
+  (`searchConsolePageRefetch:refetchPairs`) and each website's periods built
+  again. One limit is left, a guard on a job's memory (`MOST_PAIRS_HELD`,
+  400,000 searches by page in one long period): past it the searches shown
+  least go first, never one clicked or tracked, and the run's log and every
+  Search Console screen say how many. No website has reached it. On dev,
+  October's keywords now equal Google's own count of searches for the month:
+  More Handles 31,538 (was 26,652), ronins.co.uk 9,951 (was 7,390),
+  kordatackle.com 20,368 (was 15,877), with the same clicks. What Convex
+  stores for each, measured by `searchConsoleTidy:keptSize`: More Handles
+  59.0 MB to 59.5 MB, ronins.co.uk 8.8 MB to 11.7 MB, kordatackle.com
+  30.5 MB to 34.2 MB. Conterra and NEC were asked again the same evening;
+  Hurtwood House waits for its connection to be made again.
+
 * **2026-10-11 (Menu names)** — **Built: Visibility and Reading room.**
   docs/plans/active/menu-names-plan.md: the DataForSEO section, Discovery,
   is renamed Visibility (the supplier cannot be named, and "Discovery" is

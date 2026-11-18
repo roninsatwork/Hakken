@@ -1,0 +1,466 @@
+// Three ways to draw Search Console → Countries and devices, from the app's real parts, on More Handles' real figures:
+// October 2026 against September, every country (countries) and the United Kingdom (devices, as the app holds them).
+// Every chart's menus and the tables' search, sorting, pages and ticks work when the board is played. Nothing here is built.
+import { useMemo, useState, type ReactNode } from "react";
+import { MapPin, Monitor } from "lucide-react";
+import DATA from "../data/board.json";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { Change, ChangeLine } from "@/src/ui/components/screens/Change";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
+import { HundredGrid, type HundredGroup } from "@/src/ui/components/screens/HundredGrid";
+import { HundredStrips, stripColour, type StripSegment } from "@/src/ui/components/screens/HundredStrips";
+import { DotGroups, type DotGroupKey } from "@/src/ui/components/screens/DotGroups";
+import { ChangeBars, type ChangeBar } from "@/src/ui/components/screens/ChangeBars";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { tickColumn, TickActions, TickCount, type TableTicks } from "@/src/ui/components/screens/TableTicks";
+import { CHART_COMPARATOR_GREY, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
+import { outOfTotal } from "@/convex/utils/outOfTotal";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { CUT_COLUMN } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
+import { formatNumber, toCsv } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
+import { useSitePager } from "@/src/app/(dashboard)/app/sites/_components/useSitePagedTable";
+import { useSiteSearch, tableKey } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
+import { useSiteSortedList, type SiteSortColumns } from "@/src/app/(dashboard)/app/sites/_components/useSiteSort";
+import { SiteViewSwitch } from "@/src/app/(dashboard)/app/sites/_components/SiteViewSwitch";
+import { PLOTTED_COLOURS } from "@/src/app/(dashboard)/app/analytics/_components/AllPagesParts";
+import { countryName } from "@/src/app/(dashboard)/app/search-console/_components/countries";
+import { formatPosition, formatRate } from "@/src/app/(dashboard)/app/search-console/_components/searchConsoleFormat";
+import { everyDay, lineOf } from "@/src/app/(dashboard)/app/search-console/_components/PerformanceParts";
+
+export const SITE = "gs7s64z25gddkrkcarvpfjxw7x8fqkwn";
+export const PATH = `/app/search-console/${SITE}/countries-and-devices`;
+const HOST = "morehandles.co.uk";
+const NOW = "October";
+const BEFORE = "September";
+const HOME = "United Kingdom";
+const fmt = formatNumber;
+const oneDecimal = (value: number) => formatPosition(Math.round(value * 10) / 10);
+const per100 = (part: number, whole: number) => (whole > 0 ? (100 * part) / whole : 0);
+const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
+
+// ——— The figures ———
+
+type Day = { day: string; clicks: number; impressions: number; ctr: number; position: number };
+type Row = { key: string; name: string; clicks: number; impressions: number; ctr: number; position: number; clicksBefore: number; impressionsBefore: number; isNew: boolean };
+const DEVICE_NAMES: Record<string, string> = { MOBILE: "Mobile", DESKTOP: "Desktop", TABLET: "Tablet" };
+const ALL_COUNTRIES: Row[] = DATA.countries.map((c) => ({
+  key: c.key,
+  name: countryName(c.key, "en") ?? "Unknown",
+  clicks: c.clicks,
+  impressions: c.impressions,
+  ctr: c.impressions > 0 ? c.clicks / c.impressions : 0,
+  position: c.position ?? 0,
+  clicksBefore: c.clicksBefore,
+  impressionsBefore: c.impressionsBefore,
+  isNew: c.clicksBefore === 0 && c.impressionsBefore === 0,
+}));
+/** The countries Google showed the website in, in October: the table's rows. */
+const COUNTRIES = ALL_COUNTRIES.filter((c) => c.impressions > 0);
+const DEVICES: Row[] = DATA.devices.map((d) => ({
+  key: d.key, name: DEVICE_NAMES[d.key] ?? d.key, clicks: d.clicks, impressions: d.impressions, ctr: d.impressions > 0 ? d.clicks / d.impressions : 0,
+  position: d.position, clicksBefore: d.clicksBefore, impressionsBefore: d.impressionsBefore, isNew: false,
+}));
+const DAYS = DATA.days as Record<string, { days: Day[]; before: Day[] }>;
+const T = DATA.totals;
+const UK = COUNTRIES.find((c) => c.key === "gbr")!;
+const CLICKED = COUNTRIES.filter((c) => c.clicks > 0).length;
+const CLICKED_BEFORE = ALL_COUNTRIES.filter((c) => c.clicksBefore > 0).length;
+const DEVICE_CLICKS = DEVICES.reduce((sum, d) => sum + d.clicks, 0);
+
+// ——— Shared pieces ———
+
+/** "▼ 7% fewer than September", as the redone boxes say it. */
+function MoveLine({ now, before, count = false }: { now: number; before: number; count?: boolean }) {
+  const by = now - before;
+  if (by === 0) return <ChangeLine by={0}>The same as {BEFORE}</ChangeLine>;
+  const size = count || before === 0 ? fmt(Math.abs(by)) : `${Math.round((Math.abs(by) / before) * 100)}%`;
+  return <ChangeLine by={by}>{by > 0 ? `▲ ${size} more than ${BEFORE}` : `▼ ${size} fewer than ${BEFORE}`}</ChangeLine>;
+}
+
+/** Way 2's boxes, every one about the country chosen at the top (Anthony, 18 November 2026: "does this respect the country selector"). */
+const SHARE = Math.round(per100(UK.clicks, T.clicks));
+const SHARE_BEFORE = Math.round(per100(UK.clicksBefore, T.clicksBefore));
+function ChosenBoxes() {
+  return (
+    <FigureRow>
+      <Figure label={`Clicks in the ${HOME}`} value={fmt(UK.clicks)} detail={<MoveLine now={UK.clicks} before={UK.clicksBefore} />} />
+      <Figure label="Out of every 100 clicks" value={fmt(SHARE)} detail={<MoveLine now={SHARE} before={SHARE_BEFORE} count />} />
+      <Figure label="From other countries" value={fmt(T.clicks - UK.clicks)} detail={<MoveLine now={T.clicks - UK.clicks} before={T.clicksBefore - UK.clicksBefore} />} />
+      <Figure label="Countries with a click" value={`${fmt(CLICKED)} of ${fmt(COUNTRIES.length)}`} detail={<MoveLine now={CLICKED} before={CLICKED_BEFORE} count />} />
+    </FigureRow>
+  );
+}
+
+function Page({ description, children }: { description: string; children: ReactNode }) {
+  const [kind, setKind] = useState<"web" | "news">("web");
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader icon={<MapPin className="h-5 w-5 text-brand" />} title="Countries and devices" description={description} />
+      <SiteViewSwitch label="Kind of result" options={[{ value: "web", label: "Web" }, { value: "news", label: "News" }]} value={kind} onChange={setKind} />
+      <ChosenBoxes />
+      {children}
+    </div>
+  );
+}
+
+const SORTS: SiteSortColumns<Row, "name" | "clicks" | "change" | "impressions" | "ctr" | "position"> = {
+  name: { value: (row) => row.name, first: "asc" },
+  clicks: { value: (row) => row.clicks, first: "desc" },
+  change: { value: (row) => row.clicks - row.clicksBefore, first: "desc" },
+  impressions: { value: (row) => row.impressions, first: "desc" },
+  ctr: { value: (row) => row.ctr, first: "desc" },
+  position: { value: (row) => (row.impressions > 0 ? row.position : null), first: "asc" },
+};
+
+/** A lean table, as Search Console's lists draw it since 17 November: the name and five figures, one line a row. */
+function figureColumns(first: string): DataTableColumn<Row>[] {
+  return [
+    { key: "name", header: first, sortable: true, className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (row) => <span className="block truncate text-[13px] text-foreground" title={row.name}>{row.name}</span> },
+    { key: "clicks", header: "Clicks", align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{fmt(row.clicks)}</span> },
+    { key: "change", header: "Up or down", align: "right", sortable: true, className: "whitespace-nowrap", cell: (row) => <Change by={row.clicks - row.clicksBefore} isNew={row.isNew && row.clicks > 0} same={row.clicks === row.clicksBefore} format={fmt} /> },
+    { key: "impressions", header: <span title="Impressions: the times Google showed it">Shown</span>, align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{fmt(row.impressions)}</span> },
+    { key: "ctr", header: "CTR", align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.ctr)}</span> },
+    { key: "position", header: "Position", align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.impressions > 0 ? formatPosition(row.position) : "–"}</span> },
+  ];
+}
+
+function Table({ rows, noun, first, title, searchPlaceholder, table, ticks, canTick, fileName, emptyIcon }: {
+  rows: readonly Row[];
+  noun: "countries" | "devices";
+  first: string;
+  title?: string;
+  searchPlaceholder: string;
+  table?: string;
+  ticks?: TableTicks;
+  canTick?: (row: Row) => boolean;
+  fileName: string;
+  emptyIcon: ReactNode;
+}) {
+  const [search, setSearch, term] = useSiteSearch(table ? tableKey("q", table) : undefined, table);
+  const matches = wordStartMatcher(term.toLowerCase());
+  const matching = useMemo(() => (matches ? rows.filter((row) => matches(row.name)) : [...rows]), [rows, matches]);
+  const order = useSiteSortedList(matching, SORTS, { opening: "clicks", name: (row) => row.name, ...(table ? { table } : {}) });
+  const pages = useSitePager(order.rows, { ...(table ? { table } : {}) });
+  const columns = figureColumns(first);
+  return (
+    <DataTable
+      rows={pages.pageRows}
+      rowKey={(row) => row.key}
+      search={{ value: search, onChange: setSearch, placeholder: searchPlaceholder }}
+      cardHeader={(
+        <TableBar
+          footer={pages.footer}
+          noun={noun}
+          {...(title ? { title } : {})}
+          actions={(
+            <>
+              {ticks ? <TickActions ticks={ticks} rows={pages.pageRows ?? []} rowKey={(row) => row.key} {...(canTick ? { canTick } : {})} /> : null}
+              <ListDownload
+                label="Download all (CSV)"
+                fileName={`${HOST}-search-console-${fileName}`}
+                rows={order.rows}
+                columns={[
+                  { header: first, value: (row) => row.name },
+                  { header: "Clicks", value: (row) => row.clicks },
+                  { header: `Clicks in ${BEFORE}`, value: (row) => row.clicksBefore },
+                  { header: "Impressions", value: (row) => row.impressions },
+                  { header: "CTR (%)", value: (row) => Math.round(row.ctr * 1000) / 10 },
+                  { header: "Position", value: (row) => (row.impressions > 0 ? Math.round(row.position * 10) / 10 : "") },
+                ]}
+              />
+            </>
+          )}
+        >
+          {ticks ? <TickCount ticks={ticks} /> : null}
+        </TableBar>
+      )}
+      sort={order.tableSort}
+      empty={{ icon: emptyIcon, label: term ? "Nothing matches that search." : "Nothing in these dates." }}
+      footer={pages.footer}
+      columns={ticks ? [tickColumn<Row>(ticks, { rowKey: (row) => row.key, ...(canTick ? { canTick } : {}), label: (row) => `Draw ${row.name} on the chart`, heading: "On the chart" }), ...columns] : columns}
+    />
+  );
+}
+
+const CountryTable = (props: { ticks?: TableTicks; canTick?: (row: Row) => boolean }) => (
+  <Table rows={COUNTRIES} noun="countries" first="Country" searchPlaceholder="Search countries…" fileName="countries" emptyIcon={<MapPin className="h-8 w-8 text-muted/30" />} {...props} />
+);
+const DeviceTable = () => (
+  <Table rows={DEVICES} noun="devices" first="Device" title={`Devices in the ${HOME}`} searchPlaceholder="Search devices…" table="devices" fileName="devices" emptyIcon={<Monitor className="h-8 w-8 text-muted/30" />} />
+);
+
+// ——— Way 1 · tick countries to draw them, like Pages ———
+
+const SHOWN = ["clicks", "impressions", "position"] as const;
+type Shown = (typeof SHOWN)[number];
+const SHOWN_NAMES: Record<Shown, string> = { clicks: "Clicks", impressions: "Impressions", position: "Average position" };
+const MOST = 5;
+const COUNT_WORDS = ["", "The country", "The two countries", "The three countries", "The four countries", "The five countries"];
+
+function TickedCountries({ ticks }: { ticks: TableTicks }) {
+  const [shown, setShown] = useState<Shown>("clicks");
+  const [against, setAgainst] = useState<"none" | "before">("none");
+  const drawn = ticks.keys.filter((key) => DAYS[key]);
+  const nameOf = (key: string) => COUNTRIES.find((c) => c.key === key)?.name ?? key;
+  const lines: DaysLine[] = [
+    ...drawn.map((key, at) => ({ key: `row${at}`, name: nameOf(key), colour: PLOTTED_COLOURS[at] ?? CHART_COMPARATOR_GREY, ...lineOf(everyDay(DAYS[key].days, "2026-10-01", "2026-10-31"), shown) })),
+    ...(against === "before" ? drawn.map((key, at) => ({
+      key: `before${at}`, name: `${nameOf(key)}, ${BEFORE}`, colour: PLOTTED_COLOURS[at] ?? CHART_COMPARATOR_GREY, dashed: true, under: true, gaps: true,
+      ...lineOf(everyDay(DAYS[key].before, "2026-09-01", "2026-09-30"), shown),
+    })) : []),
+  ];
+  const hint = [
+    drawn.length === 0 ? "Tick a country in the table to draw it here." : `${COUNT_WORDS[drawn.length]} you've ticked in the table, in ${NOW}.`,
+    ...(against === "before" && drawn.length > 0 ? [`The dashed lines are ${BEFORE}, lined up by date.`] : []),
+    ...(shown === "position" ? ["Lower is better. 1 is the top of Google."] : []),
+  ].join(" ");
+  const counted = shown !== "position";
+  return (
+    <DaysChart
+      title={`${SHOWN_NAMES[shown]} each day`}
+      hint={hint}
+      exportName={`${HOST}-search-console-countries`}
+      csvDay="Day"
+      host={HOST}
+      step="day"
+      waiting={null}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: shown, options: SHOWN.map((value) => ({ value, label: SHOWN_NAMES[value] })), onChange: (next) => setShown(next as Shown) },
+        { kind: "select", key: "against", label: "Compare with", value: against, options: [{ value: "none", label: "No comparison" }, { value: "before", label: BEFORE }], onChange: (next) => setAgainst(next as "none" | "before") },
+      ]}
+      nothingTicked={drawn.length === 0 ? `Tick a country in the table to draw it here. You can tick up to ${MOST}.` : null}
+      lines={lines}
+      figure={SHOWN_NAMES[shown]}
+      format={counted ? fmt : oneDecimal}
+      plain={counted}
+      empty="Nothing to show for these dates."
+      height={300}
+    />
+  );
+}
+
+export function Way1() {
+  const [keys, setKeys] = useState<string[]>(["usa", "irl", "aus"]);
+  const ticks: TableTicks = { keys, set: (next) => setKeys(next.slice(0, MOST)), most: MOST, limit: `You can draw up to ${MOST} countries at once.` };
+  const canTick = (row: Row) => Boolean(DAYS[row.key]);
+  return (
+    <Page description="Every country Google showed your website in for these dates. Tick countries to draw them on the chart.">
+      <TickedCountries ticks={ticks} />
+      <CountryTable ticks={ticks} canTick={canTick} />
+      <DeviceTable />
+    </Page>
+  );
+}
+
+// ——— Way 2 · out of every 100 clicks, like Performance ———
+
+const GRID_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET, CHART_COMPARATOR_GREY];
+type Part = { key: string; name: string; clicks: number; impressions: number; clicksBefore: number; impressionsBefore: number };
+
+/** The biggest few by name, the rest together as "The other N", so the key stays short. */
+function topAndRest(parts: readonly Part[], read: (part: Part) => number, named: number): Part[] {
+  // The country chosen at the top always comes first, in orange, whatever its size.
+  const ranked = [...parts].sort((left, right) => Number(right.key === UK.key) - Number(left.key === UK.key) || read(right) - read(left));
+  if (ranked.length <= named + 1) return ranked;
+  const rest = ranked.slice(named);
+  const sum = (pick: (part: Part) => number) => rest.reduce((total, part) => total + pick(part), 0);
+  return [...ranked.slice(0, named), { key: "rest", name: `The other ${fmt(rest.filter((part) => part.impressions > 0).length)}`, clicks: sum((p) => p.clicks), impressions: sum((p) => p.impressions), clicksBefore: sum((p) => p.clicksBefore), impressionsBefore: sum((p) => p.impressionsBefore) }];
+}
+const partsOf = (split: "country" | "device"): Part[] => (split === "country" ? ALL_COUNTRIES : DEVICES);
+
+function Squares() {
+  const [show, setShow] = useState<"clicks" | "impressions">("clicks");
+  const [split, setSplit] = useState<"country" | "device">("country");
+  const [compare, setCompare] = useState<"before" | "none">("before");
+  const read = (part: Part) => (show === "clicks" ? part.clicks : part.impressions);
+  const readBefore = (part: Part) => (show === "clicks" ? part.clicksBefore : part.impressionsBefore);
+  const parts = topAndRest(partsOf(split), read, 4);
+  const values = parts.map(read);
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const counts = outOfTotal(values);
+  const before = parts.map(readBefore);
+  const totalBefore = before.reduce((sum, value) => sum + value, 0);
+  const countsBefore = outOfTotal(before);
+  const compared = compare === "before";
+  const groups: HundredGroup[] = parts.map((part, at) => ({
+    key: part.key,
+    name: part.name,
+    count: counts[at] ?? 0,
+    colour: GRID_COLOURS[at] ?? CHART_COMPARATOR_GREY,
+    ...(compared ? { was: <span className="font-mono">{countsBefore[at] ?? 0}</span> } : {}),
+    readout: [
+      { value: fmt(values[at] ?? 0), label: `${capital(show)} in ${NOW}` },
+      { value: `${oneDecimal(per100(values[at] ?? 0, total))} in 100`, label: NOW },
+      ...(compared ? [{ value: `${oneDecimal(per100(before[at] ?? 0, totalBefore))} in 100`, label: BEFORE }] : []),
+    ],
+  }));
+  const hint = `All your ${show} in ${NOW}. That's ${fmt(total)} ${show}. Each square is 1 in every 100.`;
+  // Devices follow the country menu: the title names it, as Anthony chose on Demand ("the country in scope").
+  const title = `Out of every 100 ${show}${split === "device" ? ` in the ${HOME}` : ""}`;
+  return (
+    <MapCard
+      title={title}
+      hint={hint}
+      exportName={`${HOST}-search-console-out-of-100`}
+      csv={() => toCsv(["Row", capital(show), "Squares"], groups.map((group, at) => [group.name, values[at] ?? 0, group.count]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: show, options: [{ value: "clicks", label: "Clicks" }, { value: "impressions", label: "Impressions" }], onChange: (next) => setShow(next as "clicks" | "impressions") },
+        { kind: "select", key: "split", label: "Split by", value: split, options: [{ value: "country", label: "Country" }, { value: "device", label: "Device" }], onChange: (next) => setSplit(next as "country" | "device") },
+        { kind: "select", key: "compare", label: "Compare with", value: compare, options: [{ value: "before", label: BEFORE }, { value: "none", label: "No comparison" }], onChange: (next) => setCompare(next as "before" | "none") },
+      ]}
+    >
+      <HundredGrid groups={groups} cells={100} nowLabel={NOW} wasLabel={compared ? BEFORE : ""} label={title} />
+    </MapCard>
+  );
+}
+
+function Bands() {
+  const [split, setSplit] = useState<"country" | "device">("device");
+  const [lit, setLit] = useState<string | null>(null);
+  const parts = topAndRest(partsOf(split), (part) => part.impressions, 6);
+  const impressions = parts.map((part) => part.impressions);
+  const clicks = parts.map((part) => part.clicks);
+  const [impressionsAll, clicksAll] = [impressions, clicks].map((list) => list.reduce((sum, value) => sum + value, 0));
+  const top = outOfTotal(impressions);
+  const bottom = outOfTotal(clicks);
+  const segments: StripSegment[] = parts.map((part, at) => ({
+    key: part.key,
+    name: part.name,
+    top: top[at] ?? 0,
+    bottom: bottom[at] ?? 0,
+    colour: stripColour(part.key === "rest" ? 99 : at),
+    readout: [
+      { value: fmt(impressions[at] ?? 0), label: "Impressions" },
+      { value: `${oneDecimal(per100(impressions[at] ?? 0, impressionsAll))} in 100`, label: "Of all impressions" },
+      { value: fmt(clicks[at] ?? 0), label: "Clicks" },
+      { value: `${oneDecimal(per100(clicks[at] ?? 0, clicksAll))} in 100`, label: "Of all clicks" },
+    ],
+  }));
+  const hint = "The top row is where 100 impressions went. The bottom row is the same for 100 clicks. Press one to keep it lit.";
+  return (
+    <MapCard
+      title={`What Google shows, and what gets clicked${split === "device" ? `, in the ${HOME}` : ""}`}
+      hint={hint}
+      exportName={`${HOST}-search-console-bands`}
+      csv={() => toCsv(["Name", "Impressions", "Clicks"], parts.map((part, at) => [part.name, impressions[at] ?? 0, clicks[at] ?? 0]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "split", label: "Split by", value: split, options: [{ value: "device", label: "Device" }, { value: "country", label: "Country" }], onChange: (next) => setSplit(next as "country" | "device") },
+      ]}
+    >
+      <HundredStrips segments={segments} topLabel="Out of every 100 impressions" bottomLabel="Out of every 100 clicks" lit={lit} onLit={setLit} />
+    </MapCard>
+  );
+}
+
+export function Way2() {
+  return (
+    <Page description="Which countries your clicks come from, and on which devices.">
+      <Squares />
+      <Bands />
+      <CountryTable />
+    </Page>
+  );
+}
+
+// ——— Way 3 · what moved, and where Google shows you but few click ———
+
+function Movers() {
+  const [split, setSplit] = useState<"country" | "device">("country");
+  const [which, setWhich] = useState<"all" | "abroad">("all");
+  const list = split === "country" ? ALL_COUNTRIES.filter((row) => which === "all" || row.key !== UK.key) : DEVICES;
+  const moved = list.filter((row) => row.clicks !== row.clicksBefore);
+  const gained = [...moved].filter((row) => row.clicks > row.clicksBefore).sort((a, b) => (b.clicks - b.clicksBefore) - (a.clicks - a.clicksBefore)).slice(0, 6);
+  const lost = [...moved].filter((row) => row.clicks < row.clicksBefore).sort((a, b) => (a.clicks - a.clicksBefore) - (b.clicks - b.clicksBefore)).slice(0, 6);
+  const rows: ChangeBar[] = [...gained, ...lost].map((row) => ({
+    key: row.key,
+    label: row.name,
+    detail: `${fmt(row.clicksBefore)} → ${fmt(row.clicks)}`,
+    change: row.clicks - row.clicksBefore,
+    hover: `${row.name}: ${fmt(row.clicksBefore)} ${row.clicksBefore === 1 ? "click" : "clicks"} in ${BEFORE}, ${fmt(row.clicks)} in ${NOW}`,
+  }));
+  const noun = split === "country" ? "countries" : "devices";
+  const hint = `The ${noun} that gained or lost most clicks since ${BEFORE}.`;
+  return (
+    <MapCard
+      title={noun === "countries" ? "Countries that went up or down" : `Devices that went up or down in the ${HOME}`}
+      hint={hint}
+      exportName={`${HOST}-search-console-${noun}-movers`}
+      csv={() => toCsv(["Name", BEFORE, NOW], rows.map((row) => [row.label, row.detail.split(" → ")[0], row.detail.split(" → ")[1]]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "split", label: "Split by", value: split, options: [{ value: "country", label: "Country" }, { value: "device", label: "Device" }], onChange: (next) => setSplit(next as "country" | "device") },
+        ...(split === "country" ? [{ kind: "select" as const, key: "which", label: "Show", value: which, options: [{ value: "all", label: "Every country" }, { value: "abroad", label: `Without the ${HOME}` }], onChange: (next: string) => setWhich(next as "all" | "abroad") }] : []),
+      ]}
+    >
+      <ChangeBars rows={rows} lostLabel="Lost clicks" gainedLabel="Gained clicks" />
+    </MapCard>
+  );
+}
+
+const TIMES = ["half", "middle", "twice"] as const;
+type Times = (typeof TIMES)[number];
+const TIMES_BY: Record<Times, number> = { half: 0.5, middle: 1, twice: 2 };
+const SITE_RATE = per100(T.clicks, T.impressions);
+
+function Dots() {
+  const [across, setAcross] = useState<Times>("middle");
+  const [up, setUp] = useState<Times>("middle");
+  const drawn = COUNTRIES.filter((c) => c.clicks > 0);
+  const sortedShown = [...drawn].map((c) => c.impressions).sort((a, b) => a - b);
+  const middle = sortedShown[Math.floor(sortedShown.length / 2)] ?? 1;
+  const line = Math.max(1, Math.round(middle * TIMES_BY[across]));
+  const rate = Math.round(SITE_RATE * TIMES_BY[up] * 10) / 10;
+  const said = new Set([...drawn].sort((a, b) => b.clicks - a.clicks).slice(0, 5).map((c) => c.key));
+  const acrossMore = `${fmt(line)} impressions or more`;
+  const acrossFewer = `Under ${fmt(line)} impressions`;
+  const upMore = `${oneDecimal(rate)} or more clicks for every 100`;
+  const upFewer = `under ${oneDecimal(rate)} clicks for every 100`;
+  const names: Record<DotGroupKey, string> = {
+    rightHigh: `${acrossMore}, and ${upMore}`, rightLow: `${acrossMore}, and ${upFewer}`,
+    leftHigh: `${acrossFewer}, and ${upMore}`, leftLow: `${acrossFewer}, and ${upFewer}`,
+  };
+  const none = COUNTRIES.length - drawn.length;
+  return (
+    <MapCard
+      title="Where Google shows you, and where people click"
+      hint="Each dot is a country. The further right, the more impressions it had. The higher up, the more clicks for every 100 impressions."
+      exportName={`${HOST}-search-console-countries-dots`}
+      csv={() => toCsv(["Country", "Impressions", "Clicks"], drawn.map((c) => [c.name, c.impressions, c.clicks]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "across", label: "Impressions from", value: across, options: TIMES.map((value) => ({ value, label: `${fmt(Math.max(1, Math.round(middle * TIMES_BY[value])))}, ${value === "middle" ? "your middle country" : value === "half" ? "half your middle country" : "twice your middle country"}` })), onChange: (next) => setAcross(next as Times) },
+        { kind: "select", key: "up", label: "Click-through rate from", value: up, options: TIMES.map((value) => ({ value, label: `${oneDecimal(Math.round(SITE_RATE * TIMES_BY[value] * 10) / 10)}, ${value === "middle" ? "your whole website" : value === "half" ? "half your website" : "twice your website"}` })), onChange: (next) => setUp(next as Times) },
+      ]}
+      under={<span className="text-[12px] text-secondary">{`Your ${fmt(drawn.length)} countries with a click. ${fmt(none)} had no clicks, so they aren't drawn.`}</span>}
+    >
+      <DotGroups
+        points={drawn.map((c) => ({ x: c.impressions, y: per100(c.clicks, c.impressions), label: c.name, named: said.has(c.key) }))}
+        split={{ x: line, y: rate }}
+        names={names}
+        xLabel=""
+        yLabel="Click-through rate"
+        readout={{ x: "Impressions", y: "Click-through rate" }}
+        formatY={oneDecimal}
+        height={420}
+      />
+    </MapCard>
+  );
+}
+
+export function Way3() {
+  return (
+    <Page description="Where your clicks went up and down since September, and where few people click.">
+      <Movers />
+      <Dots />
+      <CountryTable />
+    </Page>
+  );
+}
+
+export const WAYS = { Way1, Way2, Way3 };

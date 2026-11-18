@@ -1,5 +1,5 @@
 import { compareTermsQuickly, termToken, tokenPlace } from "./utils/searchConsoleTerms";
-import { BANDS, bandOf, crossedOf, emptyRow, filterRows, isBrand, moverInto, type Band, type BandCounts, type BrandSplit, type Filters, type KindCount, type ListRow, type ListSees, type Summary, type View, type ViewContext } from "./utils/searchConsoleViews";
+import { BANDS, bandOf, crossedOf, emptyRow, filterRows, isBrand, moverInto, trackedListOf, type Band, type BandCounts, type BrandSplit, type Filters, type KindCount, type ListRow, type ListSees, type Summary, type View, type ViewContext } from "./utils/searchConsoleViews";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { sortRows, type SortKey } from "./searchConsoleSorts";
 import type { Doc } from "./_generated/dataModel";
@@ -325,6 +325,8 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
   for (let row = 0; row < source.length; row += 1) total += clicksOf(row);
   const previousClicksOf = (row: number): number | null => (before ? (source.before[row] === NONE ? null : before.clicks[source.before[row]]) : null);
   const changeOf = (row: number): number | null => (before ? clicksOf(row) - (previousClicksOf(row) ?? 0) : null);
+  // Its impressions in the dates before, as `shapeRows` keeps them: nought when it wasn't shown then.
+  const previousImpressionsOf = (row: number): number | null => (before ? (source.before[row] === NONE ? 0 : before.impressions[source.before[row]]) : null);
   const previousPositionOf = (row: number): number | null => {
     const was = source.before[row];
     return before && was !== NONE && before.impressions[was] > 0 ? before.positionSum[was] / before.impressions[was] : null;
@@ -386,6 +388,7 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
       previousClicks: previousClicksOf(row),
       change: changeOf(row),
       previousPosition,
+      previousImpressions: previousImpressionsOf(row),
       positionChange: positionChangeOf(row),
       share: total > 0 ? clicksOf(row) / total : 0,
       count: countOf(row),
@@ -445,6 +448,8 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
   const summary = tally.summary();
   // What Hakken sees over the whole list (`listSeesOf`, read row by row): the same figures from the columns.
   if (brandWords && ask.view === "all") summary.wholeList = columnSees();
+  // A tracked list's own figures over every row it tracks, as `summarise` works them out (a few hundred rows at most).
+  if (ask.view === "tracked") summary.trackedList = trackedListOf(Array.from(listed, shaped), before !== null);
   function columnSees(): ListSees {
     const bandClicks = emptyBands();
     for (const row of listed) if (impressionsOf(row) > 0) bandClicks[bandOf(positionOf(row))] += clicksOf(row);

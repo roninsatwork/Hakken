@@ -4,7 +4,9 @@
  * names them without reaching a module that defines functions. `performance` is the overview.
  */
 export const SEARCH_CONSOLE_SCREENS = [
-  "performance", "keywords", "pages", "brand", "bands", "ctrCurve", "services", "updates", "newLost", "volatility", "keyword", "page",
+  "performance", "keywords", "pages", "brand", "bands", "ctrCurve", "services", "updates", "newLost", "volatility", "keyword", "page", "indexing",
+  // Countries and devices, missed when it was redone on 18 November 2026: Ask Hakken read only what its page handed over.
+  "places",
 ] as const;
 export type SearchConsoleScreen = (typeof SEARCH_CONSOLE_SCREENS)[number];
 
@@ -12,4 +14,5 @@ export type SearchConsoleScreen = (typeof SEARCH_CONSOLE_SCREENS)[number];
 export const SEARCH_CONSOLE_SEGMENT: Record<SearchConsoleScreen, string> = {
   performance: "", keywords: "keywords", pages: "pages", brand: "brand-and-non-brand", bands: "position-bands", ctrCurve: "click-rate-by-position",
   services: "demand-by-service", updates: "google-updates", newLost: "new-and-lost", volatility: "volatility", keyword: "keywords/keyword", page: "pages/page",
+  indexing: "indexing", places: "countries-and-devices",
 };

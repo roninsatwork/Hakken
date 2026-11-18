@@ -32,7 +32,6 @@ import {
   firstWeekKept,
   monthStart,
   pack,
-  packNumbers,
   packedColumns,
   weekStart,
   type ChartStep,
@@ -43,8 +42,10 @@ import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews"
 import { VOLATILITY_IMPRESSIONS, completeDays, dayVolatility, periodVolatility, type Volatility } from "./utils/searchConsoleVolatility";
 import { tenantQuery } from "./tenantFunctions";
 import { forgetListBuild, noteListBuild, writeBook } from "./searchConsolePeriodBooks";
-import type { BookKind } from "./utils/searchConsoleTerms";
 import { FIRST_PARTS_READ } from "./searchConsolePeriodReads";
+import { inBook, termsOf, type StoredPart } from "./searchConsolePeriodTerms";
+
+export { inBook, termsOf, type StoredPart } from "./searchConsolePeriodTerms";
 import { requireMySite } from "./siteAccess";
 import { keywordsOnDay, spanKey, streamList, streamPairs } from "./searchConsoleKeptSums";
 import { chartPeriods, chartReach, daysBetween, daysFrom, lastDayOf, type ChartGrain, type ChartPeriod } from "./utils/searchConsoleChartDays";
@@ -470,6 +471,13 @@ export const settledSlots = internalQuery({
   },
 });
 
+/**
+ * The lists whose spans before are kept, for each row's change: the pages', and since 18 November 2026 the countries'
+ * and devices', for Countries and devices' boxes and Up or down (search-console-countries-and-devices-way-1-plan-
+ * 2026-11-18.md). Rich results show no change, so keep none.
+ */
+const KEEPS_BEFORE: ReadonlySet<SearchConsoleList> = new Set<SearchConsoleList>(["page", "country", "device"]);
+
 /** A part as written: its rows, and what each row carries beside them. */
 export type PartToWrite = Packed & {
   counts?: number[];
@@ -501,6 +509,8 @@ export const buildTarget = internalQuery({
     google: v.union(v.null(), v.object({ connectionId: v.id("searchConsoleConnections"), property: v.string() })),
     chartWeeks: v.number(),
     richResultKinds: v.number(),
+    /** Whether the website has Classifications of its own: the home country's own pages then need no page types kept. */
+    classified: v.boolean(),
   }),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.companyWebsiteId);
@@ -513,6 +523,7 @@ export const buildTarget = internalQuery({
       google: connection && connection.status === "CONNECTED" && connection.property ? { connectionId: connection._id, property: connection.property } : null,
       chartWeeks: limits?.chartWeeks ?? FAN_OUT_LIMITS.consoleChartWeeks.fallback,
       richResultKinds: limits?.richResultKinds ?? FAN_OUT_LIMITS.consoleRichResultKinds.fallback,
+      classified: (await ctx.db.query("pageClassifications").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.companyWebsiteId)).first()) !== null,
     };
   },
 });
@@ -664,8 +675,9 @@ export async function buildSitePeriods(
         counts: packed.keys.map((key) => counts.get(key)?.count ?? 0),
         tops: packed.keys.map((key) => counts.get(key)?.top ?? ""),
       } : {}),
-      // Sites' facts, on the periods the screens list (the ones before are read for the change alone).
-      ...(facts && slot.which === "NOW" ? {
+      // Sites' facts, on the periods the screens list (the ones before are read for the change alone). The home country's
+      // own pages carry their page type both sides, as Demand by Classification adds each side up by it without classifications.
+      ...(facts && list === "countryPage" ? { kinds: packed.keys.map((key) => facts.get(key)?.kind ?? "UNJUDGED") } : facts && slot.which === "NOW" ? {
         kinds: packed.keys.map((key) => facts.get(key)?.kind ?? "UNJUDGED"),
         ...(list === "query"
           ? { volumes: packed.keys.map((key) => facts.get(key)?.number ?? UNKNOWN) }
@@ -677,7 +689,7 @@ export async function buildSitePeriods(
   const held = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId, ...scope });
   const types = options.searchType === undefined ? held : held.filter((type) => type === options.searchType);
   const target = await ctx.runQuery(internal.searchConsoleFacts.factsTarget, { companyWebsiteId });
-  const { google, chartWeeks, richResultKinds } = await ctx.runQuery(internal.searchConsolePeriods.buildTarget, { companyWebsiteId });
+  const { google, chartWeeks, richResultKinds, classified } = await ctx.runQuery(internal.searchConsolePeriods.buildTarget, { companyWebsiteId });
   // The 90 days, the 90 days before and twelve months asked of Google, a week at a time: the days are
   // kept 60 days (`searchConsoleLongLists.ts`; keep-less-history-plan.md, part 3). Asked of nobody when
   // the website is not connected, or Google will not answer: the long periods built before then stay.
@@ -698,9 +710,22 @@ export async function buildSitePeriods(
   let settled = new Set<string>();
   const longSpansOf = () => uniqueSpans(slots.filter((slot) => isLong(slot) && slot.span !== null && !settled.has(slotKey(slot))).map((slot) => slot.span!));
   const tracked = google && slots.some((slot) => isLong(slot) && slot.span !== null) ? await ctx.runQuery(internal.searchConsoleKeep.trackedSearches, { holdId: companyWebsiteId }) : [];
-  const askedOf = async (searchType: SearchType, list: SearchConsoleList) => {
-    const longSpans = longSpansOf();
+  // `also`: settled slots asked once more for one list, whose span before it didn't keep then (`missingBefore`).
+  const askedOf = async (searchType: SearchType, list: SearchConsoleList, also: ReadonlySet<string> = new Set()) => {
+    const longSpans = uniqueSpans([...longSpansOf(), ...slots.filter((slot) => also.has(slotKey(slot)) && slot.span !== null).map((slot) => slot.span!)]);
     return google && longSpans.length > 0 ? await longListRows(ctx, google, { searchType, list, country }, longSpans, tracked, options.stopAt, options.held, list === "pair" ? options.carry : undefined) : null;
+  };
+  // A finished long period's span before, settled before its countries' and devices' were kept (18 November 2026): those
+  // lists are asked of Google for it once more, one ask a span, and kept; the period's other lists stay as they are. The
+  // main home country's own pages (`countryPage`, the same day) are asked so for its settled periods and spans before both.
+  const missingBefore = async (searchType: SearchType, list: SearchConsolePeriodList, which: ReadonlyArray<"NOW" | "BEFORE"> = ["BEFORE"]): Promise<Set<string>> => {
+    const settledBefore = slots.filter((slot) => which.includes(slot.which) && slot.span !== null && settled.has(slotKey(slot)));
+    if (settledBefore.length === 0) return new Set();
+    const kept = new Set(await ctx.runQuery(internal.searchConsoleSlotsKept.slotsKept, {
+      companyWebsiteId, ...scope, searchType, list,
+      slots: settledBefore.map((slot) => ({ period: slot.period, which: slot.which, from: slot.span!.from, to: slot.span!.to })),
+    }));
+    return new Set(settledBefore.map(slotKey).filter((key) => !kept.has(key)));
   };
   const keysAsked = (asked: Map<string, Row[]> | null, side: "key" | "page") =>
     [...(asked?.values() ?? [])].flatMap((rows) => rows.map((row) => (side === "key" ? row.key : row.page ?? "")));
@@ -823,19 +848,23 @@ export async function buildSitePeriods(
     }
     // Pages, countries, devices and kinds of search appearance: Google's own totals, one list at a time.
     // A country has no country list of its own: its slots are only emptied.
+    let pagesKept = false;
     for (const list of ["page", "country", "device", "appearance"] as const) {
       inTime(`Adding up the ${searchType} ${list} list`);
       const wanted = lists.includes(list) && !(country !== undefined && list === "country");
-      // A day at a time into each period, as the pairs (SL1); only the page list keeps the spans before.
-      const listSpans = uniqueSpans(slots.filter((slot) => !isLong(slot) && !asNinety(slot) && slot.span && (slot.which === "NOW" || list === "page")).map((slot) => slot.span!));
+      // A day at a time into each period, as the pairs (SL1); the pages', countries' and devices' spans before too.
+      const keepsBefore = KEEPS_BEFORE.has(list);
+      const listSpans = uniqueSpans(slots.filter((slot) => !isLong(slot) && !asNinety(slot) && slot.span && (slot.which === "NOW" || keepsBefore)).map((slot) => slot.span!));
       const listed = wanted && !onlyLong ? await streamList(ctx, companyWebsiteId, country, searchType, list, newest, listSpans) : null;
       const anyKept = listed !== null || (wanted && onlyLong && await anyKeptOf(searchType, list));
-      const asked = anyKept ? await askedOf(searchType, list) : null;
+      if (list === "page") pagesKept = anyKept;
+      const missing = anyKept && keepsBefore && list !== "page" ? await missingBefore(searchType, list) : new Set<string>();
+      const asked = anyKept ? await askedOf(searchType, list, missing) : null;
       const pageFacts = list === "page" && anyKept ? await factsOf("page", [...(listed?.keys.texts ?? []), ...keysAsked(asked, "key")]) : undefined;
       for (const slot of slots) {
-        if (settled.has(slotKey(slot))) continue;
-        // Countries, devices and rich results show no change on the period before: none is kept for them (5.3).
-        const before = slot.which === "BEFORE" && list !== "page";
+        if (settled.has(slotKey(slot)) && !missing.has(slotKey(slot))) continue;
+        // Rich results show no change on the period before: none is kept for them (5.3).
+        const before = slot.which === "BEFORE" && !keepsBefore;
         const rows = anyKept && slot.span && !before ? (isLong(slot) ? rowsFor(asked, slot.span) : listed?.sums.get(spanKey(slot.span))?.rows() ?? []) : null;
         // Google not asked, or not answering: the long period built before stays.
         if (rows === undefined) continue;
@@ -846,39 +875,30 @@ export async function buildSitePeriods(
         await write(searchType, list, slot, rows, list === "page" ? (slot.which === "NOW" ? pageCounts.get(slotKey(slot)) : undefined) : (appearancePages ?? undefined), pageFacts);
       }
     }
+    // The main home country's own pages (18 November 2026, search-console-demand-by-classification-way-2-plan-2026-11-18.md):
+    // Demand by Classification's figures follow the country menu, and the pages kept day by day are every country's since
+    // 17 November, so each period and its span before is asked of Google with the country's filter on, an ask a span (25,000
+    // pages a request), as it was kept before then. Web results, the main country: another country is asked when chosen.
+    if (searchType === "web" && country === undefined) {
+      inTime("Adding up the home country's pages");
+      const missing = pagesKept ? await missingBefore(searchType, "countryPage", ["NOW", "BEFORE"]) : new Set<string>();
+      const spans = uniqueSpans(slots.filter((slot) => slot.span !== null && (!settled.has(slotKey(slot)) || missing.has(slotKey(slot)))).map((slot) => slot.span!));
+      const asked = pagesKept && google && spans.length > 0 ? await longListRows(ctx, google, { searchType, list: "page", country, inCountry: true }, spans, []) : null;
+      // Each page's type, for a website with no Classifications yet: one with them sorts its pages when they're read.
+      const facts = asked && !classified ? await factsOf("page", keysAsked(asked, "key")) : undefined;
+      for (const slot of slots) {
+        if (settled.has(slotKey(slot)) && !missing.has(slotKey(slot))) continue;
+        const rows = pagesKept && slot.span ? rowsFor(asked, slot.span) : null;
+        // Google not asked, or not answering: the list built before stays.
+        if (rows === undefined) continue;
+        // Each page's keywords and top one, from this build's pairs (the country's), for Pages' download (18 November 2026). A
+        // settled period asked again here has no pairs added up in this build: its download leaves the two columns empty.
+        await write(searchType, "countryPage", slot, rows, slot.which === "NOW" ? pageCounts.get(slotKey(slot)) : undefined, facts);
+      }
+    }
     await writeHeld(searchType);
   }
   return written;
-}
-
-/** A list's part as written: its keywords and pages as places in the build's book where the list is one of the three that hold them. */
-export type StoredPart = Omit<PartToWrite, "keys" | "tops" | "pages"> & { keys: string[] | string; tops?: string[] | string; pages?: string[] | string; brands?: string };
-
-/** The lists whose keywords and pages go in the build's book: the keyword lists, the page lists and Pages competing. */
-const BOOKED_LISTS: ReadonlySet<SearchConsolePeriodList> = new Set(["query", "page", "competing"]);
-
-/** The keywords (`query`) or pages a list's part names: its own keys, a keyword's top page or a page's top keyword, Pages competing's pages. */
-export function termsOf(list: SearchConsolePeriodList, part: PartToWrite, kind: BookKind): string[] {
-  if (!BOOKED_LISTS.has(list)) return [];
-  const keysKind: BookKind = list === "page" ? "page" : "query";
-  return [
-    ...(keysKind === kind ? part.keys : []),
-    ...(part.tops && (list === "page" ? "query" : "page") === kind ? part.tops : []),
-    ...(part.pages && kind === "page" ? part.pages : []),
-  ];
-}
-
-/** A part with its keywords and pages as places in the build's book, packed, and each keyword's brand flag. Exported for the load test. */
-export function inBook(list: SearchConsolePeriodList, part: PartToWrite, places: Record<BookKind, Map<string, number>>, brandWords: readonly string[]): StoredPart {
-  if (!BOOKED_LISTS.has(list)) return part;
-  const placed = (kind: BookKind, texts: readonly string[]) => packNumbers(texts.map((text) => places[kind].get(text) ?? 0));
-  return {
-    ...part,
-    keys: placed(list === "page" ? "page" : "query", part.keys),
-    ...(part.tops ? { tops: placed(list === "page" ? "query" : "page", part.tops) } : {}),
-    ...(part.pages ? { pages: placed("page", part.pages) } : {}),
-    ...(list === "query" && brandWords.length > 0 ? { brands: packNumbers(part.keys.map((key) => (isBrand(key, brandWords) ? 1 : 0))) } : {}),
-  };
 }
 
 /** Old parts of a ready-made period cleared per step: each up to a few hundred kilobytes, and a step reads at most 16 MB. */
