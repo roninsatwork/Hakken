@@ -131,7 +131,7 @@
     "source-map-js": "^1.2.2",
     "tmp": "^0.2.6",
     "uuid": "^11.1.1",
-    "vite": "^8.1.6",
+    "vite": "^8.3.8",
     "smol-toml": "^1.8.1",
     "mammoth": {
       "argparse": "^2.0.1"
