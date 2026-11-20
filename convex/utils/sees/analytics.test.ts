@@ -61,7 +61,7 @@ describe("2 · Overview", () => {
       steps: [
         { code: "channel.fell", text: "Direct", a: 5, b: 11, link: "channels", to: { segment: "channels" } },
         { code: "page.fell", text: "/", a: 4, b: 7, link: "seePage", to: { segment: "all-pages/page", filters: { key: "~0" } } },
-        { code: "push", link: "pagesToPush", to: { url: "/app/search-console/site_1/almost-there" } },
+        { code: "push", link: "pagesToPush", to: { url: "/app/search-console/site_1/position-bands" } },
       ],
     });
     worded("overview", box);
@@ -96,7 +96,7 @@ describe("2 · Overview", () => {
       says: [{ code: "notCounting", a: 826 }, { code: "googleRarely", a: 264_403, b: 367 / 264_403 }],
       steps: [
         { code: "chooseWhatCounts", link: "chooseWhatCounts", to: { segment: "connection", filters: { change: "1" } } },
-        { code: "push", link: "pagesToPush", to: { url: "/app/search-console/site_1/almost-there" } },
+        { code: "push", link: "pagesToPush", to: { url: "/app/search-console/site_1/position-bands" } },
       ],
     });
     const first = overviewSees({ siteId: SITE, now, before: null, counting: true, changedMost: [], searchConsole: null });

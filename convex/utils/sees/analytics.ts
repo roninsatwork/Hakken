@@ -106,8 +106,9 @@ export function overviewSees(facts: OverviewFacts): Seen {
   const { now, before } = facts;
   if (!now) return seen([]);
   const google = googleSays(facts.searchConsole);
-  // Pages shown but rarely clicked move up from Search Console's Almost there: its searches at positions 4 to 20.
-  const push: Maybe<SeenStep> = google && google.code === "googleRarely" && { code: "push", link: "pagesToPush", to: { url: `/app/search-console/${facts.siteId}/almost-there` } };
+  // Pages shown but rarely clicked move up from Search Console's Position bands: its searches at places 4 to 20, since
+  // Almost there was taken out of the menu (2026-11-20).
+  const push: Maybe<SeenStep> = google && google.code === "googleRarely" && { code: "push", link: "pagesToPush", to: { url: `/app/search-console/${facts.siteId}/position-bands` } };
   if (!facts.counting) {
     return seen([{ code: "notCounting", a: now.visits }, google], [{ code: "chooseWhatCounts", link: "chooseWhatCounts", to: CHOOSE }, push]);
   }

@@ -516,6 +516,25 @@ describe("charts in the dates and step chosen (2026-10-04)", () => {
     expect(screen.getByText(/^searchConsole\.chart\.reach 16 /)).toBeInTheDocument();
   });
 
+  it("Position bands, Way 3: the country's own list, and 21 and below off at first (2026-11-19)", () => {
+    at("/app/search-console/site_1/position-bands", "country=gbr&period=last3Months");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleLists:searchConsoleListPage": LIST,
+      "searchConsolePeriods:searchConsoleChartFigures": {
+        periods: [{ start: "2026-09-21", lastDay: "2026-09-26", days: 6, length: 7, top3: 1, top10: 2, top20: 0, rest: 3, brandClicks: 0, otherClicks: 0 }],
+        step: "week", byWeek: false, reach: null, chartWeeks: 16, notReady: false, preparing: false, notBuilt: false,
+      },
+    });
+    const { container } = render(<SearchConsoleBandsPage />);
+    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ dimension: "query", country: "gbr" });
+    expect(askedOfGoogle()).toEqual([]);
+    // The chart of each place on Google came off on Anthony's word the same day; MirrorBars stays a shared part.
+    expect(container.querySelector('[data-part="mirror-bars"]')).toBeNull();
+    // 21 and below is off at first, and the chart says why.
+    expect(screen.getByText("searchConsole.bands.restOff")).toBeInTheDocument();
+  });
+
   it("New and lost asks for the step chosen", () => {
     at("/app/search-console/site_1/new-and-lost", "period=last12Months&step=month");
     answer({

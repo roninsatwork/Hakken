@@ -198,6 +198,11 @@ export const searchConsoleScreenInternal = internalQuery({
         clicksLast7Days: facts.clicks,
         timesShownLast7Days: facts.impressions ?? null,
         googleUpdate: facts.update,
+        // The chart's line day by day in the dates asked, each with its two parts (2026-11-20), complete days only.
+        scoreEachDay: facts.days
+          .filter((day) => day.week >= from && day.week <= to && facts.complete.has(day.week) && day.volatility !== undefined)
+          .map((day) => ({ day: day.week, score: day.volatility, positionsImproved: day.volatilityUp ?? null, positionsDeclined: day.volatilityDown ?? null })),
+        scoreEachDayNote: "The screen calls the two parts Positions improved (what the searches that climbed moved) and Positions declined (what those that fell moved), each out of 10 over every search counted: the two add up to the score. Only the days kept day by day have a score, and a day built before 20 November 2026 may have neither part.",
         mostMoved: rows.map(rowOf),
       };
     }
@@ -221,6 +226,60 @@ export const searchConsoleScreenInternal = internalQuery({
         countriesWithAClick: clickedCountries,
         countries: countryRows.slice(0, ROWS).map((row) => ({ ...rowOf(row), name: countryNameOf(row.key) ?? row.key.toUpperCase() })),
         devices: devices.rows.slice(0, devices.rows.length).map(rowOf),
+      };
+    }
+
+    if (args.screen === "lowCtr") {
+      // Shown but not clicked (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md), as the screen reads it: the
+      // country's own pages that got fewer clicks than the website usually gets at their position, the most short first.
+      const list = await readList(ctx, hold._id, { ...ask, dimension: "page", view: "lowCtr", inCountry: true, sort: "gap", direction: "desc" });
+      if (list.live) return { ...base, note: "The home country's pages for these dates aren't added up yet: open the screen to see them." };
+      if (list.preparing) return { ...base, note: "The figures are still being added up." };
+      const rows = await namedRows(list, list.rows.slice(0, ROWS));
+      const summary = list.summary;
+      return {
+        ...base,
+        rule: `${base.rule} A page is listed when it got fewer clicks than the website usually gets at its position on Google, from Click rate by position. clicksUsually is what it would usually get there: the website's own past, never a promise.`,
+        pagesListed: summary?.rows ?? null,
+        pagesGoogleShowed: summary?.of ?? null,
+        timesShown: summary?.impressions ?? null,
+        clicks: summary?.clicks ?? null,
+        clicksUsually: summary?.expected ?? null,
+        eachPosition: summary?.lowCtr?.positions.map((one) => ({ position: one.position, pagesWithFewClicks: one.pages, clicks: one.clicks, clicksUsually: one.expected, everyPageThere: one.all })) ?? null,
+        rows: rows.map((row) => ({ ...rowOf(row), clicksUsually: row.expected })),
+        rowsListed: list.listed,
+      };
+    }
+
+    if (args.screen === "competing") {
+      // Keyword cannibalisation (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md), as the screen reads it: the
+      // keywords on Insights' rule (`cannibalisationRule.ts`), the most shown first, with each one's Swaps where counted.
+      const list = await readList(ctx, hold._id, { ...ask, dimension: "query", view: "competing", sort: "impressions", direction: "desc" });
+      if (list.live) return { ...base, note: "These dates are not a ready-made period: open the screen to read them." };
+      if (list.preparing) return { ...base, note: "The figures are still being added up." };
+      const rows = await namedRows(list, list.rows.slice(0, ROWS));
+      const summary = list.summary;
+      const figures = summary?.cannibalisation;
+      const keyword = (one: NonNullable<typeof figures>["busiest"]) => (one ? {
+        keyword: one.key, pagesCompeting: one.count, timesShown: one.impressions, clicks: one.clicks,
+        topPageSharePercent: Math.round(one.topShare * 1000) / 10, nextPageSharePercent: Math.round(one.nextShare * 1000) / 10, swaps: one.swaps,
+      } : null);
+      return {
+        ...base,
+        rule: `${base.rule} A keyword is listed when two or more of the website's pages each took at least 1 in 10 of its impressions, the home page and searches for the website's own name left out, as Insights' Keyword cannibalisation counts it. Swaps are the days Google swapped the page it showed most, counted for a month or less; null for longer dates. Which page should own a keyword is Insights' Keyword cannibalisation to say, never this screen.`,
+        keywordsShared: summary?.rows ?? null,
+        keywordsGoogleShowed: summary?.of ?? null,
+        pagesCompeting: summary?.pagesInvolved ?? null,
+        pagesGoogleShowed: summary?.pagesShown ?? null,
+        timesShown: summary?.impressions ?? null,
+        clicks: summary?.clicks ?? null,
+        busiest: keyword(figures?.busiest ?? null),
+        closestSplit: keyword(figures?.closest ?? null),
+        mostPages: keyword(figures?.crowded ?? null),
+        mostSwapped: keyword(figures?.mostSwapped ?? null),
+        keywordsSwapped: figures?.swapped ?? null,
+        rows: rows.map((row) => ({ ...rowOf(row), pagesCompeting: row.count, swaps: row.swaps ?? null })),
+        rowsListed: list.listed,
       };
     }
 

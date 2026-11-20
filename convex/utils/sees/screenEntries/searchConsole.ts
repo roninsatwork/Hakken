@@ -78,7 +78,6 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
       "any country but the one chosen in the menu: every figure on the screen is that country's",
     ],
   },
-  "searchConsole.almost": { about: "searches just off Google's first page, where a small rise would bring visitors" },
   "searchConsole.brand": {
     about: "Brand and non-brand: clicks from searches using the business's own name (its brand words, set in its Profile) against every other search",
     parts: [
@@ -168,7 +167,6 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
       "any other reason's pages: this page is one reason's alone",
     ],
   },
-  "searchConsole.demand": { about: "searches people make that the website barely shows for" },
   "searchConsole.newLost": {
     about: "New and lost: searches Google started showing the website for in the dates, and those it stopped (lost once 14 days pass without one), and the same for pages",
     parts: [
@@ -178,19 +176,56 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
     ],
     never: SEARCH_CONSOLE_NEVER,
   },
-  "searchConsole.competing": { writer: "INSIGHTS_CANNIBALISATION", about: "pages of the website competing for the same searches" },
+  "searchConsole.competing": {
+    writer: "INSIGHTS_CANNIBALISATION",
+    about: "Keyword cannibalisation (called Pages competing until 20 November 2026): keywords two or more of the website's pages each took at least 1 in 10 of the impressions of, the home page and searches for its own name left out, as Insights' Keyword cannibalisation counts them",
+    parts: [
+      "the four boxes: the keywords two pages share, the pages competing out of every page Google showed, the times Google showed them, and their clicks",
+      "the chart: which of its pages Google showed for the keyword ticked in the table, each day, by impressions or position, with a menu of the pages it competed with",
+      "the table: each keyword with how many pages compete for it, the days Google swapped the page it showed most (Swaps, counted for a month or less), its impressions, clicks and position",
+    ],
+    never: [
+      ...SEARCH_CONSOLE_NEVER,
+      // One voice (insights-one-voice-plan.md phase 5): the specialist decides, and Insights' screens say it.
+      "which page should own a keyword, or what to do with the others: that's Insights' Keyword cannibalisation to say",
+      "the home page or searches for the website's own name: the rule leaves them out",
+      "Swaps for dates longer than a month: they aren't counted, never guessed",
+      "the word showings: always say impressions, as the page does",
+      // The first press, 20 November 2026: "handles had 3,355 impressions split across its competing pages", when 3,355 is
+      // every impression Google counted for the keyword, its home page's among them.
+      "a keyword's impressions as split across its competing pages: Shown is every impression Google counted for it, the home page's too",
+      "the word place for a spot in Google's results: always say position, as the page does",
+    ],
+  },
   "searchConsole.bands": {
     about: "Position bands: how many of the website's searches Google shows in each band of places (the top 3, 4 to 10, 11 to 20, 21 and below), against the span before",
     parts: [
       "the four boxes: searches in the top 3, in 4 to 10, in 11 to 20, and 21 and below, against the span before",
-      "the chart: the searches in each band, day, week or month",
+      "the chart: the searches in each band, day, week or month; 21 and below off as it opens, as older weeks miss some of it",
       "the table: each search with its band, place, the places it moved, clicks and times shown",
     ],
     never: SEARCH_CONSOLE_NEVER,
   },
   "searchConsole.estimates": { about: "Google's real clicks against Visibility's estimate for the same searches" },
   "searchConsole.appearance": { writer: "INSIGHTS_TECHNICAL", about: "rich results: how the website's listings appear in Google" },
-  "searchConsole.lowCtr": { about: "searches where the website is shown often but rarely clicked" },
+  // Shown but not clicked as Anthony chose it on 20 November 2026 (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
+  "searchConsole.lowCtr": {
+    about: "Low click rate (called Shown but not clicked until 20 November 2026): pages Google showed a lot that people rarely clicked, in the country chosen in the menu. Each page is set against what the website usually gets at the same position on Google, from Click rate by position: the clicks it got against the clicks it would usually get there",
+    parts: [
+      "the four boxes: how many pages got fewer clicks than usual, out of every page Google showed; the times Google showed them; the clicks they got; and the clicks they'd usually get, with how many more that is",
+      "the chart: each position on Google from 1 at the top to 20, with the clicks these pages got there above the line and the clicks they'd usually get below it; Count shows the pages with few clicks above every page Google showed there instead",
+      "the table: each of these pages, the most clicks short first, with its times shown, position, clicks and the clicks it would usually get",
+    ],
+    // Its figures are the country's own pages, as Pages' are: the section's line about a page's figures doesn't hold.
+    never: [
+      ...SEARCH_CONSOLE_NEVER.filter((line) => !line.startsWith("a page's clicks as a share")),
+      "a click rate as a target or a promise: what the website usually gets at a position is its own past, not what a page will get",
+      "any page that isn't on the list: only pages that got fewer clicks than usual are listed",
+      // Anthony, 20 November 2026, of the canvas's "place on Google": "is this a place on google maps", then "Place seems to
+      // have failed on all accounts". The first press still wrote "your other first-page places".
+      "the word place for a spot in Google's results: always say position, as the page does",
+    ],
+  },
   // Tracked keywords and Tracked pages since 18 November 2026 (search-console-tracked-way-1-plan-2026-11-18.md).
   "searchConsole.trackedKeywords": {
     about: "only the keywords the company tracks in Search Console, in the country chosen in the menu: their clicks, times shown, share clicked and place together and one by one, each against the span before, and what Google's updates did to the ones ticked onto the chart",
@@ -223,10 +258,9 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
     about: "Volatility: how much the website's places on Google moved each day, out of 10, against its own usual — is it Google, or is it the website?",
     parts: [
       "the four boxes: the newest complete day's score and level, the last 7 days' (or Google's update's), the searches that moved 5 places or more, and clicks over the last 7 days against the 7 before",
-      "the chart: the score each day, week or month, Google's updates marked",
+      "the chart: the score each day, week or month, Google's updates marked, with its two parts, Positions improved (what the searches that climbed moved) and Positions declined (what those that fell moved), which add up to the score; a Show menu picks the lines",
       "the table: the searches counted on the newest complete day, the most moved first, with their place before and now",
     ],
     never: [...SEARCH_CONSOLE_NEVER, "the score as a rating of the website: it says how much places moved, not whether the website is good"],
   },
-  "searchConsole.moves": { about: "the searches and pages that won and lost the most clicks" },
 };

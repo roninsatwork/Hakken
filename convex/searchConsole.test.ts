@@ -511,12 +511,28 @@ describe("collecting", () => {
     await collect(t);
     const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined)).collect());
     // Web results carry no kind of result, as every row held before the others were kept (drift fixes, 2026-10-03).
+    // A page from the country's own search-and-page lines (2026-11-19): the home page with "plumber leeds" on 25 September too.
     expect(seen.map((entry) => `${entry.searchType ?? "web"} ${entry.kind} ${entry.key} ${entry.firstDay} ${entry.lastDay}`).sort()).toEqual([
-      "web page https://acme-shop.test/ 2026-09-26 2026-09-26",
+      "web page https://acme-shop.test/ 2026-09-25 2026-09-26",
       "web query emergency plumber 2026-09-26 2026-09-26",
       "web query plumber leeds 2026-09-25 2026-09-26",
     ]);
     expect(seen.filter((entry) => entry.searchType === "web")).toEqual([]);
+  });
+
+  test("a page shown only in every country's page list never enters a home country's register (search-console-new-and-lost-audit-2026-11-19.md)", async () => {
+    const { t, siteId, admin } = await setup();
+    const page = (path: string) => `https://acme-shop.test${path}`;
+    fakeGoogle({ figures: { [property]: { web: { [NEWEST]: {
+      total: row("", 5, 300),
+      pair: [{ key: "plumber leeds", page: page("/"), clicks: 5, impressions: 100, position: 3 }],
+      // Shown abroad only: in the page list, which is every country's since 17 November 2026, and in no line of the country's.
+      page: [row(page("/"), 5, 200), row(page("/abroad/"), 0, 100)],
+    } } } } });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    const pages = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", undefined).eq("kind", "page")).collect());
+    expect(pages.map((entry) => entry.key)).toEqual([page("/")]);
   });
 
   test("every search's lines are kept, clicked or not, deep or not, on one page or many (the keep rule went on 18 November 2026)", async () => {

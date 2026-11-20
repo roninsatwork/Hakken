@@ -1,0 +1,1752 @@
+{
+ "_note": "More Handles' Keyword cannibalisation, the United Kingdom, web results, read on dev 20 November 2026 with no asks of Google: each period's summary fields the page hands its eye and the first 25 rows, the most shown first (searchConsoleListPage, view competing).",
+ "periods": {
+  "thisWeek": {
+   "summary": {
+    "rows": 3357,
+    "of": 14352,
+    "clicks": 51,
+    "impressions": 30266,
+    "pagesInvolved": 2060,
+    "pagesShown": 3391,
+    "cannibalisation": {
+     "averagePages": 2.528448019064641,
+     "averageSwaps": 0.5320226392612452,
+     "busiest": {
+      "clicks": 2,
+      "count": 2,
+      "impressions": 361,
+      "key": "door catch",
+      "nextShare": 0.4930747922437673,
+      "swaps": 1,
+      "topShare": 0.4986149584487535
+     },
+     "closest": {
+      "clicks": 2,
+      "count": 2,
+      "impressions": 361,
+      "key": "door catch",
+      "nextShare": 0.4930747922437673,
+      "swaps": 1,
+      "topShare": 0.4986149584487535
+     },
+     "crowded": {
+      "clicks": 0,
+      "count": 3,
+      "impressions": 342,
+      "key": "handles",
+      "nextShare": 0.3076923076923077,
+      "swaps": 1,
+      "topShare": 0.358974358974359
+     },
+     "mostSwapped": {
+      "clicks": 0,
+      "count": 2,
+      "impressions": 123,
+      "key": "serozzetta door handles",
+      "nextShare": 0.36585365853658536,
+      "swaps": 2,
+      "topShare": 0.44715447154471544
+     },
+     "swapped": 1508
+    }
+   },
+   "rows": [
+    {
+     "key": "door catch",
+     "count": 2,
+     "swaps": 1,
+     "impressions": 361,
+     "clicks": 2,
+     "position": 4.781163434903047
+    },
+    {
+     "key": "handles",
+     "count": 3,
+     "swaps": 1,
+     "impressions": 342,
+     "clicks": 0,
+     "position": 13.68421052631579
+    },
+    {
+     "key": "tubular latch",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 309,
+     "clicks": 0,
+     "position": 8.249190938511326
+    },
+    {
+     "key": "door handle spindle",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 279,
+     "clicks": 0,
+     "position": 7.200716845878136
+    },
+    {
+     "key": "cupboard handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 249,
+     "clicks": 0,
+     "position": 18.417670682730925
+    },
+    {
+     "key": "carlisle brass door handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 187,
+     "clicks": 0,
+     "position": 12.481283422459892
+    },
+    {
+     "key": "internal door latch types",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 161,
+     "clicks": 1,
+     "position": 7.6770186335403725
+    },
+    {
+     "key": "zoo door handles",
+     "count": 2,
+     "swaps": 1,
+     "impressions": 124,
+     "clicks": 0,
+     "position": 13.435483870967742
+    },
+    {
+     "key": "serozzetta door handles",
+     "count": 2,
+     "swaps": 2,
+     "impressions": 123,
+     "clicks": 0,
+     "position": 14.032520325203253
+    },
+    {
+     "key": "porcelain door knobs",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 119,
+     "clicks": 0,
+     "position": 13.655462184873949
+    },
+    {
+     "key": "door spindle",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 106,
+     "clicks": 0,
+     "position": 4.679245283018868
+    },
+    {
+     "key": "hafele handles",
+     "count": 3,
+     "swaps": 1,
+     "impressions": 104,
+     "clicks": 0,
+     "position": 8.26923076923077
+    },
+    {
+     "key": "door locks",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 100,
+     "clicks": 0,
+     "position": 18.09
+    },
+    {
+     "key": "mortice door knobs",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 96,
+     "clicks": 0,
+     "position": 11.791666666666666
+    },
+    {
+     "key": "bathroom locks",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 95,
+     "clicks": 0,
+     "position": 9.021052631578947
+    },
+    {
+     "key": "eurospec hinges",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 91,
+     "clicks": 0,
+     "position": 15.824175824175825
+    },
+    {
+     "key": "tubular latches",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 83,
+     "clicks": 0,
+     "position": 9.168674698795181
+    },
+    {
+     "key": "tubular latch sizes",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 81,
+     "clicks": 1,
+     "position": 7.271604938271605
+    },
+    {
+     "key": "frelan",
+     "count": 2,
+     "swaps": 2,
+     "impressions": 79,
+     "clicks": 0,
+     "position": 6.860759493670886
+    },
+    {
+     "key": "black cabinet handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 78,
+     "clicks": 2,
+     "position": 7.705128205128205
+    },
+    {
+     "key": "drawer handles",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 78,
+     "clicks": 0,
+     "position": 27.71794871794872
+    },
+    {
+     "key": "inset cupboard handles",
+     "count": 2,
+     "swaps": 2,
+     "impressions": 77,
+     "clicks": 0,
+     "position": 4.974025974025974
+    },
+    {
+     "key": "black door furniture",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 74,
+     "clicks": 0,
+     "position": 11.594594594594595
+    },
+    {
+     "key": "how to measure a door latch",
+     "count": 2,
+     "swaps": 1,
+     "impressions": 74,
+     "clicks": 0,
+     "position": 9.5
+    },
+    {
+     "key": "door latch types",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 70,
+     "clicks": 0,
+     "position": 6.5285714285714285
+    }
+   ]
+  },
+  "lastWeek": {
+   "summary": {
+    "rows": 4677,
+    "of": 18569,
+    "clicks": 144,
+    "impressions": 84126,
+    "pagesInvolved": 2375,
+    "pagesShown": 4171,
+    "cannibalisation": {
+     "averagePages": 2.5067350865939706,
+     "averageSwaps": 1.1808851828094933,
+     "busiest": {
+      "clicks": 0,
+      "count": 2,
+      "impressions": 805,
+      "key": "door catch",
+      "nextShare": 0.4894409937888199,
+      "swaps": 4,
+      "topShare": 0.493167701863354
+     },
+     "closest": {
+      "clicks": 1,
+      "count": 2,
+      "impressions": 374,
+      "key": "serozzetta door handles",
+      "nextShare": 0.4144385026737968,
+      "swaps": 2,
+      "topShare": 0.41711229946524064
+     },
+     "crowded": {
+      "clicks": 0,
+      "count": 5,
+      "impressions": 252,
+      "key": "heritage brass handles",
+      "nextShare": 0.1111111111111111,
+      "swaps": 4,
+      "topShare": 0.15873015873015872
+     },
+     "mostSwapped": {
+      "clicks": 0,
+      "count": 2,
+      "impressions": 805,
+      "key": "door catch",
+      "nextShare": 0.4894409937888199,
+      "swaps": 4,
+      "topShare": 0.493167701863354
+     },
+     "swapped": 2738
+    }
+   },
+   "rows": [
+    {
+     "key": "door catch",
+     "count": 2,
+     "swaps": 4,
+     "impressions": 805,
+     "clicks": 0,
+     "position": 5.870807453416149
+    },
+    {
+     "key": "handles",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 779,
+     "clicks": 1,
+     "position": 14.354300385109115
+    },
+    {
+     "key": "cupboard handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 756,
+     "clicks": 5,
+     "position": 22.396825396825395
+    },
+    {
+     "key": "tubular latch",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 755,
+     "clicks": 4,
+     "position": 8.641059602649007
+    },
+    {
+     "key": "door handle spindle",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 518,
+     "clicks": 0,
+     "position": 7.617760617760617
+    },
+    {
+     "key": "internal door handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 503,
+     "clicks": 0,
+     "position": 12.554671968190855
+    },
+    {
+     "key": "drawer knobs",
+     "count": 3,
+     "swaps": 2,
+     "impressions": 488,
+     "clicks": 1,
+     "position": 15.163934426229508
+    },
+    {
+     "key": "carlisle brass door handles",
+     "count": 2,
+     "swaps": 3,
+     "impressions": 379,
+     "clicks": 0,
+     "position": 15.923482849604222
+    },
+    {
+     "key": "serozzetta door handles",
+     "count": 2,
+     "swaps": 2,
+     "impressions": 374,
+     "clicks": 1,
+     "position": 13.433155080213904
+    },
+    {
+     "key": "alexander and wilks",
+     "count": 4,
+     "swaps": 0,
+     "impressions": 331,
+     "clicks": 0,
+     "position": 25.731117824773413
+    },
+    {
+     "key": "internal door latch types",
+     "count": 2,
+     "swaps": 1,
+     "impressions": 315,
+     "clicks": 0,
+     "position": 7.561904761904762
+    },
+    {
+     "key": "window furniture",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 304,
+     "clicks": 2,
+     "position": 16.898026315789473
+    },
+    {
+     "key": "zoo door handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 288,
+     "clicks": 1,
+     "position": 17.916666666666668
+    },
+    {
+     "key": "sliding door lock",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 282,
+     "clicks": 1,
+     "position": 15.634751773049645
+    },
+    {
+     "key": "art deco door handles",
+     "count": 4,
+     "swaps": 0,
+     "impressions": 279,
+     "clicks": 5,
+     "position": 16.64516129032258
+    },
+    {
+     "key": "drawer handles",
+     "count": 3,
+     "swaps": 2,
+     "impressions": 279,
+     "clicks": 1,
+     "position": 25.770609318996417
+    },
+    {
+     "key": "heritage brass handles",
+     "count": 5,
+     "swaps": 4,
+     "impressions": 252,
+     "clicks": 0,
+     "position": 32.285714285714285
+    },
+    {
+     "key": "door spindle",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 248,
+     "clicks": 0,
+     "position": 5.217741935483871
+    },
+    {
+     "key": "porcelain door knobs",
+     "count": 4,
+     "swaps": 0,
+     "impressions": 236,
+     "clicks": 0,
+     "position": 21.088983050847457
+    },
+    {
+     "key": "heritage brass door handles",
+     "count": 4,
+     "swaps": 4,
+     "impressions": 222,
+     "clicks": 0,
+     "position": 24.783783783783782
+    },
+    {
+     "key": "hafele handles",
+     "count": 3,
+     "swaps": 4,
+     "impressions": 220,
+     "clicks": 0,
+     "position": 10.763636363636364
+    },
+    {
+     "key": "satin chrome door handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 216,
+     "clicks": 0,
+     "position": 6.606481481481482
+    },
+    {
+     "key": "door knobs",
+     "count": 2,
+     "swaps": 3,
+     "impressions": 212,
+     "clicks": 5,
+     "position": 24.264150943396228
+    },
+    {
+     "key": "knobs",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 202,
+     "clicks": 11,
+     "position": 18.054455445544555
+    },
+    {
+     "key": "tubular latch sizes",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 196,
+     "clicks": 1,
+     "position": 5.75
+    }
+   ]
+  },
+  "thisMonth": {
+   "summary": {
+    "rows": 6620,
+    "of": 25861,
+    "clicks": 361,
+    "impressions": 216015,
+    "pagesInvolved": 2897,
+    "pagesShown": 5391,
+    "cannibalisation": {
+     "averagePages": 2.467522658610272,
+     "averageSwaps": 2.6129909365558914,
+     "busiest": {
+      "clicks": 2,
+      "count": 3,
+      "impressions": 2281,
+      "key": "handles",
+      "nextShare": 0.25650557620817843,
+      "swaps": 5,
+      "topShare": 0.4795539033457249
+     },
+     "closest": {
+      "clicks": 1,
+      "count": 2,
+      "impressions": 732,
+      "key": "zoo door handles",
+      "nextShare": 0.3510928961748634,
+      "swaps": 4,
+      "topShare": 0.3510928961748634
+     },
+     "crowded": {
+      "clicks": 10,
+      "count": 4,
+      "impressions": 690,
+      "key": "art deco door handles",
+      "nextShare": 0.1855072463768116,
+      "swaps": 0,
+      "topShare": 0.5449275362318841
+     },
+     "mostSwapped": {
+      "clicks": 0,
+      "count": 4,
+      "impressions": 451,
+      "key": "heritage brass door handles",
+      "nextShare": 0.20842572062084258,
+      "swaps": 12,
+      "topShare": 0.25055432372505543
+     },
+     "swapped": 5018
+    }
+   },
+   "rows": [
+    {
+     "key": "handles",
+     "count": 3,
+     "swaps": 5,
+     "impressions": 2281,
+     "clicks": 2,
+     "position": 13.720298114861903
+    },
+    {
+     "key": "door catch",
+     "count": 2,
+     "swaps": 7,
+     "impressions": 1760,
+     "clicks": 4,
+     "position": 5.281818181818182
+    },
+    {
+     "key": "tubular latch",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 1639,
+     "clicks": 7,
+     "position": 7.50274557657108
+    },
+    {
+     "key": "cupboard handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 1626,
+     "clicks": 8,
+     "position": 20.194341943419435
+    },
+    {
+     "key": "door handle spindle",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 1413,
+     "clicks": 1,
+     "position": 7.13375796178344
+    },
+    {
+     "key": "carlisle brass door handles",
+     "count": 2,
+     "swaps": 3,
+     "impressions": 1019,
+     "clicks": 1,
+     "position": 17.598626104023552
+    },
+    {
+     "key": "drawer knobs",
+     "count": 3,
+     "swaps": 5,
+     "impressions": 924,
+     "clicks": 3,
+     "position": 15.917748917748918
+    },
+    {
+     "key": "serozzetta door handles",
+     "count": 2,
+     "swaps": 9,
+     "impressions": 914,
+     "clicks": 1,
+     "position": 13.793216630196936
+    },
+    {
+     "key": "alexander and wilks",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 829,
+     "clicks": 1,
+     "position": 24.155609167671894
+    },
+    {
+     "key": "internal door handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 803,
+     "clicks": 0,
+     "position": 13.409713574097136
+    },
+    {
+     "key": "handle",
+     "count": 2,
+     "swaps": 1,
+     "impressions": 799,
+     "clicks": 0,
+     "position": 9.586983729662078
+    },
+    {
+     "key": "window furniture",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 772,
+     "clicks": 5,
+     "position": 16.791450777202073
+    },
+    {
+     "key": "internal door latch types",
+     "count": 2,
+     "swaps": 2,
+     "impressions": 745,
+     "clicks": 1,
+     "position": 7.1422818791946305
+    },
+    {
+     "key": "zoo door handles",
+     "count": 2,
+     "swaps": 4,
+     "impressions": 732,
+     "clicks": 1,
+     "position": 17.030054644808743
+    },
+    {
+     "key": "art deco door handles",
+     "count": 4,
+     "swaps": 0,
+     "impressions": 690,
+     "clicks": 10,
+     "position": 15.253623188405797
+    },
+    {
+     "key": "door spindle",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 666,
+     "clicks": 1,
+     "position": 5.06006006006006
+    },
+    {
+     "key": "drawer handles",
+     "count": 3,
+     "swaps": 8,
+     "impressions": 664,
+     "clicks": 2,
+     "position": 27.923192771084338
+    },
+    {
+     "key": "porcelain door knobs",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 648,
+     "clicks": 0,
+     "position": 19.540123456790123
+    },
+    {
+     "key": "sliding door lock",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 642,
+     "clicks": 3,
+     "position": 18.20872274143302
+    },
+    {
+     "key": "hafele handles",
+     "count": 3,
+     "swaps": 11,
+     "impressions": 559,
+     "clicks": 0,
+     "position": 10.329159212880143
+    },
+    {
+     "key": "alexander & wilks",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 499,
+     "clicks": 3,
+     "position": 27.50300601202405
+    },
+    {
+     "key": "door knobs",
+     "count": 2,
+     "swaps": 8,
+     "impressions": 498,
+     "clicks": 5,
+     "position": 25.29116465863454
+    },
+    {
+     "key": "black door furniture",
+     "count": 2,
+     "swaps": 6,
+     "impressions": 493,
+     "clicks": 1,
+     "position": 11.728194726166329
+    },
+    {
+     "key": "heritage brass handles",
+     "count": 4,
+     "swaps": 9,
+     "impressions": 491,
+     "clicks": 0,
+     "position": 31.881873727087576
+    },
+    {
+     "key": "cabinet handles",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 489,
+     "clicks": 0,
+     "position": 29.49079754601227
+    }
+   ]
+  },
+  "lastMonth": {
+   "summary": {
+    "rows": 6662,
+    "of": 31538,
+    "clicks": 559,
+    "impressions": 231178,
+    "pagesInvolved": 3120,
+    "pagesShown": 6439,
+    "cannibalisation": {
+     "averagePages": 2.3296307415190634,
+     "averageSwaps": 3.012608826178325,
+     "busiest": {
+      "clicks": 8,
+      "count": 3,
+      "impressions": 3355,
+      "key": "handles",
+      "nextShare": 0.267741935483871,
+      "swaps": 10,
+      "topShare": 0.43870967741935485
+     },
+     "closest": {
+      "clicks": 2,
+      "count": 6,
+      "impressions": 1619,
+      "key": "handle",
+      "nextShare": 0.16666666666666666,
+      "swaps": 3,
+      "topShare": 0.16666666666666666
+     },
+     "crowded": {
+      "clicks": 2,
+      "count": 6,
+      "impressions": 1619,
+      "key": "handle",
+      "nextShare": 0.16666666666666666,
+      "swaps": 3,
+      "topShare": 0.16666666666666666
+     },
+     "mostSwapped": {
+      "clicks": 0,
+      "count": 5,
+      "impressions": 432,
+      "key": "heritage brass handles",
+      "nextShare": 0.2337962962962963,
+      "swaps": 18,
+      "topShare": 0.2800925925925926
+     },
+     "swapped": 5437
+    }
+   },
+   "rows": [
+    {
+     "key": "handles",
+     "count": 3,
+     "swaps": 10,
+     "impressions": 3355,
+     "clicks": 8,
+     "position": 14.580029806259315
+    },
+    {
+     "key": "tubular latch",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 2500,
+     "clicks": 6,
+     "position": 5.8416
+    },
+    {
+     "key": "door handle spindle",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 1665,
+     "clicks": 4,
+     "position": 6.506906906906907
+    },
+    {
+     "key": "handle",
+     "count": 6,
+     "swaps": 3,
+     "impressions": 1619,
+     "clicks": 2,
+     "position": 9.934527486102532
+    },
+    {
+     "key": "door spindle",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 1399,
+     "clicks": 0,
+     "position": 5.080057183702645
+    },
+    {
+     "key": "door knobs",
+     "count": 2,
+     "swaps": 8,
+     "impressions": 1386,
+     "clicks": 4,
+     "position": 14.34920634920635
+    },
+    {
+     "key": "alexander and wilks",
+     "count": 3,
+     "swaps": 0,
+     "impressions": 1345,
+     "clicks": 3,
+     "position": 29.496654275092936
+    },
+    {
+     "key": "carlisle brass door handles",
+     "count": 2,
+     "swaps": 3,
+     "impressions": 1242,
+     "clicks": 2,
+     "position": 13.679549114331722
+    },
+    {
+     "key": "serozzetta door handles",
+     "count": 2,
+     "swaps": 2,
+     "impressions": 1177,
+     "clicks": 2,
+     "position": 12.42056074766355
+    },
+    {
+     "key": "internal door latch types",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 1039,
+     "clicks": 3,
+     "position": 4.942252165543792
+    },
+    {
+     "key": "window furniture",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 971,
+     "clicks": 4,
+     "position": 13.734294541709577
+    },
+    {
+     "key": "hafele handles",
+     "count": 3,
+     "swaps": 12,
+     "impressions": 919,
+     "clicks": 2,
+     "position": 9.339499455930358
+    },
+    {
+     "key": "zoo door handles",
+     "count": 2,
+     "swaps": 9,
+     "impressions": 870,
+     "clicks": 1,
+     "position": 12.78735632183908
+    },
+    {
+     "key": "porcelain door knobs",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 867,
+     "clicks": 1,
+     "position": 17.22722029988466
+    },
+    {
+     "key": "black cabinet handles",
+     "count": 2,
+     "swaps": 17,
+     "impressions": 844,
+     "clicks": 1,
+     "position": 9.522511848341232
+    },
+    {
+     "key": "art deco door handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 815,
+     "clicks": 12,
+     "position": 11.392638036809815
+    },
+    {
+     "key": "tubular latch sizes",
+     "count": 2,
+     "swaps": 4,
+     "impressions": 724,
+     "clicks": 22,
+     "position": 2.6353591160220993
+    },
+    {
+     "key": "alexander & wilks",
+     "count": 4,
+     "swaps": 0,
+     "impressions": 719,
+     "clicks": 1,
+     "position": 33.68706536856745
+    },
+    {
+     "key": "tubular door latch",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 645,
+     "clicks": 2,
+     "position": 7.299224806201551
+    },
+    {
+     "key": "door latch types",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 644,
+     "clicks": 1,
+     "position": 4.998447204968944
+    },
+    {
+     "key": "copper door handles",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 630,
+     "clicks": 2,
+     "position": 9.217460317460317
+    },
+    {
+     "key": "drawer knobs",
+     "count": 2,
+     "swaps": 8,
+     "impressions": 629,
+     "clicks": 3,
+     "position": 17.483306836248012
+    },
+    {
+     "key": "mortice door knobs",
+     "count": 2,
+     "swaps": 5,
+     "impressions": 616,
+     "clicks": 0,
+     "position": 12.769480519480519
+    },
+    {
+     "key": "kitchen door knobs",
+     "count": 2,
+     "swaps": 0,
+     "impressions": 593,
+     "clicks": 1,
+     "position": 13.074198988195615
+    },
+    {
+     "key": "black door furniture",
+     "count": 2,
+     "swaps": 3,
+     "impressions": 588,
+     "clicks": 4,
+     "position": 8.700680272108844
+    }
+   ]
+  },
+  "last3Months": {
+   "summary": {
+    "rows": 11515,
+    "of": 51401,
+    "clicks": 1950,
+    "impressions": 762079,
+    "pagesInvolved": 4979,
+    "pagesShown": 10073,
+    "cannibalisation": {
+     "averagePages": 2.3613547546678246,
+     "averageSwaps": null,
+     "busiest": {
+      "clicks": 31,
+      "count": 2,
+      "impressions": 15194,
+      "key": "handles",
+      "nextShare": 0.1930635838150289,
+      "swaps": null,
+      "topShare": 0.6763005780346821
+     },
+     "closest": {
+      "clicks": 4,
+      "count": 3,
+      "impressions": 2723,
+      "key": "hafele handles",
+      "nextShare": 0.3509739066519662,
+      "swaps": null,
+      "topShare": 0.3873575891216465
+     },
+     "crowded": {
+      "clicks": 4,
+      "count": 3,
+      "impressions": 2723,
+      "key": "hafele handles",
+      "nextShare": 0.3509739066519662,
+      "swaps": null,
+      "topShare": 0.3873575891216465
+     },
+     "mostSwapped": null,
+     "swapped": null
+    }
+   },
+   "rows": [
+    {
+     "key": "handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 15194,
+     "clicks": 31,
+     "position": 12.52764249045676
+    },
+    {
+     "key": "tubular latch",
+     "count": 2,
+     "swaps": null,
+     "impressions": 7369,
+     "clicks": 24,
+     "position": 6.57307640113991
+    },
+    {
+     "key": "door catch",
+     "count": 2,
+     "swaps": null,
+     "impressions": 6508,
+     "clicks": 44,
+     "position": 5.259680393362016
+    },
+    {
+     "key": "door handle spindle",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5139,
+     "clicks": 15,
+     "position": 6.947849776221054
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4669,
+     "clicks": 15,
+     "position": 12.705932747911758
+    },
+    {
+     "key": "carlisle brass door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4588,
+     "clicks": 11,
+     "position": 13.690278988666085
+    },
+    {
+     "key": "alexander and wilks",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4352,
+     "clicks": 31,
+     "position": 27.782398897058822
+    },
+    {
+     "key": "serozzetta door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 3834,
+     "clicks": 5,
+     "position": 10.797861241523213
+    },
+    {
+     "key": "door spindle",
+     "count": 2,
+     "swaps": null,
+     "impressions": 3794,
+     "clicks": 2,
+     "position": 5.583025830258302
+    },
+    {
+     "key": "cup handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 3736,
+     "clicks": 15,
+     "position": 6.300053533190578
+    },
+    {
+     "key": "drawer knobs",
+     "count": 2,
+     "swaps": null,
+     "impressions": 3391,
+     "clicks": 24,
+     "position": 14.070185785903863
+    },
+    {
+     "key": "carlisle brass",
+     "count": 2,
+     "swaps": null,
+     "impressions": 3295,
+     "clicks": 17,
+     "position": 12.582701062215477
+    },
+    {
+     "key": "internal door latch types",
+     "count": 2,
+     "swaps": null,
+     "impressions": 3242,
+     "clicks": 6,
+     "position": 5.536705737199259
+    },
+    {
+     "key": "window furniture",
+     "count": 2,
+     "swaps": null,
+     "impressions": 2871,
+     "clicks": 18,
+     "position": 14.859282479972135
+    },
+    {
+     "key": "hafele handles",
+     "count": 3,
+     "swaps": null,
+     "impressions": 2723,
+     "clicks": 4,
+     "position": 9.287550495776717
+    },
+    {
+     "key": "art deco door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 2422,
+     "clicks": 34,
+     "position": 12.34558216350124
+    },
+    {
+     "key": "black cabinet handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 2395,
+     "clicks": 5,
+     "position": 9.150730688935282
+    },
+    {
+     "key": "alexander & wilks",
+     "count": 3,
+     "swaps": null,
+     "impressions": 2386,
+     "clicks": 21,
+     "position": 31.534367141659683
+    },
+    {
+     "key": "zoo door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 2333,
+     "clicks": 6,
+     "position": 12.981997428204028
+    },
+    {
+     "key": "porcelain door knobs",
+     "count": 2,
+     "swaps": null,
+     "impressions": 2264,
+     "clicks": 6,
+     "position": 16.670053003533567
+    },
+    {
+     "key": "tubular latch sizes",
+     "count": 2,
+     "swaps": null,
+     "impressions": 2156,
+     "clicks": 55,
+     "position": 3.4633580705009277
+    },
+    {
+     "key": "bathroom lock",
+     "count": 2,
+     "swaps": null,
+     "impressions": 2025,
+     "clicks": 0,
+     "position": 10.732839506172839
+    },
+    {
+     "key": "drawer handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 1987,
+     "clicks": 5,
+     "position": 25.908907901358834
+    },
+    {
+     "key": "black door furniture",
+     "count": 2,
+     "swaps": null,
+     "impressions": 1957,
+     "clicks": 8,
+     "position": 9.379662749105774
+    },
+    {
+     "key": "black handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 1933,
+     "clicks": 0,
+     "position": 10.316088980858769
+    }
+   ]
+  },
+  "last6Months": {
+   "summary": {
+    "rows": 18140,
+    "of": 74605,
+    "clicks": 3955,
+    "impressions": 1537083,
+    "pagesInvolved": 6151,
+    "pagesShown": 12376,
+    "cannibalisation": {
+     "averagePages": 2.331918412348401,
+     "averageSwaps": null,
+     "busiest": {
+      "clicks": 69,
+      "count": 2,
+      "impressions": 27792,
+      "key": "handles",
+      "nextShare": 0.21828454031843864,
+      "swaps": null,
+      "topShare": 0.6635850025680534
+     },
+     "closest": {
+      "clicks": 13,
+      "count": 2,
+      "impressions": 4662,
+      "key": "black cabinet handles",
+      "nextShare": 0.49785499785499787,
+      "swaps": null,
+      "topShare": 0.5019305019305019
+     },
+     "crowded": {
+      "clicks": 35,
+      "count": 4,
+      "impressions": 5096,
+      "key": "alexander & wilks",
+      "nextShare": 0.14050235478806908,
+      "swaps": null,
+      "topShare": 0.45879120879120877
+     },
+     "mostSwapped": null,
+     "swapped": null
+    }
+   },
+   "rows": [
+    {
+     "key": "handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 27792,
+     "clicks": 69,
+     "position": 13.349848877374784
+    },
+    {
+     "key": "tubular latch",
+     "count": 2,
+     "swaps": null,
+     "impressions": 14514,
+     "clicks": 40,
+     "position": 6.728124569381287
+    },
+    {
+     "key": "door handle spindle",
+     "count": 2,
+     "swaps": null,
+     "impressions": 9302,
+     "clicks": 25,
+     "position": 7.175768651902817
+    },
+    {
+     "key": "carlisle brass door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 8988,
+     "clicks": 20,
+     "position": 11.85002225189141
+    },
+    {
+     "key": "alexander and wilks",
+     "count": 3,
+     "swaps": null,
+     "impressions": 8608,
+     "clicks": 62,
+     "position": 31.668564126394052
+    },
+    {
+     "key": "zoo hardware",
+     "count": 2,
+     "swaps": null,
+     "impressions": 8582,
+     "clicks": 9,
+     "position": 7.6979725005826145
+    },
+    {
+     "key": "drawer handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 8134,
+     "clicks": 26,
+     "position": 17.623555446274896
+    },
+    {
+     "key": "handle",
+     "count": 2,
+     "swaps": null,
+     "impressions": 7874,
+     "clicks": 8,
+     "position": 9.875158750317501
+    },
+    {
+     "key": "door spindle",
+     "count": 2,
+     "swaps": null,
+     "impressions": 6786,
+     "clicks": 6,
+     "position": 5.6567933981727085
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "count": 3,
+     "swaps": null,
+     "impressions": 6416,
+     "clicks": 24,
+     "position": 14.98675187032419
+    },
+    {
+     "key": "cup handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 6136,
+     "clicks": 25,
+     "position": 7.817633637548892
+    },
+    {
+     "key": "window furniture",
+     "count": 2,
+     "swaps": null,
+     "impressions": 6036,
+     "clicks": 43,
+     "position": 15.158051689860836
+    },
+    {
+     "key": "internal door latch types",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5943,
+     "clicks": 8,
+     "position": 5.559481743227327
+    },
+    {
+     "key": "carlisle brass",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5909,
+     "clicks": 25,
+     "position": 12.343712980199696
+    },
+    {
+     "key": "serozzetta door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5801,
+     "clicks": 13,
+     "position": 10.301154973280468
+    },
+    {
+     "key": "drawer knobs",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5644,
+     "clicks": 34,
+     "position": 16.120304748405385
+    },
+    {
+     "key": "chrome door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5452,
+     "clicks": 26,
+     "position": 9.369772560528247
+    },
+    {
+     "key": "alexander & wilks",
+     "count": 4,
+     "swaps": null,
+     "impressions": 5096,
+     "clicks": 35,
+     "position": 34.804748822605966
+    },
+    {
+     "key": "knobs",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4992,
+     "clicks": 20,
+     "position": 18.611177884615383
+    },
+    {
+     "key": "black cabinet handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4662,
+     "clicks": 13,
+     "position": 8.984984984984985
+    },
+    {
+     "key": "art deco door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4560,
+     "clicks": 57,
+     "position": 13.285745614035088
+    },
+    {
+     "key": "front door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4302,
+     "clicks": 6,
+     "position": 16.511854951185494
+    },
+    {
+     "key": "hafele handles",
+     "count": 3,
+     "swaps": null,
+     "impressions": 4275,
+     "clicks": 11,
+     "position": 8.64233918128655
+    },
+    {
+     "key": "porcelain door knobs",
+     "count": 2,
+     "swaps": null,
+     "impressions": 3994,
+     "clicks": 9,
+     "position": 14.7386079118678
+    },
+    {
+     "key": "door knob",
+     "count": 2,
+     "swaps": null,
+     "impressions": 3887,
+     "clicks": 11,
+     "position": 19.70954463596604
+    }
+   ]
+  },
+  "last12Months": {
+   "summary": {
+    "rows": 19253,
+    "of": 78115,
+    "clicks": 4706,
+    "impressions": 1817380,
+    "pagesInvolved": 6332,
+    "pagesShown": 13064,
+    "cannibalisation": {
+     "averagePages": 2.339167921882304,
+     "averageSwaps": null,
+     "busiest": {
+      "clicks": 79,
+      "count": 2,
+      "impressions": 32268,
+      "key": "handles",
+      "nextShare": 0.2281574394463668,
+      "swaps": null,
+      "topShare": 0.6693339100346021
+     },
+     "closest": {
+      "clicks": 36,
+      "count": 2,
+      "impressions": 7472,
+      "key": "chrome door handles",
+      "nextShare": 0.4690845824411135,
+      "swaps": null,
+      "topShare": 0.5278372591006424
+     },
+     "crowded": {
+      "clicks": 11,
+      "count": 3,
+      "impressions": 9650,
+      "key": "zoo hardware",
+      "nextShare": 0.3522279792746114,
+      "swaps": null,
+      "topShare": 0.4360621761658031
+     },
+     "mostSwapped": null,
+     "swapped": null
+    }
+   },
+   "rows": [
+    {
+     "key": "handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 32268,
+     "clicks": 79,
+     "position": 13.459681418123218
+    },
+    {
+     "key": "tubular latch",
+     "count": 2,
+     "swaps": null,
+     "impressions": 16425,
+     "clicks": 42,
+     "position": 6.818630136986301
+    },
+    {
+     "key": "carlisle brass door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 10897,
+     "clicks": 25,
+     "position": 11.458566577957235
+    },
+    {
+     "key": "door handle spindle",
+     "count": 2,
+     "swaps": null,
+     "impressions": 10444,
+     "clicks": 29,
+     "position": 7.301321332822673
+    },
+    {
+     "key": "zoo hardware",
+     "count": 3,
+     "swaps": null,
+     "impressions": 9650,
+     "clicks": 11,
+     "position": 8.07056994818653
+    },
+    {
+     "key": "alexander and wilks",
+     "count": 3,
+     "swaps": null,
+     "impressions": 9614,
+     "clicks": 71,
+     "position": 30.652902017890575
+    },
+    {
+     "key": "drawer handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 9590,
+     "clicks": 30,
+     "position": 18.558706986444214
+    },
+    {
+     "key": "handle",
+     "count": 2,
+     "swaps": null,
+     "impressions": 9241,
+     "clicks": 8,
+     "position": 10.049345308949247
+    },
+    {
+     "key": "drawer knobs",
+     "count": 3,
+     "swaps": null,
+     "impressions": 7774,
+     "clicks": 44,
+     "position": 14.907769488037047
+    },
+    {
+     "key": "door spindle",
+     "count": 2,
+     "swaps": null,
+     "impressions": 7506,
+     "clicks": 9,
+     "position": 5.769118038902212
+    },
+    {
+     "key": "chrome door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 7472,
+     "clicks": 36,
+     "position": 9.527837259100643
+    },
+    {
+     "key": "carlisle brass",
+     "count": 2,
+     "swaps": null,
+     "impressions": 7304,
+     "clicks": 29,
+     "position": 12.238088718510406
+    },
+    {
+     "key": "kitchen cupboard handles",
+     "count": 3,
+     "swaps": null,
+     "impressions": 6989,
+     "clicks": 25,
+     "position": 15.94577192731435
+    },
+    {
+     "key": "cup handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 6869,
+     "clicks": 29,
+     "position": 8.382879604018052
+    },
+    {
+     "key": "window furniture",
+     "count": 2,
+     "swaps": null,
+     "impressions": 6841,
+     "clicks": 46,
+     "position": 14.939921064171905
+    },
+    {
+     "key": "internal door latch types",
+     "count": 2,
+     "swaps": null,
+     "impressions": 6652,
+     "clicks": 8,
+     "position": 5.668971737823211
+    },
+    {
+     "key": "serozzetta door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 6286,
+     "clicks": 18,
+     "position": 10.260419980909958
+    },
+    {
+     "key": "knobs",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5861,
+     "clicks": 20,
+     "position": 19.01620883808224
+    },
+    {
+     "key": "alexander & wilks",
+     "count": 3,
+     "swaps": null,
+     "impressions": 5755,
+     "clicks": 37,
+     "position": 33.74700260642919
+    },
+    {
+     "key": "art deco door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5249,
+     "clicks": 62,
+     "position": 13.6353591160221
+    },
+    {
+     "key": "black cabinet handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 5212,
+     "clicks": 15,
+     "position": 9.06811204911742
+    },
+    {
+     "key": "hafele handles",
+     "count": 3,
+     "swaps": null,
+     "impressions": 4764,
+     "clicks": 16,
+     "position": 8.46767422334173
+    },
+    {
+     "key": "porcelain door knobs",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4559,
+     "clicks": 12,
+     "position": 14.428602763763983
+    },
+    {
+     "key": "zoo door handles",
+     "count": 2,
+     "swaps": null,
+     "impressions": 4541,
+     "clicks": 16,
+     "position": 11.228143580709094
+    },
+    {
+     "key": "cupboard knobs",
+     "count": 3,
+     "swaps": null,
+     "impressions": 4478,
+     "clicks": 19,
+     "position": 14.234702992407325
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,309 @@
+// Three ways to draw Search Console → Shown but not clicked, from the app's real parts, on More Handles' real figures: the
+// United Kingdom, web results, October 2026 (Last month). Nothing here is built.
+import { useMemo, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { MousePointerClick } from "lucide-react";
+import DATA from "../data/board.json";
+import TITLES from "../data/titles.json";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { Change } from "@/src/ui/components/screens/Change";
+import { AgainstBars, type AgainstRow } from "@/src/ui/components/screens/AgainstBars";
+import { MirrorBars, type MirrorBar, type MirrorZone } from "@/src/ui/components/screens/MirrorBars";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { CHART_COMPARATOR_GREY } from "@/src/ui/components/charts/chartPalette";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { formatNumber, toCsv } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+import { SITE_SERIES_COLOURS } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
+import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
+import { useSitePager } from "@/src/app/(dashboard)/app/sites/_components/useSitePagedTable";
+import { useSiteSearch } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
+import { useSiteSortedList, type SiteSortColumns } from "@/src/app/(dashboard)/app/sites/_components/useSiteSort";
+import { SiteViewSwitch } from "@/src/app/(dashboard)/app/sites/_components/SiteViewSwitch";
+import { figureColumns, keywordColumn, pageColumn, SearchConsoleChips, type ChipId, type ListRow } from "@/src/app/(dashboard)/app/search-console/_components/SearchConsoleTables";
+import { formatPosition, formatRate } from "@/src/app/(dashboard)/app/search-console/_components/searchConsoleFormat";
+import { shortPageName } from "@/src/app/(dashboard)/app/search-console/_components/searchConsoleRecords";
+
+const HOST = "morehandles.co.uk";
+const fmt = formatNumber;
+const oneDecimal = (value: number) => formatPosition(Math.round(value * 10) / 10);
+/** A click rate as this page says it: two decimals under 1%, where one read 0.05% as "0.0%". */
+const percent = (rate: number) => (rate < 0.01 ? `${(rate * 100).toFixed(2)}%` : formatRate(rate));
+
+// ——— The figures ———
+
+type Judged = { key: string; clicks: number; impressions: number; position: number; usual: number; expected: number; missed: number; top?: string; brand?: boolean };
+type Totals = { rows: number; impressions: number; clicks: number; expected: number; missed: number };
+type Place = { place: number; pages: number; clicks: number; expected: number; impressions: number; usual: number };
+type Board = {
+  pages: { all: { rows: number }; low: Totals; rows: Judged[] };
+  keywords: { all: { rows: number }; low: Totals; lowOther: Totals; rows: Judged[] };
+  places: Place[];
+  placePages: Record<string, number>;
+};
+const BOARD = DATA as unknown as Board;
+const titles = TITLES as Record<string, string>;
+const nameOf = (page: string) => shortPageName(titles[page], page, HOST, "Home page");
+
+/** A table's row in the list's own shape, so the app's own columns draw it. */
+function rowOf(judged: Judged): ListRow {
+  return {
+    key: judged.key, clicks: judged.clicks, impressions: judged.impressions, ctr: judged.impressions > 0 ? judged.clicks / judged.impressions : 0,
+    position: judged.position, band: "4-10", previousClicks: null, change: null, previousPosition: null, positionChange: null, share: 0, count: null,
+    top: judged.top ?? null, tracked: false, kind: null, volume: null, estimate: null, brand: judged.brand ?? null, usualCtr: judged.usual,
+    expected: judged.expected, topShare: null, next: null, nextShare: null, verdict: null, gap: judged.missed,
+    ...(titles[judged.key] ? { title: titles[judged.key] } : {}),
+  } as ListRow;
+}
+
+// ——— Shared pieces ———
+
+const quiet = (words: string) => <span className="text-secondary">{words}</span>;
+
+function Boxes({ totals, all, noun }: { totals: Totals; all: number; noun: "pages" | "keywords" }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <FigureRow>
+        <Figure label="Shown a lot, clicked a little" value={fmt(totals.rows)} detail={quiet(`Out of ${fmt(all)} ${noun} Google showed`)} />
+        <Figure label="Times Google showed them" value={fmt(totals.impressions)} detail={quiet("In October")} />
+        <Figure label="Clicks they got" value={fmt(totals.clicks)} detail={quiet("In October")} />
+        <Figure label="Clicks you'd usually get" value={fmt(totals.expected)} detail={quiet(`That's ${fmt(totals.missed)} more than they got`)} />
+      </FigureRow>
+    </div>
+  );
+}
+
+function Page({ description, boxes, children }: { description: string; boxes: ReactNode; children: ReactNode }) {
+  const [result, setResult] = useState<"web" | "news">("web");
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader icon={<MousePointerClick className="h-5 w-5 text-brand" />} title="Shown but not clicked" description={description} />
+      <SiteViewSwitch label="Kind of result" options={[{ value: "web", label: "Web" }, { value: "news", label: "News" }]} value={result} onChange={setResult} />
+      {boxes}
+      {children}
+    </div>
+  );
+}
+
+// ——— The table: lean, one line a row ———
+
+type SortKey = "key" | "impressions" | "position" | "ctr" | "usualCtr" | "gap";
+const SORTS: SiteSortColumns<ListRow, SortKey> = {
+  key: { value: (row) => row.title ?? row.key, first: "asc" },
+  impressions: { value: (row) => row.impressions, first: "desc" },
+  position: { value: (row) => row.position, first: "asc" },
+  ctr: { value: (row) => row.ctr, first: "desc" },
+  usualCtr: { value: (row) => row.usualCtr, first: "desc" },
+  gap: { value: (row) => row.gap, first: "desc" },
+};
+
+function LowTable({ judged, of, chips }: { judged: readonly Judged[]; of: "pages" | "keywords"; chips: readonly ChipId[] }) {
+  const t = useTranslations("searchConsole");
+  const say = (key: string, values?: Record<string, string | number>) => t(key, values as never);
+  const rows = useMemo(() => judged.map(rowOf), [judged]);
+  const [search, setSearch, term] = useSiteSearch();
+  const matches = wordStartMatcher(term.toLowerCase());
+  const matching = useMemo(() => (matches ? rows.filter((row) => matches((row.title ?? row.key).toLowerCase())) : rows), [rows, matches]);
+  const order = useSiteSortedList(matching, SORTS, { opening: "gap", name: (row) => row.key });
+  const pages = useSitePager(order.rows);
+  const recordHref = () => "#";
+  const figures = (which: Parameters<typeof figureColumns>[1]) => figureColumns(say, which) as unknown as DataTableColumn<ListRow>[];
+  const columns: DataTableColumn<ListRow>[] = [
+    of === "pages" ? pageColumn<ListRow>(say("table.page"), HOST, recordHref) : keywordColumn<ListRow>(say("table.keyword"), recordHref),
+    ...figures(["impressions", "position"]),
+    { key: "ctr", header: say("table.ctr"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{percent(row.ctr)}</span> },
+    { key: "usualCtr", header: <span title="What your website usually gets at this position">Usually</span>, align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{percent(row.usualCtr ?? 0)}</span> },
+    { key: "gap", header: <span title="Clicks short of what you usually get">Missed</span>, align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{fmt(row.gap ?? 0)}</span> },
+  ];
+  return (
+    <DataTable
+      rows={pages.pageRows}
+      rowKey={(row) => row.key}
+      search={{ value: search, onChange: setSearch, placeholder: say(of === "pages" ? "pages.searchPlaceholder" : "keywords.searchPlaceholder") }}
+      filters={<SearchConsoleChips chips={chips} />}
+      cardHeader={(
+        <TableBar
+          footer={pages.footer}
+          noun={of}
+          actions={(
+            <ListDownload
+              label="Download all (CSV)"
+              fileName={`${HOST}-search-console-shown-but-not-clicked`}
+              rows={order.rows}
+              columns={[
+                { header: of === "pages" ? "Page" : "Keyword", value: (row) => row.key },
+                { header: "Impressions", value: (row) => row.impressions },
+                { header: "Position", value: (row) => Math.round(row.position * 10) / 10 },
+                { header: "CTR (%)", value: (row) => Math.round(row.ctr * 10_000) / 100 },
+                { header: "Usually (%)", value: (row) => Math.round((row.usualCtr ?? 0) * 10_000) / 100 },
+                { header: "Clicks", value: (row) => row.clicks },
+                { header: "Clicks you'd usually get", value: (row) => row.expected ?? 0 },
+              ]}
+            />
+          )}
+        />
+      )}
+      sort={order.tableSort}
+      empty={{ icon: <MousePointerClick className="h-8 w-8 text-muted/30" />, label: term ? "Nothing matches that search." : "Nothing in these dates." }}
+      footer={pages.footer}
+      columns={columns}
+    />
+  );
+}
+
+// ——— Way 1 · each page against your usual rate, with AgainstBars ———
+
+
+function againstRow(judged: Judged, name: string): AgainstRow {
+  const rate = judged.impressions > 0 ? judged.clicks / judged.impressions : 0;
+  return {
+    key: judged.key,
+    label: name,
+    now: rate * 100,
+    usual: judged.usual * 100,
+    nowWord: percent(rate),
+    usualWord: `Usually ${percent(judged.usual)}`,
+    moved: <Change by={-judged.missed} format={fmt} />,
+    readout: [
+      { value: fmt(judged.impressions), label: "Times shown" },
+      { value: oneDecimal(judged.position), label: "Position" },
+      { value: fmt(judged.clicks), label: "Clicks" },
+      { value: fmt(judged.expected), label: "Clicks you'd usually get" },
+    ],
+  };
+}
+
+function AgainstCard() {
+  const [show, setShow] = useState<"missed" | "shown">("missed");
+  const top = useMemo(() => {
+    const rows = [...BOARD.pages.rows];
+    if (show === "shown") rows.sort((a, b) => b.impressions - a.impressions);
+    return rows.slice(0, 10);
+  }, [show]);
+  return (
+    <MapCard
+      title={show === "missed" ? "The 10 pages missing the most clicks" : "The 10 pages Google shows most"}
+      hint="Each bar is how often people click the page. The line is what your website usually gets at that position."
+      exportName={`${HOST}-search-console-shown-but-not-clicked-against`}
+      csv={() => toCsv(["Page", "CTR (%)", "Usually (%)", "Clicks", "Clicks you'd usually get"], top.map((row) => [row.key, Math.round((10_000 * row.clicks) / row.impressions) / 100, Math.round(row.usual * 10_000) / 100, row.clicks, row.expected]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: show, options: [{ value: "missed", label: "Missing the most clicks" }, { value: "shown", label: "Shown most" }], onChange: (next) => setShow(next as "missed" | "shown") },
+      ]}
+    >
+      <AgainstBars rows={top.map((row) => againstRow(row, nameOf(row.key)))} nowKey="How often people click it" usualKey="What you usually get there" />
+    </MapCard>
+  );
+}
+
+function AgainstWay() {
+  return (
+    <Page description="Pages Google shows a lot that people rarely click. A better title in Google often fixes it." boxes={<Boxes totals={BOARD.pages.low} all={BOARD.pages.all.rows} noun="pages" />}>
+      <AgainstCard />
+      <LowTable judged={BOARD.pages.rows} of="pages" chips={["pageType", "band"]} />
+    </Page>
+  );
+}
+
+// ——— Way 2 · place by place on Google, with MirrorBars ———
+
+const ZONES: MirrorZone[] = [{ upTo: "3", name: "Top 3" }, { upTo: "10", name: "4–10" }, { upTo: "20", name: "11–20" }];
+
+function PlacesCard() {
+  const [count, setCount] = useState<"clicks" | "pages">("clicks");
+  const bars: MirrorBar[] = BOARD.places.map((place) => {
+    const all = BOARD.placePages[String(place.place)] ?? 0;
+    return {
+      key: String(place.place),
+      label: String(place.place),
+      heading: `Position ${place.place}`,
+      top: count === "clicks" ? place.clicks : place.pages,
+      bottom: count === "clicks" ? place.expected : all,
+      readout: count === "clicks"
+        ? [
+          { value: fmt(place.clicks), label: "Clicks they got" },
+          { value: fmt(place.expected), label: "Clicks you'd usually get" },
+          { value: fmt(place.pages), label: place.pages === 1 ? "Page" : "Pages" },
+        ]
+        : [
+          { value: fmt(place.pages), label: "Pages with few clicks" },
+          { value: fmt(all), label: "All your pages there" },
+        ],
+    };
+  });
+  return (
+    <MapCard
+      title={count === "clicks" ? "Clicks at each position in Google" : "Pages at each position in Google"}
+      hint={count === "clicks"
+        ? "Each bar is a position in Google's results, 1 at the top. The top half is the clicks these pages got. The bottom half is what you usually get there."
+        : "Each bar is a position in Google's results, 1 at the top. The top half is the pages with few clicks. The bottom half is all your pages there."}
+      exportName={`${HOST}-search-console-shown-but-not-clicked-positions`}
+      csv={() => toCsv(["Position", "Pages with few clicks", "All your pages there", "Clicks they got", "Clicks you'd usually get"], BOARD.places.map((place) => [place.place, place.pages, BOARD.placePages[String(place.place)] ?? 0, place.clicks, place.expected]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "count", label: "Count", value: count, options: [{ value: "clicks", label: "Clicks" }, { value: "pages", label: "Pages" }], onChange: (next) => setCount(next as "clicks" | "pages") },
+      ]}
+    >
+      <MirrorBars
+        bars={bars}
+        zones={ZONES}
+        topLabel={count === "clicks" ? "Clicks they got" : "Pages with few clicks"}
+        bottomLabel={count === "clicks" ? "Clicks you'd usually get" : "All your pages there"}
+        format={fmt}
+      />
+    </MapCard>
+  );
+}
+
+function PlacesWay() {
+  return (
+    <Page description="Pages Google shows a lot that people rarely click. A better title in Google often fixes it." boxes={<Boxes totals={BOARD.pages.low} all={BOARD.pages.all.rows} noun="pages" />}>
+      <PlacesCard />
+      <LowTable judged={BOARD.pages.rows} of="pages" chips={["pageType", "band"]} />
+    </Page>
+  );
+}
+
+// ——— Way 3 · keyword by keyword, with BarsCard ———
+
+function KeywordsCard() {
+  const [brand, setBrand] = useState<"counted" | "left">("counted");
+  const top = BOARD.keywords.rows.filter((row) => brand === "counted" || !row.brand).slice(0, 10);
+  const rows = top.map((row) => ({ label: row.key, clicks: row.clicks, expected: row.expected, position: row.position }));
+  return (
+    <BarsCard
+      title="The 10 keywords missing the most clicks"
+      hint={`The top bar is the clicks each one got. The lower bar is what you usually get at that position.${brand === "left" ? " Searches for More Handles by name are left out." : ""}`}
+      exportName={`${HOST}-search-console-shown-but-not-clicked-keywords`}
+      csvHeading="Keyword"
+      host={HOST}
+      waiting={null}
+      controls={[
+        { kind: "select", key: "brand", label: "Brand searches", value: brand, options: [{ value: "counted", label: "Counted" }, { value: "left", label: "Left out" }], onChange: (next) => setBrand(next as "counted" | "left") },
+      ]}
+      rows={rows}
+      series={[
+        { key: "clicks", name: "Clicks they got", colour: SITE_SERIES_COLOURS[0] },
+        { key: "expected", name: "What you usually get", colour: CHART_COMPARATOR_GREY },
+      ]}
+      figure="Clicks"
+      labels={(value) => fmt(value)}
+      anything={rows.length > 0}
+      empty="No keywords here in these dates."
+    />
+  );
+}
+
+function KeywordsWay() {
+  return (
+    <Page description="Keywords that show your website a lot, but people rarely click. A better title in Google often fixes it." boxes={<Boxes totals={BOARD.keywords.low} all={BOARD.keywords.all.rows} noun="keywords" />}>
+      <KeywordsCard />
+      <LowTable judged={BOARD.keywords.rows} of="keywords" chips={["brand", "band"]} />
+    </Page>
+  );
+}
+
+export const WAYS: Record<string, () => ReactNode> = { W1: AgainstWay, W2: PlacesWay, W3: KeywordsWay };

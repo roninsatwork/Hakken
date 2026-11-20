@@ -100,7 +100,7 @@ export function volatilitySees(facts: VolatilityFacts): Seen {
         : { code: "calm", a: latest.volatility, b: facts.usual, days: [latest.day] },
       clicksMoved && { code: clicks > 0 ? "clicksRoseCalm" : "clicksFellCalm", a: percent(clicks) },
     ],
-    [clicksMoved && { code: "seeWins", link: "seeWins", to: toPage("wins-and-losses") }],
+    [clicksMoved && { code: "seeWins", link: "seeKeywords", to: toPage("keywords", { sort: "change" }) }],
   );
 }
 
@@ -138,7 +138,7 @@ export function updatesSees(update: UpdateFacts | null, newest: string): Seen {
         : { code: clicks >= 0 ? "raisedClicks" : "cutClicks", text: update.title, a: percent(clicks) },
       update.positionBefore !== null && update.positionAfter !== null && { code: "positionFromTo", a: update.positionBefore, b: update.positionAfter },
     ],
-    [clicks !== null && clicks <= -CLICKS_WORTH_SAYING && { code: "seeLosses", link: "seeWins", to: toPage("wins-and-losses", { move: "loss" }) }],
+    [clicks !== null && clicks <= -CLICKS_WORTH_SAYING && { code: "seeLosses", link: "seeKeywords", to: toPage("keywords", { sort: "change", dir: "asc" }) }],
   );
 }
 

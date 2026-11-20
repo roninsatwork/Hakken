@@ -7,28 +7,28 @@ import { Change } from "@/src/ui/components/screens/Change";
 
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../sites/_components/SiteCharts";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard, useSeriesTicks } from "../../_components/SearchConsoleChartCard";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { CountChange, figureColumns, useSearchConsoleList, type ChipId, keywordColumn } from "../../_components/SearchConsoleTables";
+import { figureColumns, useSearchConsoleList, type ChipId, keywordColumn } from "../../_components/SearchConsoleTables";
 import { useChartPeriods } from "../../_components/useChartPeriods";
+import { usePerformanceDates } from "../../_components/PerformanceParts";
+import { MoveLine } from "../../_components/PlacesParts";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { bandsSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { bandsSeesData, bandsSeesRows } from "@/convex/utils/sees/own/searchConsoleBands";
 
 const CHIPS: readonly ChipId[] = ["band", "intent", "device"];
 
 /**
- * Position bands (search-console-plan.md §13.3, drawn as "5 · Position
- * bands"): how many of the website's keywords Google shows in each band of
- * its own average positions — the top three, 4 to 10, 11 to 20, and 21 and
- * below — against the days before, in the dates and step chosen, and each
- * keyword's band and the places it moved. In the country chosen
- * (search-console-plan.md §16): the days, weeks and months are added up
- * collection by collection, so a country the website does not keep ready has
- * no chart, and its list is asked of Google.
+ * Position bands, Way 3 (search-console-position-bands-way-3-plan-2026-11-19.md, drawn on the canvas of 19 November 2026):
+ * how many of the website's keywords Google shows in each band of its own average positions against the dates before, the
+ * bands week by week, and each keyword's band and the places it moved. In the country chosen, as every redone screen. Its
+ * chart of each place on Google came off the same day on Anthony's word ("remove the chart"); `MirrorBars` stays shared.
  */
 export default function SearchConsoleBandsPage() {
   const t = useTranslations("searchConsole");
@@ -36,33 +36,38 @@ export default function SearchConsoleBandsPage() {
   const recordHref = useRecordHref(list.siteId);
   const chart = useChartPeriods(list);
   const { figures, periods, country } = chart;
+  const { inBefore } = usePerformanceDates();
   const summary = list.summary;
-  const days = list.range.days;
   const host = list.status?.host ?? "";
   const below = (counts: Record<string, number> | null | undefined) => (counts ? counts["21-50"] + counts["51+"] : null);
   const boxes = [
-    { label: t("bands.top3"), now: summary?.bands["1-3"] ?? null, before: summary?.bandsBefore?.["1-3"] ?? null, better: true },
-    { label: t("filters.bands.4-10"), now: summary?.bands["4-10"] ?? null, before: summary?.bandsBefore?.["4-10"] ?? null, better: true },
-    { label: t("filters.bands.11-20"), now: summary?.bands["11-20"] ?? null, before: summary?.bandsBefore?.["11-20"] ?? null, better: true },
-    { label: t("bands.below"), now: below(summary?.bands), before: below(summary?.bandsBefore), better: false },
+    { label: t("bands.top3"), now: summary?.bands["1-3"] ?? null, before: summary?.bandsBefore?.["1-3"] ?? null, neutral: false },
+    { label: t("filters.bands.4-10"), now: summary?.bands["4-10"] ?? null, before: summary?.bandsBefore?.["4-10"] ?? null, neutral: false },
+    { label: t("filters.bands.11-20"), now: summary?.bands["11-20"] ?? null, before: summary?.bandsBefore?.["11-20"] ?? null, neutral: false },
+    { label: t("bands.below"), now: below(summary?.bands), before: below(summary?.bandsBefore), neutral: true },
   ];
+  // The top 3 in orange at the bottom, as drawn (today's had it a thin amber strip, and orange on 4 to 10).
   const series = [
-    { key: "top3", name: t("bands.top3"), colour: SITE_SERIES_COLOURS[3] },
-    { key: "top10", name: t("filters.bands.4-10"), colour: SITE_SERIES_COLOURS[0] },
+    { key: "top3", name: t("bands.top3"), colour: SITE_SERIES_COLOURS[0] },
+    { key: "top10", name: t("filters.bands.4-10"), colour: SITE_SERIES_COLOURS[1] },
     { key: "top20", name: t("filters.bands.11-20"), colour: SITE_SERIES_COLOURS[2] },
-    { key: "rest", name: t("bands.below"), colour: SITE_SERIES_COLOURS[5] },
+    { key: "rest", name: t("bands.below"), colour: CHART_SERIES_SLATE },
   ];
-  // A tick box for each band, as drawn.
-  const ticks = useSeriesTicks(series);
+  // 21 and below is off at first: weeks older than the days kept hold only some of it (the plan's open question).
+  const ticks = useSeriesTicks(series, ["rest"]);
+  const restShown = ticks.shown.some((entry) => entry.key === "rest");
   // The eye's figures: the list's, with each band named as its boxes name it, and the chart's days, weeks or months.
   const bandNames = useMemo(() => ({
     "1-3": t("bands.top3"), "4-10": t("filters.bands.4-10"), "11-20": t("filters.bands.11-20"), "21-50": t("filters.bands.21-50"), "51+": t("filters.bands.51+"),
   }), [t]);
   // The chart's periods by their first day (`day`), so the eye keeps the newest of a long chart, never its oldest.
-  const seesData = useMemo(() => (list.pageData ? { ...list.pageData, chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null, names: bandNames } : undefined), [list.pageData, periods, bandNames]);
+  // The list's own figures the page shows, and the table's own columns, so the writer's brief keeps its size (`bandsSeesData`).
+  const seesData = useMemo(() => (list.pageData
+    ? { ...list.pageData, summary: bandsSeesData(list.pageData.summary), rows: bandsSeesRows(list.pageData.rows), chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null, names: bandNames }
+    : undefined), [list.pageData, periods, bandNames]);
   return (
     <SearchConsoleListScreen
-      sees={<SearchConsoleSees screen="bands" seen={list.summary ? bandsSees(list.summary) : null} data={seesData} />}
+      sees={<SearchConsoleSees screen="bands" seen={list.summary ? (list.range.period === "custom" ? null : bandsSees(list.summary, list.range.period)) : null} data={seesData} />}
       icon={<BarChart3 className="h-5 w-5 text-brand" />}
       title={t("bands.title")}
       description={t("bands.description")}
@@ -73,7 +78,7 @@ export default function SearchConsoleBandsPage() {
               key={box.label}
               label={box.label}
               value={box.now === null ? "…" : formatNumber(box.now)}
-              detail={<CountChange now={box.now} before={box.before} days={days} neutral={!box.better} />}
+              detail={box.now === null ? null : <MoveLine now={box.now} before={box.before} against={inBefore} neutral={box.neutral} />}
             />
           ))}
         </FigureRow>
@@ -104,8 +109,8 @@ export default function SearchConsoleBandsPage() {
     >
       {country && figures?.notReady ? <CountryNotReady country={country} /> : (
         <SearchConsoleChartCard
-          title={t("bands.chartTitle")}
-          hint={t("bands.chartHint")}
+          title={t("bands.chartTitle", { step: chart.step })}
+          hint={t("bands.chartHint", { step: chart.step })}
           controls={ticks.controls}
           exportName={`${host}-search-console-position-bands-${list.range.from}-to-${list.range.to}`}
           host={host}
@@ -125,7 +130,10 @@ export default function SearchConsoleBandsPage() {
             <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
           ) : (
             <>
-              {chart.note ? <p className="mb-3 text-[12px] text-secondary">{chart.note}</p> : null}
+              <p className="mb-3 text-[12px] text-secondary">
+                {chart.note ? <span>{chart.note} </span> : null}
+                <span>{t(restShown ? "bands.restOn" : "bands.restOff")}</span>
+              </p>
               <SiteBarChart
                 stacked
                 height={280}

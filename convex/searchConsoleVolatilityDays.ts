@@ -19,7 +19,7 @@ export const DAYS_READ = 75;
 /** Days an update's own usual is read over before it began, as Google updates reads its days before. */
 const BEFORE_UPDATE_DAYS = 14;
 
-export type DayRow = Pick<Doc<"searchConsoleWeeks">, "week" | "volatility" | "volatilityKeywords" | "movedUp5" | "movedDown5">;
+export type DayRow = Pick<Doc<"searchConsoleWeeks">, "week" | "volatility" | "volatilityUp" | "volatilityDown" | "volatilityKeywords" | "movedUp5" | "movedDown5">;
 
 export const average = (scores: readonly number[]): number | null =>
   scores.length === 0 ? null : Math.round((scores.reduce((sum, score) => sum + score, 0) / scores.length) * 10) / 10;

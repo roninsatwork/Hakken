@@ -1,10 +1,11 @@
 import { compareTermsQuickly, termToken, tokenPlace } from "./utils/searchConsoleTerms";
-import { BANDS, bandOf, crossedOf, emptyRow, filterRows, isBrand, moverInto, trackedListOf, type Band, type BandCounts, type BrandSplit, type Filters, type KindCount, type ListRow, type ListSees, type Summary, type View, type ViewContext } from "./utils/searchConsoleViews";
+import { BANDS, bandOf, cannibalisationOf, crossedOf, isBrand, moverInto, trackedListOf, type Band, type BandCounts, type BrandSplit, type Filters, type KindCount, type ListRow, type ListSees, type Summary, type View, type ViewContext } from "./utils/searchConsoleViews";
 import { wordStartMatcher } from "./utils/wordStarts";
-import { sortRows, type SortKey } from "./searchConsoleSorts";
+import type { SortKey } from "./searchConsoleSorts";
 import type { Doc } from "./_generated/dataModel";
 import { unpackNumbers } from "./utils/searchConsolePacks";
 import { UNKNOWN } from "./searchConsoleFacts";
+import { splitsKeyword } from "./utils/cannibalisationRule";
 
 /**
  * A ready-made list of keywords shaped, put through its page's rule, searched,
@@ -50,7 +51,11 @@ export type KeywordColumns = {
 };
 
 /** Pages competing's pairs: each keyword with each page it was shown with, both as places. */
-export type PairColumns = { length: number; key: Int32Array; page: Int32Array; clicks: Float64Array; impressions: Float64Array };
+export type PairColumns = {
+  length: number; key: Int32Array; page: Int32Array; clicks: Float64Array; impressions: Float64Array;
+  /** Keyword cannibalisation's Swaps, each pair beside its keyword's (`counts`); null where its period wasn't counted day by day. */
+  swaps: Float64Array | null;
+};
 
 export type KeywordTableAsk = {
   view: View;
@@ -65,7 +70,9 @@ export type KeywordTableAsk = {
   context: ViewContext;
   /** Pages competing: how many pages Google showed for any keyword, when the list holds it. */
   pagesShown: number | null;
-  /** Every keyword's text, in place order: for a search, and Missed demand's match with Sites. */
+  /** Keyword cannibalisation: the home page's places in the page book, left out of every keyword (`cannibalisationRule.ts`). */
+  homePages?: ReadonlySet<number>;
+  /** Every keyword's text, in place order: for a search. */
   bookTexts: readonly string[] | null;
 };
 
@@ -148,17 +155,20 @@ export function pairColumnsOf(parts: readonly StoredPart[]): PairColumns | null 
   if (!inBook(parts) || parts.some((part) => part.pages === undefined && part.keys.length > 0)) return null;
   const decoded = parts.map((part) => ({ part, keys: unpackNumbers(part.keys as string) }));
   const length = decoded.reduce((sum, { keys }) => sum + keys.length, 0);
-  const pairs: PairColumns = { length, key: new Int32Array(length), page: new Int32Array(length), clicks: new Float64Array(length), impressions: new Float64Array(length) };
+  const counted = parts.length > 0 && parts.every((part) => part.counts !== undefined || part.keys.length === 0);
+  const pairs: PairColumns = { length, key: new Int32Array(length), page: new Int32Array(length), clicks: new Float64Array(length), impressions: new Float64Array(length), swaps: counted ? new Float64Array(length) : null };
   let at = 0;
   for (const { part, keys } of decoded) {
     const pages = unpackNumbers((part.pages as string | undefined) ?? "");
     const clicks = unpackNumbers(part.clicks);
     const impressions = unpackNumbers(part.impressions);
+    const swaps = counted && part.counts !== undefined ? unpackNumbers(part.counts) : null;
     for (let index = 0; index < keys.length; index += 1, at += 1) {
       pairs.key[at] = keys[index];
       pairs.page[at] = pages[index] ?? NONE;
       pairs.clicks[at] = clicks[index] ?? 0;
       pairs.impressions[at] = impressions[index] ?? 0;
+      if (pairs.swaps) pairs.swaps[at] = swaps?.[index] ?? 0;
     }
   }
   return pairs;
@@ -169,9 +179,8 @@ const NONE = -1;
 const known = (value: number) => (Number.isNaN(value) || value < 0 ? null : value);
 
 /**
- * The rows a list is shaped from: the keywords Google showed, then — for Wins
- * and losses — those gone since the days before, and — for a tracked list —
- * those tracked that Google did not show (`withGone`, `withTracked`).
+ * The rows a list is shaped from: the keywords Google showed, then — for a
+ * tracked list — those tracked that Google did not show (`withTracked`).
  */
 type Source = {
   length: number;
@@ -195,9 +204,6 @@ function rowsByPlace(keys: Int32Array, size: number): Int32Array {
 function sourceOf(view: View, now: KeywordColumns, before: KeywordColumns | null, tracked: ReadonlySet<string>, size: number): Source {
   const nowAt = rowsByPlace(now.key, size);
   const extra: Array<{ place: number; text?: string }> = [];
-  if (view === "moves" && before) {
-    for (let row = 0; row < before.length; row += 1) if (nowAt[before.key[row]] === NONE && before.clicks[row] > 0) extra.push({ place: before.key[row] });
-  }
   if (view === "tracked") {
     for (const key of tracked) {
       const at = tokenPlace(key);
@@ -226,14 +232,16 @@ function sourceOf(view: View, now: KeywordColumns, before: KeywordColumns | null
   return source;
 }
 
-/** Pages competing's figures for each keyword shown with two pages or more: the rows it lists, and what it adds. */
-type Competing = { slot: Int32Array; count: Int32Array; top: Int32Array; next: Int32Array; topClicks: Float64Array; nextClicks: Float64Array; clicks: Float64Array };
+/** Keyword cannibalisation's figures for each keyword it lists: the rows it lists, and what it adds. */
+type Competing = { slot: Int32Array; count: Int32Array; top: Int32Array; next: Int32Array; topShown: Float64Array; nextShown: Float64Array; shown: Float64Array; pages: number[][]; swaps: Float64Array | null };
 
 /**
- * Each keyword's pages, a page and its section links one (folded at build), most clicks first,
- * then most impressions, then A to Z (`pagesByKeyword`): how many, the top two and their clicks.
+ * Each keyword's pages, a page and its section links one (folded at build), by Insights' rule since 20 November 2026
+ * (`cannibalisationRule.ts`, as `splitPagesOf` reads a list of rows): the home page left out, then only the pages that
+ * each took at least 1 in 10 of its impressions, the most shown first, then the most clicked, then A to Z. Two or more,
+ * and it's listed: how many, the top two and their impressions, and every page counted.
  */
-function competingOf(pairs: PairColumns, size: number): Competing {
+function competingOf(pairs: PairColumns, size: number, home: (page: number) => boolean): Competing {
   // The pairs by keyword: counted, then placed (each keyword's in the order kept).
   const starts = new Int32Array(size + 1);
   for (let row = 0; row < pairs.length; row += 1) starts[pairs.key[row] + 1] += 1;
@@ -243,7 +251,8 @@ function competingOf(pairs: PairColumns, size: number): Competing {
   for (let row = 0; row < pairs.length; row += 1) order[filled[pairs.key[row]]++] = row;
 
   const slot = new Int32Array(size).fill(NONE);
-  const found: Array<[number, number, number, number, number, number, number]> = [];
+  const found: Array<[number, number, number, number, number, number, number, number]> = [];
+  const splitPages: number[][] = [];
   const pages: number[] = [];
   const clicks: number[] = [];
   const impressions: number[] = [];
@@ -256,6 +265,7 @@ function competingOf(pairs: PairColumns, size: number): Competing {
     impressions.length = 0;
     for (let at = from; at < to; at += 1) {
       const row = order[at];
+      if (home(pairs.page[row])) continue;
       const held = pages.indexOf(pairs.page[row]);
       if (held === NONE) {
         pages.push(pairs.page[row]);
@@ -267,20 +277,25 @@ function competingOf(pairs: PairColumns, size: number): Competing {
       }
     }
     if (pages.length < 2) continue;
-    const ranked = pages.map((_, at) => at).sort((left, right) => clicks[right] - clicks[left] || impressions[right] - impressions[left]
-      || compareTermsQuickly(termToken("page", pages[left]), termToken("page", pages[right])));
-    const total = clicks.reduce((sum, value) => sum + value, 0);
+    const total = impressions.reduce((sum, value) => sum + value, 0);
+    const ranked = pages.map((_, at) => at).filter((at) => splitsKeyword(impressions[at], total))
+      .sort((left, right) => impressions[right] - impressions[left] || clicks[right] - clicks[left]
+        || compareTermsQuickly(termToken("page", pages[left]), termToken("page", pages[right])));
+    if (ranked.length < 2) continue;
     slot[place] = found.length;
-    found.push([pages.length, pages[ranked[0]], pages[ranked[1]], clicks[ranked[0]], clicks[ranked[1]], total, place]);
+    found.push([ranked.length, pages[ranked[0]], pages[ranked[1]], impressions[ranked[0]], impressions[ranked[1]], total, place, pairs.swaps ? pairs.swaps[order[from]] : Number.NaN]);
+    splitPages.push(ranked.map((at) => pages[at]));
   }
   const competing: Competing = {
     slot,
     count: Int32Array.from(found, (entry) => entry[0]),
     top: Int32Array.from(found, (entry) => entry[1]),
     next: Int32Array.from(found, (entry) => entry[2]),
-    topClicks: Float64Array.from(found, (entry) => entry[3]),
-    nextClicks: Float64Array.from(found, (entry) => entry[4]),
-    clicks: Float64Array.from(found, (entry) => entry[5]),
+    topShown: Float64Array.from(found, (entry) => entry[3]),
+    nextShown: Float64Array.from(found, (entry) => entry[4]),
+    shown: Float64Array.from(found, (entry) => entry[5]),
+    pages: splitPages,
+    swaps: pairs.swaps ? Float64Array.from(found, (entry) => entry[7]) : null,
   };
   return competing;
 }
@@ -357,17 +372,12 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
   };
 
   // ── The page's rule (`applyView`) ────────────────────────────────────────
-  const competing = ask.view === "competing" && pairs ? competingOf(pairs, size) : null;
+  const homePages = ask.homePages;
+  const competing = ask.view === "competing" && pairs ? competingOf(pairs, size, (page) => homePages?.has(page) ?? false) : null;
   const slotOf = (row: number) => (competing && source.place[row] !== NONE ? competing.slot[source.place[row]] : NONE);
-  if (ask.view === "missed" && ask.context.missedList !== "untracked") return missedTable(ask, source, shaped, summaryOfAll(), before !== null);
   const keep: (row: number) => boolean = ask.view === "tracked" ? trackedOf
-    : ask.view === "missed" ? (row) => !trackedOf(row)
-    : ask.view === "almost" ? (row) => positionOf(row) > 3 && positionOf(row) <= 20
-    : ask.view === "competing" ? (row) => slotOf(row) !== NONE
-    : ask.view === "moves" ? (row) => {
-      const change = changeOf(row);
-      return change !== null && change !== 0;
-    }
+    // Searches for the website's own name left out, as Insights leaves them (`cannibalisationRule.ts`).
+    : ask.view === "competing" ? (row) => slotOf(row) !== NONE && brandOf(row) !== true
     : ask.view === "volatility" ? (row) => positionChangeOf(row) !== null
     : () => true;
   let count = 0;
@@ -408,12 +418,13 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
     };
     const at = slotOf(row);
     if (ask.view === "competing" && competing && at !== NONE) {
-      const clicks = competing.clicks[at];
+      const shown = competing.shown[at];
       out.count = competing.count[at];
       out.top = termToken("page", competing.top[at]);
-      out.topShare = clicks > 0 ? competing.topClicks[at] / clicks : null;
+      out.topShare = shown > 0 ? competing.topShown[at] / shown : null;
       out.next = termToken("page", competing.next[at]);
-      out.nextShare = clicks > 0 ? competing.nextClicks[at] / clicks : null;
+      out.nextShare = shown > 0 ? competing.nextShown[at] / shown : null;
+      out.swaps = competing.swaps ? competing.swaps[at] : null;
     }
     return out;
   }
@@ -474,10 +485,24 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
     return { bandClicks, bandClicksBefore, crossed: crossedOf(placeNow, placeBefore, clicked), movers };
   }
   if (competing && pairs) {
-    const marked = new Uint8Array(size);
-    for (const row of listed) if (source.place[row] !== NONE) marked[source.place[row]] = 1;
-    summary.pagesInvolved = pagesAmong(pairs, marked);
+    // The pages that split a listed keyword, by the rule: never a page shown once beside it.
+    const involved = new Set<number>();
+    for (const row of listed) {
+      const at = slotOf(row);
+      if (at !== NONE) for (const page of competing.pages[at]) involved.add(page);
+    }
+    summary.pagesInvolved = involved.size;
     summary.pagesShown = ask.pagesShown ?? pagesAmong(pairs, null);
+    // Its own figures over every keyword it lists, for its eye and Ask Hakken (`cannibalisationOf`): keys as places until named.
+    summary.cannibalisation = cannibalisationOf(Array.from(listed, (row) => {
+      const at = slotOf(row);
+      const shown = competing.shown[at];
+      return {
+        key: nameOf(row), impressions: impressionsOf(row), clicks: clicksOf(row), count: competing.count[at],
+        topShare: shown > 0 ? competing.topShown[at] / shown : null, nextShare: shown > 0 ? competing.nextShown[at] / shown : null,
+        swaps: competing.swaps ? competing.swaps[at] : null,
+      };
+    }));
   }
   const named = tally.clicks();
 
@@ -494,10 +519,9 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
     && (!filters.band || bandOf(positionOf(row)) === filters.band)
     && (!filters.kind || (kindOf(row) ?? "UNJUDGED") === filters.kind)
     && (!filters.brand || (filters.brand === "yes") === (brandOf(row) === true))
-    && (!filters.move || (filters.move === "win" ? (changeOf(row) ?? 0) > 0 : (changeOf(row) ?? 0) < 0))
     && (!filters.way || (filters.way === "up" ? (positionChangeOf(row) ?? 0) > 0 : (positionChangeOf(row) ?? 0) < 0))
     && !filters.verdict;
-  const kept = filters.q || filters.tracked || filters.band || filters.kind || filters.brand || filters.move || filters.way || filters.verdict
+  const kept = filters.q || filters.tracked || filters.band || filters.kind || filters.brand || filters.way || filters.verdict
     ? listed.filter(passes)
     : listed;
   const order = ordered(kept, ask, {
@@ -542,12 +566,12 @@ type Readers = {
 /** What each heading orders by, as a number — NaN a blank — or, for a name, a place in the book (`SORTS`). */
 function sortValue(key: SortKey, read: Readers): ((row: number) => number) | null {
   const numberOr = (value: number | null) => (value === null ? Number.NaN : value);
-  const share = (pick: "topClicks" | "nextClicks") => (row: number) => {
+  const share = (pick: "topShown" | "nextShown") => (row: number) => {
     const competing = read.competing;
     const at = competing ? competing.slotOf(row) : NONE;
     if (!competing || at === NONE) return Number.NaN;
-    const clicks = competing.competing.clicks[at];
-    return clicks > 0 ? competing.competing[pick][at] / clicks : Number.NaN;
+    const shown = competing.competing.shown[at];
+    return shown > 0 ? competing.competing[pick][at] / shown : Number.NaN;
   };
   switch (key) {
     case "clicks": return read.clicksOf;
@@ -581,9 +605,15 @@ function sortValue(key: SortKey, read: Readers): ((row: number) => number) | nul
       const brand = read.brandOf(row);
       return brand === null ? Number.NaN : brand ? 0 : 1;
     };
-    case "topShare": return share("topClicks");
-    case "nextShare": return share("nextClicks");
+    case "topShare": return share("topShown");
+    case "nextShare": return share("nextShown");
     case "band": return (row) => (read.impressionsOf(row) > 0 ? BANDS.indexOf(bandOf(read.positionOf(row))) : Number.NaN);
+    // Keyword cannibalisation's Swaps: blank where its period wasn't counted day by day.
+    case "swaps": return (row) => {
+      const competing = read.competing;
+      const at = competing ? competing.slotOf(row) : NONE;
+      return competing && at !== NONE && competing.competing.swaps ? competing.competing.swaps[at] : Number.NaN;
+    };
     // Only other views' figures: blank for every keyword.
     case "usualCtr": case "expected": case "gap": return () => Number.NaN;
     // A keyword's name: its place, the book being sorted — unless a row holds text the book does not.
@@ -597,7 +627,7 @@ function sortValue(key: SortKey, read: Readers): ((row: number) => number) | nul
 const FIRST: Record<SortKey, "asc" | "desc"> = {
   key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", movedBy: "desc", share: "desc",
   count: "desc", top: "asc", volume: "desc", estimate: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
-  topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc",
+  topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc", swaps: "desc",
 };
 
 /** The rows kept, ordered over the whole list by the heading pressed: blanks last, ties by name (`listOrder`). */
@@ -731,52 +761,4 @@ class Tally {
       types: [],
     };
   }
-}
-
-// ── Missed demand ────────────────────────────────────────────────────────────
-
-/**
- * Missed demand (`applyView`, "missed"): Sites' most-searched keywords for the
- * website that Google barely shows it for — a few thousand at most — or every
- * keyword not yet tracked. The first are made into rows and put through the
- * row rules whole, as few; the second listed by column.
- */
-function missedTable(ask: KeywordTableAsk, source: Source, toRow: (row: number) => ListRow, all: AllFigures, beforeHeld: boolean): KeywordTable {
-  const context = ask.context;
-  // Each keyword's row by its text: the book is sorted A to Z, so a text is found by halving.
-  const texts = ask.bookTexts ?? [];
-  const nowAt = new Map<number, number>();
-  for (let row = 0; row < source.length; row += 1) if (source.place[row] !== NONE) nowAt.set(source.place[row], row);
-  const rowOfText = (text: string): number | null => {
-    let low = 0;
-    let high = texts.length - 1;
-    while (low <= high) {
-      const middle = (low + high) >> 1;
-      const order = compareTermsQuickly(texts[middle], text);
-      if (order === 0) return nowAt.get(middle) ?? null;
-      if (order < 0) low = middle + 1;
-      else high = middle - 1;
-    }
-    return null;
-  };
-  const rows = (context.sitesKeywords ?? []).flatMap((keyword): ListRow[] => {
-    if (keyword.volume < context.rules.searchedALot) return [];
-    const at = rowOfText(keyword.keyword);
-    const row = at === null ? null : toRow(at);
-    if (row && row.impressions >= context.rules.barelyShown) return [];
-    return [row
-      ? { ...row, volume: keyword.volume, kind: row.kind ?? keyword.kind }
-      : { ...emptyRow(keyword.keyword), volume: keyword.volume, kind: keyword.kind, tracked: context.tracked?.has(keyword.keyword) ?? false }];
-  });
-  const tally = new Tally(all, beforeHeld);
-  for (const row of rows) tally.add(row);
-  const summary = tally.summary();
-  const textOf = (key: string) => {
-    const at = tokenPlace(key);
-    return at ? texts[at.place] ?? "" : key;
-  };
-  const sorted = sortRows(filterRows(rows, ask.filters, textOf), ask.sort, ask.direction);
-  const cut = sorted.length > ask.most ? ask.most : null;
-  const shown = cut ? sorted.slice(0, cut) : sorted;
-  return { rows: shown, listed: rows.length, named: tally.clicks(), summary, cut };
 }

@@ -62,6 +62,8 @@ its redo may be the very thing that's wrong, so it can't set the standard.
 | Search Console, Countries and devices | `searchConsole.places` |
 | Search Console, Classifications (Demand by Classification until 18 November 2026) | `searchConsole.services` |
 | Search Console, Indexing and a reason's own page | `searchConsole.indexing` |
+| Search Console, Low click rate (Shown but not clicked until 20 November 2026; "position", never "place") | `searchConsole.lowCtr` |
+| Search Console, Keyword cannibalisation (Pages competing until 20 November 2026; "impressions", never "showings") | `searchConsole.competing` |
 
 When a screen is redone, add it here. Name the screens you checked
 whenever you give a word or a pattern as the standard.

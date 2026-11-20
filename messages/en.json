@@ -6666,7 +6666,7 @@
         },
         "consoleCurvePositions": {
           "label": "Positions the usual click rate is worked out for",
-          "description": "Click rate by position, and Shown but not clicked, work out the website’s own usual click rate at each position from 1 to this.",
+          "description": "Click rate by position, and Low click rate, work out the website’s own usual click rate at each position from 1 to this.",
           "cost": "No cost."
         },
         "consoleUpdatesListed": {
@@ -10898,6 +10898,14 @@
         "ownClicksSharePercent": "of its clicks from Google",
         "searchesLost": "searches lost",
         "searchesGained": "new searches",
+        "newestLost": "newest 500 searches lost",
+        "newestGained": "newest 500 searches gained",
+        "clicksShort": "clicks short of what you usually get",
+        "lowCtrPages": "pages shown a lot, clicked a little",
+        "cannibalisedKeywords": "keywords two pages share",
+        "keywordsShown": "keywords Google showed",
+        "impressionSharePercent": "share of its impressions",
+        "swaps": "days Google swapped pages",
         "linksGained": "links gained",
         "linksLost": "links lost",
         "linkServers": "servers linking here",
@@ -15517,12 +15525,9 @@
       "keywords": "Keywords",
       "bands": "Position bands",
       "newLost": "New and lost",
-      "moves": "Wins and losses",
       "updates": "Google updates",
-      "almost": "Almost there",
-      "lowCtr": "Shown but not clicked",
-      "demand": "Missed demand",
-      "competing": "Pages competing",
+      "lowCtr": "Low click rate",
+      "competing": "Keyword cannibalisation",
       "types": "By page classification",
       "brand": "Brand and non-brand",
       "ctrCurve": "Click rate by position",
@@ -15988,7 +15993,6 @@
       "onlyUntracked": "Not tracked",
       "position": "Position",
       "anyPosition": "Any position",
-      "almostAny": "4–20",
       "bands": {
         "1-3": "1–3",
         "4-10": "4–10",
@@ -16002,10 +16006,6 @@
       "anyBrand": "Brand or not",
       "brandYes": "Brand",
       "brandNo": "Non-brand",
-      "move": "Wins or losses",
-      "anyMove": "Wins and losses",
-      "wins": "Wins",
-      "losses": "Losses",
       "verdict": "Estimate",
       "anyVerdict": "Any estimate",
       "verdicts": {
@@ -16013,9 +16013,6 @@
         "low": "Too low",
         "close": "About right"
       },
-      "missed": "List",
-      "missedSearched": "Searched a lot, barely shown",
-      "missedUntracked": "Shown, not tracked yet",
       "device": "Device",
       "anyDevice": "Any device",
       "way": "Up or down",
@@ -16024,60 +16021,108 @@
       "wayDown": "Down"
     },
     "common": {},
-    "almost": {
-      "title": "Almost there",
-      "description": "Keywords Google already shows you for at positions 4 to 20, with how many people search for each a month, from Visibility. These are the ones closest to the top three.",
-      "at4to10": "Keywords at 4–10",
-      "at11to20": "Keywords at 11–20",
-      "searches": "Searches a month behind them",
-      "sitesFigures": "Visibility's figures",
-      "tracked": "Tracked",
-      "youTrack": "Keywords you track"
-    },
     "lowCtr": {
-      "title": "Shown but not clicked",
-      "description": "Pages Google shows often that people rarely click, for where they sit. Usual CTR is your own click rate at that position, from Click rate by position; Expected is the clicks a page would have had at it. A low click rate usually means the title or description in Google needs work.",
-      "below": "Pages below your usual click rate",
-      "ofShown": "Of the {count} Google showed",
-      "impressions": "Impressions they had",
-      "clicks": "Clicks they had",
-      "atUsual": "At your usual click rate",
-      "wouldHave": "Clicks they would have had"
-    },
-    "demand": {
-      "title": "Missed demand",
-      "description": "Keywords many people search for that Google barely shows you for, from Visibility's monthly searches. And keywords Google shows you for that you don't track yet. Click one to track it.",
-      "fewer": "Fewer than {count} impressions in these dates",
-      "ofShown": "Of the {count} keywords Google showed"
+      "title": "Low click rate",
+      "description": "Pages Google shows a lot that people rarely click. A better title in Google often fixes it.",
+      "boxes": {
+        "pages": "Shown a lot, clicked a little",
+        "outOf": "Out of {count} pages Google showed",
+        "shown": "Times Google showed them",
+        "clicks": "Clicks they got",
+        "usually": "Clicks you'd usually get",
+        "more": "That's {count} more than they got"
+      },
+      "positions": {
+        "titleClicks": "Clicks at each position in Google",
+        "titlePages": "Pages at each position in Google",
+        "hintClicks": "Each bar is a position in Google's results, 1 at the top. The top half is the clicks these pages got. The bottom half is what you usually get there.",
+        "hintPages": "Each bar is a position in Google's results, 1 at the top. The top half is the pages with few clicks. The bottom half is all your pages there.",
+        "heading": "Position {position}",
+        "clicksGot": "Clicks they got",
+        "clicksUsually": "Clicks you'd usually get",
+        "pagesCount": "{count, plural, one {Page} other {Pages}}",
+        "fewClicks": "Pages with few clicks",
+        "allThere": "All your pages there",
+        "count": "Count",
+        "countClicks": "Clicks",
+        "countPages": "Pages",
+        "empty": "No page got fewer clicks than usual in these dates.",
+        "csv": {
+          "position": "Position"
+        }
+      },
+      "table": {
+        "usually": "Usually",
+        "usuallyTitle": "The clicks your website usually gets at this position",
+        "usuallyFile": "Clicks you'd usually get",
+        "usualRateFile": "Usual CTR"
+      },
+      "eye": {
+        "these": "Pages shown a lot, clicked a little",
+        "usually": "Clicks you'd usually get",
+        "position": "Position",
+        "firstPage": "Positions 4 to 10"
+      }
     },
     "competing": {
-      "title": "Pages competing",
-      "description": "Keywords where Google shows two or more of your pages, so they split the clicks between them.",
-      "split": "Keywords split between pages",
-      "ofShown": "Of the {count} Google showed",
-      "clicks": "Clicks they share",
-      "pages": "Pages involved"
+      "title": "Keyword cannibalisation",
+      "description": "Keywords that Google shows two or more of your pages for. One strong page usually does better than two.",
+      "boxes": {
+        "keywords": "Keywords two pages share",
+        "rule": "Each page got at least 1 in 10 impressions",
+        "pages": "Pages competing",
+        "ofShown": "Out of {count} pages Google showed",
+        "shown": "Times Google showed them",
+        "clicks": "Clicks they got",
+        "leftOut": "Your home page and searches for your name are left out"
+      },
+      "chart": {
+        "title": "Which page Google showed for {keyword} each day",
+        "titleNone": "Which page Google showed each day",
+        "hint": "Tick a keyword in the table to draw its pages here. When the lines cross, Google swapped one page for the other.",
+        "swaps": "{count, plural, =0 {Google didn't swap pages in {when}.} one {That happened on one day in {when}.} other {That happened on # days in {when}.}}",
+        "positionHint": "Position 1 is the top of Google.",
+        "pages": "Pages",
+        "everyPage": "Every page",
+        "show": "Show",
+        "impressions": "Impressions",
+        "position": "Position",
+        "nothingTicked": "Tick a page in the Pages menu to draw it here.",
+        "noneTicked": "Tick a keyword in the table to draw its pages here.",
+        "empty": "Google didn't show two of your pages for this keyword in these dates.",
+        "failed": "Google didn't answer. Try again in a minute.",
+        "day": "Day"
+      },
+      "table": {
+        "pagesTitle": "Your pages that got at least 1 in 10 of its impressions",
+        "swaps": "Swaps",
+        "swapsTitle": "Days Google swapped the page it showed most",
+        "topShareFile": "Top page's share of impressions",
+        "nextShareFile": "Next page's share of impressions",
+        "tickLabel": "Draw {name} on the chart",
+        "tickHeading": "On the chart"
+      },
+      "eye": {
+        "these": "Keywords two pages share",
+        "competing": "Pages competing",
+        "nextPage": "its next page",
+        "average": "the average keyword two pages share",
+        "swapped": "Keywords Google swapped pages for"
+      }
     },
     "moves": {
-      "title": "Wins and losses",
-      "description": "The keywords whose clicks changed most. Clicks and position read {before} → {period}.",
-      "gaining": "Keywords gaining clicks",
-      "losing": "Keywords losing clicks",
-      "against": "Against {before}",
-      "gained": "Clicks gained",
-      "byGaining": "By the keywords gaining",
-      "lost": "Clicks lost",
-      "byLosing": "By the keywords losing",
       "clicksBefore": "Clicks before",
       "positionBefore": "Position before"
     },
     "bands": {
       "title": "Position bands",
-      "description": "How many of your keywords Google shows in each band of positions, in the dates you choose. The positions are Google's own averages.",
+      "description": "How many of your keywords Google shows in each band in these dates. A band is a group of places, like the top 3.",
       "top3": "Top 3",
       "below": "21 and below",
-      "chartTitle": "Keywords in each band",
-      "chartHint": "Every keyword Google showed your website for, by its average position in each day, week or month."
+      "chartTitle": "Keywords in each band, {step, select, day {day by day} week {week by week} other {month by month}}",
+      "chartHint": "Each bar is a {step, select, day {day} week {week} other {month}}. It counts the keywords Google showed in each band.",
+      "restOff": "21 and below is off at first. Older weeks are missing some of its keywords.",
+      "restOn": "Older weeks are missing some keywords at 21 and below."
     },
     "catchUp": {
       "held": "Showing figures to {day}.",
@@ -16085,24 +16130,27 @@
     },
     "newLost": {
       "title": "New and lost",
-      "description": "Keywords Google started showing your website for, and keywords it stopped showing you for. A keyword is lost when Google has not shown you for it in {days} days.",
+      "description": "Keywords Google started showing you for, and the ones it stopped. A keyword counts as lost after {days} days without being shown.",
       "newKeywords": "New keywords",
       "lostKeywords": "Lost keywords",
       "newPages": "New pages",
       "lostPages": "Lost pages",
       "firstTime": "Shown for the first time",
       "notIn14": "Not shown in {days} days",
-      "watchedFrom": "A keyword counts as new from {day}: by then the website had been watched {days} days.",
+      "watchedFrom": "Your figures start on {start}, so a keyword counts as new from {day}.",
       "chartTitle": "Keywords gained and lost",
-      "chartHint": "Keywords Google started showing you for (up) and stopped showing you for (down).",
+      "chartHint": "New keywords rise above the line, and lost keywords fall below it.",
       "gained": "Gained",
       "lost": "Lost",
-      "net": "Gained less lost",
+      "net": "Gained minus lost",
       "what": "What happened",
       "newOrLost": "New or lost",
       "new": "New",
       "lostWord": "Lost",
-      "notKept": "New and lost is kept for Web. Pick Web to see it."
+      "notKept": "New and lost only covers Web results. Pick Web to see it.",
+      "newestListed": "The table lists the newest {count}.",
+      "newestSearched": "The search looks in the newest {count}.",
+      "lostFigures": "Lost keywords show the clicks and impressions they had in the last 12 months."
     },
     "updates": {
       "title": "Google updates",
@@ -16159,7 +16207,7 @@
     },
     "ctrCurve": {
       "title": "Click rate by position",
-      "description": "How often people click your website at each of Google's positions, {period}. Shown but not clicked uses this as your yardstick.",
+      "description": "How often people click your website at each of Google's positions, {period}. Low click rate uses this as your yardstick.",
       "chartTitle": "Your click rate at each position",
       "chartHint": "Clicks for each time Google showed you, at positions 1 to {positions}.",
       "rate": "Click rate",
@@ -16250,10 +16298,17 @@
       "empty": "No keyword had 10 or more impressions on both of the last two complete days.",
       "positionBefore": "Position the day before",
       "chartTitle": "Volatility, day by day",
-      "chartHint": "Out of 10. Hover a G for Google's update.",
-      "chartHintUsual": "Out of 10. Your usual is {usual}: High is 30% above it, Very high 60%. Hover a G for Google's update.",
+      "chartHint": "Out of 10. Positions improved counts the keywords that climbed, and Positions declined the ones that fell. Together they make the Volatility line. Hover a G for Google's update.",
+      "chartHintUsual": "Out of 10. Your usual is {usual}, so High is 30% above it and Very high 60%. Positions improved counts the keywords that climbed, and Positions declined the ones that fell. Together they make the Volatility line. Hover a G for Google's update.",
       "chartNothing": "No day has enough keywords to score yet.",
-      "series": "Volatility"
+      "series": "Volatility",
+      "up": "Positions improved",
+      "down": "Positions declined",
+      "show": "Show",
+      "every": "Every line",
+      "nothingTicked": "Tick a line in the Show menu to draw it here.",
+      "partsFrom": "Positions improved and declined start on {day}. Google's figures for each day before then aren't kept.",
+      "partsNone": "Positions improved and declined show after the next collection."
     },
     "sees": {
       "website": "The whole website",
@@ -16341,13 +16396,10 @@
         "seeUpdate": "See the update",
         "seeKeywords": "See the keywords",
         "seePages": "See your pages",
-        "seeWins": "See Wins and losses",
         "seeVolatility": "See Volatility",
-        "seeAlmost": "See Almost there",
-        "seeLowCtr": "See Shown but not clicked",
-        "seeLosing": "See the keywords losing",
+        "seeBands": "See Position bands",
+        "seeLowCtr": "See Low click rate",
         "keywordResearch": "Open Keyword research",
-        "seeDemand": "See Missed demand",
         "connect": "Connect it",
         "seeStrategy": "See the strategy",
         "seeCannibalisation": "See Keyword cannibalisation",
@@ -16372,40 +16424,19 @@
         "seeLowCtr": "Look at the pages Google shows but people rarely click."
       },
       "bands": {
-        "bands": "In Google's top three: {a} keywords. Positions 4 to 10: {b}. Page two: {c}.",
-        "topMore": "That is {count, plural, one {one more} other {# more}} in the top three than the days before.",
-        "topFewer": "That is {count, plural, one {one fewer} other {# fewer}} in the top three than the days before.",
-        "pushNear": "Push the {count, plural, one {keyword} other {# keywords}} at positions 4 to 20 up first: they are closest to more clicks."
-      },
-      "moves": {
-        "noMoves": "No keyword's clicks changed {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {the last 3 months} last6Months {the last 6 months} other {the last 12 months}}.",
-        "gainingLosing": "{count, plural, one {One keyword} other {# keywords}} gained clicks and {countB, plural, one {one} other {#}} lost them {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {the last 3 months} last6Months {the last 6 months} other {the last 12 months}}.",
-        "netUp": "Between them, clicks rose by {a}.",
-        "netDown": "Between them, clicks fell by {a}.",
-        "seeLosing": "Start with the keywords losing the most clicks.",
-        "checkGoogle": "See whether Google moved, or your pages did."
-      },
-      "almost": {
-        "noneNear": "None of your keywords sits at positions 4 to 20 in these dates.",
-        "near": "{count, plural, one {One keyword sits} other {# keywords sit}} at positions 4 to 20, a short way from Google's first places.",
-        "nearVolume": "Between them they are searched {a} times a month.",
-        "improvePages": "Improve the page each one lands on, starting with the most searched."
+        "bands": "Google showed {a} of your keywords in its top 3, {b} at places 4 to 10 and {c} on page two.",
+        "topMore": "That's {count, plural, one {one more} other {# more}} in the top 3 {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} last3Months {than the 3 months before} last6Months {than the 6 months before} other {than the 12 months before}}.",
+        "topFewer": "That's {count, plural, one {one fewer} other {# fewer}} in the top 3 {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} last3Months {than the 3 months before} last6Months {than the 6 months before} other {than the 12 months before}}."
       },
       "lowCtr": {
-        "noneLow": "Every page Google shows is clicked about as often as its position would bring.",
-        "lowCtr": "{count, plural, one {One page is} other {# pages are}} clicked less than your own click rate at their position would bring: {b} clicks where {c} were due.",
-        "rewriteTitles": "Rewrite their titles and descriptions in Google, the most shown first."
-      },
-      "demand": {
-        "noneMissed": "No keyword that many people search for is missing your website.",
-        "missed": "{count, plural, one {One keyword that many people search for barely shows} other {# keywords that many people search for barely show}} your website.",
-        "missedVolume": "Between them they are searched {a} times a month.",
-        "writeForDemand": "Write or improve a page for the most searched one."
+        "noneLow": "Every page Google showed got about the clicks you'd usually get at its position.",
+        "lowCtr": "{count, plural, one {One page Google showed a lot} other {# pages Google showed a lot}} got {b} clicks. At their positions you'd usually get {c}.",
+        "rewriteTitles": "Give them a better title in Google, starting with the page short of the most clicks."
       },
       "competing": {
         "noneCompeting": "No keyword has two of your pages competing for it.",
         "competing": "{count, plural, one {One keyword has} other {# keywords have}} two or more of your pages competing for it, across {b} pages.",
-        "splitsClicks": "Google splits the clicks between them, so neither page does as well as one would.",
+        "splitsClicks": "Google shares the impressions between them, so neither page does as well as one would.",
         "pickOne": "The Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
       },
       "estimates": {
@@ -16445,7 +16476,7 @@
         "seeWins": "See which keywords gained and lost clicks."
       },
       "newLost": {
-        "keywordsNewLost": "{count, plural, one {One keyword is} other {# keywords are}} new {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {the last 3 months} last6Months {the last 6 months} other {the last 12 months}}, and {countB, plural, one {one was} other {# were}} lost.",
+        "keywordsNewLost": "Google started showing you for {count, plural, one {one keyword} other {# keywords}} {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {in the last 3 months} last6Months {in the last 6 months} other {in the last 12 months}}, and stopped for {countB, plural, one {one} other {#}}.",
         "pagesNewLost": "{count, plural, one {One page} other {# pages}} appeared in Google for the first time, and {countB, plural, one {one} other {#}} dropped out.",
         "checkGoogle": "See whether Google moved, or your pages did."
       },
@@ -16464,7 +16495,7 @@
       },
       "ctrCurve": {
         "noFirst": "None of your pages showed at position 1 in these dates.",
-        "seeAlmost": "See the keywords closest to the first places.",
+        "seeBands": "See the keywords closest to the first places.",
         "firstAndThird": "At position 1 your pages are clicked {a}% of the times they are shown; at position 3, {b}%.",
         "firstOnly": "At position 1 your pages are clicked {a}% of the times they are shown.",
         "seeLowCtr": "Look at the pages Google shows but people rarely click."
@@ -19933,7 +19964,7 @@
         "noVisits": "No visits",
         "itsSearches": "Its searches in Search Console",
         "openPage": "Open the page",
-        "pagesToPush": "Almost there",
+        "pagesToPush": "Position bands",
         "conversions": "Conversions",
         "landingPages": "Funnel",
         "landingPage": "Its visits",

@@ -58,13 +58,13 @@ export const EVERY_FACT: FactsWanted = { kind: true, number: true };
 
 /**
  * The facts a live list of `kind` shows, by the page's own rule (`view`) — null when it shows none, and nothing is looked
- * up. A keyword's intent is on every list of keywords (the Intent chip); its searches a month only on Almost there and
- * Missed demand, the two that show them. A page's type only until the website has Classifications, which name every page
+ * up. A keyword's intent is on every list of keywords (the Intent chip); its searches a month on no Search Console list since
+ * Almost there and Missed demand were taken out of the menu on 2026-11-20: Visibility's figures stay in Visibility. A page's type only until the website has Classifications, which name every page
  * on every list in its place (`withPageKinds`); its estimated visits only on Real against estimated.
  */
 export function factsWanted(kind: "query" | "page", view: View, classified: boolean): FactsWanted | null {
   const wanted = kind === "query"
-    ? { kind: true, number: view === "almost" || view === "missed" }
+    ? { kind: true, number: false }
     : { kind: !classified, number: view === "estimates" };
   return wanted.kind || wanted.number ? wanted : null;
 }

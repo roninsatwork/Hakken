@@ -115,3 +115,46 @@ describe("the other lists added up as they are read", () => {
     expect(new Set(stream.keys.texts)).toEqual(new Set(kept.flatMap((record) => record.packed.keys)));
   });
 });
+
+describe("Keyword cannibalisation's Swaps (20 November 2026)", () => {
+  /** One day's pairs: each keyword's pages and impressions. */
+  const day = (pairs: Array<[string, string, number, number?]>): Packed => ({
+    keys: pairs.map(([key]) => key),
+    pages: pairs.map(([, page]) => page),
+    clicks: pairs.map(([, , , clicks]) => clicks ?? 0),
+    impressions: pairs.map(([, , impressions]) => impressions),
+    positionSums: pairs.map(([, , impressions]) => impressions * 5),
+  });
+  const SITE = "https://acme-shop.test";
+  const week: Span = { from: "2026-10-08", to: "2026-10-14" };
+
+  test("a day counts when Google showed a different page most than on the last day it showed the keyword", () => {
+    const stream = new PairStream({ newest: NEWEST, oldest: OLDEST, pairSpans: [], keywordSpans: [], chart: null, swapSpans: [week] });
+    // knobs: /a, /b, (not shown), /b, /a — two swaps. hinges: /h every day — none.
+    stream.add("2026-10-08", day([["knobs", `${SITE}/a`, 9], ["knobs", `${SITE}/b`, 3], ["hinges", `${SITE}/h`, 4]]));
+    stream.add("2026-10-09", day([["knobs", `${SITE}/a`, 2], ["knobs", `${SITE}/b`, 8], ["hinges", `${SITE}/h`, 4]]));
+    stream.add("2026-10-11", day([["knobs", `${SITE}/b`, 5], ["hinges", `${SITE}/h`, 4]]));
+    stream.add("2026-10-12", day([["knobs", `${SITE}/a`, 7], ["knobs", `${SITE}/b`, 1]]));
+    stream.finish();
+    expect(stream.swapsOf(week, "knobs")).toBe(1 + 1);
+    expect(stream.swapsOf(week, "hinges")).toBe(0);
+    expect(stream.swapsOf(week, "never shown")).toBe(0);
+    // A period not counted day by day has none at all, never a part-count.
+    expect(stream.swapsOf({ from: "2026-09-01", to: "2026-10-14" }, "knobs")).toBeNull();
+    // Written beside each pair of the period counted, and left off a period that wasn't.
+    const parts = [{ keys: ["knobs", "hinges", "knobs"] }];
+    expect(stream.withSwaps(week, parts)).toEqual([{ keys: ["knobs", "hinges", "knobs"], counts: [2, 0, 2] }]);
+    expect(stream.withSwaps({ from: "2026-09-01", to: "2026-10-14" }, parts)).toEqual(parts);
+  });
+
+  test("the home page never counts, a page and its section links are one, and a tie goes to the more clicked", () => {
+    const stream = new PairStream({ newest: NEWEST, oldest: OLDEST, pairSpans: [], keywordSpans: [], chart: null, swapSpans: [week] });
+    stream.add("2026-10-08", day([["knobs", `${SITE}/`, 50], ["knobs", `${SITE}/a`, 6], ["knobs", `${SITE}/b`, 5]]));
+    // /a's section link adds to /a; the home page shown most again changes nothing.
+    stream.add("2026-10-09", day([["knobs", `${SITE}/`, 50], ["knobs", `${SITE}/a`, 3], ["knobs", `${SITE}/a#sizes`, 3], ["knobs", `${SITE}/b`, 5]]));
+    // Equal impressions: the more clicked, /b, is shown most — a swap.
+    stream.add("2026-10-10", day([["knobs", `${SITE}/a`, 4, 0], ["knobs", `${SITE}/b`, 4, 1]]));
+    stream.finish();
+    expect(stream.swapsOf(week, "knobs")).toBe(1);
+  });
+});

@@ -8,7 +8,7 @@ figures
   figure: Moved # places or more
   figure: Clicks, last # days to # Oct
 chart-card: Volatility, day by day
-  checkbox: Volatility
+  filter: Show
 search: Search keywords…
 filter: Brand or not
 filter: Up or down

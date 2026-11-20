@@ -110,9 +110,10 @@ describe("the days, weeks and months the charts read", () => {
     const row = (grain: Kept["grain"], start: string) => rows.find((one) => one.grain === grain && one.week === start);
     // Five of ten keywords fell 2 places: 1.0; then 6 more: 3.0, five "moved 5 places or more" down.
     expect(row("DAY", "2026-09-14")?.volatility).toBeUndefined();
-    expect(row("DAY", "2026-09-15")).toMatchObject({ volatility: 1, volatilityKeywords: 10, movedDown5: 0 });
-    expect(row("DAY", "2026-09-16")).toMatchObject({ volatility: 3, volatilityKeywords: 10, movedDown5: 5, movedUp5: 0 });
-    expect(row("WEEK", "2026-09-14")).toMatchObject({ volatility: 2, volatilityKeywords: 20, movedDown5: 5 });
+    // Every move a fall, so all of it is Down (2026-11-20).
+    expect(row("DAY", "2026-09-15")).toMatchObject({ volatility: 1, volatilityUp: 0, volatilityDown: 1, volatilityKeywords: 10, movedDown5: 0 });
+    expect(row("DAY", "2026-09-16")).toMatchObject({ volatility: 3, volatilityUp: 0, volatilityDown: 3, volatilityKeywords: 10, movedDown5: 5, movedUp5: 0 });
+    expect(row("WEEK", "2026-09-14")).toMatchObject({ volatility: 2, volatilityUp: 0, volatilityDown: 2, volatilityKeywords: 20, movedDown5: 5 });
     expect(row("DAY", "2026-09-17")?.volatility).toBeUndefined();
   });
 

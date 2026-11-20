@@ -332,6 +332,40 @@ through without stopping):
 - **"Can still change"** (HS6) is met for Search Console by judging only
   complete days. Google Analytics' last two days are not yet marked.
 
+## 9a. Positions improved and declined on the chart — 2026-11-20
+
+Anthony, 2026-11-20, on Volatility as the next Search Console screen: "we
+need to add a selector to the volatility chart for positive volatility and
+negative volatility — perhaps use the standard multi select dropdown"; then
+"Go, build it" on the proposal below. The parts were first called Up and
+Down; he renamed them the same day: "can we say Positions Improved and
+Positions Declined … not up and down".
+
+- **The score in two parts that add up to it** (§3). Positions improved is
+  what the keywords that climbed moved, Positions declined what those that
+  fell moved, each counted up to 10
+  places and taken over every keyword counted, so a day of 3.2 reads 1.3 improved
+  and 1.9 declined. The declined part is what is left of the score once the
+  improved part is rounded, so the
+  two always add up to the score as written. A week's or month's parts are
+  the average of its days' (`convex/utils/searchConsoleVolatility.ts`).
+- **Kept on the chart rows** (`searchConsoleWeeks.volatilityUp`,
+  `volatilityDown`), worked out in the nightly build beside the score. A week
+  or month starting before the days kept as days is never built again, so on
+  long dates the parts start later than the score, and the chart says so
+  ("Positions improved and declined start on 21 Sept"). More Handles was rebuilt on dev the same
+  day (`searchConsoleSettle:refreshSitePeriods`, read from the days kept,
+  nothing asked of Google): October has its parts every day, the weeks from
+  21 September.
+- **The chart's tick box became the kit's tick-box dropdown** (`TickSelect`
+  through `ExplorerToolbar`): Show, with Volatility, Positions improved and Positions declined, all three
+  ticked to start, on one shared scale. The hover names every line.
+- **What Hakken sees** sets Positions declined against Positions improved over the chart's dates when one
+  leads by 0.2 or more (`volatilityFindings`, finding "parts"); Ask Hakken's
+  Volatility read gives the score each day in the dates asked, with its parts
+  (`scoreEachDay`).
+- The four boxes and the table are unchanged.
+
 ## 10. Progress
 
 - 2026-10-10: drawn and approved, the folding box approved, the five fixes
@@ -357,3 +391,6 @@ through without stopping):
   wording is shown to him after, not before (HS8). The approved looks of
   Search Console's screens gained the box (`look/*.txt`). Full local check:
   7,248 tests passing. Overall: about 95%.
+- 2026-11-20: Positions improved and declined on the chart (§9a), built on dev on Anthony's
+  "Go, build it", More Handles rebuilt on dev and checked in his Chrome on
+  Last month and Last 3 months. Not committed; the eye not pressed.

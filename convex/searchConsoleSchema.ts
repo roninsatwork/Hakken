@@ -491,9 +491,14 @@ export const searchConsoleTables = {
      * Volatility (search-console-volatility-plan.md §3): the day's score out of
      * 10 where enough keywords counted, a week's or a month's the average of
      * its days'; the keywords counted; those that moved 5 places or more up,
-     * and down. Missing on rows built before 2026-10-10.
+     * and down. Missing on rows built before 2026-10-10. Its Up and Down
+     * parts add up to the score (2026-11-20): what the keywords that climbed
+     * and those that fell each moved, over every keyword counted. Missing on
+     * rows built before 2026-11-20.
      */
     volatility: v.optional(v.number()),
+    volatilityUp: v.optional(v.number()),
+    volatilityDown: v.optional(v.number()),
     volatilityKeywords: v.optional(v.number()),
     movedUp5: v.optional(v.number()),
     movedDown5: v.optional(v.number()),

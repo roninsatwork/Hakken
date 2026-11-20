@@ -33,9 +33,14 @@ const STILL_TO_DO = new Set([
   // Countries and devices left on 18 November 2026 with its redo (search-console-countries-and-devices-way-1-plan-2026-11-18.md),
   // and Indexing the same day with its own (search-console-indexing-v1-plan-2026-11-18.md). Tracked keywords and Tracked pages
   // left the same day with theirs (search-console-tracked-way-1-plan-2026-11-18.md).
-  "searchConsole.record", "searchConsole.almost",
-  "searchConsole.demand", "searchConsole.competing", "searchConsole.estimates", "searchConsole.appearance",
-  "searchConsole.lowCtr", "searchConsole.types", "searchConsole.moves",
+  // Almost there ("searchConsole.almost") left on 20 November 2026: taken out of the menu, as Position bands lists the same.
+  "searchConsole.record",
+  // Missed demand ("searchConsole.demand") left the same day: taken out of the menu, as Keywords and Keyword research show the same.
+  "searchConsole.estimates", "searchConsole.appearance",
+  // Keyword cannibalisation ("searchConsole.competing") left on 20 November 2026 with its redo (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
+  // Wins and losses ("searchConsole.moves") left on 19 November 2026: dropped, as Keywords sorted by Up or down lists the same.
+  // Shown but not clicked ("searchConsole.lowCtr") left on 20 November 2026 with its redo (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
+  "searchConsole.types",
   // Visibility's screens outside the plan's thirty-one.
   "visibility.keywordsBandsMoved", "visibility.pageRecord", "visibility.yourPages", "visibility.paidKeywords",
   // Insights' screens outside the plan's twenty.

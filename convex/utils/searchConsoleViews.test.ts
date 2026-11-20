@@ -8,12 +8,12 @@ import {
   filterRows,
   halfOf,
   isBrand,
+  lowCtrOf,
   pageWithoutSection,
   pagesByKeyword,
   shapeRows,
   summarise,
   trackedListOf,
-  withGone,
   withSectionsInPages,
   withTracked,
   type SourceRow,
@@ -59,11 +59,6 @@ describe("shaping", () => {
 });
 
 describe("each page's rule", () => {
-  test("Almost there: positions above 3, up to 20", () => {
-    const rows = shaped([row("a", 1, 10, 3), row("b", 1, 10, 4.2), row("c", 1, 10, 20), row("d", 1, 10, 20.1)]);
-    expect(applyView("almost", rows, { rules }).map((entry) => entry.key)).toEqual(["b", "c"]);
-  });
-
   test("Click rate by position: the website's own rate at each whole position, 1 to 20", () => {
     const curve = ctrCurve([
       { clicks: 10, impressions: 100, position: 1.2 },
@@ -80,25 +75,58 @@ describe("each page's rule", () => {
   test("Shown but not clicked: pages clicked less than the website's own rate at their position would bring", () => {
     const curve = ctrCurve([{ clicks: 2, impressions: 100, position: 7 }], rules.curvePositions);
     const rows = shaped([row("/low/", 19, 3918, 7.4), row("/fine/", 90, 3918, 7.4), row("/far/", 0, 500, 40)]);
-    expect(applyView("lowCtr", rows, { rules, curve })).toEqual([expect.objectContaining({ key: "/low/", usualCtr: 0.02, expected: 78 })]);
+    expect(applyView("lowCtr", rows, { rules, curve })).toEqual([expect.objectContaining({ key: "/low/", usualCtr: 0.02, expected: 78, gap: 59 })]);
   });
 
-  test("Pages competing: keywords with two or more pages, the top two and their shares", () => {
+  // Way 2, 20 November 2026 (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md): each position its usual rate is
+  // worked out for, over the whole list, never only the rows on screen, and the pages short by most clicks.
+  test("Shown but not clicked's own figures: each position's pages, clicks and usual clicks, and the pages short most", () => {
+    const curve = ctrCurve([{ clicks: 5, impressions: 100, position: 1 }, { clicks: 2, impressions: 100, position: 7 }], rules.curvePositions);
+    const all = shaped([row("/low/", 19, 3918, 7.4), row("/lower/", 1, 1000, 6.6), row("/fine/", 90, 3918, 7.4), row("/top/", 1, 400, 1.2), row("/far/", 0, 500, 40)]);
+    const listed = applyView("lowCtr", all, { rules, curve });
+    const figures = lowCtrOf(listed, all, curve);
+    expect(figures.positions).toEqual([
+      { position: 1, pages: 1, clicks: 1, expected: 20, all: 1 },
+      { position: 7, pages: 2, clicks: 20, expected: 98, all: 3 },
+    ]);
+    // The most clicks short first: /low/ is 59 short, /top/ 19, /lower/ 19 (the one shown more first).
+    expect(figures.top.map((page) => page.key)).toEqual(["/low/", "/lower/", "/top/"]);
+    // Summed up with the rest of the list's figures when the list asks for them, on both paths.
+    expect(summarise(listed, all, null, { rules, curve, brandWords: null, pageList: true, lowCtrList: true }).lowCtr).toEqual(figures);
+  });
+
+  test("Keyword cannibalisation: Insights' rule, the home page and searches for the website's name left out (20 November 2026)", () => {
     const pages = pagesByKeyword([
-      { key: "ai agency", page: "/", clicks: 2, impressions: 50 },
-      { key: "ai agency", page: "/ai-agency/", clicks: 41, impressions: 900 },
-      { key: "solo", page: "/", clicks: 5, impressions: 50 },
+      // The home page is left out, and a page under 1 in 10 of the rest's impressions doesn't count.
+      { key: "door knobs", page: "https://acme.test/", clicks: 9, impressions: 500 },
+      { key: "door knobs", page: "https://acme.test/door-knobs/", clicks: 4, impressions: 300 },
+      { key: "door knobs", page: "https://acme.test/front-door-knobs/", clicks: 0, impressions: 100 },
+      { key: "door knobs", page: "https://acme.test/luxury/", clicks: 1, impressions: 5 },
+      // One page besides the home page: not cannibalised.
+      { key: "ai agency", page: "https://acme.test/", clicks: 2, impressions: 50 },
+      { key: "ai agency", page: "https://acme.test/ai-agency/", clicks: 41, impressions: 900 },
+      // A search for the website's own name: left out however its pages split.
+      { key: "acme knobs", page: "https://acme.test/door-knobs/", clicks: 3, impressions: 60 },
+      { key: "acme knobs", page: "https://acme.test/front-door-knobs/", clicks: 2, impressions: 40 },
     ]);
-    const rows = shaped([row("ai agency", 43, 950, 4), row("solo", 5, 50, 3)]);
+    const rows = shaped([row("door knobs", 14, 905, 9), row("ai agency", 43, 950, 4), row("acme knobs", 5, 100, 2)], null, [], ["acme"]);
     expect(applyView("competing", rows, { rules, pages })).toEqual([
-      expect.objectContaining({ key: "ai agency", count: 2, top: "/ai-agency/", next: "/", topShare: 41 / 43, nextShare: 2 / 43 }),
+      expect.objectContaining({
+        key: "door knobs", count: 2, top: "https://acme.test/door-knobs/", next: "https://acme.test/front-door-knobs/",
+        topShare: 300 / 405, nextShare: 100 / 405, swaps: null,
+      }),
     ]);
   });
 
-  test("Wins and losses: only keywords whose clicks changed", () => {
-    const rows = shaped([row("up", 43, 10, 4), row("same", 5, 10, 4), row("down", 1, 10, 4)], [row("up", 31, 10, 5), row("same", 5, 10, 4), row("down", 6, 10, 3)]);
-    expect(applyView("moves", rows, { rules }).map((entry) => [entry.key, entry.change])).toEqual([["up", 12], ["down", -5]]);
-    expect(filterRows(applyView("moves", rows, { rules }), { move: "loss" }).map((entry) => entry.key)).toEqual(["down"]);
+  test("Keyword cannibalisation's Swaps come from each keyword's kept days; a keyword not swapped has none", () => {
+    const pages = pagesByKeyword([
+      { key: "door knobs", page: "/door-knobs/", clicks: 4, impressions: 300 },
+      { key: "door knobs", page: "/front-door-knobs/", clicks: 0, impressions: 100 },
+      { key: "hinges", page: "/hinges/", clicks: 1, impressions: 60 },
+      { key: "hinges", page: "/kitchen-hinges/", clicks: 0, impressions: 40 },
+    ]);
+    const rows = shaped([row("door knobs", 4, 400, 9), row("hinges", 1, 100, 12)]);
+    expect(applyView("competing", rows, { rules, pages, swaps: new Map([["door knobs", 7]]) }).map((entry) => [entry.key, entry.swaps])).toEqual([["door knobs", 7], ["hinges", 0]]);
   });
 
   test("Volatility: keywords counted on its day and the day before, up or down (search-console-volatility-plan.md §2.1)", () => {
@@ -110,27 +138,9 @@ describe("each page's rule", () => {
     expect(filterRows(listed, { way: "up" }).map((entry) => entry.key)).toEqual(["rose"]);
   });
 
-  test("Missed demand: Sites' most-searched keywords Google barely shows, or every shown keyword not tracked", () => {
-    const rows = shaped([row("shown a lot", 4, 900, 8), row("barely", 0, 14, 61.2)], null, ["shown a lot"]);
-    const sitesKeywords = [
-      { keyword: "barely", volume: 6600, kind: "BUYING" },
-      { keyword: "never shown", volume: 1000, kind: "RESEARCHING" },
-      { keyword: "shown a lot", volume: 5000, kind: "BUYING" },
-      { keyword: "hardly searched", volume: 20, kind: "BUYING" },
-    ];
-    expect(applyView("missed", rows, { rules, sitesKeywords, missedList: "searched" }).map((entry) => [entry.key, entry.volume, entry.impressions])).toEqual([
-      ["barely", 6600, 14],
-      ["never shown", 1000, 0],
-    ]);
-    expect(applyView("missed", rows, { rules, missedList: "untracked" }).map((entry) => entry.key)).toEqual(["barely"]);
-  });
-
-  test("each rule follows the website's limits: searched a lot, barely shown, how far off, and the positions counted", () => {
+  test("each rule follows the website's limits: how far off, and the positions counted", () => {
     const rows = shaped([row("barely", 0, 14, 61.2), row("/b/", 9, 10, 4, { estimate: 11 })]);
-    const sitesKeywords = [{ keyword: "barely", volume: 200, kind: "BUYING" }, { keyword: "never shown", volume: 120, kind: "BUYING" }];
     const stricter: ViewRules = { curvePositions: 5, barelyShown: 10, searchedALot: 150, estimateOff: 0.1 };
-    expect(applyView("missed", rows, { rules: stricter, sitesKeywords, missedList: "searched" }).map((entry) => entry.key)).toEqual([]);
-    expect(applyView("missed", rows, { rules, sitesKeywords, missedList: "searched" }).map((entry) => entry.key)).toEqual(["barely", "never shown"]);
     expect(applyView("estimates", rows, { rules: stricter }).map((entry) => entry.verdict)).toEqual(["high"]);
     expect(ctrCurve([{ clicks: 1, impressions: 10, position: 7 }], stricter.curvePositions)).toEqual([]);
   });
@@ -174,7 +184,8 @@ describe("a page's hero boxes", () => {
       ["ai agency"],
       ["ronins"],
     );
-    const listed = applyView("almost", all, { rules });
+    // The two rows below the top three, as a page's rule might list them: the summary is theirs, never the whole list's.
+    const listed = all.filter((entry) => entry.position > 3);
     const summary = summarise(listed, all, [row("ai agency", 31, 1000, 5.1), row("web design", 6, 800, 12), row("gone", 1, 10, 30)], { rules, brandWords: ["ronins"] });
     expect(summary).toMatchObject({
       rows: 2, of: 3, clicks: 45, impressions: 2441, tracked: 1, gaining: 1, gained: 12, losing: 1, lost: 4, volume: 3400,
@@ -192,15 +203,18 @@ describe("a page's hero boxes", () => {
     });
   });
 
-  test("Pages competing counts the pages its keywords split, of every page any keyword was shown with", () => {
+  test("Keyword cannibalisation counts the pages that split its keywords, of every page any keyword was shown with", () => {
     const pages = pagesByKeyword([
       { key: "ai agency", page: "/", clicks: 2, impressions: 50 },
       { key: "ai agency", page: "/ai-agency/", clicks: 41, impressions: 900 },
+      { key: "ai agency", page: "/ai-seo/", clicks: 3, impressions: 200 },
+      { key: "ai agency", page: "/blog/ai/", clicks: 0, impressions: 10 },
       { key: "solo", page: "/solo/", clicks: 5, impressions: 50 },
     ]);
-    const all = shaped([row("ai agency", 43, 950, 4), row("solo", 5, 50, 3)]);
+    const all = shaped([row("ai agency", 46, 1160, 4), row("solo", 5, 50, 3)]);
     const summary = summarise(applyView("competing", all, { rules, pages }), all, null, { rules, pages, brandWords: null });
-    expect(summary).toMatchObject({ rows: 1, of: 2, pagesInvolved: 2, pagesShown: 3, bandsBefore: null, brand: null });
+    // The two pages splitting it: never the home page, nor the blog post with under 1 in 10 of its impressions.
+    expect(summary).toMatchObject({ rows: 1, of: 2, pagesInvolved: 2, pagesShown: 5, bandsBefore: null, brand: null });
   });
 });
 
@@ -216,16 +230,6 @@ describe("found in review, 2026-10-03", () => {
     const rows = shaped([row("/a/", 300, 1000, 4, { estimate: 100 })]);
     expect(applyView("estimates", rows, { rules, days: 90 })).toEqual([expect.objectContaining({ estimate: 296, verdict: "close", gap: 0 })]);
     expect(applyView("estimates", rows, { rules, days: 30 })).toEqual([expect.objectContaining({ estimate: 99, verdict: "low", gap: -201 })]);
-  });
-
-  test("Wins and losses counts a keyword shown before and not at all now as all its clicks lost", () => {
-    const before = [row("gone", 40, 400, 6), row("kept", 5, 50, 4), row("never clicked", 0, 9, 50)];
-    const rows = shapeRows(withGone([row("kept", 9, 60, 3)], before), before, { tracked: new Set(), brandWords: null });
-    expect(applyView("moves", rows, { rules }).map((entry) => [entry.key, entry.clicks, entry.change, entry.previousClicks])).toEqual([
-      ["kept", 9, 4, 5],
-      ["gone", 0, -40, 40],
-    ]);
-    expect(summarise(applyView("moves", rows, { rules }), rows, before, { rules, brandWords: null })).toMatchObject({ gaining: 1, gained: 4, losing: 1, lost: 40 });
   });
 });
 
@@ -298,8 +302,8 @@ describe("Tracked keywords and Tracked pages (drawn 2026-10-03)", () => {
     expect(summarise(listed, listed, was, { rules, brandWords: null })).not.toHaveProperty("trackedList");
   });
 
-  test("Wins and losses: a keyword gone since the days before moved no places", () => {
-    const gone = shapeRows(withGone([], [row("gone", 40, 400, 6)]), [row("gone", 40, 400, 6)], { tracked: new Set(), brandWords: null });
+  test("a tracked keyword Google stopped showing moved no places", () => {
+    const gone = shapeRows(withTracked([], new Set(["gone"])), [row("gone", 40, 400, 6)], { tracked: new Set(["gone"]), brandWords: null });
     expect(gone[0]).toMatchObject({ change: -40, previousPosition: 6, positionChange: null });
   });
 });

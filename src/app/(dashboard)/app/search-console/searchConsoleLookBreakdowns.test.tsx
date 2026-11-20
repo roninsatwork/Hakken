@@ -5,8 +5,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { PAGE_ROW, ROW, STATUS, SUMMARY, TRACKING, list } from "@/src/test/searchConsoleFixtures";
-import SearchConsoleDemandPage from "./[siteId]/missed-demand/page";
+import { PAGE_ROW, ROW, STATUS, SUMMARY, list } from "@/src/test/searchConsoleFixtures";
 import SearchConsoleCompetingPage from "./[siteId]/pages-competing/page";
 import SearchConsoleTypesPage from "./[siteId]/types/page";
 import SearchConsoleBrandPage from "./[siteId]/brand-and-non-brand/page";
@@ -17,7 +16,7 @@ import SearchConsoleEstimatesPage from "./[siteId]/real-against-estimated/page";
 /**
  * Search Console's last opportunities and its breakdowns hold to the looks
  * Anthony approved on the "Search Console — keywords and pages" canvas
- * (design-drift-plan D4): Missed demand, Pages competing, Types, Brand and
+ * (design-drift-plan D4): Pages competing, Types, Brand and
  * non-brand, Click rate by position, Rich results and Real against
  * estimated, each rendered with sample rows in English, read as the outline
  * saved beside its board in docs/plans/assets/search-console-redesign/look/.
@@ -42,8 +41,6 @@ const PLAN = "search-console-redesign";
 const BASE = { ...SUMMARY, types: [] };
 
 /** A keyword many people search for that Google barely shows the website for. */
-const MISSED_ROW = { ...ROW, impressions: 12, clicks: 0, ctr: 0, position: 18.2, volume: 2400 };
-const MISSED = { ...list([MISSED_ROW]), summary: { ...BASE, rows: 1, of: 69, volume: 2400 } };
 
 /** A keyword two of the website's pages were shown for, splitting its clicks. */
 const COMPETING_ROW = {
@@ -145,20 +142,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("Search Console's approved looks: missed demand, pages competing and the breakdowns", () => {
-  it("11 · Missed demand", async () => {
-    at("/app/search-console/site_1/missed-demand");
-    answer({
-      "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleLists:searchConsoleListPage": MISSED,
-      "searchConsoleTracking:searchConsoleTracking": TRACKING,
-    });
-    const { container } = render(<SearchConsoleDemandPage />);
-    await screen.findByText("ai agency");
-    await expectApprovedLook(container, PLAN, "Demand", "Search Console → Missed demand");
-  });
-
-  it("12 · Pages competing", async () => {
+describe("Search Console's approved looks: pages competing and the breakdowns", () => {
+  it("12 · Keyword cannibalisation", async () => {
     at("/app/search-console/site_1/pages-competing");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
@@ -166,7 +151,8 @@ describe("Search Console's approved looks: missed demand, pages competing and th
     });
     const { container } = render(<SearchConsoleCompetingPage />);
     await screen.findByText("ai agency");
-    await expectApprovedLook(container, PLAN, "Competing", "Search Console → Pages competing");
+    // Approved again as Way 3 on 20 November 2026 (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
+    await expectApprovedLook(container, "search-console-keyword-cannibalisation-way-3", "Competing", "Search Console → Keyword cannibalisation");
   });
 
   it("13 · Types", async () => {

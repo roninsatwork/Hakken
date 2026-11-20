@@ -8,7 +8,8 @@ import { addressesOf, decodeWith, isPageRef } from "./holdPageRefs";
 import { unpackedPart, type Packed, type StoredPacked } from "./utils/searchConsolePacks";
 import { KeywordSums, RowSums, Terms, addKeywords, addPart, numbered } from "./utils/searchConsoleSums";
 import { LINES_READ_DAYS, chartPeriods, daysBetween, daysFrom, lastDayOf, type ChartGrain, type ChartPeriod } from "./utils/searchConsoleChartDays";
-import { bandOf, isBrand } from "./utils/searchConsoleViews";
+import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
+import { isHome, pathOfPage } from "./utils/cannibalisationRule";
 import { dayVolatility, periodVolatility, type Volatility } from "./utils/searchConsoleVolatility";
 
 /**
@@ -102,7 +103,15 @@ export type PairPlan = {
   keywordSpans: readonly Span[];
   /** The charts' days, weeks and months, when the build writes them. */
   chart: { chartWeeks: number; brandWords: readonly string[]; dayLine: string } | null;
+  /**
+   * Keyword cannibalisation's Swaps (20 November 2026): the periods whose every day is kept, in which each keyword's
+   * days are counted where Google showed a different page most than on the last day it showed the keyword.
+   */
+  swapSpans?: readonly Span[];
 };
+
+/** Each keyword's page shown most on the day before it was shown, and its swaps, in one period. */
+type SwapCount = { last: Map<number, number>; swaps: Map<number, number> };
 
 /** Days whose keywords are kept to the end: the volatility day is the newest complete one, within the last few. */
 const RECENT_DAYS = 7;
@@ -128,8 +137,15 @@ export class PairStream {
   private day: string | null = null;
   private dayKeywords: KeywordSums | null = null;
   private before: { day: string; standings: ReturnType<KeywordSums["standings"]> } | null = null;
+  /** The day's pages for each keyword, a page and its section links one, the home page left out: for the swaps. */
+  private dayPages = new Map<number, Map<number, { clicks: number; impressions: number }>>();
+  private readonly swapCounts = new Map<string, SwapCount>();
+  /** Each page number's own page, its section link folded in, or -1 for the home page: numbered apart from the pairs' pages. */
+  private readonly pageOf = new Map<number, number>();
+  private readonly ownPages = new Terms();
 
   constructor(private readonly plan: PairPlan) {
+    for (const span of plan.swapSpans ?? []) this.swapCounts.set(spanKey(span), { last: new Map(), swaps: new Map() });
     for (const span of plan.pairSpans) this.pairs.set(spanKey(span), new RowSums(this.keys, this.pages));
     for (const span of plan.keywordSpans) this.keywords.set(spanKey(span), new KeywordSums(this.keys));
     this.chartList = plan.chart ? chartPeriods(plan.newest, plan.oldest, plan.chart.chartWeeks, plan.chart.dayLine) : [];
@@ -146,6 +162,7 @@ export class PairStream {
       this.dayKeywords = new KeywordSums(this.keys);
     }
     const part = numbered(packed, this.keys, this.pages);
+    if (this.swapCounts.size > 0 && part.pages) this.addDayPages(part.keys, part.pages, part.clicks, part.impressions);
     for (const span of this.plan.pairSpans) if (within(day, span)) addPart(this.pairs.get(spanKey(span))!, part);
     for (const span of this.plan.keywordSpans) if (within(day, span)) addKeywords(this.keywords.get(spanKey(span))!, part);
     addKeywords(this.dayKeywords!, part);
@@ -172,9 +189,77 @@ export class PairStream {
     return this.recent.get(day);
   }
 
+  /**
+   * A keyword's swaps in a period whose every day was read: the days Google showed a different page most than on the
+   * last day it showed the keyword. Null for a period not counted, and 0 for a keyword never swapped.
+   */
+  swapsOf(span: Span, key: string): number | null {
+    const counted = this.swapCounts.get(spanKey(span));
+    if (!counted) return null;
+    const number = this.keys.find(key);
+    return number === undefined ? 0 : counted.swaps.get(number) ?? 0;
+  }
+
+  /** A period's packed pairs, each beside its keyword's Swaps (`counts`); as they are for a period not counted day by day. */
+  withSwaps<Part extends { keys: readonly string[] }>(span: Span, parts: readonly Part[]): Array<Part & { counts?: number[] }> {
+    if (!this.swapCounts.has(spanKey(span))) return [...parts];
+    return parts.map((part) => ({ ...part, counts: part.keys.map((key) => this.swapsOf(span, key) ?? 0) }));
+  }
+
+  /** The page a numbered page is, its section link folded in; -1 for the home page, which never counts. */
+  private ownPage(page: number): number {
+    let own = this.pageOf.get(page);
+    if (own === undefined) {
+      const address = pageWithoutSection(this.pages.texts[page] ?? "");
+      own = isHome(pathOfPage(address)) ? -1 : this.ownPages.numberOf(address);
+      this.pageOf.set(page, own);
+    }
+    return own;
+  }
+
+  private addDayPages(keys: readonly number[], pages: readonly number[], clicks: readonly number[], impressions: readonly number[]): void {
+    for (let at = 0; at < keys.length; at += 1) {
+      const page = this.ownPage(pages[at]);
+      if (page < 0) continue;
+      const byPage = this.dayPages.get(keys[at]) ?? new Map<number, { clicks: number; impressions: number }>();
+      const held = byPage.get(page) ?? { clicks: 0, impressions: 0 };
+      held.clicks += clicks[at] ?? 0;
+      held.impressions += impressions[at] ?? 0;
+      byPage.set(page, held);
+      this.dayPages.set(keys[at], byPage);
+    }
+  }
+
+  /** The day's page shown most for each keyword (then clicked most, then A to Z), counted against the day before it in each period. */
+  private closeSwaps(day: string): void {
+    if (this.swapCounts.size === 0) return;
+    const counting = (this.plan.swapSpans ?? []).filter((span) => within(day, span)).map((span) => this.swapCounts.get(spanKey(span))!);
+    if (counting.length > 0) {
+      for (const [key, byPage] of this.dayPages) {
+        let top = -1;
+        let best = { clicks: -1, impressions: -1 };
+        for (const [page, held] of byPage) {
+          if (held.impressions > best.impressions || (held.impressions === best.impressions && (held.clicks > best.clicks
+            || (held.clicks === best.clicks && (this.ownPages.texts[page] ?? "") < (this.ownPages.texts[top] ?? ""))))) {
+            top = page;
+            best = held;
+          }
+        }
+        if (top < 0) continue;
+        for (const counted of counting) {
+          const last = counted.last.get(key);
+          if (last !== undefined && last !== top) counted.swaps.set(key, (counted.swaps.get(key) ?? 0) + 1);
+          counted.last.set(key, top);
+        }
+      }
+    }
+    this.dayPages = new Map();
+  }
+
   private closeDay(): void {
     if (this.day === null || this.dayKeywords === null) return;
     const day = this.day;
+    this.closeSwaps(day);
     const standings = this.dayKeywords.standings();
     if (this.before && this.before.day === shiftDay(day, -1)) this.volatility.set(day, dayVolatility(standings, this.before.standings));
     this.before = { day, standings };

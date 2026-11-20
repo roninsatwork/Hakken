@@ -7,7 +7,6 @@ import SearchConsolePage from "./page";
 import SearchConsolePerformancePage from "./[siteId]/page";
 import SearchConsoleSearchesPage from "./[siteId]/keywords/page";
 import SearchConsoleConnectionPage from "./[siteId]/connection/page";
-import SearchConsoleWinsPage from "./[siteId]/wins-and-losses/page";
 import SearchConsoleTypesPage from "./[siteId]/types/page";
 import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 import { useScreenDay } from "@/src/test/realTime";
@@ -307,14 +306,18 @@ describe("the pages beyond Google's own", () => {
     live: false, from: "2026-08-28", to: "2026-09-26", summary,
   };
 
-  it("Wins and losses reads the keywords whose clicks moved, before → now, the most gained first", () => {
-    at("/app/search-console/site_1/wins-and-losses");
+  // Wins and losses was dropped on 2026-11-19 (Anthony: "Yes, drop it"): the eye's links, and old links forwarded by
+  // next.config.ts, open Keywords sorted by Up or down, the most gained first, or with dir=asc the most lost.
+  it.each([
+    ["?sort=change", "desc"],
+    ["?sort=change&dir=asc", "asc"],
+  ])("Keywords opened at %s lists the keywords by their change in clicks", (search, direction) => {
+    at("/app/search-console/site_1/keywords", search);
     answer({ "searchConsoleConnect:searchConsoleStatus": status(), "searchConsoleLists:searchConsoleListPage": LIST });
-    render(<SearchConsoleWinsPage />);
+    render(<SearchConsoleSearchesPage />);
     expect(screen.getByText("ai agency")).toBeInTheDocument();
-    expect(screen.getByText("+12")).toBeInTheDocument();
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsoleListPage")).at(-1)?.[1];
-    expect(asked).toMatchObject({ view: "moves", dimension: "query", sort: "change", direction: "desc" });
+    expect(asked).toMatchObject({ dimension: "query", sort: "change", direction });
   });
 
   it("Types draws each kind's share of the pages and of the clicks, each opening its list", () => {

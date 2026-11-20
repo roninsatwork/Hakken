@@ -16,7 +16,7 @@ import { compareTermsQuickly } from "./utils/searchConsoleTerms";
 /** The headings a list orders by, each the best first on its first press. */
 export const SORT_KEYS = [
   "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "movedBy", "share", "count", "top",
-  "volume", "estimate", "kind", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap", "band",
+  "volume", "estimate", "kind", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap", "band", "swaps",
 ] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 const SORTS: ListSorts<ListRow, SortKey> = {
@@ -45,6 +45,8 @@ const SORTS: ListSorts<ListRow, SortKey> = {
   gap: { value: (row) => row.gap, first: "desc" },
   // Position bands: the top band first; a row Google did not show has none, last.
   band: { value: (row) => (row.impressions > 0 ? BANDS.indexOf(row.band) : null), first: "asc" },
+  // Keyword cannibalisation's Swaps: the most swapped first; a period not counted day by day has none.
+  swaps: { value: (row) => row.swaps ?? null, first: "desc" },
 };
 
 /**

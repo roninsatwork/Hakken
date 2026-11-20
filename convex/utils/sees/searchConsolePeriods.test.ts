@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { expectEyeHolds } from "@/src/test/eyeHolds";
+import { bandsSeesData, bandsSeesRows } from "./own/searchConsoleBands";
+import { lowCtrSeesData } from "./own/searchConsoleLowCtr";
+import { cannibalisationSeesData } from "./own/searchConsoleCannibalisation";
 import { readFixture } from "@/src/test/readFixture";
 import { findingWords, type Finding } from "./findings";
 import { pageDataFor } from "./pageData";
@@ -26,6 +29,11 @@ const roninsPerformance = readFixture("roninsSearchConsolePerformance");
 const splitsRead = readFixture("moreHandlesSearchConsolePerformanceSplits") as Record<string, unknown>;
 /** "more handles" on its own screen, as Google answered on 17 November 2026: its figures and every page shown for it. */
 const keywordScreen = readFixture("moreHandlesSearchConsoleKeywordScreen") as Record<string, unknown>;
+/** Position bands' list and chart for every period, the United Kingdom, read on dev on 19 November 2026. */
+const positionBands = readFixture("moreHandlesSearchConsolePositionBands") as { periods: Record<string, { summary: unknown; rows: unknown[]; chart: Array<{ start: string }> }> };
+/** Shown but not clicked's list for every period, the United Kingdom, read on dev on 20 November 2026 (no asks of Google). */
+const lowCtr = readFixture("moreHandlesSearchConsoleLowCtr") as { kindNames: Record<string, string>; periods: Record<string, { summary: unknown; rows: unknown[] }> };
+const cannibalisation = readFixture("moreHandlesSearchConsoleCannibalisation") as { periods: Record<string, { summary: unknown; rows: unknown[] }> };
 /** The United Kingdom's own pages, each against its dates before, and its own figures, as Google answered on 18 November 2026. */
 const pagesRead = readFixture("moreHandlesSearchConsolePages") as Record<string, unknown>;
 const pageScreen = readFixture("moreHandlesSearchConsolePageScreen") as Record<string, unknown>;
@@ -53,7 +61,7 @@ const demandRead = readFixture("moreHandlesSearchConsoleDemand") as {
  *   and set the newest weeks against those before them instead.
  */
 
-type Period = "lastWeek" | "thisMonth" | "lastMonth" | "last3Months" | "last6Months" | "last12Months";
+type Period = "thisWeek" | "lastWeek" | "thisMonth" | "lastMonth" | "last3Months" | "last6Months" | "last12Months";
 const WHOLE: Period[] = ["lastWeek", "lastMonth", "last3Months"];
 const NO_FAIR_BEFORE: Period[] = ["last6Months", "last12Months"];
 const ALL: Period[] = [...WHOLE, "thisMonth", ...NO_FAIR_BEFORE];
@@ -62,7 +70,7 @@ const at = (fixture: unknown, period: Period) => (fixture as Record<Period, Fixt
 
 /** The words `SearchConsoleSees` hands every page, in English: what each period is set against, and the page's names. */
 const BEFORE: Record<Period, string> = {
-  lastWeek: "The week before", thisMonth: "The same days last month", lastMonth: "The month before", last3Months: "The 3 months before",
+  thisWeek: "The same days last week", lastWeek: "The week before", thisMonth: "The same days last month", lastMonth: "The month before", last3Months: "The 3 months before",
   last6Months: "The 6 months before", last12Months: "The 12 months before",
 };
 const wordsFor = (period: Period) => ({
@@ -74,7 +82,7 @@ const wordsFor = (period: Period) => ({
 });
 /** A day as the chart names it ("Sat 31 Oct"), a month by its name. */
 const dayName = (start: string, step: string) => new Date(`${start}T12:00:00Z`).toLocaleDateString("en-GB", step === "month" ? { month: "long", year: "numeric", timeZone: "UTC" } : { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
-const STEP: Record<Period, string> = { lastWeek: "day", thisMonth: "day", lastMonth: "day", last3Months: "week", last6Months: "week", last12Months: "month" };
+const STEP: Record<Period, string> = { thisWeek: "day", lastWeek: "day", thisMonth: "day", lastMonth: "day", last3Months: "week", last6Months: "week", last12Months: "month" };
 
 const PRINT = process.env.PRINT_SEES === "1";
 function said(screen: string, period: Period, data: Fixture): string[] {
@@ -388,20 +396,59 @@ describe("Search Console finds the biggest things on every period the date menu 
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(3);
   });
 
-  test.each(ALL)("New and lost: %s", (period) => {
+  // On More Handles' register as rebuilt from Google on 19 November 2026 (search-console-new-and-lost-audit-2026-11-19.md),
+  // read as the page reads it, on every period the date menu offers, this week included: the headline and four things more.
+  test.each(["thisWeek", ...ALL] as Period[])("New and lost: %s", (period) => {
     const lines = said("searchConsole.newLost", period, newLostPage(period));
     clean(lines);
     expect(lines[0], lines.join("\n")).toMatch(/^Searches: \d+ new and \d+ lost/);
-    // A week's new searches take their places from the week's own list, which on 3 November still held the week before
-    // (waiting on its rebuild), and its lost ones were last shown before it: three things, not four, until it is rebuilt.
-    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(period === "thisMonth" ? 2 : period === "lastWeek" ? 3 : 4);
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
   });
 
-  test.each(ALL)("Position bands: %s", (period) => {
-    const lines = said("searchConsole.bands", period, keywordsPage(period, BAND_NAMES));
+  // Way 3 since 19 November 2026 (search-console-position-bands-way-3-plan-2026-11-19.md): its bands on today's figures, handed
+  // over as the page hands them (`bandsSeesData`, `bandsSeesRows`), on every period the date menu offers, this week included.
+  test.each(["thisWeek", ...ALL] as Period[])("Position bands: %s", (period) => {
+    const one = positionBands.periods[period];
+    const page = { summary: bandsSeesData(one.summary), rows: bandsSeesRows(one.rows), picked: true, chart: one.chart.map((step) => ({ ...step, day: step.start })), names: BAND_NAMES };
+    const lines = said("searchConsole.bands", period, page);
     clean(lines);
-    if (!NO_FAIR_BEFORE.includes(period)) expect(lines.some((line) => /^Top 3: searches (up|down)/.test(line)), lines.join("\n")).toBe(true);
+    if (!NO_FAIR_BEFORE.includes(period) && period !== "thisWeek") expect(lines.some((line) => /^Top 3: searches (up|down)/.test(line)), lines.join("\n")).toBe(true);
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(NO_FAIR_BEFORE.includes(period) ? 2 : 4);
+  });
+
+  // Way 2 since 20 November 2026 (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md): its own figures handed over
+  // as the page hands them (`lowCtrSeesData`), on every period the date menu offers, this week included. Nothing here is set
+  // against the span before, so every period says the same kinds of thing: its clicks against the clicks it'd usually get
+  // first, then how few pages, the page and the position short by most, the first page's share, and a Classification.
+  test.each(["thisWeek", ...ALL] as Period[])("Shown but not clicked: %s", (period) => {
+    const one = lowCtr.periods[period];
+    const names = {
+      these: "Pages shown a lot, clicked a little", usually: "Clicks you'd usually get", position: "Position", firstPage: "Positions 4 to 10", home: "Home page",
+      kinds: lowCtr.kindNames,
+    };
+    const lines = said("searchConsole.lowCtr", period, { ...lowCtrSeesData(one.summary, one.rows), names });
+    clean(lines);
+    expect(lines[0], lines.join("\n")).toMatch(/^Pages shown a lot, clicked a little: clicks/);
+    // The page short by most clicks is named by its title, never its address.
+    expect(lines.some((line) => /^(Guide To Bathroom|What is a|Top Guide|Black Cupboard|Contact Us)/.test(line)), lines.join("\n")).toBe(true);
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(period === "thisWeek" ? 3 : 5);
+  });
+
+  // Way 3 since 20 November 2026 (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md): its own figures handed over
+  // as the page hands them (`cannibalisationSeesData`), on every period the date menu offers, this week included. The keywords
+  // two pages share first, then the pages competing, the busiest keyword's split, the closest and the most crowded among the
+  // busiest, and, for a month or less, the keyword Google swapped pages for most.
+  test.each(["thisWeek", ...ALL] as Period[])("Keyword cannibalisation: %s", (period) => {
+    const one = cannibalisation.periods[period];
+    const names = { these: "Keywords two pages share", competing: "Pages competing", nextPage: "its next page", average: "the average keyword two pages share", swapped: "Keywords Google swapped pages for" };
+    const lines = said("searchConsole.competing", period, { ...cannibalisationSeesData(one.summary, one.rows), names });
+    clean(lines);
+    expect(lines[0], lines.join("\n")).toMatch(/^Keywords two pages share holds [\d.]+% of the list's keywords Google showed/);
+    expect(lines.some((line) => line.startsWith("Pages competing holds ")), lines.join("\n")).toBe(true);
+    // Swaps are counted for a month or less, never part-counted for a longer period.
+    const counted = ["thisWeek", "lastWeek", "thisMonth", "lastMonth"].includes(period);
+    expect(lines.some((line) => /days Google swapped pages/.test(line)), lines.join("\n")).toBe(counted);
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
   });
 
   test.each(ALL)("Keywords: %s", (period) => {
@@ -509,6 +556,22 @@ describe("Search Console finds the biggest things on every period the date menu 
     clean(lines);
     expect(lines[0], lines.join("\n")).toMatch(/^Thu 29 Oct: how much the results moved 4.1/);
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
+  });
+
+  test("Volatility: Positions declined against Positions improved over the chart's dates, only when one is clearly bigger (2026-11-20)", () => {
+    // More Handles' October, as dev rebuilt it on 20 November: 1.0 a day improved, 1.1 declined, too even to say.
+    const page = volatilityPage();
+    expect(said("searchConsole.volatility", "lastMonth", page).some((line) => /^Positions declined: /.test(line))).toBe(false);
+    // The same days with a fifth of each day's improved part moved to declined: falls clearly lead.
+    const falling = {
+      ...page,
+      chart: (page.chart as Array<Record<string, unknown>>).map((one) => (typeof one.volatilityUp === "number"
+        ? { ...one, volatilityUp: Math.round((one.volatilityUp as number) * 8) / 10, volatilityDown: Math.round(((one.volatility as number) - Math.round((one.volatilityUp as number) * 8) / 10) * 10) / 10 }
+        : one)),
+    };
+    const lines = said("searchConsole.volatility", "lastMonth", falling);
+    clean(lines);
+    expect(lines.find((line) => /^Positions declined: /.test(line)), lines.join("\n")).toMatch(/^Positions declined: how much the results moved 1\.3, against 0\.8 for Positions improved/);
   });
 });
 

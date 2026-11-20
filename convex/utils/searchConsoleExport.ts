@@ -9,11 +9,12 @@
 /** The figures a download can hold, by the row's own names. */
 export const EXPORT_FIELDS = [
   "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "count", "top", "tracked", "kind",
-  "volume", "estimate", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "verdict", "gap", "previousClicks", "previousPosition",
+  "volume", "estimate", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "verdict", "gap", "previousClicks", "previousPosition", "swaps",
 ] as const;
 export type ExportField = (typeof EXPORT_FIELDS)[number];
 
-type ExportRow = { [Field in ExportField]: string | number | boolean | null };
+// A field a row may leave out (Keyword cannibalisation's `swaps`) is blank in the file.
+type ExportRow = { [Field in ExportField]?: string | number | boolean | null };
 
 /** A position in a downloaded file: one decimal. */
 export function filePosition(value: number | null | undefined): number | null {

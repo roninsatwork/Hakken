@@ -1,0 +1,95 @@
+"""More Handles, October 2026, the United Kingdom, web: the figures the three ways draw, worked out by today's rule.
+
+Today's rule (`applyView("lowCtr")`): a row's usual click rate is the website's own at its whole place (Click rate by
+position, places 1 to 20); what it would have had is its impressions at that rate, rounded; it's listed when its clicks
+are fewer. Ways 1 and 2 use it on the country's own pages (as Pages since 18 November), Way 3 on its keywords.
+"""
+import csv
+import io
+import json
+import sys
+
+D = sys.argv[1]
+HOST = "https://www.morehandles.co.uk"
+
+
+def rows_of(name):
+    data = json.load(open(f"{D}/{name}.json"))
+    return list(csv.DictReader(io.StringIO(data["csv"])))
+
+
+curve = {p["position"]: p["ctr"] for p in json.load(open(f"{D}/curve.json"))["points"]}
+
+
+def judged(rows, key="k"):
+    out = []
+    for r in rows:
+        clicks, shown, place = int(r["c"]), int(r["i"]), float(r["p"])
+        usual = curve.get(round(place))
+        if usual is None:
+            continue
+        expected = round(shown * usual)
+        if clicks < expected:
+            out.append({"key": r[key], "clicks": clicks, "impressions": shown, "position": place, "usual": usual, "expected": expected,
+                        "missed": expected - clicks, **({"top": r["t"]} if r.get("t", "").startswith("http") else {}),
+                        **({"brand": r.get("b") == "yes"} if "b" in r else {})})
+    return out
+
+
+pages = rows_of("pages")
+keywords = rows_of("keywords")
+low_pages = judged(pages)
+low_pages.sort(key=lambda r: (-r["missed"], -r["impressions"]))
+low_keywords = judged(keywords)
+low_keywords.sort(key=lambda r: (-r["missed"], -r["impressions"]))
+
+
+def totals(rows):
+    return {"rows": len(rows), "impressions": sum(r["impressions"] for r in rows), "clicks": sum(r["clicks"] for r in rows),
+            "expected": sum(r["expected"] for r in rows), "missed": sum(r["missed"] for r in rows)}
+
+
+# Way 2: each place on Google, 1 to 20, over the pages clicked less than usual.
+places = []
+for place in range(1, 21):
+    here = [r for r in low_pages if round(r["position"]) == place]
+    places.append({"place": place, "pages": len(here), "clicks": sum(r["clicks"] for r in here), "expected": sum(r["expected"] for r in here),
+                   "impressions": sum(r["impressions"] for r in here), "usual": curve[place]})
+
+# Way 3: each keyword's page, its missed clicks added up.
+by_page = {}
+for r in low_keywords:
+    page = r.get("top")
+    if not page:
+        continue
+    held = by_page.setdefault(page, {"key": page, "keywords": 0, "missed": 0, "clicks": 0, "expected": 0, "impressions": 0})
+    held["keywords"] += 1
+    held["missed"] += r["missed"]
+    held["clicks"] += r["clicks"]
+    held["expected"] += r["expected"]
+    held["impressions"] += r["impressions"]
+pages_by_keywords = sorted(by_page.values(), key=lambda p: -p["missed"])
+
+all_pages = {"rows": len(pages), "impressions": sum(int(r["i"]) for r in pages), "clicks": sum(int(r["c"]) for r in pages)}
+all_keywords = {"rows": 31538, "kept": len(keywords), "impressions": sum(int(r["i"]) for r in keywords), "clicks": sum(int(r["c"]) for r in keywords)}
+board = {
+    "curve": [{"place": k, "usual": v} for k, v in sorted(curve.items())],
+    "pages": {"all": all_pages, "low": totals(low_pages), "rows": low_pages},
+    "keywords": {"all": all_keywords, "low": totals(low_keywords), "lowOther": totals([r for r in low_keywords if not r.get("brand")]), "rows": low_keywords, "listed": len(low_keywords)},
+    "placePages": {str(place): sum(1 for r in pages if round(float(r["p"])) == place) for place in range(1, 21)},
+    "places": places,
+    "pagesByKeywords": pages_by_keywords[:40],
+}
+json.dump(board, open(f"{D}/board.json", "w"))
+print("pages", all_pages, "low", totals(low_pages))
+print("keywords", all_keywords, "low", totals(low_keywords))
+print("top pages by missed:")
+for r in low_pages[:10]:
+    print(f"  {r['key'].replace(HOST, ''):70.70} shown {r['impressions']:6} place {r['position']:5} ctr {100*r['clicks']/r['impressions']:.2f}% usual {100*r['usual']:.2f}% clicks {r['clicks']} expected {r['expected']} missed {r['missed']}")
+print("places:", [(p["place"], p["pages"], p["clicks"], p["expected"]) for p in places])
+print("top keywords by missed:")
+for r in low_keywords[:10]:
+    print(f"  {r['key']:40.40} shown {r['impressions']:6} place {r['position']:5} clicks {r['clicks']} expected {r['expected']} missed {r['missed']} page {r.get('top','').replace(HOST,'')[:50]}")
+print("pages by keywords' missed:")
+for p in pages_by_keywords[:8]:
+    print(f"  {p['key'].replace(HOST,''):70.70} keywords {p['keywords']} missed {p['missed']} clicks {p['clicks']} expected {p['expected']}")

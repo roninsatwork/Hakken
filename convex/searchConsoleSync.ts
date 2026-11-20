@@ -501,8 +501,15 @@ export async function runStep(
         // Every search's lines kept, whatever its figures (Anthony, 18 November 2026; `searchConsoleKeep.ts`).
         const rows = fromGoogle(answer.rows, list === "pair");
         if (list === "pair") named.set(type, rows.reduce((sum, row) => sum + row.clicks, 0));
-        if (list === "pair") for (const row of rows) see(type, "query", row.key, day);
-        if (list === "page") for (const row of rows) see(type, "page", row.key, day);
+        // New and lost's register from the country's own search-and-page lines, its searches and its pages: never from
+        // the page list, which is every country's since 2026-11-17 (`EVERY_COUNTRY_LISTS`), so a page shown only abroad
+        // read as new in the United Kingdom (search-console-new-and-lost-audit-2026-11-19.md).
+        if (list === "pair") {
+          for (const row of rows) {
+            see(type, "query", row.key, day);
+            if (row.page) see(type, "page", row.page, day);
+          }
+        }
         parts = pack(rows, list === "pair");
       }
       for (const [index, part] of parts.entries()) {

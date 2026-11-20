@@ -1,4 +1,4 @@
-import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
+import { cleanup, fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
@@ -55,8 +55,8 @@ const FACTS = {
 };
 const CHART = {
   periods: [
-    { start: "2026-10-07", lastDay: "2026-10-07", days: 1, length: 1, top3: 0, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 0, volatility: 2.4 },
-    { start: "2026-10-08", lastDay: "2026-10-08", days: 1, length: 1, top3: 0, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 0, volatility: 1.9 },
+    { start: "2026-10-07", lastDay: "2026-10-07", days: 1, length: 1, top3: 0, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 0, volatility: 2.4, volatilityUp: 0.9, volatilityDown: 1.5 },
+    { start: "2026-10-08", lastDay: "2026-10-08", days: 1, length: 1, top3: 0, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 0, volatility: 1.9, volatilityUp: 0.7, volatilityDown: 1.2 },
   ],
   step: "day", byWeek: false, reach: null, chartWeeks: 16, notReady: false, preparing: false, notBuilt: false,
 };
@@ -93,6 +93,45 @@ describe("Volatility's approved look", () => {
     // The rule's words stand once the writer has no answer.
     expect(await findSaid(/Google's September 2026 spam update ran from/)).toBeInTheDocument();
     await expectApprovedLook(container, "search-console-volatility", "Main", "Search Console → Volatility");
+  });
+
+  it("its Show menu picks the score and its two parts, Positions improved and declined, and says what to tick when none is (2026-11-20)", async () => {
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleLists:searchConsoleListPage": list([ROW]),
+      "searchConsoleVolatility:searchConsoleVolatility": FACTS,
+      "searchConsolePeriods:searchConsoleChartFigures": CHART,
+      "googleUpdates:listGoogleUpdatesBetween": [],
+    });
+    render(<SearchConsoleVolatilityPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /Show: Every line/ }));
+    expect(screen.getAllByRole("checkbox").map((box) => box.closest("label")?.textContent?.trim())).toEqual(expect.arrayContaining(["Volatility", "Positions improved", "Positions declined"]));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Positions improved" }));
+    expect(screen.getByRole("button", { name: /Show: Volatility, Positions declined/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
+    expect(screen.getByText("Tick a line in the Show menu to draw it here.")).toBeInTheDocument();
+    // Every day here has its parts: nothing to say about where they start.
+    expect(screen.queryByText(/Positions improved and declined start on/)).not.toBeInTheDocument();
+  });
+
+  it("says where the two parts start when the score reaches back further, and when none is kept yet", async () => {
+    const [older, newer] = CHART.periods;
+    const { volatilityUp: _up, volatilityDown: _down, ...olderAlone } = older;
+    const { volatilityUp: _newerUp, volatilityDown: _newerDown, ...newerAlone } = newer;
+    const answerWith = (periods: unknown[]) => answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleLists:searchConsoleListPage": list([ROW]),
+      "searchConsoleVolatility:searchConsoleVolatility": FACTS,
+      "searchConsolePeriods:searchConsoleChartFigures": { ...CHART, periods },
+      "googleUpdates:listGoogleUpdatesBetween": [],
+    });
+    answerWith([olderAlone, newer]);
+    render(<SearchConsoleVolatilityPage />);
+    expect(await screen.findByText("Positions improved and declined start on 8 Oct. Google's figures for each day before then aren't kept.")).toBeInTheDocument();
+    cleanup();
+    answerWith([olderAlone, newerAlone]);
+    render(<SearchConsoleVolatilityPage />);
+    expect(await screen.findByText("Positions improved and declined show after the next collection.")).toBeInTheDocument();
   });
 
   it("every sentence its box can say has its words, in English and Italian", () => {

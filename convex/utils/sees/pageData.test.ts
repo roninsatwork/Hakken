@@ -29,7 +29,7 @@ describe("a page's own figures", () => {
     // Insights keeps every rate as a percentage, under 1 as well (0.8%); Search Console's moves count places.
     expect(pageDataFor({ rows: [{ page: "/a", rate: 3.4 }] }, "insights.pagePlan")).toEqual({ rows: [{ page: "/a", rate: 3.4 }] });
     expect(pageDataFor({ rows: [{ page: "/a", rate: 0.8, share: 0.5 }] }, "insights.enquiries")).toEqual({ rows: [{ page: "/a", rate: 0.8, share: 0.5 }] });
-    expect(pageDataFor({ rows: [{ key: "door handles", change: 16 }] }, "searchConsole.almost")).toEqual({ rows: [{ key: "door handles", change: 16 }] });
+    expect(pageDataFor({ rows: [{ key: "door handles", change: 16 }] }, "searchConsole.competing")).toEqual({ rows: [{ key: "door handles", change: 16 }] });
     // Read twice, as the eye and then the press read it, it stays as it was read once.
     const once = pageDataFor(channels, "googleAnalytics.channelsPage");
     expect(pageDataFor(once, "googleAnalytics.channelsPage")).toEqual(once);

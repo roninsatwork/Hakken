@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import schema from "./schema";
-import { ask } from "./insightsAsk";
+import { ask, readJson, withInnerQuotesEscaped } from "./insightsAsk";
 import { internal } from "./_generated/api";
 import { useFixedDay } from "@/src/test/realTime";
 
@@ -62,5 +62,25 @@ describe("Insights answers on continuation", () => {
     expect(await read()).toEqual({ drafts: [] });
     expect(await read()).toEqual({ drafts: [] });
     expect(generate).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("reading a model's JSON answer (2026-11-19)", () => {
+  test("reads it as it stands, in a code fence, or with words around it", () => {
+    expect(readJson('{"says":["One."]}')).toEqual({ says: ["One."] });
+    expect(readJson('```json\n{"says":["One."]}\n```')).toEqual({ says: ["One."] });
+    expect(readJson('Here it is: {"says":["One."]} Done.')).toEqual({ says: ["One."] });
+    expect(readJson("not an answer")).toBeNull();
+  });
+
+  test("keeps a press whose sentence has quote marks of its own, as Position bands' did", () => {
+    const answer = '{"says":["Your big "door handles" search climbed into places 11 to 20.","Next."],"steps":[{"words":"Fix it.","link":0}]}';
+    expect(readJson(answer)).toEqual({ says: ['Your big "door handles" search climbed into places 11 to 20.', "Next."], steps: [{ words: "Fix it.", link: 0 }] });
+  });
+
+  test("leaves quote marks already escaped, and every end of a string, as they are", () => {
+    const answer = '{"a":"He said \\"hi\\".","b":["x", "y"],"c":{"d":"z"}}';
+    expect(withInnerQuotesEscaped(answer)).toBe(answer);
+    expect(JSON.parse(withInnerQuotesEscaped(answer))).toEqual({ a: 'He said "hi".', b: ["x", "y"], c: { d: "z" } });
   });
 });

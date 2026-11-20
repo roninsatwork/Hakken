@@ -1,18 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { Activity } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Change } from "@/src/ui/components/screens/Change";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { ExplorerToolbar } from "@/src/ui/components/screens/ChartExplorer";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../sites/_components/SiteCharts";
 import { formatNumber, formatShortDay, toCsv } from "../../../sites/_components/siteFormat";
-import { SearchConsoleChartCard, useSeriesTicks } from "../../_components/SearchConsoleChartCard";
+import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
@@ -27,6 +28,15 @@ const TONE: Record<"NORMAL" | "HIGH" | "VERY_HIGH", StatusTone> = { NORMAL: "suc
 
 /** A score as the page writes it: one decimal. */
 const score = (value: number | null | undefined) => (value === null || value === undefined ? "…" : value.toFixed(1));
+
+/**
+ * The chart's lines (Anthony, 2026-11-20: "a selector to the volatility chart for positive volatility and negative
+ * volatility … use the standard multi select dropdown"; then "Positions Improved and Positions Declined … not up and down"):
+ * the score, and its two parts, Positions improved and Positions declined, which add up to it. All
+ * three start ticked, in the kit's tick-box dropdown, each keeping its colour whichever are ticked.
+ */
+const LINES = ["volatility", "volatilityUp", "volatilityDown"] as const;
+type Line = (typeof LINES)[number];
 
 /**
  * Volatility (docs/plans/active/search-console-volatility-plan.md §2.1, drawn
@@ -51,8 +61,17 @@ export default function SearchConsoleVolatilityPage() {
   const chart = useChartPeriods({ ...list, kind: "web" });
   const { figures, periods } = chart;
   const host = list.status?.host ?? "";
-  const series = [{ key: "volatility", name: tv("series"), colour: SITE_SERIES_COLOURS[0] }];
-  const ticks = useSeriesTicks(series);
+  const lineNames: Record<Line, string> = { volatility: tv("series"), volatilityUp: tv("up"), volatilityDown: tv("down") };
+  const [ticked, setTicked] = useState<Line[]>([...LINES]);
+  const series = LINES.map((key, at) => ({ key, name: lineNames[key], colour: SITE_SERIES_COLOURS[at] })).filter((line) => ticked.includes(line.key));
+  const showsParts = ticked.some((key) => key !== "volatility");
+  // The two parts are kept from 20 November 2026, and a week or month past the days kept is never built again, so on long
+  // dates the score's line reaches back further than its parts: the chart says where they start.
+  const scored = (periods ?? []).filter((period) => period.volatility !== undefined);
+  const firstParts = scored.find((period) => period.volatilityUp !== undefined);
+  const partsNote = !showsParts || scored.length === 0 ? null
+    : !firstParts ? tv("partsNone")
+      : firstParts !== scored[0] ? tv("partsFrom", { day: formatShortDay(firstParts.start) }) : null;
   const latest = facts?.latest ?? null;
   const update = facts?.update ?? null;
   // Its figures keep the newest seven days whatever the menu says, so they name the day they end on (calendar-periods-plan.md).
@@ -73,6 +92,7 @@ export default function SearchConsoleVolatilityPage() {
       chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null,
       names: {
         latest: latestDay ? formatShortDay(latestDay) : tv("latestDayNone"),
+        up: tv("up"), down: tv("down"),
         usual: tw("usual"), last7: tw("last7"), week7Before: tw("week7Before"), climbed5: tw("climbed5"), fell5: tw("fell5"), beforeIt: tw("beforeIt"), dayBefore: tw("dayBefore"),
       },
     }
@@ -151,13 +171,22 @@ export default function SearchConsoleVolatilityPage() {
         <SearchConsoleChartCard
           title={tv("chartTitle")}
           hint={facts?.usual ? tv("chartHintUsual", { usual: score(facts.usual) }) : tv("chartHint")}
-          controls={ticks.controls}
+          controls={(
+            <ExplorerToolbar controls={[{
+              kind: "ticks", key: "lines", label: tv("show"), everyWord: tv("every"),
+              choices: LINES.map((key) => ({ key, label: lineNames[key] })), ticked, onChange: (next) => setTicked(next as Line[]),
+            }]}
+            />
+          )}
           exportName={`${host}-search-console-volatility-${list.range.from}-to-${list.range.to}`}
           host={host}
           from={chart.from}
           to={chart.to}
           step={chart.step}
-          csv={() => toCsv([chart.periodHeader, tv("series")], (periods ?? []).map((period) => [period.start, period.volatility ?? ""]))}
+          csv={() => toCsv(
+            [chart.periodHeader, tv("series"), tv("up"), tv("down")],
+            (periods ?? []).map((period) => [period.start, period.volatility ?? "", period.volatilityUp ?? "", period.volatilityDown ?? ""]),
+          )}
         >
           {periods === undefined ? (
             <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
@@ -168,7 +197,19 @@ export default function SearchConsoleVolatilityPage() {
           ) : (
             <>
               {chart.note ? <p className="mb-3 text-[12px] text-secondary">{chart.note}</p> : null}
-              <SiteLineChart height={280} series={ticks.shown} data={chart.rows((period) => ({ volatility: period.volatility ?? null }))} />
+              {partsNote ? <p className="mb-3 text-[12px] text-secondary">{partsNote}</p> : null}
+              {series.length === 0 ? (
+                <p className="py-10 text-center text-[13px] text-secondary">{tv("nothingTicked")}</p>
+              ) : (
+                <SiteLineChart
+                  height={280}
+                  series={series}
+                  sharedScale
+                  keepEmptyRows
+                  formatValue={(value) => score(value)}
+                  data={chart.rows((period) => ({ volatility: period.volatility ?? null, volatilityUp: period.volatilityUp ?? null, volatilityDown: period.volatilityDown ?? null }))}
+                />
+              )}
             </>
           )}
         </SearchConsoleChartCard>

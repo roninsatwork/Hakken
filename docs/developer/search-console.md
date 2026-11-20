@@ -270,9 +270,38 @@ follows it, with New and lost:
   `min-w-[160px]` beside its `CUT_COLUMN` share and cut it to one line, whole on hover. `PageNameCell` shows a page's
   title once Google Analytics knows it, else its address, on one line, with both on hover (`RecordLinkCell`'s `hover`).
 - **One line a row.** `clicksAndChange` and `positionAndMove` are gone: a move is its own column, `change`, headed
-  "Up or down" (`table.change`, shared with Wins and losses, Position bands and Google updates).
+  "Up or down" (`table.change`, shared with Position bands and Google updates).
+- **Wins and losses was dropped** (Anthony, 2026-11-19: "Yes, drop it"). Keywords sorted by Up or down lists the same
+  keywords and the same change. The eye's links to it, and old links (forwarded in `next.config.ts`), open Keywords at
+  `?sort=change`, or `?sort=change&dir=asc` for losses. Its `moves` list rule and Wins or losses filter went with it.
 - **Short headings.** `figureColumns`' impressions are headed "Shown" with "Impressions" on hover (`ShownHeading`,
   `table.shown`, `table.shownTitle`). CSV downloads keep Google's own words and every field.
+- **Low click rate, Way 2** (Shown but not clicked until it was renamed the same day, its address kept; Anthony,
+  2026-11-20: "ok i think we build way 2 and also wire it up to what hakken sees", then "ok call it low click rate"; `docs/plans/active/search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md`). The country's own pages
+  (`inCountry`), four boxes, `MirrorBars` of each position 1 to 20 (`Summary.lowCtr`, `lowCtrOf`, on both read paths), and
+  a lean table of Page, Shown, Position, Clicks and Usually, the most clicks short first (`gap`). No Device menu. Its eye
+  has its own rules (`own/searchConsoleLowCtr.ts`) and Ask Hakken reads it (`screen: "lowCtr"`).
+- **Pages competing is now Keyword cannibalisation** (Anthony, 2026-11-20: "i want it to be called keyword
+  cannibalisation"), Insights' name for the same thing. The menu, the title, the eye's screen entry and the approved
+  look's title, in English and Italian ("Cannibalizzazione delle parole chiave"). The address stays `/pages-competing`.
+  Built the same day as Way 3 on Insights' rule (`convex/utils/cannibalisationRule.ts`, shared with Insights): the home
+  page and brand searches left out, a keyword listed when two or more pages each took 1 in 10 of its impressions; four
+  boxes; the ticked keyword's pages each day asked of Google (`searchConsoleKeywordPagesByDay`) with a Pages menu; and a
+  Swaps column counted in the nightly build for periods kept day by day (`PairStream.swapSpans`, kept as the competing
+  list's `counts`). `docs/plans/active/search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md`.
+- **Missed demand was taken out of the menu** (Anthony, 2026-11-20: "Yes, take it out"). Its second list was Keywords
+  with Tracked on Not tracked; its first was Visibility's monthly searches, not Google's, many for searches Google never
+  showed, and their sum counted the same people several times (49,500 a month for five spellings of one search). Old
+  links open Keywords (`next.config.ts`); Brand and non-brand's eye step opens Keyword research. Its `missed` list rule,
+  the List menu (`filters.missed`), its eye entry and words, and `searchConsole.almost` (whose words it borrowed) went
+  with it. Its three limits on the admin Limits screen (`consoleMissedKeywords`, `consoleSearchedALot`,
+  `consoleBarelyShown`) are left for now: they're saved settings, read by nothing since.
+- **Almost there was taken out of the menu** (Anthony, 2026-11-20: "lets remove almost there from the menu"). Position
+  bands lists the same keywords at 4–10 and 11–20. Old links (forwarded in `next.config.ts`) and the eye's links from
+  Keywords, Click rate by position and Google Analytics' Overview open Position bands; Position bands' own eye says no
+  step there, as it would link to itself. Its `almost` list rule and 4–20 Position menu went with it. A "Close to
+  the top three" choice on Pages was drawn and approved the same morning, then dropped before it was finished (Anthony:
+  "i liked the current bands"): the Position menus keep their bands as they are.
 - **What moved to the row's own screen:** Track on Keywords, Pages, Almost there and Missed demand (the record screen has
   its own Track box); Pages and Top page on Keywords and the tracked keywords; Keywords and Top keyword on Pages and the
   tracked pages; CTR on the two tracked lists, which keep Track because unticking is what they are for; Position on

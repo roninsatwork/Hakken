@@ -14,10 +14,10 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { Change } from "@/src/ui/components/screens/Change";
 import { CUT_COLUMN, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { ListDownload } from "../../../_components/SiteDownloads";
-import { SiteGainLossChart, type GainLossKind, type GainLossStep } from "../../../_components/SiteGainLossChart";
+import type { GainLossKind, GainLossStep } from "../../../_components/SiteGainLossChart";
+import { GainLossCard } from "@/src/ui/components/screens/GainLossCard";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
@@ -181,23 +181,25 @@ export default function SiteNewLostPage() {
         </p>
       ) : null}
 
-      <SiteChartCard
+      {/* The shared gain-and-loss card (search-console-new-and-lost-audit-2026-11-19.md), as Search Console's New and lost draws it. */}
+      <GainLossCard
         title={t("chartTitle")}
         hint={t("chartHint")}
         exportName={`${host}-new-and-lost-${range.from}-to-${range.to}`}
+        host={site?.host}
+        from={range.from}
+        to={range.to}
+        step={range.step}
         csv={() => toCsv(
           ["day", t("checks.columns.day"), ...KINDS.map(seriesName), t("net")],
           steps.map((step) => [step.lastDay, stepDetail(step), ...KINDS.map((kind) => countOf(step, kind)), netOf(step)]),
         )}
-        enoughData={steps.length > 0}
-      >
-        <SiteGainLossChart
-          steps={chartSteps}
-          series={KINDS.map((kind) => ({ key: kind, name: seriesName(kind), colour: COLOURS[kind] }))}
-          netLabel={t("net")}
-          startLegend={t("startLegend")}
-        />
-      </SiteChartCard>
+        filling={steps.length === 0}
+        steps={chartSteps}
+        series={KINDS.map((kind) => ({ key: kind, name: seriesName(kind), colour: COLOURS[kind] }))}
+        netLabel={t("net")}
+        startLegend={t("startLegend")}
+      />
 
       {newest && newestIsStart ? (
         <Notice>{startNote(newest)}</Notice>

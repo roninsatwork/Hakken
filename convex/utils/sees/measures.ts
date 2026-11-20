@@ -5,6 +5,8 @@
  * know is worse than none. One list for every section, so the same figure reads the same way on every page.
  */
 
+import { NEW_LOST_EYE_NEWEST } from "../searchConsoleViews";
+
 export type Measure = {
   /** The words for the writer: "clicks from Google". */
   words: string;
@@ -165,9 +167,32 @@ const COUNTS: Record<string, Measure> = {
   lostADay: { words: "searches lost a day", kind: "count", lessIsBetter: true },
   newADay: { words: "new searches a day", kind: "count" },
   pageOne: { words: "searches on Google's first page", kind: "count" },
-  /** New and lost's own: a part of the searches lost, and of those new (own/searchConsole.ts). */
+  /** New and lost's own: the searches lost, and those new, on a busy day against the average (own/searchConsole.ts). */
   searchesLost: { words: "searches lost", kind: "count", lessIsBetter: true },
   searchesGained: { words: "new searches", kind: "count" },
+  /**
+   * Their first-page shares, which are of the newest `NEW_LOST_EYE_NEWEST` of each, not of all of them
+   * (search-console-new-and-lost-audit-2026-11-19.md): the first press read "29.8% of all the searches lost" when it was
+   * 149 of the newest 500. The words name the number; `measuresWords.test.ts` holds them to the limit.
+   */
+  newestLost: { words: `newest ${NEW_LOST_EYE_NEWEST} searches lost`, kind: "count", lessIsBetter: true },
+  newestGained: { words: `newest ${NEW_LOST_EYE_NEWEST} searches gained`, kind: "count" },
+  /** Shown but not clicked's shortfall: the clicks a position's pages are short of what the website usually gets there (own/searchConsoleLowCtr.ts). */
+  clicksShort: { words: "clicks short of what you usually get", kind: "count", lessIsBetter: true },
+  /**
+   * Its pages a Classification holds a share of (own/searchConsoleLowCtr.ts): never "of all the pages", which the first press
+   * said of Handles' 21.5% when it was 28 of the 130 pages listed, not of the 6,439 Google showed (20 November 2026).
+   */
+  lowCtrPages: { words: "pages shown a lot, clicked a little", kind: "count" },
+  /**
+   * Keyword cannibalisation's own (own/searchConsoleCannibalisation.ts, 20 November 2026): the keywords two pages share, a
+   * page's share of a keyword's impressions (the home page left out, as the rule counts them), and the days Google swapped
+   * the page it showed most. Named for this page alone, so no other page's figure changes.
+   */
+  cannibalisedKeywords: { words: "keywords two pages share", kind: "count" },
+  keywordsShown: { words: "keywords Google showed", kind: "count" },
+  impressionSharePercent: { words: "share of its impressions", kind: "percent" },
+  swaps: { words: "days Google swapped pages", kind: "count", lessIsBetter: true },
   // Visibility's Backlinks and Keywords (own/visibility.ts, `linksAndKeywords`; ask-hakken-every-chart-page-plan-2026-11-03.md
   // section 10): links gained and lost, the servers links come from, the searches on Google's first page as each Keywords
   // page counts them, and the rivals you watch. Last, and named for these pages alone, so no other table's main figure changes.

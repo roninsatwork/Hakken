@@ -61,8 +61,12 @@ function checkGoogle(now: number, before: number | null): Maybe<SeenStep> {
 }
 
 const near = (bands: Record<string, number>) => (bands["4-10"] ?? 0) + (bands["11-20"] ?? 0);
+/**
+ * The keywords at places 4 to 20, closest to more clicks: Position bands lists them, at 4–10 and 11–20, since Almost there
+ * was taken out of the menu (2026-11-20). Position bands' own eye leaves the step out: it would link to the page it's on.
+ */
 const pushNear = (bands: Record<string, number>): Maybe<SeenStep> =>
-  near(bands) > 0 && { code: "pushNear", a: near(bands), link: "seeAlmost", to: toPage("almost-there") };
+  near(bands) > 0 && { code: "pushNear", a: near(bands), link: "seeBands", to: toPage("position-bands") };
 
 /** Keywords. */
 export function keywordsSees(list: ListFigures, period: CalendarPeriod): Seen {
@@ -86,41 +90,15 @@ export function pagesSees(list: ListFigures, period: CalendarPeriod): Seen {
   );
 }
 
-/** Position bands. */
-export function bandsSees(list: ListFigures): Seen {
+/** Position bands: the dates before by the period's words, as Keywords' lines say them (2026-11-19, Way 3). */
+export function bandsSees(list: ListFigures, period: CalendarPeriod): Seen {
   const top = list.bands["1-3"] ?? 0;
   const before = list.bandsBefore ? list.bandsBefore["1-3"] ?? 0 : null;
   return seen(
     [
       { code: "bands", a: top, b: list.bands["4-10"] ?? 0, c: list.bands["11-20"] ?? 0 },
-      before !== null && top !== before && { code: top > before ? "topMore" : "topFewer", a: Math.abs(top - before) },
+      before !== null && top !== before && { code: top > before ? "topMore" : "topFewer", a: Math.abs(top - before), period },
     ],
-    [pushNear(list.bands)],
-  );
-}
-
-/** Wins and losses. */
-export function movesSees(list: ListFigures, period: CalendarPeriod): Seen {
-  if (list.gaining === 0 && list.losing === 0) return seen([{ code: "noMoves", period }]);
-  const net = list.gained - Math.abs(list.lost);
-  return seen(
-    [
-      { code: "gainingLosing", a: list.gaining, b: list.losing, period },
-      net !== 0 && { code: net > 0 ? "netUp" : "netDown", a: Math.abs(net) },
-    ],
-    [
-      list.losing > 0 && { code: "seeLosing", link: "seeLosing", to: toPage("wins-and-losses", { move: "loss" }) },
-      net < 0 && { code: "checkGoogle", link: "seeVolatility", to: toPage("volatility") },
-    ],
-  );
-}
-
-/** Almost there. */
-export function almostSees(list: ListFigures): Seen {
-  if (list.rows === 0) return seen([{ code: "noneNear" }]);
-  return seen(
-    [{ code: "near", a: list.rows }, list.volume > 0 && { code: "nearVolume", a: list.volume }],
-    [{ code: "improvePages", link: "seePages", to: toPage("pages") }],
   );
 }
 
@@ -130,15 +108,6 @@ export function lowCtrSees(list: ListFigures): Seen {
   return seen(
     [{ code: "lowCtr", a: list.rows, b: list.clicks, c: list.expected }],
     [{ code: "rewriteTitles", link: "seePages", to: toPage("pages") }],
-  );
-}
-
-/** Missed demand. */
-export function demandSees(list: ListFigures): Seen {
-  if (list.rows === 0) return seen([{ code: "noneMissed" }]);
-  return seen(
-    [{ code: "missed", a: list.rows }, list.volume > 0 && { code: "missedVolume", a: list.volume }],
-    [{ code: "writeForDemand", link: "keywordResearch", to: { url: "/app/keyword-research" } }],
   );
 }
 
@@ -170,7 +139,8 @@ export function brandSees(list: ListFigures): Seen {
       { code: "brandShare", a: percent(share) },
       other !== null && Math.abs(other) >= WORTH_SAYING && { code: other > 0 ? "othersUp" : "othersDown", a: percent(other) },
     ],
-    [share >= MOSTLY_BRAND && { code: "growOthers", link: "seeDemand", to: toPage("missed-demand") }],
+    // Keyword research since Missed demand was taken out of the menu (2026-11-20): the searches people make that you could be found for.
+    [share >= MOSTLY_BRAND && { code: "growOthers", link: "keywordResearch", to: { url: "/app/keyword-research" } }],
   );
 }
 
@@ -195,7 +165,7 @@ export function performanceSees(totals: { clicks: number; impressions: number; p
     ],
     [fell !== null && fell <= -WORTH_SAYING
       ? { code: "checkGoogle", link: "seeVolatility", to: toPage("volatility") }
-      : { code: "seeWins", link: "seeWins", to: toPage("wins-and-losses") }],
+      : { code: "seeWins", link: "seeKeywords", to: toPage("keywords", { sort: "change" }) }],
   );
 }
 
@@ -240,7 +210,7 @@ export function curveSees(points: ReadonlyArray<{ position: number; ctr: number;
   const at = (position: number) => points.find((point) => point.position === position && point.impressions > 0) ?? null;
   const first = at(1);
   const third = at(3);
-  if (!first) return seen([{ code: "noFirst" }], [{ code: "seeAlmost", link: "seeAlmost", to: toPage("almost-there") }]);
+  if (!first) return seen([{ code: "noFirst" }], [{ code: "seeBands", link: "seeBands", to: toPage("position-bands") }]);
   return seen(
     [
       third

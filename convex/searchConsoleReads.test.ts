@@ -303,7 +303,7 @@ describe("the tables", () => {
     expect(otherDates.rows.flat().map((row) => row.count)).toEqual([null, null]);
   });
 
-  test("Pages competing over this year reads its own ready-made list, with how many pages Google showed (drift fixes, 2026-10-03)", async () => {
+  test("Keyword cannibalisation over this year reads its own ready-made list, with how many pages Google showed (drift fixes, 2026-10-03; Insights' rule, 2026-11-20)", async () => {
     const { t, siteId, reader } = await withSearches();
     const year = { period: "last12Months" as const, which: "NOW" as const, from: "2025-09-27", to: "2026-09-26" };
     await period(t, siteId, "query", year, [
@@ -316,11 +316,13 @@ describe("the tables", () => {
       list: "competing",
       ...year,
       part: 0,
-      keys: ["plumber leeds", "plumber leeds"],
-      pages: ["https://acme-shop.test/plumbers/", "https://acme-shop.test/"],
-      clicks: [7, 3],
-      impressions: [150, 50],
-      positionSums: [450, 350],
+      // The home page is left out; the two others each took 1 in 10 of the rest's impressions. Its Swaps beside each pair.
+      keys: ["plumber leeds", "plumber leeds", "plumber leeds"],
+      pages: ["https://acme-shop.test/plumbers/", "https://acme-shop.test/boilers/", "https://acme-shop.test/"],
+      clicks: [7, 3, 4],
+      impressions: [150, 50, 100],
+      positionSums: [450, 350, 200],
+      counts: [2, 2, 2],
       shown: 4,
       builtAt: Date.now(),
     });
@@ -328,8 +330,8 @@ describe("the tables", () => {
       siteId, ...range, view: "competing", from: "2025-09-27", ...page,
     });
     expect(competing).toMatchObject({ live: false, preparing: false, total: 1 });
-    expect(competing.rows[0]).toMatchObject({ key: "plumber leeds", count: 2, top: "https://acme-shop.test/plumbers/", next: "https://acme-shop.test/" });
-    expect(competing.rows[0].topShare).toBeCloseTo(0.7);
+    expect(competing.rows[0]).toMatchObject({ key: "plumber leeds", count: 2, top: "https://acme-shop.test/plumbers/", next: "https://acme-shop.test/boilers/", swaps: 2 });
+    expect(competing.rows[0].topShare).toBeCloseTo(0.75);
     expect(competing.summary).toMatchObject({ rows: 1, of: 2, pagesInvolved: 2, pagesShown: 4 });
   });
 

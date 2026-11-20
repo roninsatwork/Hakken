@@ -1,23 +1,21 @@
 import { cleanup, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScreenDay } from "@/src/test/realTime";
 import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { PAGE_ROW, ROW, STATUS, SUMMARY, TRACKING, list } from "@/src/test/searchConsoleFixtures";
+import { PAGE_ROW, ROW, STATUS, SUMMARY, list } from "@/src/test/searchConsoleFixtures";
 import SearchConsoleBandsPage from "./[siteId]/position-bands/page";
 import SearchConsoleNewLostPage from "./[siteId]/new-and-lost/page";
-import SearchConsoleWinsPage from "./[siteId]/wins-and-losses/page";
 import SearchConsoleUpdatesPage from "./[siteId]/google-updates/page";
-import SearchConsoleAlmostPage from "./[siteId]/almost-there/page";
 import SearchConsoleLowCtrPage from "./[siteId]/shown-but-not-clicked/page";
 
 /**
  * Search Console's change and opportunity screens hold to the looks Anthony
  * approved on the "Search Console — keywords and pages" canvas
- * (design-drift-plan D4): Position bands, New and lost, Wins and losses,
- * Google updates, Almost there and Shown but not clicked, each rendered with
+ * (design-drift-plan D4): Position bands, New and lost, Google updates and
+ * Shown but not clicked, each rendered with
  * sample rows in English, read as the outline saved beside its board in
  * docs/plans/assets/search-console-redesign/look/.
  */
@@ -39,6 +37,12 @@ const PLAN = "search-console-redesign";
 
 /** The same keywords' bands the days before: every band box has its change. */
 const BANDED = { ...SUMMARY, bandsBefore: { "1-3": 0, "4-10": 1, "11-20": 1, "21-50": 0, "51+": 0 } };
+
+/** Shown but not clicked's own figures: two positions on Google, one with a page short of clicks (Way 2, 20 November 2026). */
+const LOW_CTR_SUMMARY = {
+  ...SUMMARY, rows: 1, of: 2, expected: 94,
+  lowCtr: { positions: [{ position: 1, pages: 0, clicks: 0, expected: 0, all: 1 }, { position: 2, pages: 1, clicks: 69, expected: 94, all: 1 }], top: [] },
+};
 
 /** Two weeks of position bands for the chart. */
 const BAND_PERIODS = {
@@ -117,7 +121,8 @@ describe("Search Console's approved looks: changes and opportunities", () => {
     });
     const { container } = render(<SearchConsoleBandsPage />);
     await screen.findByText("ai agency");
-    await expectApprovedLook(container, PLAN, "Bands", "Search Console → Position bands");
+    // Redrawn as Way 3 on 19 November 2026, its look kept with that plan (search-console-position-bands-way-3-plan-2026-11-19.md).
+    await expectApprovedLook(container, "search-console-position-bands-way-3", "Bands", "Search Console → Position bands");
   });
 
   it("6 · New and lost", async () => {
@@ -131,15 +136,22 @@ describe("Search Console's approved looks: changes and opportunities", () => {
     await expectApprovedLook(container, PLAN, "NewLost", "Search Console → New and lost");
   });
 
-  it("7 · Wins and losses", async () => {
-    at("/app/search-console/site_1/wins-and-losses");
+  it("6 · New and lost past its limit counts every keyword, says how many the table lists, and what a lost row shows", async () => {
+    at("/app/search-console/site_1/new-and-lost");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleLists:searchConsoleListPage": list([ROW]),
+      "searchConsoleChanges:searchConsoleNewLost": {
+        ...NEW_LOST,
+        total: 10_000, pages: 400, cut: 5_000,
+        counts: { newKeywords: 8_478, lostKeywords: 9_877, newPages: 40, lostPages: 31 },
+      },
     });
-    const { container } = render(<SearchConsoleWinsPage />);
+    render(<SearchConsoleNewLostPage />);
     await screen.findByText("ai agency");
-    await expectApprovedLook(container, PLAN, "Moves", "Search Console → Wins and losses");
+    // The bar counts all 18,355, as the boxes do (search-console-new-and-lost-audit-2026-11-19.md: it said 10,000).
+    expect(await screen.findByText(/18,355/)).toBeTruthy();
+    expect(screen.getByText("The table lists the newest 10,000.")).toBeTruthy();
+    expect(screen.getByText("Lost keywords show the clicks and impressions they had in the last 12 months.")).toBeTruthy();
   });
 
   it("8 · Google updates", async () => {
@@ -156,27 +168,16 @@ describe("Search Console's approved looks: changes and opportunities", () => {
     await expectApprovedLook(container, "search-console-volatility", "Updates", "Search Console → Google updates");
   });
 
-  it("9 · Almost there", async () => {
-    at("/app/search-console/site_1/almost-there");
-    answer({
-      "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleLists:searchConsoleListPage": { ...list([{ ...ROW, volume: 880 }]), summary: { ...BANDED, volume: 880 } },
-      "searchConsoleTracking:searchConsoleTracking": TRACKING,
-    });
-    const { container } = render(<SearchConsoleAlmostPage />);
-    await screen.findByText("ai agency");
-    await expectApprovedLook(container, PLAN, "Almost", "Search Console → Almost there");
-  });
-
-  it("10 · Shown but not clicked", async () => {
+  it("10 · Low click rate", async () => {
     at("/app/search-console/site_1/shown-but-not-clicked");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleLists:searchConsoleListPage": list([{ ...PAGE_ROW, usualCtr: 0.06, expected: 94 }]),
+      "searchConsoleLists:searchConsoleListPage": { ...list([{ ...PAGE_ROW, usualCtr: 0.06, expected: 94, gap: 25 }]), summary: LOW_CTR_SUMMARY },
       "pageKinds:pageKindChoices": null,
     });
     const { container } = render(<SearchConsoleLowCtrPage />);
     await screen.findAllByText(/ai-agency/);
-    await expectApprovedLook(container, PLAN, "LowCtr", "Search Console → Shown but not clicked");
+    // Approved again as Way 2 on 20 November 2026 (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
+    await expectApprovedLook(container, "search-console-shown-but-not-clicked-way-2", "LowCtr", "Search Console → Low click rate");
   });
 });

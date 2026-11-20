@@ -125,6 +125,35 @@ const nextConfig: NextConfig = {
         destination: "/app/analytics/:siteId/landing-pages",
         permanent: true,
       },
+      // Search Console's Wins and losses was dropped on 2026-11-19 (Anthony:
+      // "Yes, drop it"): Keywords sorted by Up or down lists the same keywords
+      // and the same change. Saved advice may still link to it, losses first
+      // or not, so each opens Keywords in that order.
+      {
+        source: "/app/search-console/:siteId/wins-and-losses",
+        has: [{ type: "query", key: "move", value: "loss" }],
+        destination: "/app/search-console/:siteId/keywords?sort=change&dir=asc",
+        permanent: true,
+      },
+      {
+        source: "/app/search-console/:siteId/wins-and-losses",
+        destination: "/app/search-console/:siteId/keywords?sort=change",
+        permanent: true,
+      },
+      // Search Console's Almost there was taken out of the menu on 2026-11-20 (Anthony: "lets remove almost there from
+      // the menu"): its keywords at places 4 to 20 are Position bands' 4–10 and 11–20. Old links open Position bands.
+      {
+        source: "/app/search-console/:siteId/almost-there",
+        destination: "/app/search-console/:siteId/position-bands",
+        permanent: true,
+      },
+      // Missed demand was taken out the same day (Anthony: "Yes, take it out"): its second list is Keywords with Tracked on
+      // Not tracked, and its first was Visibility's monthly searches, which Keyword research shows. Old links open Keywords.
+      {
+        source: "/app/search-console/:siteId/missed-demand",
+        destination: "/app/search-console/:siteId/keywords",
+        permanent: true,
+      },
       {
         source: "/admin/companies/:id/users",
         destination: "/admin/companies/:id/directory/users",

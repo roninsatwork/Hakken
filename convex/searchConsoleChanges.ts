@@ -21,7 +21,7 @@ import { checkedLongest, consoleLimitsOf, type ConsoleLimits } from "./searchCon
 import { periodOf } from "./searchConsoleLists";
 import { holdBrandNames } from "./holdProfiles";
 import { updateInLanguage } from "./googleUpdates";
-import { BANDS, bandOf, ctrCurve, type Band } from "./utils/searchConsoleViews";
+import { BANDS, NEW_LOST_EYE_NEWEST, bandOf, ctrCurve, type Band } from "./utils/searchConsoleViews";
 import { stepEnd, stepStart } from "./utils/searchConsolePacks";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { seenValidator } from "./utils/hakkenSees";
@@ -236,7 +236,7 @@ export async function readNewLost(ctx: SiteReader, args: ObjectType<typeof readN
   const lostTo = shiftDay(args.to, -lostAfter) < lastLost ? shiftDay(args.to, -lostAfter) : lastLost;
   // Gained and lost read side by side (2026-11-03: the read took 1.7 to 2.7 seconds on morehandles.co.uk's Last month
   // and longer, reading 15,000 to 21,000 records one list after another).
-  const read = async (kind: "query" | "page") => {
+  const read = async (kind: "query" | "page", most: number) => {
     const [gained, lost] = await Promise.all([
       seenBetween(ctx, holdId, country, args.searchType, kind, "first", newFrom, args.to, most),
       // Lost in the dates: last shown the lost days before a day in them, and not since.
@@ -251,47 +251,45 @@ export async function readNewLost(ctx: SiteReader, args: ObjectType<typeof readN
   const before = beforeOf(args.from, args.to, args.period);
   const beforeWatched = before.from >= watched;
   const lostBefore = { from: shiftDay(before.from, -lostAfter), to: shiftDay(before.to, -lostAfter) };
-  // Each keyword's figures over the date menu's period (calendar-periods-plan.md, phase 4), read a keyword at a time
-  // (step 4b): other dates read the last 3 months, which hold every keyword shown in them.
-  const [keywords, keywordDays, pageDays, ninety, keywordDaysBefore, pageDaysBefore] = await Promise.all([
-    read("query"),
+  // Read only what the page shows (search-console-new-and-lost-audit-2026-11-19.md, speed): newest first with no search
+  // and no place chosen, the table's page and the eye's newest are all it needs, and the total comes from the register's
+  // day counts. Ordered by a figure, searched or cut to a place, every keyword read is looked at, as before.
+  const order = args.sort ?? "when";
+  const newestFirst = order === "when" && (args.direction ?? CHANGE_SORTS.when.first) === "desc" && !args.q?.trim() && !args.band;
+  const sample = Math.min(most, NEW_LOST_EYE_NEWEST);
+  const enough = newestFirst ? Math.min(most, Math.max(sample, Math.ceil(Math.max(1, args.page)) * Math.max(1, args.rows))) : most;
+  // A new keyword's figures are its figures in the dates (other dates read the last 3 months, which hold every keyword
+  // shown in them: calendar-periods-plan.md, phase 4). A lost keyword's are what it had before it went: its figures in
+  // the website's last 12 months, every one of which came before it went (Anthony, 2026-11-19: it had said 0 and 0).
+  const period = periodOf(args.from, args.to, newest, ukDay(), args.period) ?? "last3Months";
+  const [keywordsRead, keywordDays, pageDays, nowFigures, lastYear, keywordDaysBefore, pageDaysBefore] = await Promise.all([
+    read("query", enough),
     seenDaysBetween(ctx, register, "query", countsFrom, args.to),
     seenDaysBetween(ctx, register, "page", countsFrom, args.to),
-    keywordFiguresOf(ctx, holdId, args.searchType, periodOf(args.from, args.to, newest, ukDay(), args.period) ?? "last3Months", country),
+    keywordFiguresOf(ctx, holdId, args.searchType, period, country),
+    period === "last12Months" ? null : keywordFiguresOf(ctx, holdId, args.searchType, "last12Months", country),
     beforeWatched ? seenDaysBetween(ctx, register, "query", lostBefore.from, before.to) : null,
     beforeWatched ? seenDaysBetween(ctx, register, "page", lostBefore.from, before.to) : null,
   ]);
+  // Before the register counted by day (2026-10-04) the lists themselves are counted, so every keyword is read.
+  const keywords = keywordDays || enough === most ? keywordsRead : await read("query", most);
+  const lostFigures = period === "last12Months" ? nowFigures : (lastYear ?? nowFigures);
   // Pages are only counted on this page: their own lists are read only until the register counts them by day, as it
   // has after each collection since 2026-10-04 (before, every page gained and lost was read to be counted and dropped).
-  const pages = pageDays ? { gained: [], lost: [] } : await read("page");
-  // The 90 days keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1): each new or
-  // lost keyword looked up by its text, the book's records read once however many ask.
-  const names = ninety?.book ? new BookNames(ctx, ninety.book) : null;
-  // Looked up side by side: the book holds each record's read, so two keywords in one record read it once.
-  const tokens = new Map<string, string>(names
-    ? await Promise.all([...new Set([...keywords.gained, ...keywords.lost].map((entry) => entry.key))].map(async (key) => [key, await names.tokenOf("query", key)] as const))
-    : []);
-  const rowOf = (entry: Seen, status: "new" | "lost"): Change => {
-    const at = ninety ? ninety.rowOf(tokens.get(entry.key) ?? entry.key) : -1;
-    const known = ninety && at !== -1 ? { clicks: ninety.clicks(at), impressions: ninety.impressions(at), positionSum: ninety.positionSum(at) } : null;
-    const position = known && known.impressions > 0 ? known.positionSum / known.impressions : null;
-    return {
-      key: entry.key,
-      status,
-      when: status === "new" ? entry.firstDay : shiftDay(entry.lastDay, lostAfter),
-      clicks: status === "new" ? (known?.clicks ?? 0) : 0,
-      impressions: status === "new" ? (known?.impressions ?? 0) : 0,
-      position,
-      band: position === null ? null : bandOf(position),
-    };
+  const pages = pageDays ? { gained: [], lost: [] } : await read("page", most);
+  // Looked up: every keyword read when the table is ordered by a figure or cut to a place, else the eye's newest and the
+  // table's page. The lists keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1):
+  // each looked up by its text, the book's records read once however many ask.
+  const lookUp = async (figures: typeof nowFigures, keys: string[]) => {
+    const names = figures?.book ? new BookNames(ctx, figures.book) : null;
+    return new Map<string, string>(names
+      ? await Promise.all([...new Set(keys)].map(async (key) => [key, await names.tokenOf("query", key)] as const))
+      : []);
   };
-  const all = [...keywords.gained.map((entry) => rowOf(entry, "new")), ...keywords.lost.map((entry) => rowOf(entry, "lost"))];
-  const matches = wordStartMatcher(args.q?.trim().toLowerCase());
-  const kept = all
-    .filter((row) => (!matches || matches(row.key)) && (!args.what || row.status === args.what) && (!args.band || row.band === args.band))
-    .sort(listOrder(CHANGE_SORTS, args.sort ?? "when", args.direction, (row) => row.key));
-  const cut = keywords.gained.length >= most || keywords.lost.length >= most ? most : null;
-
+  const figuresOf = (figures: typeof nowFigures, tokens: Map<string, string>, key: string) => {
+    const at = figures ? figures.rowOf(tokens.get(key) ?? key) : -1;
+    return figures && at !== -1 ? { clicks: figures.clicks(at), impressions: figures.impressions(at), positionSum: figures.positionSum(at) } : null;
+  };
   // Every one gained and lost in the dates, by the day it was gained or lost, from the register's
   // counts kept after each collection (2026-10-04: the lists above read at most `most` of each).
   // Until the first collection that counts them, the lists themselves.
@@ -312,6 +310,50 @@ export async function readNewLost(ctx: SiteReader, args: ObjectType<typeof readN
     return { gained, lost, newCount: total(gained), lostCount: total(lost) };
   };
   const keywordsBy = countedBy(keywordDays, keywords);
+
+  // A row is found by its day first, and its figures filled in only where it's shown or counted.
+  const bare = (entry: Seen, status: "new" | "lost"): Change => ({
+    key: entry.key,
+    status,
+    when: status === "new" ? entry.firstDay : shiftDay(entry.lastDay, lostAfter),
+    clicks: 0,
+    impressions: 0,
+    position: null,
+    band: null,
+  });
+  const sorted = (rows: Change[]) => rows.sort(listOrder(CHANGE_SORTS, order, args.direction, (row) => row.key));
+  const wanted = (row: Change) => !args.what || row.status === args.what;
+  // Newest first: the page's rows are the newest of what was read, found before a figure is looked up.
+  const window = newestFirst && keywordDays
+    ? sorted([...keywords.gained.map((entry) => bare(entry, "new")), ...keywords.lost.map((entry) => bare(entry, "lost"))].filter(wanted))
+    : null;
+  const size = Math.max(1, Math.floor(args.rows) || 1);
+  const pageStart = (Math.max(1, Math.floor(args.page) || 1) - 1) * size;
+  const onPage = window ? window.slice(pageStart, pageStart + size) : [];
+  const keysOf = (entries: Seen[], status: "new" | "lost") => [...entries.map((entry) => entry.key), ...onPage.filter((row) => row.status === status).map((row) => row.key)];
+  const [gainedTokens, lostTokens] = await Promise.all([
+    lookUp(nowFigures, keysOf(window ? keywords.gained.slice(0, sample) : keywords.gained, "new")),
+    lookUp(lostFigures, keysOf(window ? keywords.lost.slice(0, sample) : keywords.lost, "lost")),
+  ]);
+  const fill = (row: Change): Change => {
+    const known = row.status === "new" ? figuresOf(nowFigures, gainedTokens, row.key) : figuresOf(lostFigures, lostTokens, row.key);
+    const position = known && known.impressions > 0 ? known.positionSum / known.impressions : null;
+    return { ...row, clicks: known?.clicks ?? 0, impressions: known?.impressions ?? 0, position, band: position === null ? null : bandOf(position) };
+  };
+  const newRow = (entry: Seen) => fill(bare(entry, "new"));
+  const lostRow = (entry: Seen) => fill(bare(entry, "lost"));
+  const matches = wordStartMatcher(args.q?.trim().toLowerCase());
+  // The table lists the newest `most` of each, whichever way it's read.
+  const cut = keywordDays
+    ? (keywordsBy.newCount > most || keywordsBy.lostCount > most ? most : null)
+    : (keywords.gained.length >= most || keywords.lost.length >= most ? most : null);
+  const listed: { readonly length: number; slice(start?: number, end?: number): Change[] } = window
+    ? {
+      length: (args.what === "lost" ? 0 : Math.min(keywordsBy.newCount, most)) + (args.what === "new" ? 0 : Math.min(keywordsBy.lostCount, most)),
+      slice: (start, end) => window.slice(start, end).map(fill),
+    }
+    : sorted([...keywords.gained.map(newRow), ...keywords.lost.map(lostRow)]
+      .filter((row) => (!matches || matches(row.key)) && wanted(row) && (!args.band || row.band === args.band)));
   const pagesBy = countedBy(pageDays, pages);
   // The span before's counts, by the same rule from its own days (lost: last shown the lost days before a day in it).
   const countedBefore = (byDay: Map<string, { first: number; last: number }> | null) => {
@@ -326,10 +368,11 @@ export async function readNewLost(ctx: SiteReader, args: ObjectType<typeof readN
   };
   const keywordsBefore = countedBefore(keywordDaysBefore);
   const pagesBefore = countedBefore(pageDaysBefore);
-  // Where the new and lost keywords sit on Google, every one read (at most `most` of each): for What Hakken sees.
-  const bandCounts = (status: "new" | "lost") => {
+  // Where the newest new and lost keywords sit on Google (`NEW_LOST_EYE_NEWEST` of each), for What Hakken sees: the
+  // same keywords whatever the table's order, so a click on a heading never changes what the eye is given.
+  const bandCounts = (rows: Change[]) => {
     const counts: Record<string, number> = Object.fromEntries(BANDS.map((band) => [band, 0]));
-    for (const row of all) if (row.status === status && row.band) counts[row.band] += 1;
+    for (const row of rows) if (row.band) counts[row.band] += 1;
     return counts;
   };
 
@@ -351,7 +394,7 @@ export async function readNewLost(ctx: SiteReader, args: ObjectType<typeof readN
   }
 
   return {
-    ...pageOfList(kept, args.page, args.rows, cut),
+    ...pageOfList(listed, args.page, args.rows, cut),
     preparing: false,
     notReady: false,
     notKept: false,
@@ -364,7 +407,7 @@ export async function readNewLost(ctx: SiteReader, args: ObjectType<typeof readN
     countsBefore: keywordsBefore && pagesBefore
       ? { newKeywords: keywordsBefore.gained, lostKeywords: keywordsBefore.lost, newPages: pagesBefore.gained, lostPages: pagesBefore.lost }
       : null,
-    bands: { new: bandCounts("new"), lost: bandCounts("lost") },
+    bands: { new: bandCounts(keywords.gained.slice(0, sample).map(newRow)), lost: bandCounts(keywords.lost.slice(0, sample).map(lostRow)) },
     periods: [...periods.values()],
     watchedFrom: watched,
   };

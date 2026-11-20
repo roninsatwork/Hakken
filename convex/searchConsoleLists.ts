@@ -16,7 +16,7 @@ import { beforeOf, daysIn, historyLimitDay, periodOf } from "./searchConsoleDays
 export { periodOf } from "./searchConsoleDays";
 import { periodFromParts, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
 import { keySeriesAnswer, namedMovers, namedTracked, totalsOf } from "./searchConsoleSpans";
-import { curveRows, keywordFiguresOf, keywordListOf, type KeywordParts } from "./searchConsoleKeywordList";
+import { curveRows, keywordFiguresOf, keywordListOf, namedCannibalisation, type KeywordParts } from "./searchConsoleKeywordList";
 import type { ListRows } from "./searchConsoleKeywordTable";
 import { BookNames, BookShelf, keysAsText, namedRows, textsFrom } from "./searchConsolePeriodBooks";
 import { SORT_KEYS, sortRows, type SortKey } from "./searchConsoleSorts";
@@ -41,12 +41,11 @@ import {
   withSectionsInPages,
   type Filters,
   type ListRow,
-  type SitesKeyword,
   type Summary,
   type View,
   type ViewContext,
 } from "./utils/searchConsoleViews";
-import { brandWordsOf, connectionOf, sitesKeywordsOf, trackedOf } from "./searchConsoleListSources";
+import { brandWordsOf, connectionOf, trackedOf } from "./searchConsoleListSources";
 import { GOOGLE_MOST_ROWS, LISTS_OF } from "./searchConsoleApi";
 import { EXPORT_FIELDS, exportFileName, exportValue } from "./utils/searchConsoleExport";
 import { bySide, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
@@ -113,6 +112,8 @@ const rowValidator = v.object({
   nextShare: nullable(v.number()),
   verdict: v.union(v.literal("high"), v.literal("low"), v.literal("close"), v.null()),
   gap: nullable(v.number()),
+  /** Keyword cannibalisation: days Google swapped the page it showed most; null for a period not counted day by day. */
+  swaps: v.optional(nullable(v.number())),
   title: v.optional(v.string()), // A page's title, from the website's page list (google-analytics-plan.md GA27): only on the rows shown.
 });
 
@@ -127,6 +128,10 @@ const trackedMoveValidator = v.union(v.null(), v.object({
 }));
 
 /** What a page's hero boxes read: figures over every row its rule lists (`summarise`). */
+const sharedKeywordValidator = v.union(v.null(), v.object({
+  key: v.string(), impressions: v.number(), clicks: v.number(), count: v.number(), topShare: v.number(), nextShare: v.number(), swaps: v.union(v.number(), v.null()),
+}));
+
 const summaryValidator = v.object({
   rows: v.number(),
   of: v.number(),
@@ -164,6 +169,21 @@ const summaryValidator = v.object({
   halfRows: v.optional(v.union(v.number(), v.null())), clickedBefore: v.optional(v.union(v.number(), v.null())),
   /** The pages that gained and lost most clicks (`Summary.pageMovers`), named, with their titles. */
   pageMovers: v.optional(v.union(v.null(), v.object({ up: pageMovedValidator, down: pageMovedValidator }))),
+  /** Shown but not clicked's own figures (`Summary.lowCtr`): each position on Google, and the pages short by most clicks. */
+  lowCtr: v.optional(v.object({
+    positions: v.array(v.object({ position: v.number(), pages: v.number(), clicks: v.number(), expected: v.number(), all: v.number() })),
+    top: v.array(v.object({ key: v.string(), clicks: v.number(), expected: v.number(), impressions: v.number(), position: v.number(), title: v.optional(v.string()) })),
+  })),
+  /** Keyword cannibalisation's own figures (`Summary.cannibalisation`), its keywords named. */
+  cannibalisation: v.optional(v.object({
+    busiest: sharedKeywordValidator,
+    closest: sharedKeywordValidator,
+    mostSwapped: sharedKeywordValidator,
+    crowded: sharedKeywordValidator,
+    averagePages: v.union(v.number(), v.null()),
+    swapped: v.union(v.number(), v.null()),
+    averageSwaps: v.union(v.number(), v.null()),
+  })),
   /** A tracked list's own figures over every row it tracks (`Summary.trackedList`), its rows named. */
   trackedList: v.optional(v.object({
     before: v.union(v.null(), v.object({ clicks: v.number(), impressions: v.number(), position: v.union(v.number(), v.null()) })),
@@ -190,12 +210,9 @@ const filterArgs = {
   /** An intent or a page type, as Sites words them — or, once the website has classifications, a classification's id or Not sorted. */
   kind: v.optional(v.string()),
   brand: v.optional(v.union(v.literal("yes"), v.literal("no"))),
-  move: v.optional(v.union(v.literal("win"), v.literal("loss"))),
   /** Volatility: keywords whose position rose, or fell. */
   way: v.optional(v.union(v.literal("up"), v.literal("down"))),
   verdict: v.optional(v.union(v.literal("high"), v.literal("low"), v.literal("close"))),
-  /** Missed demand's two lists. */
-  missed: v.optional(v.union(v.literal("searched"), v.literal("untracked"))),
 };
 
 /** One keyword's pages, or one page's keywords: the pairs that hold it. */
@@ -231,7 +248,6 @@ type Ask = {
   inCountry?: boolean;
   sort?: SortKey;
   direction?: "asc" | "desc";
-  missed?: "searched" | "untracked";
 } & Filters;
 
 type ListAnswer = {
@@ -306,9 +322,9 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   let held: KeywordParts | null = null;
   if (dimension === "query" && !how.rows) {
     const keywords = await keywordListOf(ctx, companyWebsiteId, {
-      searchType: args.searchType, period, country, view, filters: args, sort: args.sort, direction: args.direction, missed: args.missed ?? "searched",
+      searchType: args.searchType, period, country, view, filters: args, sort: args.sort, direction: args.direction,
       days: daysIn(args.from, args.to), rules: viewRulesOf(limits), most: limits.listRows, tracked: async () => await trackedOf(ctx, companyWebsiteId, "query"),
-      brandWords: async () => await brandWordsOf(ctx, companyWebsiteId), sitesKeywords: async () => await sitesKeywordsOf(ctx, companyWebsiteId, limits.missedKeywords),
+      brandWords: async () => await brandWordsOf(ctx, companyWebsiteId),
     });
     if (keywords === "PREPARING") return { ...empty, live: false, preparing: true };
     if ("asRows" in keywords) held = keywords.asRows;
@@ -349,8 +365,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   const brandWords = dimension === "query" ? await brandWordsOf(ctx, companyWebsiteId) : null;
   // A list of pages reads the website's classifications once, and names each page by them.
   const pageKinds = dimension === "page" ? await readPageKinds(ctx, companyWebsiteId) : null;
-  const shaped = withPageKinds(shapeRows(sourceRowsOf(view, now.rows, before?.rows ?? null, tracked), before?.rows ?? null, { tracked, brandWords }), pageKinds);
-  const context: ViewContext = { rules: viewRulesOf(limits), missedList: args.missed ?? "searched", tracked, days: daysIn(args.from, args.to) };
+  const shaped = withPageKinds(shapeRows(sourceRowsOf(view, now.rows, tracked), before?.rows ?? null, { tracked, brandWords }), pageKinds);
+  const context: ViewContext = { rules: viewRulesOf(limits), tracked, days: daysIn(args.from, args.to) };
   if (view === "lowCtr") {
     // The website's own click rate at each position, from its keywords a keyword at a time (step 4b).
     context.curve = ctrCurve(curveRows(await keywordFiguresOf(ctx, companyWebsiteId, args.searchType, period, country)), limits.curvePositions);
@@ -358,10 +374,12 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   if (competing) {
     context.pages = pagesByKeyword(competing.rows);
     context.pagesShown = competing.shown ?? undefined;
+    // Each keyword's Swaps, kept beside each of its pairs (`counts`) where its period was counted day by day.
+    const swaps = new Map(competing.rows.flatMap((row) => (row.count === undefined ? [] : [[row.key, row.count] as const])));
+    if (swaps.size > 0) context.swaps = swaps;
   }
-  if (view === "missed" && context.missedList === "searched") context.sitesKeywords = await sitesKeywordsOf(ctx, companyWebsiteId, limits.missedKeywords);
-  // A search, and Missed demand's match with Sites, read every keyword's text: the keyword book whole (§5.5).
-  const textOf = keysAreTokens && names && (args.q?.trim() || (view === "missed" && context.missedList === "searched"))
+  // A search reads every keyword's text: the keyword book whole (§5.5).
+  const textOf = keysAreTokens && names && args.q?.trim()
     ? textsFrom(await shelf.whole(names.scope, "query"))
     : undefined;
   context.textOf = textOf;
@@ -377,7 +395,11 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     ...(pageKinds ? { kindType: pageKinds.typeOf, kindOfPage: (page: string) => pageKinds.kindOf(page) } : {}),
     wholeList: view === "all" && dimension === "query",
     trackedList: view === "tracked",
+    lowCtrList: view === "lowCtr",
+    competingList: view === "competing",
   });
+  // Keyword cannibalisation's keywords the eye names, named as the rows on screen are.
+  if (summary.cannibalisation && names && keysAreTokens) summary.cannibalisation = await namedCannibalisation(summary.cannibalisation, names);
   // The four searches What Hakken sees moved most, named as the rows on screen are: the rest stay tokens.
   const movers = summary.wholeList?.movers;
   if (movers && names) {
@@ -388,6 +410,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   }
   // The two pages that moved most, named, each with its title where the website has one.
   if (summary.pageMovers) summary.pageMovers = await namedMovers(ctx, companyWebsiteId, summary.pageMovers, names);
+  // Shown but not clicked's pages short by most clicks, each with its title where the website has one.
+  if (summary.lowCtr) summary.lowCtr = { ...summary.lowCtr, top: await withTitles(ctx, companyWebsiteId, summary.lowCtr.top) };
   // A tracked list's movers and the busiest onto and off the first page, named as the rows on screen are.
   if (summary.trackedList) summary.trackedList = await namedTracked(ctx, companyWebsiteId, summary.trackedList, names, dimension === "page");
   const sorted = sortRows(filterRows(listed, args, textOf), args.sort, args.direction, pageKinds);
@@ -496,7 +520,6 @@ export const liveTarget = internalQuery({
     facts: v.union(v.null(), v.object({ websiteId: v.id("websites"), place: v.number() })),
     tracked: v.array(v.string()),
     brandWords: v.union(v.array(v.string()), v.null()),
-    sitesKeywords: v.array(v.object({ keyword: v.string(), volume: v.number(), kind: v.string() })),
     /** A list of pages: the website's classifications, to name each page by, once it has any. */
     pageKinds: v.union(v.null(), pageKindSetupValidator),
     limits: consoleLimitsValidator,
@@ -517,7 +540,6 @@ export const liveTarget = internalQuery({
       facts: site ? { websiteId: site.website._id, place: site.place } : null,
       tracked,
       brandWords: args.kind === "query" ? await brandWordsOf(ctx, hold._id) : null,
-      sitesKeywords: args.view === "missed" ? await sitesKeywordsOf(ctx, hold._id, limits.missedKeywords) : [],
       pageKinds: args.kind === "page" ? await readPageKindSetup(ctx, hold._id) : null,
       limits,
     };
@@ -532,7 +554,6 @@ type LiveTarget = {
   facts: { websiteId: Id<"websites">; place: number } | null;
   tracked: string[];
   brandWords: string[] | null;
-  sitesKeywords: SitesKeyword[];
   pageKinds: PageKindSetup | null;
   limits: ConsoleLimits;
 };
@@ -619,7 +640,6 @@ export const searchConsoleLiveList = tenantAction({
     dimension: listKindValidator,
     view: viewValidator,
     within: withinValidator,
-    missed: v.optional(v.union(v.literal("searched"), v.literal("untracked"))),
     from: v.string(),
     to: v.string(),
     period: v.optional(calendarPeriodValidator),
@@ -706,8 +726,8 @@ export const searchConsoleLiveList = tenantAction({
     const tracked = new Set(target.tracked);
     const earlierRows = earlier.ok ? earlier.rows : null;
     const pageKinds = dimension === "page" && target.pageKinds ? pageKindsFrom(target.pageKinds) : null;
-    const shaped = withPageKinds(shapeRows(sourceRowsOf(view, rows, earlierRows, tracked), earlierRows, { tracked, brandWords: target.brandWords }), pageKinds);
-    const context: ViewContext = { rules: viewRulesOf(limits), missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords, tracked, days: daysIn(args.from, args.to) };
+    const shaped = withPageKinds(shapeRows(sourceRowsOf(view, rows, tracked), earlierRows, { tracked, brandWords: target.brandWords }), pageKinds);
+    const context: ViewContext = { rules: viewRulesOf(limits), tracked, days: daysIn(args.from, args.to) };
     if (view === "lowCtr") {
       const keywords = [...bySide(now.pairs, "query").values()];
       context.curve = ctrCurve(keywords.map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })), limits.curvePositions);
@@ -727,6 +747,11 @@ export const searchConsoleLiveList = tenantAction({
       splitList: dimension === "country" || dimension === "device",
       ...(pageKinds ? { kindType: pageKinds.typeOf, kindOfPage: (page: string) => pageKinds.kindOf(page) } : {}),
       trackedList: view === "tracked",
+      lowCtrList: view === "lowCtr",
+      competingList: view === "competing",
+      // A list asked of Google carries the whole list's own figures too, as a ready-made one does: a country not kept ready,
+      // a device chosen or dates of one's own, for Position bands' eye (search-console-position-bands-way-3-plan-2026-11-19.md).
+      wholeList: view === "all" && dimension === "query",
     });
     const most = within ? limits.pairedRows : limits.listRows;
     return {

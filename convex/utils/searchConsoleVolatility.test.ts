@@ -24,7 +24,7 @@ describe("volatility (search-console-volatility-plan.md §3)", () => {
     today.set("rare", { impressions: 9, positionSum: 9 * 50 });
     const before = ten(() => 4);
     before.set("rare", { impressions: 40, positionSum: 40 * 4 });
-    expect(dayVolatility(today, before)).toEqual({ volatility: 2, volatilityKeywords: 10, movedUp5: 0, movedDown5: 0 });
+    expect(dayVolatility(today, before)).toEqual({ volatility: 2, volatilityUp: 0, volatilityDown: 2, volatilityKeywords: 10, movedUp5: 0, movedDown5: 0 });
   });
 
   test("fewer than 10 keywords counted is too few to judge: no score, the counts kept", () => {
@@ -35,6 +35,33 @@ describe("volatility (search-console-volatility-plan.md §3)", () => {
   test("moved 5 places or more, up and down apart", () => {
     const today = ten((at) => (at < 3 ? 12 : at < 5 ? 1 : 4));
     expect(dayVolatility(today, ten((at) => (at < 3 ? 6 : at < 5 ? 7 : 4)))).toMatchObject({ movedUp5: 2, movedDown5: 3 });
+  });
+
+  test("the score in two parts that add up to it: Up from the keywords that climbed, Down from those that fell (2026-11-20)", () => {
+    // Four climb 3 places, three fall 5, one falls forty (counted as 10), two stay: (12 + 15 + 10) / 10.
+    const before = ten(() => 20);
+    const today = ten((at) => (at < 4 ? 17 : at < 7 ? 25 : at === 7 ? 60 : 20));
+    expect(dayVolatility(today, before)).toMatchObject({ volatility: 3.7, volatilityUp: 1.2, volatilityDown: 2.5 });
+    // Rounded so the two still add up to the score as written: 1.25 Up of 2.5 is 1.3 and 1.2, never 1.3 and 1.3.
+    const halves = dayVolatility(ten((at) => (at < 5 ? 17.5 : 22.5)), ten(() => 20));
+    expect(halves).toMatchObject({ volatility: 2.5 });
+    expect(halves.volatilityUp! + halves.volatilityDown!).toBeCloseTo(2.5, 10);
+    // Too few counted: no score, so no parts either.
+    expect(dayVolatility(day({ a: [20, 10] }), day({ a: [20, 4] }))).not.toHaveProperty("volatilityUp");
+  });
+
+  test("a week's or month's parts are the average of its days', only when every day with a score has them", () => {
+    expect(periodVolatility([
+      { volatility: 2, volatilityUp: 0.5, volatilityDown: 1.5, volatilityKeywords: 10, movedUp5: 0, movedDown5: 0 },
+      { volatility: 4, volatilityUp: 3, volatilityDown: 1, volatilityKeywords: 10, movedUp5: 0, movedDown5: 0 },
+    ])).toMatchObject({ volatility: 3, volatilityUp: 1.8, volatilityDown: 1.2 });
+    // A day built before the parts were kept leaves the period with its score alone.
+    const mixed = periodVolatility([
+      { volatility: 2, volatilityKeywords: 10, movedUp5: 0, movedDown5: 0 },
+      { volatility: 4, volatilityUp: 3, volatilityDown: 1, volatilityKeywords: 10, movedUp5: 0, movedDown5: 0 },
+    ]);
+    expect(mixed).toMatchObject({ volatility: 3 });
+    expect(mixed).not.toHaveProperty("volatilityUp");
   });
 
   test("a week or month is the average of its days' scores, its counts added up", () => {

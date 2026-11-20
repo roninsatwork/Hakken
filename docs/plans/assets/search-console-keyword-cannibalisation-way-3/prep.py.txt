@@ -1,0 +1,155 @@
+"""More Handles, October 2026, the United Kingdom, web: Pages competing on Insights' cannibalisation rule.
+
+A keyword is split when two or more of the website's pages each took at least 1 in 10 of the times Google showed it, the
+home page and searches for the website's name left out (`SPLIT_SHARE`, `isHome`, brand words in
+convex/utils/insightCompeting.ts). Two pages compete when they split 3 or more keywords (`LINK_SEARCHES`). The groups are
+Insights' own `competingGroups`, run on the same month (groups.mjs). Each day's pages come from the kept daily lines.
+"""
+import collections, glob, json, re, sys
+sys.path.insert(0, sys.argv[1])
+from decode import unpack
+D = sys.argv[1] + "/data"
+HOST = "https://www.morehandles.co.uk"
+pairs = json.load(open(f"{D}/oct-pairs-named.json"))
+def path_of(address):
+    m = re.match(r"^https?://[^/]+(/[^#]*)?", address.strip(), re.I)
+    return (m.group(1) or "/") if m else address.strip().split("#")[0]
+def is_home(p): return p == "/" or re.match(r"^/(index|home|default)(\.[a-z]+)?/?$", p, re.I) is not None
+def is_brand(q): return re.search(r"more ?handle", q, re.I) is not None
+
+by = collections.defaultdict(lambda: collections.defaultdict(lambda: [0, 0]))
+for r in pairs:
+    by[r["search"]][path_of(r["page"])][0] += r["clicks"]
+    by[r["search"]][path_of(r["page"])][1] += r["impressions"]
+split = {}
+for q, pages in by.items():
+    if is_brand(q): continue
+    own = {p: v for p, v in pages.items() if not is_home(p)}
+    if len(own) < 2: continue
+    total = sum(v[1] for v in own.values())
+    sp = sorted(p for p, v in own.items() if total > 0 and v[1] / total >= 0.10)
+    if len(sp) >= 2: split[q] = {"pages": own, "split": sp, "shown": total, "clicks": sum(v[0] for v in own.values())}
+
+# ——— Each day's pages for the split keywords ———
+books = json.load(open(f"{D}/day-books.json"))
+def kw(place):
+    c = books["chunks"].get(str(place // 4000), [])
+    return c[place % 4000] if place % 4000 < len(c) else ""
+def addr(ref):
+    if not ref.startswith("~"): return ref
+    n = int(ref[1:], 36); rec = books["recs"].get(str(n // 250), [])
+    return rec[n % 250] if n % 250 < len(rec) else ""
+days = collections.defaultdict(lambda: collections.defaultdict(dict))  # search -> day -> path -> [impr, clicks, posSum]
+DAYS = []
+for f in sorted(glob.glob(f"{D}/days/2026-10-*.json")):
+    day = f.rsplit("/", 1)[1][:10]; DAYS.append(day)
+    for p in json.load(open(f)):
+        k = unpack(p["keys"]); c = unpack(p["clicks"]); i = unpack(p["impressions"]); s = unpack(p["positionSums"])
+        for a in range(len(k)):
+            q = kw(k[a])
+            if q not in split: continue
+            path = path_of(addr(p["pages"][a]))
+            if is_home(path): continue
+            h = days[q][day].setdefault(path, [0, 0, 0]); h[0] += i[a]; h[1] += c[a]; h[2] += s[a]
+def changes(q):
+    """Days Google showed a different page most than on the day before it was shown."""
+    last, n, held = None, 0, 0
+    for day in DAYS:
+        pages = days[q].get(day)
+        if not pages: continue
+        held += 1
+        top = sorted(pages.items(), key=lambda kv: (-kv[1][0], -kv[1][1], kv[0]))[0][0]
+        if last is not None and top != last: n += 1
+        last = top
+    return n, held
+def position(q, path):
+    imp = sum(days[q][d].get(path, [0, 0, 0])[0] for d in DAYS); s = sum(days[q][d].get(path, [0, 0, 0])[2] for d in DAYS)
+    return round(s / imp, 1) if imp else None
+
+keywords = []
+for q, k in split.items():
+    n, held = changes(q)
+    imp = sum(v[0] for d in DAYS for v in days[q].get(d, {}).values()); s = sum(v[2] for d in DAYS for v in days[q].get(d, {}).values())
+    order = sorted(k["pages"].items(), key=lambda kv: (-kv[1][1], -kv[1][0]))
+    keywords.append({"key": q, "pages": len(k["split"]), "shown": k["shown"], "clicks": k["clicks"], "changes": n, "days": held,
+                     "position": round(s / imp, 1) if imp else None,
+                     "top": order[0][0], "topShare": round(100 * order[0][1][1] / k["shown"]), "next": order[1][0], "nextShare": round(100 * order[1][1][1] / k["shown"])})
+keywords.sort(key=lambda r: (-r["shown"], r["key"]))
+
+# ——— Pairs of pages ———
+edges = {}
+for q, k in split.items():
+    sp = k["split"]
+    for x in range(len(sp)):
+        for y in range(x + 1, len(sp)):
+            a, b = sp[x], sp[y]
+            e = edges.setdefault((a, b), {"a": a, "b": b, "keywords": 0, "aShown": 0, "bShown": 0, "aClicks": 0, "bClicks": 0, "changes": 0})
+            e["keywords"] += 1
+            e["aShown"] += k["pages"][a][1]; e["bShown"] += k["pages"][b][1]
+            e["aClicks"] += k["pages"][a][0]; e["bClicks"] += k["pages"][b][0]
+pair_list = [e for e in edges.values() if e["keywords"] >= 3]
+for e in pair_list:
+    if e["bShown"] > e["aShown"]:
+        e["a"], e["b"] = e["b"], e["a"]; e["aShown"], e["bShown"] = e["bShown"], e["aShown"]; e["aClicks"], e["bClicks"] = e["bClicks"], e["aClicks"]
+    e["shown"] = e["aShown"] + e["bShown"]; e["clicks"] = e["aClicks"] + e["bClicks"]
+    e["even"] = round(100 * e["bShown"] / e["shown"]) if e["shown"] else 0
+pair_list.sort(key=lambda e: (-e["keywords"], -e["shown"]))
+competing_pages = sorted({p for e in pair_list for p in (e["a"], e["b"])})
+
+groups = json.load(open(f"{D}/oct-groups.json"))
+for g in groups:
+    g["pages"].sort(key=lambda p: (-p["shown"], p["path"]))
+
+totals = {
+    "pagesShown": 6439,
+    "keywordsTwoPages": 8717,
+    "split": len(split),
+    "splitShown": sum(k["shown"] for k in split.values()),
+    "splitClicks": sum(k["clicks"] for k in split.values()),
+    "shown250": sum(1 for k in split.values() if k["shown"] >= 250),
+    "pairs": len(pair_list),
+    "competingPages": len(competing_pages),
+    "groups": len(groups),
+}
+print(totals)
+# The day-by-day lines for the keywords the chart can show: the most changes among those shown 250 times or more.
+busy = sorted([k for k in keywords if k["shown"] >= 250], key=lambda r: (-r["changes"], -r["shown"]))
+for k in busy[:15]: print(k["key"], k["shown"], k["changes"], k["days"], k["position"], k["top"][-40:], k["topShare"], k["next"][-40:], k["nextShare"])
+chart_keys = [k["key"] for k in busy[:12]]
+series = {}
+for q in chart_keys:
+    paths = sorted({p for d in DAYS for p in days[q].get(d, {})}, key=lambda p: -sum(days[q][d].get(p, [0])[0] for d in DAYS))[:4]
+    series[q] = [{"path": p, "position": position(q, p), "points": [{"day": d, "shown": days[q][d].get(p, [0, 0, 0])[0], "posSum": days[q][d].get(p, [0, 0, 0])[2]} for d in DAYS]} for p in paths]
+print("\nPAIRS", len(pair_list))
+for e in pair_list[:12]: print(e["keywords"], e["shown"], e["even"], e["clicks"], e["a"][-40:], "|", e["b"][-40:])
+json.dump({"totals": totals, "pairs": pair_list, "groups": groups, "keywords": keywords, "series": series, "days": DAYS}, open(f"{D}/board2.json", "w"))
+keys = []
+for e in pair_list[:60]:
+    for p in (e["a"], e["b"]):
+        if p not in keys: keys.append(p)
+for g in groups:
+    for p in g["pages"]:
+        if p["path"] not in keys: keys.append(p["path"])
+for q in chart_keys:
+    for s in series[q]:
+        if s["path"] not in keys: keys.append(s["path"])
+for k in keywords[:40]:
+    for p in (k["top"], k["next"]):
+        if p not in keys: keys.append(p)
+json.dump([HOST + p for p in keys], open(f"{D}/title-keys2.json", "w"))
+print("title keys", len(keys))
+
+# ——— Keyword-first: each keyword's own pages, their impressions, clicks and positions ———
+kw_pages = {}
+for q, k in split.items():
+    order = sorted(k["pages"].items(), key=lambda kv: (-kv[1][1], -kv[1][0], kv[0]))
+    kw_pages[q] = [{"path": p, "shown": v[1], "clicks": v[0], "position": position(q, p)} for p, v in order[:4]]
+    others = order[4:]
+    if others:
+        kw_pages[q].append({"path": "", "shown": sum(v[1] for _, v in others), "clicks": sum(v[0] for _, v in others), "position": None, "others": len(others)})
+involved = sorted({p for k in split.values() for p in k["split"]})
+both_low = sum(1 for q in split if all((x["position"] or 99) > 10 for x in kw_pages[q][:2] if x["path"]))
+json.dump({"kwPages": kw_pages, "involved": len(involved), "bothOffFirstPage": both_low}, open(f"{D}/kw-pages.json", "w"))
+print("involved", len(involved), "both off first page", both_low, "of", len(split))
+for q in ["tubular latch sizes", "black cabinet handles", "door knobs", "zoo door handles"]:
+    print(q, kw_pages.get(q))

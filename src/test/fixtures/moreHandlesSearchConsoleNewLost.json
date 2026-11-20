@@ -1,1 +1,2390 @@
-{"lastWeek":{"counts":{"lostKeywords":3303,"lostPages":670,"newKeywords":1183,"newPages":442},"countsBefore":{"lostKeywords":2411,"lostPages":639,"newKeywords":1342,"newPages":422},"watchedFrom":"2026-07-22","bands":{"lost":{"1-3":0,"11-20":0,"21-50":1,"4-10":0,"51+":0},"new":{"1-3":0,"11-20":0,"21-50":0,"4-10":0,"51+":0}},"periods":[{"gained":168,"lastDay":"2026-10-26","lost":466,"start":"2026-10-26"},{"gained":287,"lastDay":"2026-10-27","lost":478,"start":"2026-10-27"},{"gained":192,"lastDay":"2026-10-28","lost":468,"start":"2026-10-28"},{"gained":183,"lastDay":"2026-10-29","lost":412,"start":"2026-10-29"},{"gained":121,"lastDay":"2026-10-30","lost":455,"start":"2026-10-30"},{"gained":119,"lastDay":"2026-10-31","lost":604,"start":"2026-10-31"},{"gained":113,"lastDay":"2026-11-01","lost":420,"start":"2026-11-01"}],"rows":[{"band":null,"clicks":0,"impressions":0,"key":"£280","position":null,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"10-spec","position":null,"status":"new","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"105mm","position":null,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"10mm glass shelf","position":null,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"1200","position":null,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"180 degree door opening hinges","position":null,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"180 degree kitchen cabinet hinges","position":null,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"180mm hole centre handles kitchen","position":null,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"38mm hinge","position":null,"status":"new","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"4.5cm","position":null,"status":"new","when":"2026-11-01"}],"total":4486},"thisMonth":{"counts":{"lostKeywords":420,"lostPages":90,"newKeywords":113,"newPages":28},"countsBefore":{"lostKeywords":263,"lostPages":50,"newKeywords":175,"newPages":52},"watchedFrom":"2026-07-22","bands":{"lost":{"1-3":81,"11-20":125,"21-50":17,"4-10":182,"51+":3},"new":{"1-3":0,"11-20":1,"21-50":0,"4-10":0,"51+":0}},"periods":[{"gained":113,"lastDay":"2026-11-01","lost":420,"start":"2026-11-01"}],"rows":[{"band":"1-3","clicks":0,"impressions":0,"key":"£280","position":2,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"10-spec","position":null,"status":"new","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"105mm","position":16,"status":"lost","when":"2026-11-01"},{"band":"1-3","clicks":0,"impressions":0,"key":"10mm glass shelf","position":3,"status":"lost","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"1200","position":18,"status":"lost","when":"2026-11-01"},{"band":"4-10","clicks":0,"impressions":0,"key":"180 degree door opening hinges","position":7,"status":"lost","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"180 degree kitchen cabinet hinges","position":19.5,"status":"lost","when":"2026-11-01"},{"band":"21-50","clicks":0,"impressions":0,"key":"180mm hole centre handles kitchen","position":25,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"38mm hinge","position":null,"status":"new","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"4.5cm","position":null,"status":"new","when":"2026-11-01"}],"total":533},"lastMonth":{"counts":{"lostKeywords":9921,"lostPages":2714,"newKeywords":5897,"newPages":1943},"countsBefore":{"lostKeywords":7207,"lostPages":1660,"newKeywords":6006,"newPages":2236},"watchedFrom":"2026-07-22","bands":{"lost":{"1-3":232,"11-20":939,"21-50":69,"4-10":966,"51+":23},"new":{"1-3":0,"11-20":0,"21-50":0,"4-10":0,"51+":0}},"periods":[{"gained":175,"lastDay":"2026-10-01","lost":263,"start":"2026-10-01"},{"gained":155,"lastDay":"2026-10-02","lost":346,"start":"2026-10-02"},{"gained":156,"lastDay":"2026-10-03","lost":246,"start":"2026-10-03"},{"gained":150,"lastDay":"2026-10-04","lost":219,"start":"2026-10-04"},{"gained":281,"lastDay":"2026-10-05","lost":238,"start":"2026-10-05"},{"gained":263,"lastDay":"2026-10-06","lost":261,"start":"2026-10-06"},{"gained":202,"lastDay":"2026-10-07","lost":231,"start":"2026-10-07"},{"gained":220,"lastDay":"2026-10-08","lost":247,"start":"2026-10-08"},{"gained":201,"lastDay":"2026-10-09","lost":258,"start":"2026-10-09"},{"gained":175,"lastDay":"2026-10-10","lost":229,"start":"2026-10-10"},{"gained":100,"lastDay":"2026-10-11","lost":276,"start":"2026-10-11"},{"gained":211,"lastDay":"2026-10-12","lost":262,"start":"2026-10-12"},{"gained":301,"lastDay":"2026-10-13","lost":263,"start":"2026-10-13"},{"gained":208,"lastDay":"2026-10-14","lost":252,"start":"2026-10-14"},{"gained":159,"lastDay":"2026-10-15","lost":243,"start":"2026-10-15"},{"gained":164,"lastDay":"2026-10-16","lost":249,"start":"2026-10-16"},{"gained":210,"lastDay":"2026-10-17","lost":266,"start":"2026-10-17"},{"gained":154,"lastDay":"2026-10-18","lost":278,"start":"2026-10-18"},{"gained":186,"lastDay":"2026-10-19","lost":357,"start":"2026-10-19"},{"gained":220,"lastDay":"2026-10-20","lost":328,"start":"2026-10-20"},{"gained":173,"lastDay":"2026-10-21","lost":342,"start":"2026-10-21"},{"gained":181,"lastDay":"2026-10-22","lost":401,"start":"2026-10-22"},{"gained":181,"lastDay":"2026-10-23","lost":401,"start":"2026-10-23"},{"gained":213,"lastDay":"2026-10-24","lost":337,"start":"2026-10-24"},{"gained":188,"lastDay":"2026-10-25","lost":245,"start":"2026-10-25"},{"gained":168,"lastDay":"2026-10-26","lost":466,"start":"2026-10-26"},{"gained":287,"lastDay":"2026-10-27","lost":478,"start":"2026-10-27"},{"gained":192,"lastDay":"2026-10-28","lost":468,"start":"2026-10-28"},{"gained":183,"lastDay":"2026-10-29","lost":412,"start":"2026-10-29"},{"gained":121,"lastDay":"2026-10-30","lost":455,"start":"2026-10-30"},{"gained":119,"lastDay":"2026-10-31","lost":604,"start":"2026-10-31"}],"rows":[{"band":null,"clicks":0,"impressions":0,"key":"+1248","position":null,"status":"new","when":"2026-10-31"},{"band":"4-10","clicks":0,"impressions":0,"key":"100mm door handles","position":4,"status":"lost","when":"2026-10-31"},{"band":null,"clicks":0,"impressions":0,"key":"128mm handle","position":null,"status":"new","when":"2026-10-31"},{"band":"11-20","clicks":0,"impressions":0,"key":"160mm kitchen door handles black","position":16,"status":"lost","when":"2026-10-31"},{"band":null,"clicks":0,"impressions":0,"key":"180 degree open door hinges","position":null,"status":"new","when":"2026-10-31"},{"band":null,"clicks":0,"impressions":0,"key":"192mm kitchen handles black","position":null,"status":"lost","when":"2026-10-31"},{"band":null,"clicks":0,"impressions":0,"key":"205mm upvc door handle","position":null,"status":"new","when":"2026-10-31"},{"band":null,"clicks":0,"impressions":0,"key":"20mm cabinet hinges","position":null,"status":"lost","when":"2026-10-31"},{"band":"4-10","clicks":0,"impressions":0,"key":"20mm door stop","position":5,"status":"lost","when":"2026-10-31"},{"band":"11-20","clicks":0,"impressions":0,"key":"210mm kitchen door handles","position":10.4,"status":"lost","when":"2026-10-31"}],"total":10000},"last3Months":{"counts":{"lostKeywords":24703,"lostPages":5779,"newKeywords":19921,"newPages":6116},"countsBefore":null,"watchedFrom":"2026-07-22","bands":{"lost":{"1-3":698,"11-20":1735,"21-50":386,"4-10":1900,"51+":51},"new":{"1-3":859,"11-20":1129,"21-50":569,"4-10":1155,"51+":90}},"periods":[{"gained":315,"lastDay":"2026-08-02","lost":111,"start":"2026-07-27"},{"gained":1980,"lastDay":"2026-08-09","lost":2394,"start":"2026-08-03"},{"gained":2004,"lastDay":"2026-08-16","lost":1374,"start":"2026-08-10"},{"gained":1753,"lastDay":"2026-08-23","lost":1388,"start":"2026-08-17"},{"gained":1649,"lastDay":"2026-08-30","lost":1655,"start":"2026-08-24"},{"gained":1617,"lastDay":"2026-09-06","lost":1509,"start":"2026-08-31"},{"gained":1441,"lastDay":"2026-09-13","lost":1539,"start":"2026-09-07"},{"gained":1409,"lastDay":"2026-09-20","lost":1631,"start":"2026-09-14"},{"gained":1211,"lastDay":"2026-09-27","lost":1957,"start":"2026-09-21"},{"gained":1168,"lastDay":"2026-10-04","lost":1878,"start":"2026-09-28"},{"gained":1442,"lastDay":"2026-10-11","lost":1740,"start":"2026-10-05"},{"gained":1407,"lastDay":"2026-10-18","lost":1813,"start":"2026-10-12"},{"gained":1342,"lastDay":"2026-10-25","lost":2411,"start":"2026-10-19"},{"gained":1183,"lastDay":"2026-11-01","lost":3303,"start":"2026-10-26"}],"rows":[{"band":"1-3","clicks":0,"impressions":0,"key":"£280","position":2,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"10-spec","position":null,"status":"new","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"105mm","position":16,"status":"lost","when":"2026-11-01"},{"band":"1-3","clicks":0,"impressions":0,"key":"10mm glass shelf","position":3,"status":"lost","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"1200","position":18,"status":"lost","when":"2026-11-01"},{"band":"4-10","clicks":0,"impressions":0,"key":"180 degree door opening hinges","position":7,"status":"lost","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"180 degree kitchen cabinet hinges","position":18.571428571428573,"status":"lost","when":"2026-11-01"},{"band":"21-50","clicks":0,"impressions":0,"key":"180mm hole centre handles kitchen","position":25,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"38mm hinge","position":null,"status":"new","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"4.5cm","position":null,"status":"new","when":"2026-11-01"}],"total":10000},"last6Months":{"counts":{"lostKeywords":26131,"lostPages":6039,"newKeywords":27445,"newPages":7505},"countsBefore":null,"watchedFrom":"2026-07-22","bands":{"lost":{"1-3":582,"11-20":1734,"21-50":590,"4-10":1852,"51+":53},"new":{"1-3":781,"11-20":1073,"21-50":814,"4-10":1148,"51+":108}},"periods":[{"gained":0,"lastDay":"2026-07-12","lost":0,"start":"2026-07-06"},{"gained":0,"lastDay":"2026-07-19","lost":0,"start":"2026-07-13"},{"gained":4878,"lastDay":"2026-07-26","lost":616,"start":"2026-07-20"},{"gained":2961,"lastDay":"2026-08-02","lost":923,"start":"2026-07-27"},{"gained":1980,"lastDay":"2026-08-09","lost":2394,"start":"2026-08-03"},{"gained":2004,"lastDay":"2026-08-16","lost":1374,"start":"2026-08-10"},{"gained":1753,"lastDay":"2026-08-23","lost":1388,"start":"2026-08-17"},{"gained":1649,"lastDay":"2026-08-30","lost":1655,"start":"2026-08-24"},{"gained":1617,"lastDay":"2026-09-06","lost":1509,"start":"2026-08-31"},{"gained":1441,"lastDay":"2026-09-13","lost":1539,"start":"2026-09-07"},{"gained":1409,"lastDay":"2026-09-20","lost":1631,"start":"2026-09-14"},{"gained":1211,"lastDay":"2026-09-27","lost":1957,"start":"2026-09-21"},{"gained":1168,"lastDay":"2026-10-04","lost":1878,"start":"2026-09-28"},{"gained":1442,"lastDay":"2026-10-11","lost":1740,"start":"2026-10-05"},{"gained":1407,"lastDay":"2026-10-18","lost":1813,"start":"2026-10-12"},{"gained":1342,"lastDay":"2026-10-25","lost":2411,"start":"2026-10-19"},{"gained":1183,"lastDay":"2026-11-01","lost":3303,"start":"2026-10-26"}],"rows":[{"band":"1-3","clicks":0,"impressions":0,"key":"£280","position":2,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"10-spec","position":null,"status":"new","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"105mm","position":10.5,"status":"lost","when":"2026-11-01"},{"band":"1-3","clicks":0,"impressions":0,"key":"10mm glass shelf","position":3,"status":"lost","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"1200","position":18,"status":"lost","when":"2026-11-01"},{"band":"4-10","clicks":0,"impressions":0,"key":"180 degree door opening hinges","position":7,"status":"lost","when":"2026-11-01"},{"band":"21-50","clicks":0,"impressions":0,"key":"180 degree kitchen cabinet hinges","position":22.8125,"status":"lost","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"180mm hole centre handles kitchen","position":12.8,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"38mm hinge","position":null,"status":"new","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"4.5cm","position":null,"status":"new","when":"2026-11-01"}],"total":10000},"last12Months":{"counts":{"lostKeywords":26131,"lostPages":6039,"newKeywords":27445,"newPages":7505},"countsBefore":null,"watchedFrom":"2026-07-22","bands":{"lost":{"1-3":576,"11-20":1730,"21-50":596,"4-10":1855,"51+":53},"new":{"1-3":776,"11-20":1067,"21-50":823,"4-10":1157,"51+":110}},"periods":[{"gained":7262,"lastDay":"2026-07-31","lost":1309,"start":"2026-07-01"},{"gained":8167,"lastDay":"2026-08-31","lost":7274,"start":"2026-08-01"},{"gained":6006,"lastDay":"2026-09-30","lost":7207,"start":"2026-09-01"},{"gained":5897,"lastDay":"2026-10-31","lost":9921,"start":"2026-10-01"},{"gained":113,"lastDay":"2026-11-01","lost":420,"start":"2026-11-01"}],"rows":[{"band":"1-3","clicks":0,"impressions":0,"key":"£280","position":2,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"10-spec","position":null,"status":"new","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"105mm","position":10.5,"status":"lost","when":"2026-11-01"},{"band":"1-3","clicks":0,"impressions":0,"key":"10mm glass shelf","position":3,"status":"lost","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"1200","position":18,"status":"lost","when":"2026-11-01"},{"band":"4-10","clicks":0,"impressions":0,"key":"180 degree door opening hinges","position":7,"status":"lost","when":"2026-11-01"},{"band":"21-50","clicks":0,"impressions":0,"key":"180 degree kitchen cabinet hinges","position":22.8125,"status":"lost","when":"2026-11-01"},{"band":"11-20","clicks":0,"impressions":0,"key":"180mm hole centre handles kitchen","position":12.8,"status":"lost","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"38mm hinge","position":null,"status":"new","when":"2026-11-01"},{"band":null,"clicks":0,"impressions":0,"key":"4.5cm","position":null,"status":"new","when":"2026-11-01"}],"total":10000}}
+{
+  "thisWeek": {
+    "bands": {
+      "lost": {
+        "1-3": 55,
+        "11-20": 113,
+        "21-50": 126,
+        "4-10": 173,
+        "51+": 33
+      },
+      "new": {
+        "1-3": 78,
+        "11-20": 103,
+        "21-50": 105,
+        "4-10": 99,
+        "51+": 35
+      }
+    },
+    "counts": {
+      "lostKeywords": 1058,
+      "lostPages": 202,
+      "newKeywords": 587,
+      "newPages": 89
+    },
+    "countsBefore": {
+      "lostKeywords": 868,
+      "lostPages": 182,
+      "newKeywords": 393,
+      "newPages": 78
+    },
+    "periods": [
+      {
+        "gained": 362,
+        "lastDay": "2026-11-16",
+        "lost": 577,
+        "start": "2026-11-16"
+      },
+      {
+        "gained": 225,
+        "lastDay": "2026-11-17",
+        "lost": 481,
+        "start": "2026-11-17"
+      }
+    ],
+    "rows": [
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1000 vinyl gloves",
+        "position": 12,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "110 degree concealed hinge",
+        "position": 7.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1200 pull handle",
+        "position": 54,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "126.54",
+        "position": 5.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "2 knobs",
+        "position": 5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "225",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "288mm handles",
+        "position": 17.5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3 4 butt hinge",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3762",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "450mm",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "5 cup pulls",
+        "position": 9,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "50 sink",
+        "position": 3,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "52mm",
+        "position": 1,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "57mm",
+        "position": 7.833333333333333,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "6 hairpin legs",
+        "position": 26,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 11,
+        "key": "60mm euro cylinder lock",
+        "position": 32.18181818181818,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "64mm bathroom lock",
+        "position": 2,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 2,
+        "impressions": 53,
+        "key": "64mm cupboard handles",
+        "position": 11.962264150943396,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "8mm spindle bar",
+        "position": 3,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "9mm bolts",
+        "position": 4,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "a darker blue",
+        "position": 2,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 1,
+        "impressions": 28,
+        "key": "accessible door handle",
+        "position": 1.6428571428571428,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 4,
+        "key": "accessories gate",
+        "position": 68,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 128,
+        "key": "aged brass centre door knobs",
+        "position": 26.8359375,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 241,
+        "key": "aged bronze multipoint locking door handles",
+        "position": 32.96265560165975,
+        "status": "lost",
+        "when": "2026-11-17"
+      }
+    ],
+    "total": 1645,
+    "watchedFrom": "2026-07-22"
+  },
+  "lastWeek": {
+    "bands": {
+      "lost": {
+        "1-3": 56,
+        "11-20": 140,
+        "21-50": 121,
+        "4-10": 157,
+        "51+": 26
+      },
+      "new": {
+        "1-3": 110,
+        "11-20": 119,
+        "21-50": 109,
+        "4-10": 127,
+        "51+": 35
+      }
+    },
+    "counts": {
+      "lostKeywords": 2742,
+      "lostPages": 587,
+      "newKeywords": 1251,
+      "newPages": 302
+    },
+    "countsBefore": {
+      "lostKeywords": 3945,
+      "lostPages": 572,
+      "newKeywords": 1303,
+      "newPages": 329
+    },
+    "periods": [
+      {
+        "gained": 193,
+        "lastDay": "2026-11-09",
+        "lost": 417,
+        "start": "2026-11-09"
+      },
+      {
+        "gained": 200,
+        "lastDay": "2026-11-10",
+        "lost": 451,
+        "start": "2026-11-10"
+      },
+      {
+        "gained": 146,
+        "lastDay": "2026-11-11",
+        "lost": 458,
+        "start": "2026-11-11"
+      },
+      {
+        "gained": 144,
+        "lastDay": "2026-11-12",
+        "lost": 395,
+        "start": "2026-11-12"
+      },
+      {
+        "gained": 193,
+        "lastDay": "2026-11-13",
+        "lost": 274,
+        "start": "2026-11-13"
+      },
+      {
+        "gained": 172,
+        "lastDay": "2026-11-14",
+        "lost": 325,
+        "start": "2026-11-14"
+      },
+      {
+        "gained": 203,
+        "lastDay": "2026-11-15",
+        "lost": 422,
+        "start": "2026-11-15"
+      }
+    ],
+    "rows": [
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1 gang",
+        "position": 1,
+        "status": "new",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1154",
+        "position": 5,
+        "status": "new",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "1-3",
+        "clicks": 1,
+        "impressions": 16,
+        "key": "128mm cabinet handles",
+        "position": 1.5625,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 5,
+        "key": "160mm kitchen cabinet handles",
+        "position": 8.8,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 63,
+        "key": "160mm kitchen door handles black",
+        "position": 13.88888888888889,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 56,
+        "key": "180 degree kitchen door hinges",
+        "position": 12.982142857142858,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 19,
+        "key": "180 locking hinge",
+        "position": 10.421052631578947,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 31,
+        "key": "2 way door hinge",
+        "position": 35.096774193548384,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "20amp switch",
+        "position": 5,
+        "status": "new",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 18,
+        "key": "20mm intumescent strips",
+        "position": 25.333333333333332,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 53,
+        "key": "20mm piano hinge",
+        "position": 24,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 5,
+        "key": "3 lever door lock",
+        "position": 2.2,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 40,
+        "key": "3\" hinges",
+        "position": 7.45,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "3491",
+        "position": 10,
+        "status": "new",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 4,
+        "key": "35mm backset latch black",
+        "position": 16.25,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "360 degree hinges for doors",
+        "position": 42.333333333333336,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "38mm hinge",
+        "position": 1,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "4.5cm",
+        "position": 1,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "45",
+        "position": 2.6666666666666665,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "60/40 sink",
+        "position": 11,
+        "status": "new",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "64mm latch",
+        "position": 4,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "76mm parliament hinges",
+        "position": 11,
+        "status": "new",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "a doorknob",
+        "position": 9,
+        "status": "new",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 52,
+        "key": "accessibility compliant ironmongery",
+        "position": 13.673076923076923,
+        "status": "lost",
+        "when": "2026-11-15"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "action door",
+        "position": 43.5,
+        "status": "lost",
+        "when": "2026-11-15"
+      }
+    ],
+    "total": 3993,
+    "watchedFrom": "2026-07-22"
+  },
+  "thisMonth": {
+    "bands": {
+      "lost": {
+        "1-3": 55,
+        "11-20": 113,
+        "21-50": 126,
+        "4-10": 173,
+        "51+": 33
+      },
+      "new": {
+        "1-3": 78,
+        "11-20": 103,
+        "21-50": 105,
+        "4-10": 99,
+        "51+": 35
+      }
+    },
+    "counts": {
+      "lostKeywords": 8059,
+      "lostPages": 1430,
+      "newKeywords": 3278,
+      "newPages": 764
+    },
+    "countsBefore": {
+      "lostKeywords": 4877,
+      "lostPages": 1184,
+      "newKeywords": 3513,
+      "newPages": 1057
+    },
+    "periods": [
+      {
+        "gained": 137,
+        "lastDay": "2026-11-01",
+        "lost": 314,
+        "start": "2026-11-01"
+      },
+      {
+        "gained": 218,
+        "lastDay": "2026-11-02",
+        "lost": 398,
+        "start": "2026-11-02"
+      },
+      {
+        "gained": 213,
+        "lastDay": "2026-11-03",
+        "lost": 489,
+        "start": "2026-11-03"
+      },
+      {
+        "gained": 204,
+        "lastDay": "2026-11-04",
+        "lost": 526,
+        "start": "2026-11-04"
+      },
+      {
+        "gained": 213,
+        "lastDay": "2026-11-05",
+        "lost": 580,
+        "start": "2026-11-05"
+      },
+      {
+        "gained": 163,
+        "lastDay": "2026-11-06",
+        "lost": 554,
+        "start": "2026-11-06"
+      },
+      {
+        "gained": 146,
+        "lastDay": "2026-11-07",
+        "lost": 792,
+        "start": "2026-11-07"
+      },
+      {
+        "gained": 146,
+        "lastDay": "2026-11-08",
+        "lost": 606,
+        "start": "2026-11-08"
+      },
+      {
+        "gained": 193,
+        "lastDay": "2026-11-09",
+        "lost": 417,
+        "start": "2026-11-09"
+      },
+      {
+        "gained": 200,
+        "lastDay": "2026-11-10",
+        "lost": 451,
+        "start": "2026-11-10"
+      },
+      {
+        "gained": 146,
+        "lastDay": "2026-11-11",
+        "lost": 458,
+        "start": "2026-11-11"
+      },
+      {
+        "gained": 144,
+        "lastDay": "2026-11-12",
+        "lost": 395,
+        "start": "2026-11-12"
+      },
+      {
+        "gained": 193,
+        "lastDay": "2026-11-13",
+        "lost": 274,
+        "start": "2026-11-13"
+      },
+      {
+        "gained": 172,
+        "lastDay": "2026-11-14",
+        "lost": 325,
+        "start": "2026-11-14"
+      },
+      {
+        "gained": 203,
+        "lastDay": "2026-11-15",
+        "lost": 422,
+        "start": "2026-11-15"
+      },
+      {
+        "gained": 362,
+        "lastDay": "2026-11-16",
+        "lost": 577,
+        "start": "2026-11-16"
+      },
+      {
+        "gained": 225,
+        "lastDay": "2026-11-17",
+        "lost": 481,
+        "start": "2026-11-17"
+      }
+    ],
+    "rows": [
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1000 vinyl gloves",
+        "position": 12,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "110 degree concealed hinge",
+        "position": 7.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1200 pull handle",
+        "position": 54,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "126.54",
+        "position": 5.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "2 knobs",
+        "position": 5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "225",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "288mm handles",
+        "position": 17.5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3 4 butt hinge",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3762",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "450mm",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "5 cup pulls",
+        "position": 9,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "50 sink",
+        "position": 3,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "52mm",
+        "position": 1,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "57mm",
+        "position": 7.833333333333333,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "6 hairpin legs",
+        "position": 26,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 11,
+        "key": "60mm euro cylinder lock",
+        "position": 32.18181818181818,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "64mm bathroom lock",
+        "position": 2,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 2,
+        "impressions": 53,
+        "key": "64mm cupboard handles",
+        "position": 11.962264150943396,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "8mm spindle bar",
+        "position": 3,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "9mm bolts",
+        "position": 4,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "a darker blue",
+        "position": 2,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 1,
+        "impressions": 28,
+        "key": "accessible door handle",
+        "position": 1.6428571428571428,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 4,
+        "key": "accessories gate",
+        "position": 68,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 128,
+        "key": "aged brass centre door knobs",
+        "position": 26.8359375,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 241,
+        "key": "aged bronze multipoint locking door handles",
+        "position": 32.96265560165975,
+        "status": "lost",
+        "when": "2026-11-17"
+      }
+    ],
+    "total": 8278,
+    "watchedFrom": "2026-07-22"
+  },
+  "lastMonth": {
+    "bands": {
+      "lost": {
+        "1-3": 38,
+        "11-20": 125,
+        "21-50": 165,
+        "4-10": 111,
+        "51+": 61
+      },
+      "new": {
+        "1-3": 107,
+        "11-20": 109,
+        "21-50": 86,
+        "4-10": 140,
+        "51+": 58
+      }
+    },
+    "counts": {
+      "lostKeywords": 9928,
+      "lostPages": 2158,
+      "newKeywords": 6002,
+      "newPages": 1950
+    },
+    "countsBefore": {
+      "lostKeywords": 9457,
+      "lostPages": 1496,
+      "newKeywords": 6973,
+      "newPages": 2236
+    },
+    "periods": [
+      {
+        "gained": 196,
+        "lastDay": "2026-10-01",
+        "lost": 280,
+        "start": "2026-10-01"
+      },
+      {
+        "gained": 198,
+        "lastDay": "2026-10-02",
+        "lost": 382,
+        "start": "2026-10-02"
+      },
+      {
+        "gained": 194,
+        "lastDay": "2026-10-03",
+        "lost": 248,
+        "start": "2026-10-03"
+      },
+      {
+        "gained": 175,
+        "lastDay": "2026-10-04",
+        "lost": 226,
+        "start": "2026-10-04"
+      },
+      {
+        "gained": 257,
+        "lastDay": "2026-10-05",
+        "lost": 254,
+        "start": "2026-10-05"
+      },
+      {
+        "gained": 250,
+        "lastDay": "2026-10-06",
+        "lost": 273,
+        "start": "2026-10-06"
+      },
+      {
+        "gained": 219,
+        "lastDay": "2026-10-07",
+        "lost": 275,
+        "start": "2026-10-07"
+      },
+      {
+        "gained": 221,
+        "lastDay": "2026-10-08",
+        "lost": 280,
+        "start": "2026-10-08"
+      },
+      {
+        "gained": 184,
+        "lastDay": "2026-10-09",
+        "lost": 269,
+        "start": "2026-10-09"
+      },
+      {
+        "gained": 191,
+        "lastDay": "2026-10-10",
+        "lost": 275,
+        "start": "2026-10-10"
+      },
+      {
+        "gained": 128,
+        "lastDay": "2026-10-11",
+        "lost": 348,
+        "start": "2026-10-11"
+      },
+      {
+        "gained": 196,
+        "lastDay": "2026-10-12",
+        "lost": 277,
+        "start": "2026-10-12"
+      },
+      {
+        "gained": 300,
+        "lastDay": "2026-10-13",
+        "lost": 288,
+        "start": "2026-10-13"
+      },
+      {
+        "gained": 225,
+        "lastDay": "2026-10-14",
+        "lost": 316,
+        "start": "2026-10-14"
+      },
+      {
+        "gained": 181,
+        "lastDay": "2026-10-15",
+        "lost": 295,
+        "start": "2026-10-15"
+      },
+      {
+        "gained": 146,
+        "lastDay": "2026-10-16",
+        "lost": 280,
+        "start": "2026-10-16"
+      },
+      {
+        "gained": 252,
+        "lastDay": "2026-10-17",
+        "lost": 311,
+        "start": "2026-10-17"
+      },
+      {
+        "gained": 151,
+        "lastDay": "2026-10-18",
+        "lost": 251,
+        "start": "2026-10-18"
+      },
+      {
+        "gained": 159,
+        "lastDay": "2026-10-19",
+        "lost": 351,
+        "start": "2026-10-19"
+      },
+      {
+        "gained": 205,
+        "lastDay": "2026-10-20",
+        "lost": 325,
+        "start": "2026-10-20"
+      },
+      {
+        "gained": 182,
+        "lastDay": "2026-10-21",
+        "lost": 378,
+        "start": "2026-10-21"
+      },
+      {
+        "gained": 187,
+        "lastDay": "2026-10-22",
+        "lost": 389,
+        "start": "2026-10-22"
+      },
+      {
+        "gained": 165,
+        "lastDay": "2026-10-23",
+        "lost": 348,
+        "start": "2026-10-23"
+      },
+      {
+        "gained": 220,
+        "lastDay": "2026-10-24",
+        "lost": 302,
+        "start": "2026-10-24"
+      },
+      {
+        "gained": 184,
+        "lastDay": "2026-10-25",
+        "lost": 265,
+        "start": "2026-10-25"
+      },
+      {
+        "gained": 173,
+        "lastDay": "2026-10-26",
+        "lost": 391,
+        "start": "2026-10-26"
+      },
+      {
+        "gained": 239,
+        "lastDay": "2026-10-27",
+        "lost": 448,
+        "start": "2026-10-27"
+      },
+      {
+        "gained": 190,
+        "lastDay": "2026-10-28",
+        "lost": 430,
+        "start": "2026-10-28"
+      },
+      {
+        "gained": 205,
+        "lastDay": "2026-10-29",
+        "lost": 352,
+        "start": "2026-10-29"
+      },
+      {
+        "gained": 119,
+        "lastDay": "2026-10-30",
+        "lost": 331,
+        "start": "2026-10-30"
+      },
+      {
+        "gained": 110,
+        "lastDay": "2026-10-31",
+        "lost": 490,
+        "start": "2026-10-31"
+      }
+    ],
+    "rows": [
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "#10 screw head diameter",
+        "position": 37.5,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "+1248",
+        "position": 6,
+        "status": "new",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 14,
+        "key": "100mm door handles",
+        "position": 19.928571428571427,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "128mm handle",
+        "position": 2,
+        "status": "new",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "180 degree open door hinges",
+        "position": 6,
+        "status": "new",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "192mm kitchen handles black",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "20mm cabinet hinges",
+        "position": 12,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 10,
+        "key": "20mm door stop",
+        "position": 8.6,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "25mm spindles",
+        "position": 5,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "25mm width",
+        "position": 1,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "3 1/2 in",
+        "position": 11,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 14,
+        "key": "3 inch drawer pulls",
+        "position": 7.285714285714286,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "4 inch door hinges",
+        "position": 48,
+        "status": "new",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 25,
+        "key": "40mm door latch",
+        "position": 9.52,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "5 bar gate ironmongery",
+        "position": 56,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "6 doors",
+        "position": 3,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "6g screws",
+        "position": 1,
+        "status": "new",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "6mm spindle",
+        "position": 11,
+        "status": "new",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "6mm spindle bar",
+        "position": 9,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "70mm",
+        "position": 14.5,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 4,
+        "key": "76",
+        "position": 13.5,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "76mm mortice lock",
+        "position": 3,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 4,
+        "key": "90 degree soft close hinges",
+        "position": 23.75,
+        "status": "lost",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "accessible windows definition insurance",
+        "position": 31,
+        "status": "new",
+        "when": "2026-10-31"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "acrylic kick plates for doors",
+        "position": 26.666666666666668,
+        "status": "lost",
+        "when": "2026-10-31"
+      }
+    ],
+    "total": 10000,
+    "watchedFrom": "2026-07-22"
+  },
+  "last3Months": {
+    "bands": {
+      "lost": {
+        "1-3": 55,
+        "11-20": 113,
+        "21-50": 126,
+        "4-10": 173,
+        "51+": 33
+      },
+      "new": {
+        "1-3": 78,
+        "11-20": 103,
+        "21-50": 105,
+        "4-10": 99,
+        "51+": 35
+      }
+    },
+    "counts": {
+      "lostKeywords": 31393,
+      "lostPages": 5713,
+      "newKeywords": 20626,
+      "newPages": 5844
+    },
+    "countsBefore": null,
+    "periods": [
+      {
+        "gained": 1995,
+        "lastDay": "2026-08-23",
+        "lost": 1446,
+        "start": "2026-08-17"
+      },
+      {
+        "gained": 2113,
+        "lastDay": "2026-08-30",
+        "lost": 2199,
+        "start": "2026-08-24"
+      },
+      {
+        "gained": 1869,
+        "lastDay": "2026-09-06",
+        "lost": 2198,
+        "start": "2026-08-31"
+      },
+      {
+        "gained": 1847,
+        "lastDay": "2026-09-13",
+        "lost": 2068,
+        "start": "2026-09-07"
+      },
+      {
+        "gained": 1460,
+        "lastDay": "2026-09-20",
+        "lost": 1916,
+        "start": "2026-09-14"
+      },
+      {
+        "gained": 1485,
+        "lastDay": "2026-09-27",
+        "lost": 2560,
+        "start": "2026-09-21"
+      },
+      {
+        "gained": 1340,
+        "lastDay": "2026-10-04",
+        "lost": 2155,
+        "start": "2026-09-28"
+      },
+      {
+        "gained": 1450,
+        "lastDay": "2026-10-11",
+        "lost": 1974,
+        "start": "2026-10-05"
+      },
+      {
+        "gained": 1451,
+        "lastDay": "2026-10-18",
+        "lost": 2018,
+        "start": "2026-10-12"
+      },
+      {
+        "gained": 1302,
+        "lastDay": "2026-10-25",
+        "lost": 2358,
+        "start": "2026-10-19"
+      },
+      {
+        "gained": 1173,
+        "lastDay": "2026-11-01",
+        "lost": 2756,
+        "start": "2026-10-26"
+      },
+      {
+        "gained": 1303,
+        "lastDay": "2026-11-08",
+        "lost": 3945,
+        "start": "2026-11-02"
+      },
+      {
+        "gained": 1251,
+        "lastDay": "2026-11-15",
+        "lost": 2742,
+        "start": "2026-11-09"
+      },
+      {
+        "gained": 587,
+        "lastDay": "2026-11-17",
+        "lost": 1058,
+        "start": "2026-11-16"
+      }
+    ],
+    "rows": [
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1000 vinyl gloves",
+        "position": 12,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "110 degree concealed hinge",
+        "position": 7.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1200 pull handle",
+        "position": 54,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "126.54",
+        "position": 5.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "2 knobs",
+        "position": 5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "225",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "288mm handles",
+        "position": 17.5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3 4 butt hinge",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3762",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "450mm",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "5 cup pulls",
+        "position": 9,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "50 sink",
+        "position": 3,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "52mm",
+        "position": 1,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "57mm",
+        "position": 7.833333333333333,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "6 hairpin legs",
+        "position": 26,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 11,
+        "key": "60mm euro cylinder lock",
+        "position": 32.18181818181818,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "64mm bathroom lock",
+        "position": 2,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 2,
+        "impressions": 53,
+        "key": "64mm cupboard handles",
+        "position": 11.962264150943396,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "8mm spindle bar",
+        "position": 3,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "9mm bolts",
+        "position": 4,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "a darker blue",
+        "position": 2,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 1,
+        "impressions": 28,
+        "key": "accessible door handle",
+        "position": 1.6428571428571428,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 4,
+        "key": "accessories gate",
+        "position": 68,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 128,
+        "key": "aged brass centre door knobs",
+        "position": 26.8359375,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 241,
+        "key": "aged bronze multipoint locking door handles",
+        "position": 32.96265560165975,
+        "status": "lost",
+        "when": "2026-11-17"
+      }
+    ],
+    "total": 10000,
+    "watchedFrom": "2026-07-22"
+  },
+  "last6Months": {
+    "bands": {
+      "lost": {
+        "1-3": 55,
+        "11-20": 113,
+        "21-50": 126,
+        "4-10": 173,
+        "51+": 33
+      },
+      "new": {
+        "1-3": 77,
+        "11-20": 103,
+        "21-50": 110,
+        "4-10": 99,
+        "51+": 39
+      }
+    },
+    "counts": {
+      "lostKeywords": 40608,
+      "lostPages": 6527,
+      "newKeywords": 39735,
+      "newPages": 8248
+    },
+    "countsBefore": null,
+    "periods": [
+      {
+        "gained": 0,
+        "lastDay": "2026-07-12",
+        "lost": 0,
+        "start": "2026-07-06"
+      },
+      {
+        "gained": 0,
+        "lastDay": "2026-07-19",
+        "lost": 0,
+        "start": "2026-07-13"
+      },
+      {
+        "gained": 9773,
+        "lastDay": "2026-07-26",
+        "lost": 844,
+        "start": "2026-07-20"
+      },
+      {
+        "gained": 3988,
+        "lastDay": "2026-08-02",
+        "lost": 1109,
+        "start": "2026-07-27"
+      },
+      {
+        "gained": 2359,
+        "lastDay": "2026-08-09",
+        "lost": 5092,
+        "start": "2026-08-03"
+      },
+      {
+        "gained": 2677,
+        "lastDay": "2026-08-16",
+        "lost": 1885,
+        "start": "2026-08-10"
+      },
+      {
+        "gained": 2307,
+        "lastDay": "2026-08-23",
+        "lost": 1731,
+        "start": "2026-08-17"
+      },
+      {
+        "gained": 2113,
+        "lastDay": "2026-08-30",
+        "lost": 2199,
+        "start": "2026-08-24"
+      },
+      {
+        "gained": 1869,
+        "lastDay": "2026-09-06",
+        "lost": 2198,
+        "start": "2026-08-31"
+      },
+      {
+        "gained": 1847,
+        "lastDay": "2026-09-13",
+        "lost": 2068,
+        "start": "2026-09-07"
+      },
+      {
+        "gained": 1460,
+        "lastDay": "2026-09-20",
+        "lost": 1916,
+        "start": "2026-09-14"
+      },
+      {
+        "gained": 1485,
+        "lastDay": "2026-09-27",
+        "lost": 2560,
+        "start": "2026-09-21"
+      },
+      {
+        "gained": 1340,
+        "lastDay": "2026-10-04",
+        "lost": 2155,
+        "start": "2026-09-28"
+      },
+      {
+        "gained": 1450,
+        "lastDay": "2026-10-11",
+        "lost": 1974,
+        "start": "2026-10-05"
+      },
+      {
+        "gained": 1451,
+        "lastDay": "2026-10-18",
+        "lost": 2018,
+        "start": "2026-10-12"
+      },
+      {
+        "gained": 1302,
+        "lastDay": "2026-10-25",
+        "lost": 2358,
+        "start": "2026-10-19"
+      },
+      {
+        "gained": 1173,
+        "lastDay": "2026-11-01",
+        "lost": 2756,
+        "start": "2026-10-26"
+      },
+      {
+        "gained": 1303,
+        "lastDay": "2026-11-08",
+        "lost": 3945,
+        "start": "2026-11-02"
+      },
+      {
+        "gained": 1251,
+        "lastDay": "2026-11-15",
+        "lost": 2742,
+        "start": "2026-11-09"
+      },
+      {
+        "gained": 587,
+        "lastDay": "2026-11-17",
+        "lost": 1058,
+        "start": "2026-11-16"
+      }
+    ],
+    "rows": [
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1000 vinyl gloves",
+        "position": 12,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "110 degree concealed hinge",
+        "position": 7.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1200 pull handle",
+        "position": 54,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "126.54",
+        "position": 5.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "2 knobs",
+        "position": 5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "225",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "288mm handles",
+        "position": 17.5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3 4 butt hinge",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3762",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "450mm",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "5 cup pulls",
+        "position": 9,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "50 sink",
+        "position": 3,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "52mm",
+        "position": 1,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "57mm",
+        "position": 7.833333333333333,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "6 hairpin legs",
+        "position": 26,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 11,
+        "key": "60mm euro cylinder lock",
+        "position": 32.18181818181818,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "64mm bathroom lock",
+        "position": 2,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 2,
+        "impressions": 53,
+        "key": "64mm cupboard handles",
+        "position": 11.962264150943396,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "8mm spindle bar",
+        "position": 3,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "9mm bolts",
+        "position": 4,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "a darker blue",
+        "position": 2,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 1,
+        "impressions": 28,
+        "key": "accessible door handle",
+        "position": 1.6428571428571428,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 4,
+        "key": "accessories gate",
+        "position": 68,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 128,
+        "key": "aged brass centre door knobs",
+        "position": 26.8359375,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 241,
+        "key": "aged bronze multipoint locking door handles",
+        "position": 32.96265560165975,
+        "status": "lost",
+        "when": "2026-11-17"
+      }
+    ],
+    "total": 10000,
+    "watchedFrom": "2026-07-22"
+  },
+  "last12Months": {
+    "bands": {
+      "lost": {
+        "1-3": 55,
+        "11-20": 113,
+        "21-50": 126,
+        "4-10": 173,
+        "51+": 33
+      },
+      "new": {
+        "1-3": 74,
+        "11-20": 105,
+        "21-50": 113,
+        "4-10": 102,
+        "51+": 40
+      }
+    },
+    "counts": {
+      "lostKeywords": 40608,
+      "lostPages": 6527,
+      "newKeywords": 39735,
+      "newPages": 8248
+    },
+    "countsBefore": null,
+    "periods": [
+      {
+        "gained": 12997,
+        "lastDay": "2026-07-31",
+        "lost": 1733,
+        "start": "2026-07-01"
+      },
+      {
+        "gained": 10485,
+        "lastDay": "2026-08-31",
+        "lost": 11431,
+        "start": "2026-08-01"
+      },
+      {
+        "gained": 6973,
+        "lastDay": "2026-09-30",
+        "lost": 9457,
+        "start": "2026-09-01"
+      },
+      {
+        "gained": 6002,
+        "lastDay": "2026-10-31",
+        "lost": 9928,
+        "start": "2026-10-01"
+      },
+      {
+        "gained": 3278,
+        "lastDay": "2026-11-17",
+        "lost": 8059,
+        "start": "2026-11-01"
+      }
+    ],
+    "rows": [
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1000 vinyl gloves",
+        "position": 12,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "110 degree concealed hinge",
+        "position": 7.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "1200 pull handle",
+        "position": 54,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "126.54",
+        "position": 5.666666666666667,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "2 knobs",
+        "position": 5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "225",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "288mm handles",
+        "position": 17.5,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3 4 butt hinge",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": null,
+        "clicks": 0,
+        "impressions": 0,
+        "key": "3762",
+        "position": null,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "450mm",
+        "position": 6,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "5 cup pulls",
+        "position": 9,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 3,
+        "key": "50 sink",
+        "position": 3,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "52mm",
+        "position": 1,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 6,
+        "key": "57mm",
+        "position": 7.833333333333333,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "6 hairpin legs",
+        "position": 26,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 11,
+        "key": "60mm euro cylinder lock",
+        "position": 32.18181818181818,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "64mm bathroom lock",
+        "position": 2,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "11-20",
+        "clicks": 2,
+        "impressions": 53,
+        "key": "64mm cupboard handles",
+        "position": 11.962264150943396,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 2,
+        "key": "8mm spindle bar",
+        "position": 3,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "4-10",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "9mm bolts",
+        "position": 4,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 0,
+        "impressions": 1,
+        "key": "a darker blue",
+        "position": 2,
+        "status": "new",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "1-3",
+        "clicks": 1,
+        "impressions": 28,
+        "key": "accessible door handle",
+        "position": 1.6428571428571428,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "51+",
+        "clicks": 0,
+        "impressions": 4,
+        "key": "accessories gate",
+        "position": 68,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 128,
+        "key": "aged brass centre door knobs",
+        "position": 26.8359375,
+        "status": "lost",
+        "when": "2026-11-17"
+      },
+      {
+        "band": "21-50",
+        "clicks": 0,
+        "impressions": 241,
+        "key": "aged bronze multipoint locking door handles",
+        "position": 32.96265560165975,
+        "status": "lost",
+        "when": "2026-11-17"
+      }
+    ],
+    "total": 10000,
+    "watchedFrom": "2026-07-22"
+  }
+}

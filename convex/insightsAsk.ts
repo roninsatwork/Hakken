@@ -137,19 +137,53 @@ export async function ask(ctx: ActionCtx, args: AskRun, member: TeamMember | und
 /** A model's JSON answer, its code fences taken off; null when it isn't JSON. */
 export function readJson(text: string): unknown {
   const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const start = trimmed.indexOf("{"), end = trimmed.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      try {
-        return JSON.parse(trimmed.slice(start, end + 1));
-      } catch {
-        return null;
-      }
+  const start = trimmed.indexOf("{"), end = trimmed.lastIndexOf("}");
+  const object = start >= 0 && end > start ? trimmed.slice(start, end + 1) : null;
+  for (const candidate of [trimmed, object, object === null ? null : withInnerQuotesEscaped(object)]) {
+    if (candidate === null) continue;
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // The next way of reading it.
     }
-    return null;
   }
+  return null;
+}
+
+/**
+ * A model's JSON with the quote marks inside its sentences escaped (2026-11-19): What Hakken sees on Position bands threw
+ * a whole press away because the writer wrote `"Your big "door handles" search…"`. Read only when the answer isn't JSON
+ * as it stands. Inside a string, a quote mark ends it only when what follows is what JSON allows after a string (a comma,
+ * a colon, or the end of a list or an object); any other quote mark is the sentence's own, and is escaped.
+ */
+export function withInnerQuotesEscaped(text: string): string {
+  let out = "";
+  let inString = false;
+  for (let at = 0; at < text.length; at += 1) {
+    const character = text[at];
+    if (inString && character === "\\") {
+      out += character + (text[at + 1] ?? "");
+      at += 1;
+      continue;
+    }
+    if (character !== '"') {
+      out += character;
+      continue;
+    }
+    if (!inString) {
+      inString = true;
+      out += character;
+      continue;
+    }
+    const next = text.slice(at + 1).match(/^\s*(.)/)?.[1];
+    if (next === undefined || next === "," || next === ":" || next === "}" || next === "]") {
+      inString = false;
+      out += character;
+    } else {
+      out += '\\"';
+    }
+  }
+  return out;
 }
 
 /** Facts as a model reads them: each by its key, what it is, its value written out, and its span and country. */

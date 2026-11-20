@@ -1,0 +1,20 @@
+# Search Console → Low click rate — the approved look (board "LowCtr" of docs/plans/assets/search-console-shown-but-not-clicked-way-2/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Low click rate
+choice: Kind of result: Web | Video | News | Discover | Google News
+figures
+  figure: Shown a lot, clicked a little
+  figure: Times Google showed them
+  figure: Clicks they got
+  figure: Clicks you'd usually get
+chart-card: Clicks at each position in Google
+filter: Count
+mirror-bars
+search: Search pages…
+filter: Page type
+filter: Position
+table: Page | Shown | Position | Clicks | Usually
+  table-bar
+    download: Download all (CSV)
+  table-footer

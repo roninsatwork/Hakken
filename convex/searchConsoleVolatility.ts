@@ -6,7 +6,7 @@ import { addUp, shiftDay } from "./searchConsoleDays";
 import { countryScope } from "./searchConsoleCountries";
 import { consoleLimitsOf } from "./searchConsoleLimits";
 import { updatesIn } from "./searchConsoleChanges";
-import { DAYS_READ, average, dayRowsOf, scoresBetween, updateInPlay, updateVolatility } from "./searchConsoleVolatilityDays";
+import { DAYS_READ, average, dayRowsOf, scoresBetween, updateInPlay, updateVolatility, type DayRow } from "./searchConsoleVolatilityDays";
 import { seenValidator } from "./utils/hakkenSees";
 import { volatilitySees, type UpdateSeen } from "./utils/sees/searchConsole";
 import { USUAL_DAYS, completeDays, levelOf } from "./utils/searchConsoleVolatility";
@@ -35,6 +35,9 @@ export const searchConsoleVolatility = tenantQuery({
     latest: v.union(v.null(), v.object({
       day: v.string(),
       volatility: scoreValidator,
+      /** Its Up and Down parts, which add up to it (2026-11-20): null on a day built before them. */
+      volatilityUp: v.optional(scoreValidator),
+      volatilityDown: v.optional(scoreValidator),
       level: v.union(v.literal("NORMAL"), v.literal("HIGH"), v.literal("VERY_HIGH"), v.null()),
       keywords: v.number(),
       movedUp5: v.number(),
@@ -50,7 +53,11 @@ export const searchConsoleVolatility = tenantQuery({
     impressions: v.optional(v.object({ now: v.number(), before: v.union(v.number(), v.null()) })),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => await readVolatility(ctx, args),
+  handler: async (ctx, args) => {
+    // The day rows are Ask Hakken's, for the score day by day (`assistantSearchConsoleReads.ts`): the page's chart reads its own.
+    const { days: _days, complete: _complete, ...facts } = await readVolatility(ctx, args);
+    return facts;
+  },
 });
 
 /** Volatility's figures: the one read the screen and Ask Hakken both make (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6). */
@@ -61,11 +68,12 @@ export async function readVolatility(ctx: SiteReader, args: ObjectType<typeof re
   const scope = await countryScope(ctx, site.hold, connection, args.country);
   const nothing = { newestDay: null, latest: null, usual: null, update: null, week: { now: null, before: null }, clicks: { now: 0, before: null } };
   const unseen = volatilitySees({ latest: null, usual: null, update: null, clicks: { now: 0, before: null }, impressions: { now: 0, before: null } });
-  if (scope.read === "LIVE") return { ...nothing, live: true, seen: unseen };
+  const none = { days: [] as DayRow[], complete: new Set<string>() };
+  if (scope.read === "LIVE") return { ...nothing, live: true, seen: unseen, ...none };
   const country = scope.read === "KEPT" ? scope.country : undefined;
   const newest = scope.read === "KEPT" ? scope.newestDay : connection?.newestDay;
   const oldest = scope.read === "KEPT" ? scope.oldestDay : connection?.oldestDay;
-  if (!newest || !oldest) return { ...nothing, live: false, seen: unseen };
+  if (!newest || !oldest) return { ...nothing, live: false, seen: unseen, ...none };
 
   const days = await dayRowsOf(ctx, holdId, country, shiftDay(newest, 1 - DAYS_READ));
   const complete = completeDays(days);
@@ -79,6 +87,8 @@ export async function readVolatility(ctx: SiteReader, args: ObjectType<typeof re
     ? {
       day: last.week,
       volatility: last.volatility ?? null,
+      volatilityUp: last.volatilityUp ?? null,
+      volatilityDown: last.volatilityDown ?? null,
       level: last.volatility === undefined ? null : levelOf(last.volatility, usual),
       keywords: last.volatilityKeywords,
       movedUp5: last.movedUp5 ?? 0,
@@ -99,5 +109,5 @@ export async function readVolatility(ctx: SiteReader, args: ObjectType<typeof re
   const clicks = { now: now?.clicks ?? 0, before: before ? before.clicks : null };
   const impressions = { now: now?.impressions ?? 0, before: before ? before.impressions : null };
   const seen = volatilitySees({ latest, usual, update, clicks, impressions });
-  return { live: false, newestDay: newest, latest, usual, update, week, clicks, impressions, seen };
+  return { live: false, newestDay: newest, latest, usual, update, week, clicks, impressions, seen, days, complete };
 }

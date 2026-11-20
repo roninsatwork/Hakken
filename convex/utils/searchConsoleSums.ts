@@ -41,6 +41,11 @@ export class Terms {
   get size(): number {
     return this.texts.length;
   }
+
+  /** A term's number when it has one, never numbering it. */
+  find(text: string): number | undefined {
+    return this.numbers.get(text);
+  }
 }
 
 /** A pair's two numbers as one: a keyword's number times this, and its page's. Far past any website's pages. */

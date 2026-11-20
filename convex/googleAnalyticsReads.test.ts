@@ -1116,8 +1116,8 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(overview.searchConsole).toEqual({ clicks: 120, impressions: 24_000 });
     expect(overview.seen.says[0]).toEqual({ code: "lead.up.up", a: (990 - 480) / 480, b: 60, c: 150 });
     expect(overview.seen.says.at(-1)).toEqual({ code: "googleRarely", a: 24_000, b: 0.005 });
-    // Pages shown but rarely clicked: Search Console's Almost there for the same website.
-    expect(overview.seen.steps.at(-1)).toEqual({ code: "push", link: "pagesToPush", to: { url: `/app/search-console/${siteId}/almost-there` } });
+    // Pages shown but rarely clicked: Search Console's Position bands for the same website, since Almost there left the menu.
+    expect(overview.seen.steps.at(-1)).toEqual({ code: "push", link: "pagesToPush", to: { url: `/app/search-console/${siteId}/position-bands` } });
   });
 
   test("each list's box is of the whole list, whatever is searched, its pages named by their paths", async () => {

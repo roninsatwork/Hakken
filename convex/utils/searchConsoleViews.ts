@@ -10,11 +10,19 @@
 import { countsByType, type ClassificationType, type PageKinds } from "./pageKinds";
 import { wordStartMatcher } from "./wordStarts";
 import { compareTermsQuickly } from "./searchConsoleTerms";
+import { splitPagesOf } from "./cannibalisationRule";
 
 /** The keywords Performance's dots draw: the ones Google showed most (search-console-performance-way-3-plan-2026-11-17.md). */
 export const TOP_KEYWORDS = 300;
 
 export type Band = "1-3" | "4-10" | "11-20" | "21-50" | "51+";
+/**
+ * How many of the newest new, and of the newest lost, keywords New and lost tells What Hakken sees the places of
+ * (search-console-new-and-lost-audit-2026-11-19.md, speed): the same keywords whatever the table's order, and few enough
+ * that the page reads only its own rows and these when it opens newest first.
+ */
+export const NEW_LOST_EYE_NEWEST = 500;
+
 export const BANDS: readonly Band[] = ["1-3", "4-10", "11-20", "21-50", "51+"];
 
 /** Google's average position in its band, read as given: 10.7 is 11–20, 9.8 is 4–10. */
@@ -24,24 +32,24 @@ export const bandOf = (position: number): Band =>
 /**
  * A page's own rule for what it lists (§13.3):
  * - `tracked` — the keywords or pages the company tracks, each one whether Google showed it in the dates or not (Tracked keywords, Tracked pages);
- * - `almost` — keywords at positions 4 to 20 (Almost there);
  * - `lowCtr` — pages clicked less than the website's own click rate at their position (Shown but not clicked);
- * - `competing` — keywords two or more of the website's pages were shown for (Pages competing);
- * - `moves` — keywords whose clicks changed on the period before (Wins and losses);
- * - `missed` — keywords many search for that Google barely shows the website for, or not yet tracked (Missed demand);
+ * - `competing` — Keyword cannibalisation (Pages competing until 20 November 2026): keywords two or more of the website's
+ *   pages each took 1 in 10 of the impressions of, the home page and searches for its name left out (`cannibalisationRule.ts`);
  * - `estimates` — pages with Sites' estimated visits beside Google's clicks (Real against estimated);
  * - `volatility` — keywords counted on Volatility's day and the day before, 10 or more impressions each (Volatility; its own ready-made day, `VOLATILITY_PERIOD`).
  */
-export const VIEWS = ["all", "tracked", "almost", "lowCtr", "competing", "moves", "missed", "estimates", "volatility"] as const;
+// No `moves`: Wins and losses was dropped on 2026-11-19 (Anthony: "Yes, drop it"), as Keywords sorted by Up or down
+// lists the same keywords and the same change. No `almost`: Almost there was taken out of the menu on 2026-11-20 (Anthony:
+// "lets remove almost there from the menu"), as Position bands lists the same keywords at 4–10 and 11–20. No `missed`:
+// Missed demand was taken out the same day (Anthony: "Yes, take it out"), as its second list is Keywords' Tracked: Not
+// tracked, and its first was Visibility's monthly searches, not Google's, which Keyword research shows.
+export const VIEWS = ["all", "tracked", "lowCtr", "competing", "estimates", "volatility"] as const;
 export type View = (typeof VIEWS)[number];
 
 /** The list a view reads, whatever the page asked. */
 export const VIEW_LIST: Partial<Record<View, "query" | "page">> = {
-  almost: "query",
   lowCtr: "page",
   competing: "query",
-  moves: "query",
-  missed: "query",
   estimates: "page",
   volatility: "query",
 };
@@ -103,7 +111,7 @@ export type ListRow = {
   /** Shown but not clicked: the website's own click rate at its position, and the clicks it would have had at it. */
   usualCtr: number | null;
   expected: number | null;
-  /** Pages competing: the page with the most clicks' share, the next page and its share. */
+  /** Keyword cannibalisation: the page shown most's share of the keyword's impressions, the next page and its share. */
   topShare: number | null;
   next: string | null;
   nextShare: number | null;
@@ -111,6 +119,8 @@ export type ListRow = {
   verdict: Verdict | null;
   /** Estimate less clicks: above nothing, too high. */
   gap: number | null;
+  /** Keyword cannibalisation: days Google swapped the page it showed most; null for a period not counted day by day. */
+  swaps?: number | null;
 };
 
 /** A row of a list as kept or asked: figures as sums, and what is known beside them. */
@@ -141,16 +151,6 @@ export function isBrand(keyword: string, brandWords: readonly string[]): boolean
 }
 
 /**
- * The rows a list shows, with — for Wins and losses — every keyword shown in
- * the period before and not at all now, as none: its clicks all lost.
- */
-export function withGone(now: readonly SourceRow[], before: readonly SourceRow[] | null): SourceRow[] {
-  if (!before) return [...now];
-  const shown = new Set(now.map((row) => row.key));
-  return [...now, ...before.filter((row) => !shown.has(row.key) && row.clicks > 0).map((row) => ({ key: row.key, clicks: 0, impressions: 0, positionSum: 0 }))];
-}
-
-/**
  * The rows a tracked list shows: every row Google showed, with — for each
  * keyword or page the company tracks that Google did not show in the dates —
  * a row of none, so the list holds all it tracks, can be unticked from, and
@@ -162,12 +162,10 @@ export function withTracked(now: readonly SourceRow[], tracked: ReadonlySet<stri
 }
 
 /**
- * The rows a view is shaped from: Wins and losses adds the keywords gone
- * since the days before, a tracked list those it tracks that Google did not
- * show — both read from what the list already holds, nothing more.
+ * The rows a view is shaped from: a tracked list adds those it tracks that
+ * Google did not show, read from what the list already holds, nothing more.
  */
-export function sourceRowsOf(view: View, now: readonly SourceRow[], before: readonly SourceRow[] | null, tracked: ReadonlySet<string>): readonly SourceRow[] {
-  if (view === "moves") return withGone(now, before);
+export function sourceRowsOf(view: View, now: readonly SourceRow[], tracked: ReadonlySet<string>): readonly SourceRow[] {
   if (view === "tracked") return withTracked(now, tracked);
   return now;
 }
@@ -320,9 +318,6 @@ export function withSectionsInPages(rows: readonly ListRow[]): ListRow[] {
   });
 }
 
-/** A keyword Sites holds for the website that Google barely shows it for: Missed demand. */
-export type SitesKeyword = { keyword: string; volume: number; kind: string };
-
 /** Days in an average month: Sites' estimated visits are a month's, read against the days chosen. */
 const DAYS_A_MONTH = 30.44;
 
@@ -331,17 +326,16 @@ export type ViewContext = {
   rules: ViewRules;
   /** The days the list covers: Real against estimated scales Sites' monthly estimate to them. */
   days?: number;
-  /** The company's tracked keywords: Missed demand's keywords Google never showed are ticked from these. */
+  /** The company's tracked keywords. */
   tracked?: ReadonlySet<string>;
   curve?: readonly CurvePoint[];
   pages?: PairPages;
   /** Pages competing: how many pages Google showed for any keyword, when `pages` holds only the competing keywords' pairs. */
   pagesShown?: number;
-  /** Missed demand's first list: the website's most-searched keywords in Sites. */
-  sitesKeywords?: readonly SitesKeyword[];
-  missedList?: "searched" | "untracked";
-  /** A row's keyword as text, where rows carry its book's token (core-data plan §5.1): Missed demand matches Sites by text. */
+  /** A row's keyword as text, where rows carry its book's token (core-data plan §5.1). */
   textOf?: (key: string) => string;
+  /** Keyword cannibalisation: each keyword's Swaps, where its period was counted day by day. */
+  swaps?: ReadonlyMap<string, number>;
 };
 
 /** Each view's rows: the rows it lists, with the figures it adds. */
@@ -349,47 +343,37 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext): Li
   switch (view) {
     case "tracked":
       return rows.filter((row) => row.tracked);
-    case "almost":
-      return rows.filter((row) => row.position > 3 && row.position <= 20);
     case "lowCtr": {
       const curve = new Map((context.curve ?? []).map((point) => [point.position, point.ctr]));
       return rows.flatMap((row) => {
         const usual = curve.get(Math.round(row.position));
         if (usual === undefined) return [];
         const expected = Math.round(row.impressions * usual);
-        return row.clicks < expected ? [{ ...row, usualCtr: usual, expected }] : [];
+        // The clicks it's short by (`gap`, as Real against estimated's): the table lists the most short first (Way 2,
+        // search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
+        return row.clicks < expected ? [{ ...row, usualCtr: usual, expected, gap: expected - row.clicks }] : [];
       });
     }
     case "competing":
+      // Keyword cannibalisation, on Insights' rule since 20 November 2026 (`cannibalisationRule.ts`): searches for the
+      // website's own name and the home page left out, and a keyword listed only when two or more of its pages each took
+      // at least 1 in 10 of its impressions. The shares are of those impressions, the most shown first.
       return rows.flatMap((row) => {
-        const pages = context.pages?.get(row.key) ?? [];
+        if (row.brand === true) return [];
+        const { pages, shown } = splitPagesOf(context.pages?.get(row.key) ?? []);
         if (pages.length < 2) return [];
-        const clicks = pages.reduce((sum, page) => sum + page.clicks, 0);
         return [{
           ...row,
           count: pages.length,
           top: pages[0].page,
-          topShare: clicks > 0 ? pages[0].clicks / clicks : null,
+          topShare: pages[0].impressions / shown,
           next: pages[1].page,
-          nextShare: clicks > 0 ? pages[1].clicks / clicks : null,
+          nextShare: pages[1].impressions / shown,
+          swaps: context.swaps ? context.swaps.get(row.key) ?? 0 : null,
         }];
       });
-    case "moves":
-      return rows.filter((row) => row.change !== null && row.change !== 0);
     case "volatility":
       return rows.filter((row) => row.positionChange !== null);
-    case "missed": {
-      if (context.missedList === "untracked") return rows.filter((row) => !row.tracked);
-      const shown = new Map(rows.map((row) => [context.textOf ? context.textOf(row.key) : row.key, row]));
-      return (context.sitesKeywords ?? []).flatMap((keyword) => {
-        if (keyword.volume < context.rules.searchedALot) return [];
-        const row = shown.get(keyword.keyword);
-        if (row && row.impressions >= context.rules.barelyShown) return [];
-        return [row
-          ? { ...row, volume: keyword.volume, kind: row.kind ?? keyword.kind }
-          : { ...emptyRow(keyword.keyword), volume: keyword.volume, kind: keyword.kind, tracked: context.tracked?.has(keyword.keyword) ?? false }];
-      });
-    }
     case "estimates":
       return rows.flatMap((row) => {
         if (row.estimate === null) return [];
@@ -420,7 +404,6 @@ export type Filters = {
   /** An intent or a page type, as Sites words them. */
   kind?: string;
   brand?: "yes" | "no";
-  move?: "win" | "loss";
   /** Volatility: keywords whose position rose, or fell. */
   way?: "up" | "down";
   verdict?: Verdict;
@@ -436,7 +419,6 @@ export function filterRows(rows: readonly ListRow[], filters: Filters, textOf?: 
     // A row Sites has not judged reads as "Not judged yet", as the Types bars count it.
     && (!filters.kind || (row.kind ?? "UNJUDGED") === filters.kind)
     && (!filters.brand || (filters.brand === "yes") === (row.brand === true))
-    && (!filters.move || (filters.move === "win" ? (row.change ?? 0) > 0 : (row.change ?? 0) < 0))
     && (!filters.way || (filters.way === "up" ? (row.positionChange ?? 0) > 0 : (row.positionChange ?? 0) < 0))
     && (!filters.verdict || row.verdict === filters.verdict));
 }
@@ -459,13 +441,13 @@ export type Summary = {
   /**
    * The listed rows' clicks in the days before; null when those days are not
    * held. A row not shown then counts none; a row shown only then counts only
-   * where the page's rule lists it (Wins and losses' gone, a tracked list's).
+   * where the page's rule lists it (a tracked list's).
    */
   previousClicks: number | null;
   /** Google's average position over the listed rows, weighted by impressions as Google's own; null when none was shown. */
   position: number | null;
   tracked: number;
-  /** Wins and losses. */
+  /** The listed keywords whose clicks rose, and fell, and by how many clicks between them. */
   gaining: number;
   losing: number;
   gained: number;
@@ -524,7 +506,61 @@ export type Summary = {
   pageMovers?: { up: MovedPage | null; down: MovedPage | null } | null;
   /** A tracked list's own figures over every row it tracks (`trackedListOf`): Tracked keywords' and Tracked pages' boxes and eye. */
   trackedList?: TrackedList;
+  /** Shown but not clicked's own figures over the whole list (`lowCtrOf`): its chart, boxes and eye. */
+  lowCtr?: LowCtrFigures;
+  /** Keyword cannibalisation's own figures over the whole list (`cannibalisationOf`): its eye and Ask Hakken. */
+  cannibalisation?: CannibalisationFigures;
 };
+
+/** A keyword two pages share, as Keyword cannibalisation's eye names it: its key as the list keeps it until the read names it. */
+export type SharedKeyword = { key: string; impressions: number; clicks: number; count: number; topShare: number; nextShare: number; swaps: number | null };
+export type CannibalisationFigures = {
+  /** The keyword shown most. */
+  busiest: SharedKeyword | null;
+  /** Of the `CLOSEST_AMONG` shown most, the one whose top two pages' shares are closest. */
+  closest: SharedKeyword | null;
+  /** Of the `SWAPPED_AMONG` shown most, the one Google swapped pages for most; null where Swaps weren't counted. */
+  mostSwapped: SharedKeyword | null;
+  /** Of the `CLOSEST_AMONG` shown most, the one with most pages competing for it, and the pages a keyword has on average. */
+  crowded: SharedKeyword | null;
+  averagePages: number | null;
+  /** Keywords Google swapped pages for at least once, and the average swaps; null where Swaps weren't counted. */
+  swapped: number | null;
+  averageSwaps: number | null;
+};
+
+/** The busiest keywords the eye picks among, so a keyword shown a handful of times is never its example. */
+export const CLOSEST_AMONG = 20;
+export const SWAPPED_AMONG = 50;
+
+/**
+ * Keyword cannibalisation's figures over every keyword it lists (20 November 2026): the busiest, the closest split among
+ * the busiest, and the most swapped among the busiest, with how many were swapped at all. Plain code, read by both paths.
+ */
+export function cannibalisationOf(rows: Iterable<{ key: string; impressions: number; clicks: number; count: number | null; topShare: number | null; nextShare: number | null; swaps?: number | null }>): CannibalisationFigures {
+  const shared: SharedKeyword[] = [];
+  for (const row of rows) {
+    if (row.count === null || row.topShare === null || row.nextShare === null) continue;
+    shared.push({ key: row.key, impressions: row.impressions, clicks: row.clicks, count: row.count, topShare: row.topShare, nextShare: row.nextShare, swaps: row.swaps ?? null });
+  }
+  const byShown = [...shared].sort((left, right) => right.impressions - left.impressions || right.clicks - left.clicks || compareTermsQuickly(left.key, right.key));
+  const gap = (row: SharedKeyword) => row.topShare - row.nextShare;
+  const closest = byShown.slice(0, CLOSEST_AMONG).reduce<SharedKeyword | null>((best, row) => (best === null || gap(row) < gap(best) ? row : best), null);
+  const counted = shared.length > 0 && shared.every((row) => row.swaps !== null);
+  const mostSwapped = counted
+    ? byShown.slice(0, SWAPPED_AMONG).reduce<SharedKeyword | null>((best, row) => ((row.swaps ?? 0) > 0 && (best === null || (row.swaps ?? 0) > (best.swaps ?? 0)) ? row : best), null)
+    : null;
+  const crowded = byShown.slice(0, CLOSEST_AMONG).reduce<SharedKeyword | null>((best, row) => (best === null || row.count > best.count ? row : best), null);
+  return {
+    busiest: byShown[0] ?? null,
+    closest,
+    mostSwapped,
+    crowded,
+    averagePages: shared.length > 0 ? shared.reduce((sum, row) => sum + row.count, 0) / shared.length : null,
+    swapped: counted ? shared.filter((row) => (row.swaps ?? 0) > 0).length : null,
+    averageSwaps: counted ? shared.reduce((sum, row) => sum + (row.swaps ?? 0), 0) / shared.length : null,
+  };
+}
 
 /** A tracked row that moved: its clicks and place now and before, by its key as the list keeps it until the read names it. */
 export type TrackedMove = { key: string; clicks: number; previousClicks: number; position: number | null; previousPosition: number | null; title?: string };
@@ -754,6 +790,10 @@ export function summarise(
     wholeList?: boolean;
     /** A tracked list: its own figures over every row it tracks (`Summary.trackedList`). */
     trackedList?: boolean;
+    /** Shown but not clicked: its pages at each position on Google, and the pages short by most clicks (`Summary.lowCtr`). */
+    lowCtrList?: boolean;
+    /** Keyword cannibalisation's own figures (`cannibalisationOf`). */
+    competingList?: boolean;
   },
 ): Summary {
   const bands = emptyBands();
@@ -818,6 +858,8 @@ export function summarise(
     summary.pageMovers = before ? pageMoversOf(listed) : null;
   }
   if (context.trackedList) summary.trackedList = trackedListOf(listed, before !== null);
+  if (context.lowCtrList) summary.lowCtr = lowCtrOf(listed, all, context.curve ?? []);
+  if (context.competingList) summary.cannibalisation = cannibalisationOf(listed);
   if (context.splitList) {
     summary.beforeTotals = before ? beforeTotalsOf(before) : null;
     summary.clickedRows = listed.filter((row) => row.clicks > 0).length;
@@ -825,7 +867,8 @@ export function summarise(
   }
   if (context.pages) {
     const pages = new Set<string>();
-    for (const row of listed) for (const page of context.pages.get(row.key) ?? []) pages.add(page.page);
+    // The pages that split a listed keyword, by the rule: never a page shown once beside it.
+    for (const row of listed) for (const page of splitPagesOf(context.pages.get(row.key) ?? []).pages) pages.add(page.page);
     summary.pagesInvolved = pages.size;
     summary.pagesShown = context.pagesShown ?? pagesIn(context.pages);
   }
@@ -834,6 +877,43 @@ export function summarise(
     if (context.wholeList) summary.wholeList = listSeesOf(listed, before);
   }
   return summary;
+}
+
+/** Shown but not clicked's pages the eye names: the most clicks short first. */
+export const LOW_CTR_TOP = 3;
+
+/** A position on Google, 1 at the top: its pages that got few clicks, their clicks and the clicks they'd usually get, and every page there. */
+export type LowCtrPosition = { position: number; pages: number; clicks: number; expected: number; all: number };
+
+/** A page short by many clicks, as the eye names it: its title where the website has one. */
+export type LowCtrPage = { key: string; clicks: number; expected: number; impressions: number; position: number; title?: string };
+
+export type LowCtrFigures = { positions: LowCtrPosition[]; top: LowCtrPage[] };
+
+/**
+ * Shown but not clicked's own figures (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md), over the whole list
+ * and never only the rows on screen: at each position its usual click rate is worked out for (1 to 20), the pages that got
+ * fewer clicks than the website usually gets there, their clicks and the clicks they'd usually get, beside every page Google
+ * showed there; and the pages short by most clicks. A position is the page's average, rounded, as the rule reads it.
+ */
+export function lowCtrOf(listed: readonly ListRow[], all: readonly ListRow[], curve: readonly CurvePoint[]): LowCtrFigures {
+  const at = new Map<number, LowCtrPosition>(curve.map((point) => [point.position, { position: point.position, pages: 0, clicks: 0, expected: 0, all: 0 }]));
+  for (const row of all) if (row.impressions > 0) {
+    const position = at.get(Math.round(row.position));
+    if (position) position.all += 1;
+  }
+  for (const row of listed) {
+    const position = at.get(Math.round(row.position));
+    if (!position) continue;
+    position.pages += 1;
+    position.clicks += row.clicks;
+    position.expected += row.expected ?? 0;
+  }
+  const top = [...listed]
+    .sort((left, right) => (right.gap ?? 0) - (left.gap ?? 0) || right.impressions - left.impressions || (left.key < right.key ? -1 : 1))
+    .slice(0, LOW_CTR_TOP)
+    .map((row) => ({ key: row.key, clicks: row.clicks, expected: row.expected ?? 0, impressions: row.impressions, position: row.position }));
+  return { positions: [...at.values()].sort((left, right) => left.position - right.position), top };
 }
 
 /** The whole list's figures for What Hakken sees (`Summary.wholeList`), in one pass over its rows and the span before's. */

@@ -1,0 +1,341 @@
+// Three ways to draw Search Console → Keyword cannibalisation (Pages competing until 20 November 2026), keyword first, on
+// Insights' rule, from the app's real parts, on More Handles' real figures: the United Kingdom, web results, October 2026
+// (Last month). A keyword counts when two or more pages each took at least 1 in 10 of its impressions, the home page and
+// searches for the website's name left out (convex/utils/insightCompeting.ts). Nothing here is built.
+import { useMemo, useState, type ReactNode } from "react";
+import { GitFork } from "lucide-react";
+import DATA from "../data/board-slim.json";
+import TITLES from "../data/titles2.json";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
+import { HundredStrips, type StripSegment } from "@/src/ui/components/screens/HundredStrips";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { tickColumn, type TableTicks } from "@/src/ui/components/screens/TableTicks";
+import { outOfTotal } from "@/convex/utils/outOfTotal";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { formatNumber, toCsv } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+import { SITE_SERIES_COLOURS } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
+import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
+import { useSitePager } from "@/src/app/(dashboard)/app/sites/_components/useSitePagedTable";
+import { useSiteSearch } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
+import { useSiteSortedList, type SiteSortColumns } from "@/src/app/(dashboard)/app/sites/_components/useSiteSort";
+import { SiteViewSwitch } from "@/src/app/(dashboard)/app/sites/_components/SiteViewSwitch";
+import { keywordColumn, SearchConsoleChips, type ChipId } from "@/src/app/(dashboard)/app/search-console/_components/SearchConsoleTables";
+import { shortPageName } from "@/src/app/(dashboard)/app/search-console/_components/searchConsoleRecords";
+
+const HOST = "morehandles.co.uk";
+const SITE = `https://www.${HOST}`;
+const fmt = formatNumber;
+const oneDecimal = (value: number) => value.toLocaleString("en-GB", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+// ——— The figures ———
+
+type Totals = { pagesShown: number; split: number; splitShown: number; splitClicks: number; shown250: number; groups: number; bothOff: number };
+type GroupPage = { path: string; shown: number; clicks: number; searches: number };
+type Group = { name: string; split: number; shared: number; shown: number; clicks: number; pages: GroupPage[] };
+type Keyword = { key: string; pages: number; shown: number; clicks: number; changes: number; position: number | null; share: [number, number] };
+type KeywordPage = { path: string; shown: number; clicks: number; position: number | null; others?: number };
+type Line = { path: string; position: number | null; points: Array<{ day: string; shown: number; posSum: number }> };
+const BOARD = DATA as unknown as { totals: Totals; groups: Group[]; keywords: Keyword[]; kwPages: Record<string, KeywordPage[]>; series: Record<string, Line[]>; days: string[] };
+const T = BOARD.totals;
+const titles = TITLES as Record<string, string>;
+const nameOf = (path: string) => shortPageName(titles[SITE + path], SITE + path, HOST, "Home page");
+
+/** One row ticked at a time: ticking another takes its place. */
+function useOneTick(first: string): TableTicks {
+  const [keys, setKeys] = useState<string[]>([first]);
+  return { keys, set: (next) => setKeys(next.slice(-1)), most: Number.POSITIVE_INFINITY, limit: "" };
+}
+
+// ——— Shared pieces ———
+
+const quiet = (words: string) => <span className="text-secondary">{words}</span>;
+
+function Boxes() {
+  return (
+    <FigureRow>
+      <Figure label="Keywords two pages share" value={fmt(T.split)} detail={quiet("Each page got at least 1 in 10 impressions")} />
+      <Figure label="Neither page in Google's top 10" value={fmt(T.bothOff)} detail={quiet(`Out of those ${fmt(T.split)} keywords`)} />
+      <Figure label="Times Google showed them" value={fmt(T.splitShown)} detail={quiet(`${fmt(T.shown250)} keywords shown 250 times or more`)} />
+      <Figure label="Clicks they got" value={fmt(T.splitClicks)} detail={quiet("Your home page and searches for your name are left out")} />
+    </FigureRow>
+  );
+}
+
+function Page({ children }: { children: ReactNode }) {
+  const [result, setResult] = useState<"web" | "news">("web");
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        icon={<GitFork className="h-5 w-5 text-brand" />}
+        title="Keyword cannibalisation"
+        description="Keywords that Google shows two or more of your pages for. One strong page usually does better than two."
+      />
+      <SiteViewSwitch label="Kind of result" options={[{ value: "web", label: "Web" }, { value: "news", label: "News" }]} value={result} onChange={setResult} />
+      <Boxes />
+      {children}
+    </div>
+  );
+}
+
+const number = (value: number) => <span className="font-mono text-[12px] text-secondary">{fmt(value)}</span>;
+const strong = (value: number) => <span className="font-mono text-[12px] text-foreground">{fmt(value)}</span>;
+const plain = (words: string) => <span className="font-mono text-[12px] text-secondary">{words}</span>;
+const heading = (words: string, hover: string) => <span title={hover}>{words}</span>;
+
+/** A list's table, lean: one line a row, sorted by its headings, searched by its name. */
+function LeanTable<Row extends { key: string }>({ rows, noun, columns, sorts, opening, chips, placeholder, file }: {
+  rows: readonly Row[];
+  noun: "pages" | "keywords";
+  columns: DataTableColumn<Row>[];
+  sorts: SiteSortColumns<Row, string>;
+  opening: string;
+  chips: readonly ChipId[];
+  placeholder: string;
+  file: { header: string; value: (row: Row) => string | number }[];
+}) {
+  const [search, setSearch, term] = useSiteSearch();
+  const matches = wordStartMatcher(term.toLowerCase());
+  const matching = useMemo(() => (matches ? rows.filter((row) => matches(row.key.toLowerCase())) : [...rows]), [rows, matches]);
+  const order = useSiteSortedList(matching, sorts, { opening, name: (row) => row.key });
+  const pages = useSitePager(order.rows);
+  return (
+    <DataTable
+      rows={pages.pageRows}
+      rowKey={(row) => row.key}
+      search={{ value: search, onChange: setSearch, placeholder }}
+      filters={chips.length > 0 ? <SearchConsoleChips chips={chips} /> : undefined}
+      cardHeader={<TableBar footer={pages.footer} noun={noun} actions={<ListDownload label="Download all (CSV)" fileName={`${HOST}-search-console-keyword-cannibalisation`} rows={order.rows} columns={file} />} />}
+      sort={order.tableSort}
+      empty={{ icon: <GitFork className="h-8 w-8 text-muted/30" />, label: "Nothing matches that search." }}
+      footer={pages.footer}
+      columns={columns}
+    />
+  );
+}
+
+/** Every keyword two pages share: Way 1 with each one's share, Way 3 with its swaps and a tick to draw it. */
+function KeywordsTable({ ticks, show }: { ticks?: TableTicks; show: "share" | "swaps" }) {
+  const columns: DataTableColumn<Keyword>[] = [
+    ...(ticks ? [tickColumn<Keyword>(ticks, { rowKey: (row) => row.key, label: (row) => `Draw ${row.key} on the chart`, heading: "On the chart" })] : []),
+    keywordColumn<Keyword>("Keyword", () => "#") as unknown as DataTableColumn<Keyword>,
+    { key: "pages", header: heading("Pages", "Your pages that got at least 1 in 10 of its impressions"), align: "right", sortable: true, cell: (row) => strong(row.pages) },
+    show === "share"
+      ? { key: "share", header: heading("Share", "Out of every 100 impressions, how many its top two pages got"), align: "right", sortable: true, cell: (row) => plain(`${row.share[0]} / ${row.share[1]}`) }
+      : { key: "changes", header: heading("Swaps", "Days Google swapped the page it showed most"), align: "right", sortable: true, cell: (row) => strong(row.changes) },
+    { key: "shown", header: heading("Shown", "Impressions"), align: "right", sortable: true, cell: (row) => number(row.shown) },
+    { key: "clicks", header: "Clicks", align: "right", sortable: true, cell: (row) => number(row.clicks) },
+    { key: "position", header: heading("Position", "Its average position in Google"), align: "right", sortable: true, cell: (row) => plain(row.position === null ? "–" : oneDecimal(row.position)) },
+  ];
+  const sorts: SiteSortColumns<Keyword, string> = {
+    key: { value: (row) => row.key, first: "asc" },
+    pages: { value: (row) => row.pages, first: "desc" },
+    share: { value: (row) => row.share[1], first: "desc" },
+    changes: { value: (row) => row.changes, first: "desc" },
+    shown: { value: (row) => row.shown, first: "desc" },
+    clicks: { value: (row) => row.clicks, first: "desc" },
+    position: { value: (row) => row.position, first: "asc" },
+  };
+  return (
+    <LeanTable rows={BOARD.keywords} noun="keywords" columns={columns} sorts={sorts} opening="shown" chips={["intent", "band"]} placeholder="Search keywords…"
+      file={[
+        { header: "Keyword", value: (row) => row.key }, { header: "Pages", value: (row) => row.pages },
+        { header: "Top page, out of 100 impressions", value: (row) => row.share[0] }, { header: "Next page, out of 100 impressions", value: (row) => row.share[1] },
+        { header: "Days Google swapped pages", value: (row) => row.changes }, { header: "Impressions", value: (row) => row.shown },
+        { header: "Clicks", value: (row) => row.clicks }, { header: "Position", value: (row) => row.position ?? "" },
+      ]} />
+  );
+}
+
+// ——— Way 1 · the keywords, and which page Google showed ———
+
+const KEYWORD_BARS = 10;
+
+function KeywordsCard() {
+  const [order, setOrder] = useState<"shown" | "clicks">("shown");
+  const top = BOARD.keywords.filter((one) => BOARD.kwPages[one.key])
+    .sort((x, y) => (order === "shown" ? y.shown - x.shown || y.clicks - x.clicks : y.clicks - x.clicks || y.shown - x.shown)).slice(0, KEYWORD_BARS);
+  const rows = top.map((one) => {
+    const pages = BOARD.kwPages[one.key];
+    const [first, second, ...rest] = pages;
+    const [a, b, c] = outOfTotal([first?.shown ?? 0, second?.shown ?? 0, rest.reduce((sum, page) => sum + page.shown, 0)]);
+    return { label: one.key, first: a, second: b, others: c, pages };
+  });
+  const series = [
+    { key: "first", name: "The page Google showed most", colour: SITE_SERIES_COLOURS[0] },
+    { key: "second", name: "The next page", colour: SITE_SERIES_COLOURS[1] },
+    { key: "others", name: "Your other pages", colour: SITE_SERIES_COLOURS[2] },
+  ];
+  return (
+    <BarsCard
+      title="Which of your pages Google showed for each keyword"
+      hint="Each bar is a keyword. It shows which of your pages Google showed, out of every 100 impressions. The closer two pages are to 50 each, the more they compete."
+      exportName={`${HOST}-search-console-keyword-cannibalisation`}
+      csvHeading="Keyword"
+      csv={() => toCsv(["Keyword", "Page", "Impressions", "Clicks", "Position"], top.flatMap((one) => BOARD.kwPages[one.key].map((page) => [one.key, page.path ? SITE + page.path : "Other pages", page.shown, page.clicks, page.position ?? ""])))}
+      host={HOST}
+      waiting={null}
+      controls={[{
+        kind: "select", key: "show", label: "Show", value: order,
+        options: [{ value: "shown", label: "Most impressions" }, { value: "clicks", label: "Most clicks" }],
+        onChange: (next) => setOrder(next as "shown" | "clicks"),
+      }]}
+      rows={rows}
+      series={series}
+      figure="Out of 100"
+      stacked
+      labels={(value) => (value >= 6 ? String(value) : null)}
+      readout={({ row, heading: title }) => {
+        const pages = (row as unknown as { pages: KeywordPage[] }).pages;
+        return {
+          heading: title,
+          columns: [{ key: "shown", label: "Shown" }, { key: "position", label: "Position" }, { key: "clicks", label: "Clicks" }],
+          rows: pages.map((page, at) => ({
+            key: page.path || "others",
+            name: page.path ? nameOf(page.path) : `${page.others} other pages`,
+            colour: SITE_SERIES_COLOURS[Math.min(at, 2)],
+            cells: { shown: { text: fmt(page.shown) }, position: { text: page.position === null ? "–" : oneDecimal(page.position) }, clicks: { text: fmt(page.clicks) } },
+          })),
+        };
+      }}
+      anything
+      empty="No two pages shared a keyword in these dates."
+    />
+  );
+}
+
+function KeywordsWay() {
+  return (
+    <Page>
+      <KeywordsCard />
+      <KeywordsTable show="share" />
+    </Page>
+  );
+}
+
+// ——— Way 2 · groups of pages, as Insights finds them ———
+
+function GroupsCard({ group }: { group: Group }) {
+  const [lit, setLit] = useState<string | null>(null);
+  const top = outOfTotal(group.pages.map((page) => page.shown));
+  const bottom = outOfTotal(group.pages.map((page) => page.clicks));
+  const segments: StripSegment[] = group.pages.map((page, at) => ({
+    key: page.path,
+    name: nameOf(page.path),
+    top: top[at] ?? 0,
+    bottom: bottom[at] ?? 0,
+    colour: SITE_SERIES_COLOURS[at % SITE_SERIES_COLOURS.length],
+    readout: [
+      { value: fmt(page.shown), label: "Impressions" },
+      { value: `${top[at] ?? 0} in 100`, label: "Of the impressions" },
+      { value: fmt(page.clicks), label: "Clicks" },
+      { value: `${bottom[at] ?? 0} in 100`, label: "Of the clicks" },
+      { value: fmt(page.searches), label: "Keywords" },
+    ],
+  }));
+  return (
+    <MapCard
+      title={`Which page Google shows for ${group.name}, and which gets clicked`}
+      hint="Tick a group in the table to draw it here. The top row is where 100 impressions went. The bottom row is where 100 clicks went. Press one to keep it lit."
+      exportName={`${HOST}-search-console-keyword-cannibalisation-group`}
+      csv={() => toCsv(["Page", "Impressions", "Clicks", "Keywords"], group.pages.map((page) => [SITE + page.path, page.shown, page.clicks, page.searches]))}
+      host={HOST}
+    >
+      <HundredStrips segments={segments} topLabel="Out of every 100 impressions" bottomLabel="Out of every 100 clicks" lit={lit} onLit={setLit} />
+    </MapCard>
+  );
+}
+
+type GroupRow = { key: string; pages: number; split: number; shown: number; clicks: number };
+const GROUP_ROWS: GroupRow[] = BOARD.groups.map((group) => ({ key: group.name, pages: group.pages.length, split: group.split, shown: group.shown, clicks: group.clicks }));
+
+function GroupsTable({ ticks }: { ticks: TableTicks }) {
+  const columns: DataTableColumn<GroupRow>[] = [
+    tickColumn<GroupRow>(ticks, { rowKey: (row) => row.key, label: (row) => `Draw ${row.key} on the chart`, heading: "On the chart" }),
+    { ...(keywordColumn<GroupRow>("Group", () => "#") as unknown as DataTableColumn<GroupRow>), header: heading("Group", "Named after the keyword Google showed them for most") },
+    { key: "split", header: heading("Keywords", "Keywords two of its pages share"), align: "right", sortable: true, cell: (row) => strong(row.split) },
+    { key: "pages", header: heading("Pages", "Your pages in the group"), align: "right", sortable: true, cell: (row) => number(row.pages) },
+    { key: "shown", header: heading("Shown", "Impressions"), align: "right", sortable: true, cell: (row) => number(row.shown) },
+    { key: "clicks", header: "Clicks", align: "right", sortable: true, cell: (row) => number(row.clicks) },
+  ];
+  const sorts: SiteSortColumns<GroupRow, string> = {
+    key: { value: (row) => row.key, first: "asc" },
+    split: { value: (row) => row.split, first: "desc" },
+    pages: { value: (row) => row.pages, first: "desc" },
+    shown: { value: (row) => row.shown, first: "desc" },
+    clicks: { value: (row) => row.clicks, first: "desc" },
+  };
+  return (
+    <LeanTable rows={GROUP_ROWS} noun="pages" columns={columns} sorts={sorts} opening="shown" chips={[]} placeholder="Search groups…"
+      file={[{ header: "Group", value: (row) => row.key }, { header: "Keywords", value: (row) => row.split }, { header: "Pages", value: (row) => row.pages }, { header: "Impressions", value: (row) => row.shown }, { header: "Clicks", value: (row) => row.clicks }]} />
+  );
+}
+
+function GroupsWay() {
+  const ticks = useOneTick("tubular latch");
+  const group = BOARD.groups.find((one) => one.name === ticks.keys[0]) ?? BOARD.groups[0];
+  return (
+    <Page>
+      <GroupsCard group={group} />
+      <GroupsTable ticks={ticks} />
+    </Page>
+  );
+}
+
+// ——— Way 3 · Google swapping pages, day by day ———
+
+function SwapsCard({ keyword }: { keyword: string }) {
+  const [show, setShow] = useState<"shown" | "position">("shown");
+  // The pages it competed with: every page Google showed for it, chosen in the chart's own menu.
+  const held = BOARD.series[keyword] ?? [];
+  const [pages, setPages] = useState<string[]>(held.map((line) => line.path));
+  const lines: DaysLine[] = held.map((line, at) => ({ line, at })).filter(({ line }) => pages.includes(line.path)).map(({ line, at }) => {
+    const shown = line.points.map((point) => ({ day: point.day, value: point.shown }));
+    return {
+      key: line.path,
+      name: nameOf(line.path),
+      colour: SITE_SERIES_COLOURS[at % SITE_SERIES_COLOURS.length],
+      ...(show === "shown" ? { points: shown } : { points: line.points.map((point) => ({ day: point.day, value: point.posSum })), per: shown, perScale: 1 }),
+    };
+  });
+  const one = BOARD.keywords.find((entry) => entry.key === keyword);
+  return (
+    <DaysChart
+      title={`Which page Google showed for ${keyword} each day`}
+      hint={`Tick a keyword in the table to draw its pages here. When the lines cross, Google swapped one page for the other.${one ? ` That happened on ${one.changes} days in October.` : ""}${show === "position" ? " Position 1 is the top of Google." : ""}`}
+      exportName={`${HOST}-search-console-keyword-cannibalisation-days`}
+      csvDay="Day"
+      host={HOST}
+      step="day"
+      waiting={null}
+      controls={[
+        { kind: "ticks", key: "pages", label: "Pages", everyWord: "Every page", choices: held.map((line) => ({ key: line.path, label: nameOf(line.path) })), ticked: pages, onChange: setPages },
+        { kind: "select", key: "show", label: "Show", value: show, options: [{ value: "shown", label: "Impressions" }, { value: "position", label: "Position" }], onChange: (next) => setShow(next as "shown" | "position") },
+      ]}
+      nothingTicked={pages.length === 0 ? "Tick a page in the Pages menu to draw it here." : null}
+      lines={lines}
+      figure={show === "shown" ? "Impressions" : "Position"}
+      plain={show === "shown"}
+      format={show === "shown" ? formatNumber : oneDecimal}
+      anything={() => lines.length > 0}
+      empty="No two pages shared this keyword in these dates."
+      height={300}
+    />
+  );
+}
+
+function SwapsWay() {
+  const ticks = useOneTick("black cabinet handles");
+  return (
+    <Page>
+      <SwapsCard key={ticks.keys[0]} keyword={ticks.keys[0] ?? "black cabinet handles"} />
+      <KeywordsTable ticks={ticks} show="swaps" />
+    </Page>
+  );
+}
+
+export const WAYS: Record<string, () => ReactNode> = { W1: KeywordsWay, W2: GroupsWay, W3: SwapsWay };

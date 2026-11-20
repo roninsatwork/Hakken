@@ -162,13 +162,27 @@ showed it.
 ## Changes and opportunities
 
 The section groups changes separately from the main figures. Position bands,
-new and lost results, wins and losses, volatility and Google updates offer
-different views of movement. Use them to decide what to inspect, then follow
+new and lost results, volatility and Google updates offer different views of
+movement. To see which keywords gained or lost the most clicks, sort Keywords
+by Up or down. Volatility's chart can show its score and two parts that add
+up to it: Positions improved, how far the keywords that climbed moved, and
+Positions declined, how far the ones that fell moved. Pick the lines in its
+Show menu. On long dates the two parts start later than the score, because they are worked out from the days
+kept day by day, and the chart says the day they start. Use them to decide what to inspect, then follow
 the relevant search or page. A result moving between bands is a descriptive
 change; it does not by itself establish the cause or commercial value.
 
-The opportunity routes include Almost there, Shown but not clicked, demand
-and competing-page views. Their usefulness depends on the source data and
+The opportunity routes include Low click rate and Keyword
+cannibalisation (called Pages competing until 20 November 2026). Keyword
+cannibalisation lists the keywords two or more of your pages each get at
+least 1 in 10 of the impressions of, leaving out your home page and searches
+for your name. Tick a keyword to see which page Google showed each day.
+Swaps counts the days Google changed the page it showed most, for a month
+or less. To find searches people make that you aren't found for yet, use
+Keyword research. Low click rate lists pages Google shows a lot
+that people rarely click, in the country chosen. Each page sits beside the
+clicks your website usually gets at the same position in Google's results. To see the keywords just below Google's top three,
+open Position bands and choose 4–10 or 11–20. Their usefulness depends on the source data and
 current collection. A search with impressions but few clicks can raise a
 question about relevance or presentation; it does not prove that rewriting
 a title will produce a particular number of leads. Two pages appearing for

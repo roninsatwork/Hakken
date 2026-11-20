@@ -290,6 +290,7 @@ async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
   // What stopped the step, set inside the asks below: held in an object, so it is read as set.
   const halt: { failure: GoogleFailure | null } = { failure: null };
   const seen = new Map<string, { first: string; last: string }>();
+  const seenPages = new Map<string, { first: string; last: string }>();
   // A day's clicks named by a search, for each kind asked (pairs only), noted once the step's asks are in.
   const named: Array<{ day: string; type: SearchType; clicks: number }> = [];
   const asks = days.flatMap(({ day, types }) => types.map((type) => ({ day, type })));
@@ -312,15 +313,20 @@ async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
   const write = async (day: string, type: SearchType, rows: readonly AnalyticsRow[]) => {
     const lines = fromGoogle(rows, list === "pair");
     if (list === "pair") named.push({ day, type, clicks: lines.reduce((sum, row) => sum + row.clicks, 0) });
-    // New and lost is kept for web search: its searches from the pairs, its pages from the page list.
-    if (type === "web") {
-      for (const row of lines) {
-        const was = seen.get(row.key);
-        if (!was) seen.set(row.key, { first: day, last: day });
+    // New and lost is kept for web search, in the country's own search-and-page lines: its searches and their pages.
+    // Never the page list, which is every country's (search-console-new-and-lost-audit-2026-11-19.md).
+    if (type === "web" && list === "pair") {
+      const note = (into: Map<string, { first: string; last: string }>, key: string) => {
+        const was = into.get(key);
+        if (!was) into.set(key, { first: day, last: day });
         else {
           if (day < was.first) was.first = day;
           if (day > was.last) was.last = day;
         }
+      };
+      for (const row of lines) {
+        note(seen, row.key);
+        if (row.page) note(seenPages, row.page);
       }
     }
     const fetchedAt = Date.now();
@@ -354,12 +360,14 @@ async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
     }
   }));
 
-  // New and lost's register of pages, or of searches, widened by what came in: never narrowed.
-  const entries = [...seen].map(([key, span]) => ({ key, ...span }));
-  for (let start = 0; start < entries.length && !halt.failure; start += SEEN_CHUNK) {
-    await ctx.runMutation(internal.searchConsoleSync.noteSeen, {
-      connectionId, property, companyWebsiteId: state.companyWebsiteId, ...scope, searchType: "web", kind: list === "pair" ? "query" : "page", entries: entries.slice(start, start + SEEN_CHUNK),
-    });
+  // New and lost's register of searches and their pages, widened by what came in: never narrowed.
+  for (const [kind, held] of [["query", seen], ["page", seenPages]] as const) {
+    const entries = [...held].map(([key, span]) => ({ key, ...span }));
+    for (let start = 0; start < entries.length && !halt.failure; start += SEEN_CHUNK) {
+      await ctx.runMutation(internal.searchConsoleSync.noteSeen, {
+        connectionId, property, companyWebsiteId: state.companyWebsiteId, ...scope, searchType: "web", kind, entries: entries.slice(start, start + SEEN_CHUNK),
+      });
+    }
   }
   for (const one of named) {
     await ctx.runMutation(internal.searchConsolePageRefetch.noteNamedClicks, { companyWebsiteId: state.companyWebsiteId, ...scope, searchType: one.type, day: one.day, namedClicks: one.clicks });

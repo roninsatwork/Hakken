@@ -6,6 +6,9 @@ import { placesFindings } from "./searchConsolePlaces";
 import { indexingFindings, reasonFindings } from "./searchConsoleIndexing";
 import { demandFindings } from "./searchConsoleDemand";
 import { trackedFindings } from "./searchConsoleTracked";
+import { lowCtrFindings } from "./searchConsoleLowCtr";
+import { cannibalisationFindings } from "./searchConsoleCannibalisation";
+import { NEW_LOST_EYE_NEWEST } from "../../searchConsoleViews";
 
 /**
  * Search Console's pages with rules of their own (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6; Anthony,
@@ -537,14 +540,14 @@ function newLostFindings(data: Row): OwnFound[] {
   const placed = (counted: unknown) => (isRow(counted) ? Object.values(counted).reduce<number>((sum, value) => sum + (isNumber(value) ? value : 0), 0) : 0);
   const lostFirst = firstPage(bands.lost);
   if (lostFirst >= 10 && placed(bands.lost) > 0) {
-    const part = partOf("lostFirst", text(names, "lostFirstPage", "Lost from Google's first page"), "searchesLost", lostFirst, placed(bands.lost), 1.1 + Math.min(0.3, lostFirst / placed(bands.lost)));
-    part.facts.push({ key: "lostAll", value: lost, unit: "count", label: "searches lost in all; the share is of those whose place Google gave, of the newest read" });
+    const part = partOf("lostFirst", text(names, "lostFirstPage", "Lost from Google's first page"), "newestLost", lostFirst, placed(bands.lost), 1.1 + Math.min(0.3, lostFirst / placed(bands.lost)));
+    part.facts.push({ key: "lostAll", value: lost, unit: "count", label: `searches lost in all; the share is of the newest ${NEW_LOST_EYE_NEWEST.toLocaleString("en-GB")} lost whose place Google gave` });
     found.push(part);
   }
   const newFirst = firstPage(bands.new);
   if (newFirst >= 5 && placed(bands.new) > 0) {
-    const part = partOf("newFirst", text(names, "newFirstPage", "New on Google's first page"), "searchesGained", newFirst, placed(bands.new), 1.0 + Math.min(0.3, newFirst / placed(bands.new)));
-    part.facts.push({ key: "newAll", value: gained, unit: "count", label: "new searches in all; the share is of those whose place Google gave, of the newest read" });
+    const part = partOf("newFirst", text(names, "newFirstPage", "New on Google's first page"), "newestGained", newFirst, placed(bands.new), 1.0 + Math.min(0.3, newFirst / placed(bands.new)));
+    part.facts.push({ key: "newAll", value: gained, unit: "count", label: `new searches in all; the share is of the newest ${NEW_LOST_EYE_NEWEST.toLocaleString("en-GB")} new whose place Google gave` });
     found.push(part);
   }
   // The newest days, weeks or months against those before them inside the dates: searches lost, and new, each a day.
@@ -708,6 +711,18 @@ function volatilityFindings(data: Row): OwnFound[] {
   if (week && isNumber(week.now) && isNumber(week.before) && week.before > 0 && Math.abs(week.now - week.before) >= 0.2) {
     found.push(against("week", text(names, "last7", "The last 7 days"), "volatility", week.now, week.before, 1.1 + Math.min(0.4, Math.abs(Math.log(week.now / week.before))), text(names, "week7Before", "The 7 days before")));
   }
+  // Positions declined against Positions improved over the dates chosen (2026-11-20): did the places mostly fall, or mostly climb? The two add up to
+  // the score, so a period with them is said only as both. Periods built before them carry neither and are left out.
+  const parts = rowsOf(data.chart).filter((row) => isNumber(row.volatilityUp) && isNumber(row.volatilityDown));
+  if (parts.length >= 3) {
+    const meanOf = (key: "volatilityUp" | "volatilityDown") => parts.reduce((sum, row) => sum + (row[key] as number), 0) / parts.length;
+    const [up, down] = [meanOf("volatilityUp"), meanOf("volatilityDown")];
+    if (up + down > 0 && Math.abs(down - up) >= 0.2) {
+      found.push(against("parts", text(names, "down", "Positions declined"), "volatility", down, up, 1.0 + Math.min(0.4, Math.abs(down - up) / (up + down)), text(names, "up", "Positions improved"), {
+        facts: [{ key: "periods", value: parts.length, unit: "count", label: "points on the chart with Positions improved and Positions declined, averaged" }],
+      }));
+    }
+  }
   // Times shown against clicks over the same 7 days: is it demand, or is it the places?
   const clicks = isRow(facts.clicks) ? facts.clicks : null;
   const shown = isRow(facts.impressions) ? facts.impressions : null;
@@ -757,4 +772,8 @@ export const SEARCH_CONSOLE_OWN: Readonly<Record<string, { general: boolean; fin
   // Tracked keywords and Tracked pages since 18 November 2026 (search-console-tracked-way-1-plan-2026-11-18.md).
   "searchConsole.trackedKeywords": { general: false, find: trackedFindings("keywords") },
   "searchConsole.trackedPages": { general: false, find: trackedFindings("pages") },
+  // Shown but not clicked since 20 November 2026 (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
+  "searchConsole.lowCtr": { general: false, find: lowCtrFindings },
+  // Keyword cannibalisation (Pages competing until 20 November 2026; search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
+  "searchConsole.competing": { general: false, find: cannibalisationFindings },
 };

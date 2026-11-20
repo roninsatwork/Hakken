@@ -1,0 +1,576 @@
+// Three ways to draw Search Console → Position bands, from the app's real parts, on More Handles' real figures: the United
+// Kingdom, web results, 18 August to 17 November 2026 against the 3 months before. Nothing here is built.
+import { useMemo, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { BarChart3 } from "lucide-react";
+import DATA from "../data/board.json";
+import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { Change, ChangeLine } from "@/src/ui/components/screens/Change";
+import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
+import { MapCard } from "@/src/ui/components/screens/MapCard";
+import { HundredStrips, type StripSegment } from "@/src/ui/components/screens/HundredStrips";
+import { ChangeBars, type ChangeBar } from "@/src/ui/components/screens/ChangeBars";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { CHART_COMPARATOR_GREY, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
+import { MirrorBars, MoveFlow, ShiftLines, type Flow, type FlowGroup, type MirrorBar, type MirrorZone, type ShiftRow, type ShiftZone } from "./parts";
+import { outOfTotal } from "@/convex/utils/outOfTotal";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { formatNumber, formatShortDay, toCsv } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+import { datedRow } from "@/src/app/(dashboard)/app/sites/_components/datedRows";
+import { SITE_SERIES_COLOURS, SiteBarChart } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
+import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
+import { useSitePager } from "@/src/app/(dashboard)/app/sites/_components/useSitePagedTable";
+import { useSiteSearch } from "@/src/app/(dashboard)/app/sites/_components/useSiteParam";
+import { useSiteSortedList, type SiteSortColumns } from "@/src/app/(dashboard)/app/sites/_components/useSiteSort";
+import { SiteViewSwitch } from "@/src/app/(dashboard)/app/sites/_components/SiteViewSwitch";
+import { SearchConsoleChartCard, useSeriesTicks } from "@/src/app/(dashboard)/app/search-console/_components/SearchConsoleChartCard";
+import { figureColumns, keywordColumn, SearchConsoleChips, type ListRow } from "@/src/app/(dashboard)/app/search-console/_components/SearchConsoleTables";
+import { formatPosition } from "@/src/app/(dashboard)/app/search-console/_components/searchConsoleFormat";
+
+export const SITE = "gs7s64z25gddkrkcarvpfjxw7x8fqkwn";
+const HOST = "morehandles.co.uk";
+const FROM = "2026-08-18";
+const TO = "2026-11-17";
+/** The dates by their name, as the date menu and the redone boxes say them on Last 3 months. */
+const NOW = "the last 3 months";
+const BEFORE = "the 3 months before";
+const fmt = formatNumber;
+const oneDecimal = (value: number) => formatPosition(Math.round(value * 10) / 10);
+const per100 = (part: number, whole: number) => (whole > 0 ? (100 * part) / whole : 0);
+
+// ——— The figures ———
+
+type Band = "1-3" | "4-10" | "11-20" | "21-50" | "51+";
+type Counts = Record<Band, number>;
+type Week = { start: string; lastDay: string; days: number; length: number; top3: number; top10: number; top20: number; rest: number };
+type Kept = { key: string; clicks: number; previousClicks: number | null; impressions: number; position: number | null; previousPosition: number | null; brand: boolean; band: Band; bandBefore: Band | null };
+type Board = {
+  summary: { bands: Counts; bandsBefore: Counts; wholeList: { bandClicks: Counts; bandClicksBefore: Counts; crossed: { top3In: number; top3Out: number; pageOneIn: number; pageOneOut: number } } };
+  listed: number; cut: number; clicked: number; moved: { of: number; up: number; down: number };
+  weeks: Week[]; weeksBefore: Week[]; rows: Kept[]; movers: Kept[]; near: Kept[]; nearCount: Record<"top3" | "first", number>;
+};
+const BOARD = DATA as unknown as Board;
+const S = BOARD.summary;
+const below = (counts: Counts) => counts["21-50"] + counts["51+"];
+
+/** A table's row, in the list's own shape, so the app's own columns draw it. */
+type Row = ListRow;
+function rowOf(kept: Kept): Row {
+  const shownBefore = kept.previousPosition !== null;
+  return {
+    key: kept.key, clicks: kept.clicks, impressions: kept.impressions, ctr: kept.impressions > 0 ? kept.clicks / kept.impressions : 0, position: kept.position ?? 0,
+    band: kept.band, previousClicks: kept.previousClicks, change: kept.previousClicks === null ? kept.clicks : kept.clicks - kept.previousClicks,
+    previousPosition: kept.previousPosition, positionChange: shownBefore && kept.position !== null ? (kept.previousPosition as number) - kept.position : null,
+    share: 0, count: null, top: null, tracked: false, kind: null, volume: null, estimate: null, brand: kept.brand, usualCtr: null, expected: null,
+    topShare: null, next: null, nextShare: null, verdict: null, gap: null,
+  } as unknown as Row;
+}
+
+// ——— Shared pieces ———
+
+/** "▼ 7% fewer than the 3 months before", as the redone boxes say it. */
+function MoveLine({ now, before, neutral = false }: { now: number; before: number; neutral?: boolean }) {
+  const by = now - before;
+  const size = before === 0 ? fmt(Math.abs(by)) : `${Math.round((Math.abs(by) / before) * 100)}%`;
+  if (by === 0 || size === "0%") return <ChangeLine by={0}>No change since {BEFORE}</ChangeLine>;
+  return <ChangeLine by={by} neutral={neutral}>{by > 0 ? `▲ ${size} more than ${BEFORE}` : `▼ ${size} fewer than ${BEFORE}`}</ChangeLine>;
+}
+
+/** The four bands' boxes: how many keywords Google showed in each, against the 3 months before. */
+function BandBoxes() {
+  return (
+    <FigureRow>
+      <Figure label="Top 3" value={fmt(S.bands["1-3"])} detail={<MoveLine now={S.bands["1-3"]} before={S.bandsBefore["1-3"]} />} />
+      <Figure label="4–10" value={fmt(S.bands["4-10"])} detail={<MoveLine now={S.bands["4-10"]} before={S.bandsBefore["4-10"]} />} />
+      <Figure label="11–20" value={fmt(S.bands["11-20"])} detail={<MoveLine now={S.bands["11-20"]} before={S.bandsBefore["11-20"]} />} />
+      <Figure label="21 and below" value={fmt(below(S.bands))} detail={<MoveLine now={below(S.bands)} before={below(S.bandsBefore)} neutral />} />
+    </FigureRow>
+  );
+}
+
+function Page({ description, boxes, children }: { description: string; boxes: ReactNode; children: ReactNode }) {
+  const [result, setResult] = useState<"web" | "news">("web");
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader icon={<BarChart3 className="h-5 w-5 text-brand" />} title="Position bands" description={description} />
+      <SiteViewSwitch label="Kind of result" options={[{ value: "web", label: "Web" }, { value: "news", label: "News" }]} value={result} onChange={setResult} />
+      {boxes}
+      {children}
+    </div>
+  );
+}
+
+// ——— Keywords in each band each week: today's chart, the top 3 in orange first ———
+
+const SERIES = [
+  { key: "top3", name: "Top 3", colour: SITE_SERIES_COLOURS[0] },
+  { key: "top10", name: "4–10", colour: SITE_SERIES_COLOURS[1] },
+  { key: "top20", name: "11–20", colour: SITE_SERIES_COLOURS[2] },
+  { key: "rest", name: "21 and below", colour: CHART_SERIES_SLATE },
+];
+const weekRow = (week: Week, values: Record<string, unknown>) => datedRow(
+  { day: week.start, lastDay: week.lastDay, ...(week.days < week.length ? { readout: `${formatShortDay(week.start)}, ${week.days === 1 ? "1 day" : `${week.days} days`}`, part: true } : {}) },
+  values,
+  formatShortDay(week.start),
+);
+
+function WeeksCard() {
+  // 21 and below starts unticked: weeks before 21 September miss some of its keywords, so its bars jump that week.
+  const ticks = useSeriesTicks(SERIES, ["rest"]);
+  const restShown = ticks.shown.some((entry) => entry.key === "rest");
+  return (
+    <SearchConsoleChartCard
+      title="Keywords in each band, week by week"
+      hint="Each bar is a week. It counts the keywords Google showed in each band."
+      controls={ticks.controls}
+      exportName={`${HOST}-search-console-position-bands`}
+      host={HOST}
+      from={BOARD.weeks[0].start}
+      to={BOARD.weeks.at(-1)!.lastDay}
+      step="week"
+      csv={() => toCsv(["Week starting", ...SERIES.map((entry) => entry.name)], BOARD.weeks.map((week) => [week.start, week.top3, week.top10, week.top20, week.rest]))}
+    >
+      <p className="mb-3 text-[12px] text-secondary">
+        {restShown ? "Some keywords at 21 and below are missing before 21 September." : "21 and below is off at first. Some of its keywords are missing before 21 September."}
+      </p>
+      <SiteBarChart stacked height={280} series={ticks.shown} data={BOARD.weeks.map((week) => weekRow(week, { top3: week.top3, top10: week.top10, top20: week.top20, rest: week.rest }))} />
+    </SearchConsoleChartCard>
+  );
+}
+
+// ——— The table: lean, one line a row, as built today ———
+
+type SortKey = "key" | "band" | "position" | "positionChange" | "clicks" | "impressions";
+const SORTS: SiteSortColumns<Row, SortKey> = {
+  key: { value: (row) => row.key, first: "asc" },
+  band: { value: (row) => ["1-3", "4-10", "11-20", "21-50", "51+"].indexOf(row.band), first: "asc" },
+  position: { value: (row) => (row.impressions > 0 ? row.position : null), first: "asc" },
+  positionChange: { value: (row) => row.positionChange, first: "desc" },
+  clicks: { value: (row) => row.clicks, first: "desc" },
+  impressions: { value: (row) => row.impressions, first: "desc" },
+};
+
+function BandTable({ kept, opening = "clicks", whole, note }: { kept: readonly Kept[]; opening?: SortKey; whole: number; note?: string }) {
+  const t = useTranslations("searchConsole");
+  const say = (key: string, values?: Record<string, string | number>) => t(key, values as never);
+  const rows = useMemo(() => kept.map(rowOf), [kept]);
+  const [search, setSearch, term] = useSiteSearch();
+  const matches = wordStartMatcher(term.toLowerCase());
+  const matching = useMemo(() => (matches ? rows.filter((row) => matches(row.key.toLowerCase())) : rows), [rows, matches]);
+  const order = useSiteSortedList(matching, SORTS, { opening, name: (row) => row.key });
+  const pages = useSitePager(order.rows);
+  const recordHref = () => "#";
+  const columns: DataTableColumn<Row>[] = [
+    keywordColumn<Row>(say("table.keyword"), recordHref),
+    { key: "band", header: say("table.band"), sortable: true, cell: (row) => <span className="text-[12px] text-secondary">{row.impressions > 0 ? say(`filters.bands.${row.band}`) : "–"}</span> },
+    ...(figureColumns(say, ["position"]) as unknown as DataTableColumn<Row>[]),
+    { key: "positionChange", header: say("table.change"), align: "right", sortable: true, cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} /> },
+    ...(figureColumns(say, ["clicks", "impressions"]) as unknown as DataTableColumn<Row>[]),
+  ];
+  return (
+    <DataTable
+      rows={pages.pageRows}
+      rowKey={(row) => row.key}
+      search={{ value: search, onChange: setSearch, placeholder: say("keywords.searchPlaceholder") }}
+      filters={<SearchConsoleChips chips={["band", "intent", "device"]} />}
+      cardHeader={(
+        <TableBar
+          footer={{ ...pages.footer, totalCount: whole }}
+          noun="keywords"
+          actions={(
+            <ListDownload
+              label="Download all (CSV)"
+              fileName={`${HOST}-search-console-position-bands`}
+              rows={order.rows}
+              columns={[
+                { header: "Keyword", value: (row) => row.key },
+                { header: "Position", value: (row) => (row.impressions > 0 ? Math.round(row.position * 10) / 10 : "") },
+                { header: "Up or down", value: (row) => (row.positionChange === null ? "" : Math.round(row.positionChange * 10) / 10) },
+                { header: "Clicks", value: (row) => row.clicks },
+                { header: "Impressions", value: (row) => row.impressions },
+              ]}
+            />
+          )}
+        >
+          {note ? <span className="text-[12px] text-secondary">{note}</span> : null}
+        </TableBar>
+      )}
+      sort={order.tableSort}
+      empty={{ icon: <BarChart3 className="h-8 w-8 text-muted/30" />, label: term ? "Nothing matches that search." : "Nothing in these dates." }}
+      footer={pages.footer}
+      columns={columns}
+    />
+  );
+}
+
+// ——— Way 1 · where your clicks come from, like Performance ———
+
+const BANDS4 = [
+  { key: "1-3", name: "Top 3", count: (counts: Counts) => counts["1-3"] },
+  { key: "4-10", name: "4–10", count: (counts: Counts) => counts["4-10"] },
+  { key: "11-20", name: "11–20", count: (counts: Counts) => counts["11-20"] },
+  { key: "21+", name: "21 and below", count: below },
+] as const;
+const BAND_COLOURS = [SITE_SERIES_COLOURS[0], SITE_SERIES_COLOURS[1], SITE_SERIES_COLOURS[2], CHART_SERIES_SLATE];
+
+function StripsCard() {
+  const [lit, setLit] = useState<string | null>(null);
+  const keywords = BANDS4.map((band) => band.count(S.bands));
+  const clicks = BANDS4.map((band) => band.count(S.wholeList.bandClicks));
+  const [allKeywords, allClicks] = [keywords, clicks].map((list) => list.reduce((sum, value) => sum + value, 0));
+  const top = outOfTotal(keywords);
+  const bottom = outOfTotal(clicks);
+  const segments: StripSegment[] = BANDS4.map((band, at) => ({
+    key: band.key,
+    name: band.name,
+    top: top[at] ?? 0,
+    bottom: bottom[at] ?? 0,
+    colour: BAND_COLOURS[at],
+    readout: [
+      { value: fmt(keywords[at]), label: "Keywords" },
+      { value: `${oneDecimal(per100(keywords[at], allKeywords))} in 100`, label: "Of all keywords" },
+      { value: fmt(clicks[at]), label: "Clicks" },
+      { value: `${oneDecimal(per100(clicks[at], allClicks))} in 100`, label: "Of all clicks" },
+    ],
+  }));
+  return (
+    <MapCard
+      title="Where your keywords sit, and where the clicks come from"
+      hint="The top row is where 100 keywords sat. The bottom row is where 100 clicks came from. Press one to keep it lit."
+      exportName={`${HOST}-search-console-position-bands-clicks`}
+      csv={() => toCsv(["Band", "Keywords", "Clicks"], BANDS4.map((band, at) => [band.name, keywords[at], clicks[at]]))}
+      host={HOST}
+    >
+      <HundredStrips segments={segments} topLabel="Out of every 100 keywords" bottomLabel="Out of every 100 clicks" lit={lit} onLit={setLit} />
+    </MapCard>
+  );
+}
+
+function OldStrips() {
+  return (
+    <Page description="How many of your keywords Google shows in each band, and where your clicks come from." boxes={<BandBoxes />}>
+      <WeeksCard />
+      <StripsCard />
+      <BandTable kept={BOARD.rows} whole={BOARD.listed} />
+    </Page>
+  );
+}
+
+// ——— Way 2 · what moved between bands ———
+
+function MoveBoxes() {
+  const crossed = S.wholeList.crossed;
+  const quiet = (words: string) => <span className="text-secondary">{words}</span>;
+  return (
+    <div className="flex flex-col gap-2">
+      <FigureRow>
+        <Figure label="Came into the top 3" value={fmt(crossed.top3In)} detail={quiet(`${fmt(crossed.top3Out)} dropped out of it`)} />
+        <Figure label="Came onto the first page" value={fmt(crossed.pageOneIn)} detail={quiet(`${fmt(crossed.pageOneOut)} dropped off it`)} />
+        <Figure label="Went up" value={fmt(BOARD.moved.up)} detail={quiet(`A place or more since ${BEFORE}`)} />
+        <Figure label="Went down" value={fmt(BOARD.moved.down)} detail={quiet(`A place or more since ${BEFORE}`)} />
+      </FigureRow>
+      <p className="text-[12px] text-secondary">Only keywords that got a click, in these dates or {BEFORE}.</p>
+    </div>
+  );
+}
+
+function ClicksByBand() {
+  const rows: ChangeBar[] = BANDS4.map((band) => {
+    const [now, was] = [band.count(S.wholeList.bandClicks), band.count(S.wholeList.bandClicksBefore)];
+    return {
+      key: band.key,
+      label: band.name,
+      detail: `${fmt(was)} → ${fmt(now)}`,
+      change: now - was,
+      hover: `Keywords at ${band.name === "Top 3" ? "the top 3" : band.name} brought ${fmt(was)} clicks in ${BEFORE}, and ${fmt(now)} in ${NOW}`,
+    };
+  });
+  return (
+    <MapCard
+      title="Clicks from each band"
+      hint={`How the clicks from each band changed since ${BEFORE}.`}
+      exportName={`${HOST}-search-console-position-bands-clicks-moved`}
+      csv={() => toCsv(["Band", "Clicks before", "Clicks now"], rows.map((row) => [row.label, row.detail.split(" → ")[0], row.detail.split(" → ")[1]]))}
+      host={HOST}
+    >
+      <ChangeBars rows={rows} lostLabel="Fewer clicks" gainedLabel="More clicks" />
+    </MapCard>
+  );
+}
+
+function Movers() {
+  const sorted = [...BOARD.movers]
+    .map((kept) => ({ kept, by: Math.round(((kept.previousPosition as number) - (kept.position as number)) * 10) / 10 }))
+    .sort((a, b) => b.by - a.by);
+  // The six that went up most and the six that went down most.
+  const rows: ChangeBar[] = [...sorted.slice(0, 6), ...sorted.slice(-6)]
+    .map(({ kept, by }) => ({
+      key: kept.key,
+      label: kept.key,
+      detail: `${oneDecimal(kept.previousPosition as number)} → ${oneDecimal(kept.position as number)}`,
+      change: by,
+      hover: `${kept.key} sat at ${oneDecimal(kept.previousPosition as number)} in ${BEFORE}, and at ${oneDecimal(kept.position as number)} in ${NOW}`,
+    }));
+  return (
+    <MapCard
+      title="Keywords that went up or down most"
+      hint="The six that went up most, and the six that went down most. Only keywords shown 300 times or more."
+      exportName={`${HOST}-search-console-position-bands-moved`}
+      csv={() => toCsv(["Keyword", "Position before", "Position now"], rows.map((row) => [row.label, row.detail.split(" → ")[0], row.detail.split(" → ")[1]]))}
+      host={HOST}
+    >
+      <ChangeBars rows={rows} lostLabel="Lower on Google" gainedLabel="Higher on Google" />
+    </MapCard>
+  );
+}
+
+function OldMoves() {
+  return (
+    <Page description={`Which of your keywords moved between bands since ${BEFORE}.`} boxes={<MoveBoxes />}>
+      <WeeksCard />
+      <ClicksByBand />
+      <Movers />
+      <BandTable kept={BOARD.rows} opening="positionChange" whole={BOARD.listed} />
+    </Page>
+  );
+}
+
+// ——— Way 3 · close to the next band ———
+
+const SHOWN = ["top3", "top10", "top20", "first"] as const;
+type Shown = (typeof SHOWN)[number];
+const SHOWN_NAMES: Record<Shown, string> = { top3: "Top 3", top10: "4–10", top20: "11–20", first: "First page" };
+const countOf = (week: Week, shown: Shown) => (shown === "first" ? week.top3 + week.top10 : week[shown]);
+// The week of 16 November holds 2 days so far: left off, so the line doesn't dip at its end.
+const WHOLE_WEEKS = BOARD.weeks.filter((week) => week.days === week.length);
+
+function BandLine() {
+  const [shown, setShown] = useState<Shown>("top3");
+  const [against, setAgainst] = useState<"none" | "before">("before");
+  const pointsOf = (weeks: readonly Week[]) => weeks.map((week) => ({ day: week.start, lastDay: week.lastDay, value: countOf(week, shown) }));
+  const lines: DaysLine[] = [
+    { key: "now", name: SHOWN_NAMES[shown], colour: SITE_SERIES_COLOURS[0], points: pointsOf(WHOLE_WEEKS) },
+    ...(against === "before" ? [{ key: "before", name: `${SHOWN_NAMES[shown]}, ${BEFORE}`, colour: SITE_SERIES_COLOURS[0], dashed: true, under: true, gaps: true, points: pointsOf(BOARD.weeksBefore) }] : []),
+  ];
+  return (
+    <DaysChart
+      title={`Keywords in the ${shown === "first" ? "first page" : shown === "top3" ? "top 3" : `${SHOWN_NAMES[shown]} band`} each week`}
+      hint={against === "before" ? `Each week in ${NOW}. The dashed line is ${BEFORE}, lined up by date.` : `Each week in ${NOW}.`}
+      exportName={`${HOST}-search-console-position-bands-line`}
+      csvDay="Week starting"
+      host={HOST}
+      step="week"
+      waiting={null}
+      controls={[
+        { kind: "select", key: "show", label: "Show", value: shown, options: SHOWN.map((value) => ({ value, label: SHOWN_NAMES[value] })), onChange: (next) => setShown(next as Shown) },
+        { kind: "select", key: "against", label: "Compare with", value: against, options: [{ value: "none", label: "No comparison" }, { value: "before", label: "The 3 months before" }], onChange: (next) => setAgainst(next as "none" | "before") },
+      ]}
+      lines={lines}
+      figure="Keywords"
+      plain
+      empty="Nothing to show for these dates."
+      height={280}
+    />
+  );
+}
+
+type Near = "top3" | "first";
+const NEAR: Record<Near, { name: string; from: number; to: number; places: string; reward: string }> = {
+  top3: { name: "Just off the top 3", from: 3, to: 5, places: "places 4 and 5", reward: "A place or two up would put them in the top 3." },
+  first: { name: "Just off the first page", from: 10, to: 15, places: "places 11 to 15", reward: "A few places up would put them on Google's first page." },
+};
+const nearOf = (near: Near) => BOARD.near.filter((kept) => kept.position !== null && kept.position > NEAR[near].from && kept.position <= NEAR[near].to);
+
+function NearBars({ near, onNear }: { near: Near; onNear: (next: Near) => void }) {
+  const top = nearOf(near).slice(0, 10);
+  const rows = top.map((kept) => ({ label: kept.key, impressions: kept.impressions, position: kept.position }));
+  return (
+    <BarsCard
+      title="Shown most, just off the next band"
+      hint={`Your 10 keywords at ${NEAR[near].places} that Google showed most. ${NEAR[near].reward}`}
+      exportName={`${HOST}-search-console-position-bands-near`}
+      csvHeading="Keyword"
+      host={HOST}
+      waiting={null}
+      controls={[
+        { kind: "select", key: "near", label: "Show", value: near, options: (Object.keys(NEAR) as Near[]).map((value) => ({ value, label: NEAR[value].name })), onChange: (next) => onNear(next as Near) },
+      ]}
+      rows={rows}
+      series={[{ key: "impressions", name: "Impressions", colour: SITE_SERIES_COLOURS[0] }]}
+      figure="Impressions"
+      labels={(value, _key, row) => `${fmt(value)} · at ${oneDecimal(Number(row.position))}`}
+      anything={rows.length > 0}
+      empty="No keywords there in these dates."
+    />
+  );
+}
+
+function OldNear() {
+  const [near, setNear] = useState<Near>("first");
+  return (
+    <Page description="How each band did each week, and your keywords closest to a better band." boxes={<BandBoxes />}>
+      <BandLine />
+      <NearBars near={near} onNear={setNear} />
+      <BandTable kept={nearOf(near)} opening="impressions" whole={BOARD.nearCount[near]} note={`At ${NEAR[near].places}`} />
+    </Page>
+  );
+}
+
+// ——— Way 4 · from band to band, with the new MoveFlow ———
+
+type FlowCount = { from: string; to: string; keywords: number; clicks: number };
+const FLOW_GROUPS: FlowGroup[] = [
+  { key: "new", name: "Not shown before", colour: CHART_COMPARATOR_GREY },
+  { key: "1-3", name: "Top 3", colour: SITE_SERIES_COLOURS[0] },
+  { key: "4-10", name: "4–10", colour: SITE_SERIES_COLOURS[1] },
+  { key: "11-20", name: "11–20", colour: SITE_SERIES_COLOURS[2] },
+  { key: "21+", name: "21 and below", colour: CHART_SERIES_SLATE },
+];
+const groupName = (key: string) => FLOW_GROUPS.find((group) => group.key === key)?.name ?? key;
+
+function FlowCard() {
+  const [count, setCount] = useState<"keywords" | "clicks">("keywords");
+  const counts = (BOARD as unknown as { flows: { clicked: FlowCount[] } }).flows.clicked;
+  const flows: Flow[] = counts.map((flow) => ({
+    from: flow.from,
+    to: flow.to,
+    value: flow[count],
+    readout: [
+      { value: fmt(flow.keywords), label: flow.keywords === 1 ? "Keyword" : "Keywords" },
+      { value: fmt(flow.clicks), label: `Clicks in ${NOW}` },
+    ],
+  }));
+  const stayed = counts.filter((flow) => flow.from === flow.to).reduce((sum, flow) => sum + flow.keywords, 0);
+  const all = counts.reduce((sum, flow) => sum + flow.keywords, 0);
+  return (
+    <MapCard
+      title="How your keywords moved between bands"
+      hint={count === "keywords"
+        ? `Each ribbon goes from a band in ${BEFORE} to a band now. ${fmt(stayed)} of these ${fmt(all)} keywords stayed where they were. Press a band to keep it lit.`
+        : `Each ribbon is the clicks in ${NOW}, from where each keyword sat before. Press a band to keep it lit.`}
+      exportName={`${HOST}-search-console-position-bands-flow`}
+      csv={() => toCsv(["Band before", "Band now", "Keywords", "Clicks"], counts.map((flow) => [groupName(flow.from), groupName(flow.to), flow.keywords, flow.clicks]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "count", label: "Count", value: count, options: [{ value: "keywords", label: "Keywords" }, { value: "clicks", label: "Clicks" }], onChange: (next) => setCount(next as "keywords" | "clicks") },
+      ]}
+      under={<span className="text-[12px] text-secondary">Keywords Google stopped showing aren&apos;t here.</span>}
+    >
+      <MoveFlow groups={FLOW_GROUPS} flows={flows} leftLabel={capital(BEFORE)} rightLabel={capital(NOW)} format={fmt} />
+    </MapCard>
+  );
+}
+const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
+
+function FlowWay() {
+  return (
+    <Page description="How your keywords moved between bands in these dates. A band is a group of places on Google, like the top 3." boxes={<MoveBoxes />}>
+      <FlowCard />
+      <WeeksCard />
+      <BandTable kept={BOARD.rows} opening="positionChange" whole={BOARD.listed} />
+    </Page>
+  );
+}
+
+// ——— Way 5 · close to the next band, place by place, with the new ShiftLines ———
+
+const ZONES: ShiftZone[] = [{ upTo: 3, name: "Top 3" }, { upTo: 10, name: "4–10" }, { upTo: 20, name: "11–20" }, { upTo: 30, name: "21 and below" }];
+
+function ShiftCard({ near, onNear }: { near: Near; onNear: (next: Near) => void }) {
+  const top = nearOf(near).slice(0, 12);
+  const rows: ShiftRow[] = top.map((kept) => ({
+    key: kept.key,
+    label: kept.key,
+    from: kept.previousPosition,
+    to: kept.position as number,
+    detail: `${fmt(kept.impressions)} shown`,
+    readout: [
+      ...(kept.previousPosition !== null ? [{ value: oneDecimal(kept.previousPosition), label: `Position in ${BEFORE}` }] : []),
+      { value: oneDecimal(kept.position as number), label: `Position in ${NOW}` },
+      { value: fmt(kept.impressions), label: "Impressions" },
+      { value: fmt(kept.clicks), label: "Clicks" },
+    ],
+  }));
+  return (
+    <MapCard
+      title="Keywords close to the next band"
+      hint={`The 12 keywords at ${NEAR[near].places} that Google showed most. ${NEAR[near].reward}`}
+      exportName={`${HOST}-search-console-position-bands-close`}
+      csv={() => toCsv(["Keyword", "Position before", "Position now", "Impressions"], top.map((kept) => [kept.key, kept.previousPosition === null ? "" : oneDecimal(kept.previousPosition), oneDecimal(kept.position as number), kept.impressions]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "near", label: "Show", value: near, options: (Object.keys(NEAR) as Near[]).map((value) => ({ value, label: NEAR[value].name })), onChange: (next) => onNear(next as Near) },
+      ]}
+    >
+      <ShiftLines rows={rows} min={1} max={30} zones={ZONES} lowerIsBetter format={oneDecimal} fromLabel={capital(BEFORE)} toLabel={capital(NOW)} />
+    </MapCard>
+  );
+}
+
+function ShiftWay() {
+  const [near, setNear] = useState<Near>("first");
+  return (
+    <Page description="The keywords close to a better band, and how far each one moved in these dates." boxes={<BandBoxes />}>
+      <ShiftCard near={near} onNear={setNear} />
+      <WeeksCard />
+      <BandTable kept={nearOf(near)} opening="impressions" whole={BOARD.nearCount[near]} note={`At ${NEAR[near].places}`} />
+    </Page>
+  );
+}
+
+// ——— Way 3 · clicks at each place on Google, with the new MirrorBars ———
+
+type Place = { place: number; keywords: number; clicks: number; impressions: number };
+const PLACE_ZONES: MirrorZone[] = [{ upTo: "3", name: "Top 3" }, { upTo: "10", name: "4–10" }, { upTo: "20", name: "11–20" }, { upTo: "31", name: "21 and below" }];
+
+function MirrorCard() {
+  const [which, setWhich] = useState<"other" | "all">("other");
+  const [bottom, setBottom] = useState<"clicks" | "impressions">("clicks");
+  const places = (BOARD as unknown as { places: Record<"all" | "other", Place[]> }).places[which];
+  const placeName = (place: number) => (place === 31 ? "31 and below" : `Place ${place}`);
+  const bars: MirrorBar[] = places.map((one) => ({
+    key: String(one.place),
+    label: one.place === 31 ? "31+" : String(one.place),
+    heading: placeName(one.place),
+    top: one.keywords,
+    bottom: one[bottom],
+    readout: [
+      { value: fmt(one.keywords), label: "Keywords that got a click" },
+      { value: fmt(one.clicks), label: "Clicks" },
+      { value: fmt(one.impressions), label: "Impressions" },
+    ],
+  }));
+  const noun = bottom === "clicks" ? "clicks" : "impressions";
+  return (
+    <MapCard
+      title="Clicks at each place on Google"
+      hint={`Each bar is a place on Google, from 1 at the top. Above the line are keywords that got a click. Below are their ${noun}.${which === "other" ? " Searches for More Handles by name are left out." : ""}`}
+      exportName={`${HOST}-search-console-position-bands-places`}
+      csv={() => toCsv(["Place", "Keywords that got a click", "Clicks", "Impressions"], places.map((one) => [placeName(one.place), one.keywords, one.clicks, one.impressions]))}
+      host={HOST}
+      controls={[
+        { kind: "select", key: "which", label: "Brand searches", value: which, options: [{ value: "other", label: "Left out" }, { value: "all", label: "Counted" }], onChange: (next) => setWhich(next as "other" | "all") },
+        { kind: "select", key: "bottom", label: "Count", value: bottom, options: [{ value: "clicks", label: "Clicks" }, { value: "impressions", label: "Impressions" }], onChange: (next) => setBottom(next as "clicks" | "impressions") },
+      ]}
+    >
+      <MirrorBars bars={bars} zones={PLACE_ZONES} topLabel="Keywords that got a click" bottomLabel={bottom === "clicks" ? "Clicks" : "Impressions"} format={fmt} />
+    </MapCard>
+  );
+}
+
+function MirrorWay() {
+  return (
+    <Page description="Where on Google your clicks come from in these dates. A band is a group of places, like the top 3." boxes={<BandBoxes />}>
+      <MirrorCard />
+      <WeeksCard />
+      <BandTable kept={BOARD.rows} whole={BOARD.listed} />
+    </Page>
+  );
+}
+
+export const WAYS = { W1: FlowWay, W2: ShiftWay, W3: MirrorWay };
+const ADDRESS = `/app/search-console/${SITE}/position-bands`;
+export const PATHS: Record<string, string> = { W1: ADDRESS, W2: ADDRESS, W3: ADDRESS };

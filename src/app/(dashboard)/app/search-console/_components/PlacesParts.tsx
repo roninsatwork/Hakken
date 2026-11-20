@@ -20,14 +20,18 @@ export function percentOf(share: number): string {
   return share < 0.005 ? formatRate(share) : formatRate(Math.round(share * 100) / 100).replace(/[.,]0(?=\s?%)/, "");
 }
 
-/** A move fewer or more than the dates before, as the redone boxes say it: 5% fewer than September; a count's move as a count, 2 more. */
-function MoveLine({ now, before, against, count = false }: { now: number; before: number | null; against: string; count?: boolean }) {
+/**
+ * A move fewer or more than the dates before, as the redone boxes say it: 5% fewer than September; a count's move as a
+ * count, 2 more. Position bands' boxes share it (search-console-position-bands-way-3-plan-2026-11-19.md), and `neutral` is
+ * for a move that's neither good nor bad (fewer keywords at 21 and below).
+ */
+export function MoveLine({ now, before, against, count = false, neutral = false }: { now: number; before: number | null; against: string; count?: boolean; neutral?: boolean }) {
   const t = useTranslations("searchConsole.places.boxes");
   if (before === null) return <ChangeLine by={null}>{t("nothingBefore", { before: against })}</ChangeLine>;
   const by = now - before;
   if (by === 0) return <ChangeLine by={0}>{t("same", { before: against })}</ChangeLine>;
   const size = count || before === 0 ? formatNumber(Math.abs(by)) : percentOf(Math.abs(by) / before);
-  return <ChangeLine by={by}>{t(by > 0 ? "more" : "fewer", { change: size, before: against })}</ChangeLine>;
+  return <ChangeLine by={by} neutral={neutral}>{t(by > 0 ? "more" : "fewer", { change: size, before: against })}</ChangeLine>;
 }
 
 /**

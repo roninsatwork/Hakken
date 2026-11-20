@@ -25,8 +25,8 @@ export function SeesStandIn({ section, siteId, off = false }: { section: SeesSec
 }
 
 /**
- * The page's key by its address, for what the chat is told the page is: "/app/search-console/s1/almost-there" is
- * "searchConsole.almostThere"; a website's first page its "overview".
+ * The page's key by its address, for what the chat is told the page is: "/app/search-console/s1/pages-competing" is
+ * "searchConsole.pagesCompeting"; a website's first page its "overview".
  */
 export function standInScreen(section: SeesSection, path: string, siteId?: string): string {
   const parts = path.split("/").filter(Boolean).slice(2).filter((part) => part !== siteId);

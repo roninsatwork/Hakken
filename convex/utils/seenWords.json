@@ -1242,7 +1242,7 @@
         "noVisits": "No visits",
         "itsSearches": "Its searches in Search Console",
         "openPage": "Open the page",
-        "pagesToPush": "Almost there",
+        "pagesToPush": "Position bands",
         "conversions": "Conversions",
         "landingPages": "Funnel",
         "landingPage": "Its visits",
@@ -1317,13 +1317,10 @@
         "seeUpdate": "See the update",
         "seeKeywords": "See the keywords",
         "seePages": "See your pages",
-        "seeWins": "See Wins and losses",
         "seeVolatility": "See Volatility",
-        "seeAlmost": "See Almost there",
-        "seeLowCtr": "See Shown but not clicked",
-        "seeLosing": "See the keywords losing",
+        "seeBands": "See Position bands",
+        "seeLowCtr": "See Low click rate",
         "keywordResearch": "Open Keyword research",
-        "seeDemand": "See Missed demand",
         "connect": "Connect it",
         "seeStrategy": "See the strategy",
         "seeCannibalisation": "See Keyword cannibalisation",
@@ -1348,40 +1345,19 @@
         "seeLowCtr": "Look at the pages Google shows but people rarely click."
       },
       "bands": {
-        "bands": "In Google's top three: {a} keywords. Positions 4 to 10: {b}. Page two: {c}.",
-        "topMore": "That is {count, plural, one {one more} other {# more}} in the top three than the days before.",
-        "topFewer": "That is {count, plural, one {one fewer} other {# fewer}} in the top three than the days before.",
-        "pushNear": "Push the {count, plural, one {keyword} other {# keywords}} at positions 4 to 20 up first: they are closest to more clicks."
-      },
-      "moves": {
-        "noMoves": "No keyword's clicks changed {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {the last 3 months} last6Months {the last 6 months} other {the last 12 months}}.",
-        "gainingLosing": "{count, plural, one {One keyword} other {# keywords}} gained clicks and {countB, plural, one {one} other {#}} lost them {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {the last 3 months} last6Months {the last 6 months} other {the last 12 months}}.",
-        "netUp": "Between them, clicks rose by {a}.",
-        "netDown": "Between them, clicks fell by {a}.",
-        "seeLosing": "Start with the keywords losing the most clicks.",
-        "checkGoogle": "See whether Google moved, or your pages did."
-      },
-      "almost": {
-        "noneNear": "None of your keywords sits at positions 4 to 20 in these dates.",
-        "near": "{count, plural, one {One keyword sits} other {# keywords sit}} at positions 4 to 20, a short way from Google's first places.",
-        "nearVolume": "Between them they are searched {a} times a month.",
-        "improvePages": "Improve the page each one lands on, starting with the most searched."
+        "bands": "Google showed {a} of your keywords in its top 3, {b} at places 4 to 10 and {c} on page two.",
+        "topMore": "That's {count, plural, one {one more} other {# more}} in the top 3 {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} last3Months {than the 3 months before} last6Months {than the 6 months before} other {than the 12 months before}}.",
+        "topFewer": "That's {count, plural, one {one fewer} other {# fewer}} in the top 3 {period, select, thisWeek {than the same days last week} lastWeek {than the week before} thisMonth {than the same days last month} lastMonth {than the month before} last3Months {than the 3 months before} last6Months {than the 6 months before} other {than the 12 months before}}."
       },
       "lowCtr": {
-        "noneLow": "Every page Google shows is clicked about as often as its position would bring.",
-        "lowCtr": "{count, plural, one {One page is} other {# pages are}} clicked less than your own click rate at their position would bring: {b} clicks where {c} were due.",
-        "rewriteTitles": "Rewrite their titles and descriptions in Google, the most shown first."
-      },
-      "demand": {
-        "noneMissed": "No keyword that many people search for is missing your website.",
-        "missed": "{count, plural, one {One keyword that many people search for barely shows} other {# keywords that many people search for barely show}} your website.",
-        "missedVolume": "Between them they are searched {a} times a month.",
-        "writeForDemand": "Write or improve a page for the most searched one."
+        "noneLow": "Every page Google showed got about the clicks you'd usually get at its position.",
+        "lowCtr": "{count, plural, one {One page Google showed a lot} other {# pages Google showed a lot}} got {b} clicks. At their positions you'd usually get {c}.",
+        "rewriteTitles": "Give them a better title in Google, starting with the page short of the most clicks."
       },
       "competing": {
         "noneCompeting": "No keyword has two of your pages competing for it.",
         "competing": "{count, plural, one {One keyword has} other {# keywords have}} two or more of your pages competing for it, across {b} pages.",
-        "splitsClicks": "Google splits the clicks between them, so neither page does as well as one would.",
+        "splitsClicks": "Google shares the impressions between them, so neither page does as well as one would.",
         "pickOne": "The Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
       },
       "estimates": {
@@ -1421,7 +1397,7 @@
         "seeWins": "See which keywords gained and lost clicks."
       },
       "newLost": {
-        "keywordsNewLost": "{count, plural, one {One keyword is} other {# keywords are}} new {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {the last 3 months} last6Months {the last 6 months} other {the last 12 months}}, and {countB, plural, one {one was} other {# were}} lost.",
+        "keywordsNewLost": "Google started showing you for {count, plural, one {one keyword} other {# keywords}} {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {in the last 3 months} last6Months {in the last 6 months} other {in the last 12 months}}, and stopped for {countB, plural, one {one} other {#}}.",
         "pagesNewLost": "{count, plural, one {One page} other {# pages}} appeared in Google for the first time, and {countB, plural, one {one} other {#}} dropped out.",
         "checkGoogle": "See whether Google moved, or your pages did."
       },
@@ -1440,7 +1416,7 @@
       },
       "ctrCurve": {
         "noFirst": "None of your pages showed at position 1 in these dates.",
-        "seeAlmost": "See the keywords closest to the first places.",
+        "seeBands": "See the keywords closest to the first places.",
         "firstAndThird": "At position 1 your pages are clicked {a}% of the times they are shown; at position 3, {b}%.",
         "firstOnly": "At position 1 your pages are clicked {a}% of the times they are shown.",
         "seeLowCtr": "Look at the pages Google shows but people rarely click."
@@ -2720,7 +2696,7 @@
         "noVisits": "Nessuna visita",
         "itsSearches": "Le sue ricerche in Search Console",
         "openPage": "Apri la pagina",
-        "pagesToPush": "Quasi in cima",
+        "pagesToPush": "Fasce di posizione",
         "conversions": "Conversioni",
         "landingPages": "Funnel",
         "landingPage": "Le sue visite",
@@ -2795,13 +2771,10 @@
         "seeUpdate": "Vedi l'aggiornamento",
         "seeKeywords": "Vedi le parole chiave",
         "seePages": "Vedi le tue pagine",
-        "seeWins": "Vedi Guadagni e perdite",
         "seeVolatility": "Vedi Volatilità",
-        "seeAlmost": "Vedi Quasi in cima",
-        "seeLowCtr": "Vedi Mostrate ma non cliccate",
-        "seeLosing": "Vedi le parole chiave in calo",
+        "seeBands": "Vedi Fasce di posizione",
+        "seeLowCtr": "Vedi Tasso di clic basso",
         "keywordResearch": "Apri Ricerca parole chiave",
-        "seeDemand": "Vedi Domanda persa",
         "connect": "Collegalo",
         "seeStrategy": "Vedi la strategia",
         "seeCannibalisation": "Vedi la cannibalizzazione delle parole chiave",
@@ -2826,40 +2799,19 @@
         "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
       },
       "bands": {
-        "bands": "Tra i primi tre di Google: {a} parole chiave. Posizioni da 4 a 10: {b}. Seconda pagina: {c}.",
-        "topMore": "{count, plural, one {Una in più} other {# in più}} tra i primi tre rispetto ai giorni prima.",
-        "topFewer": "{count, plural, one {Una in meno} other {# in meno}} tra i primi tre rispetto ai giorni prima.",
-        "pushNear": "Spingi prima {count, plural, one {la parola chiave} other {le # parole chiave}} tra le posizioni 4 e 20: sono le più vicine a nuovi clic."
-      },
-      "moves": {
-        "noMoves": "I clic di nessuna parola chiave sono cambiati {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {gli ultimi 3 mesi} last6Months {gli ultimi 6 mesi} other {gli ultimi 12 mesi}}.",
-        "gainingLosing": "{count, plural, one {Una parola chiave ha guadagnato} other {# parole chiave hanno guadagnato}} clic e {countB, plural, one {una li ha persi} other {# li hanno persi}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {gli ultimi 3 mesi} last6Months {gli ultimi 6 mesi} other {gli ultimi 12 mesi}}.",
-        "netUp": "Nel complesso, i clic sono aumentati di {a}.",
-        "netDown": "Nel complesso, i clic sono calati di {a}.",
-        "seeLosing": "Inizia dalle parole chiave che perdono più clic.",
-        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
-      },
-      "almost": {
-        "noneNear": "Nessuna delle tue parole chiave è tra le posizioni 4 e 20 in queste date.",
-        "near": "{count, plural, one {Una parola chiave è} other {# parole chiave sono}} tra le posizioni 4 e 20, a poca distanza dai primi posti di Google.",
-        "nearVolume": "Insieme vengono cercate {a} volte al mese.",
-        "improvePages": "Migliora la pagina su cui arriva ciascuna, a partire dalla più cercata."
+        "bands": "Google ha mostrato {a} delle tue parole chiave tra le prime 3, {b} dalla posizione 4 alla 10 e {c} in seconda pagina.",
+        "topMore": "{count, plural, one {Una in più} other {# in più}} tra le prime 3 {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} last3Months {rispetto ai 3 mesi precedenti} last6Months {rispetto ai 6 mesi precedenti} other {rispetto ai 12 mesi precedenti}}.",
+        "topFewer": "{count, plural, one {Una in meno} other {# in meno}} tra le prime 3 {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} last3Months {rispetto ai 3 mesi precedenti} last6Months {rispetto ai 6 mesi precedenti} other {rispetto ai 12 mesi precedenti}}."
       },
       "lowCtr": {
-        "noneLow": "Ogni pagina che Google mostra viene cliccata più o meno quanto la sua posizione porterebbe.",
-        "lowCtr": "{count, plural, one {Una pagina viene cliccata} other {# pagine vengono cliccate}} meno di quanto porterebbe il tuo tasso di clic alla loro posizione: {b} clic invece di {c}.",
-        "rewriteTitles": "Riscrivi i loro titoli e descrizioni su Google, a partire dalle più mostrate."
-      },
-      "demand": {
-        "noneMissed": "Nessuna parola chiave cercata da molti manca il tuo sito.",
-        "missed": "{count, plural, one {Una parola chiave cercata da molti mostra} other {# parole chiave cercate da molti mostrano}} appena il tuo sito.",
-        "missedVolume": "Insieme vengono cercate {a} volte al mese.",
-        "writeForDemand": "Scrivi o migliora una pagina per la più cercata."
+        "noneLow": "Ogni pagina mostrata da Google ha ricevuto più o meno i clic che ricevi di solito alla sua posizione.",
+        "lowCtr": "{count, plural, one {Una pagina mostrata spesso da Google} other {# pagine mostrate spesso da Google}} hanno ricevuto {b} clic. Alle loro posizioni di solito ne riceveresti {c}.",
+        "rewriteTitles": "Dai loro un titolo migliore su Google, partendo dalla pagina a cui mancano più clic."
       },
       "competing": {
         "noneCompeting": "Nessuna parola chiave ha due tue pagine in concorrenza.",
         "competing": "{count, plural, one {Una parola chiave ha} other {# parole chiave hanno}} due o più tue pagine in concorrenza, su {b} pagine.",
-        "splitsClicks": "Google divide i clic tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
+        "splitsClicks": "Google divide le impressioni tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
         "pickOne": "Lo specialista di cannibalizzazione delle parole chiave dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
       },
       "estimates": {
@@ -2899,7 +2851,7 @@
         "seeWins": "Vedi quali parole chiave hanno guadagnato e perso clic."
       },
       "newLost": {
-        "keywordsNewLost": "{count, plural, one {Una parola chiave è nuova} other {# parole chiave sono nuove}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {gli ultimi 3 mesi} last6Months {gli ultimi 6 mesi} other {gli ultimi 12 mesi}}, e {countB, plural, one {una è stata persa} other {# sono state perse}}.",
+        "keywordsNewLost": "Google ha iniziato a mostrarti per {count, plural, one {una parola chiave} other {# parole chiave}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {negli ultimi 3 mesi} last6Months {negli ultimi 6 mesi} other {negli ultimi 12 mesi}}, e ha smesso per {countB, plural, one {una} other {#}}.",
         "pagesNewLost": "{count, plural, one {Una pagina è comparsa} other {# pagine sono comparse}} su Google per la prima volta, e {countB, plural, one {una è uscita} other {# sono uscite}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
       },
@@ -2918,7 +2870,7 @@
       },
       "ctrCurve": {
         "noFirst": "Nessuna delle tue pagine è comparsa in posizione 1 in queste date.",
-        "seeAlmost": "Vedi le parole chiave più vicine ai primi posti.",
+        "seeBands": "Vedi le parole chiave più vicine ai primi posti.",
         "firstAndThird": "In posizione 1 le tue pagine vengono cliccate il {a}% delle volte in cui compaiono; in posizione 3, il {b}%.",
         "firstOnly": "In posizione 1 le tue pagine vengono cliccate il {a}% delle volte in cui compaiono.",
         "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."

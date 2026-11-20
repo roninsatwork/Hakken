@@ -2,6 +2,7 @@ import { v, type Infer } from "convex/values";
 import { OWN_RATE_VISITS, bandOf, type PositionBand } from "./heroes";
 import type { Fact } from "./insightFacts";
 import { namedIn, placeName, wordsOf, type Named } from "./placeNames";
+import { isHome, pathOfPage, splitsKeyword } from "./cannibalisationRule";
 
 /**
  * Keyword cannibalisation (docs/plans/active/insights-intelligence-plan.md
@@ -14,8 +15,9 @@ import { namedIn, placeName, wordsOf, type Named } from "./placeNames";
  * bring.
  */
 
-/** A page takes at least this share of a search's showings among the pages shown for it to count as splitting it. */
-export const SPLIT_SHARE = 0.1;
+// The rule's own parts, shared with Search Console's Keyword cannibalisation so the two never say different things
+// (Anthony, 20 November 2026): a page splitting a keyword, the home page, a page's path (`cannibalisationRule.ts`).
+export { SPLIT_SHARE, isHome, pathOfPage } from "./cannibalisationRule";
 /** Two pages are in one group when they split at least this many searches between them. */
 export const LINK_SEARCHES = 3;
 /** A group bigger than this is split again on stronger links: a group is pages an agency would weigh together. */
@@ -136,16 +138,6 @@ export type CompetingGroup = {
   words?: { headline: string; story: string };
 };
 
-/** The home page brings enquiries for everything, so it is never counted in a group. */
-export function isHome(path: string): boolean {
-  return path === "/" || /^\/(index|home|default)(\.[a-z]+)?\/?$/i.test(path);
-}
-
-/** A page's address without its section, kept by its path. */
-export function pathOfPage(address: string): string {
-  const match = /^https?:\/\/[^/]+(\/[^#]*)?/i.exec(address.trim());
-  return match ? match[1] || "/" : address.trim().split("#")[0];
-}
 
 /** The website's own name in a search: its address's first word ("acme" of acme.co.uk). */
 export function brandWordsOf(host: string): string[] {
@@ -370,7 +362,7 @@ export function competingGroups(input: {
   for (const [search, pages] of bySearch) {
     if (pages.size < 2) continue;
     const total = [...pages.values()].reduce((sum, page) => sum + page.impressions, 0);
-    const split = [...pages].filter(([, page]) => total > 0 && page.impressions / total >= SPLIT_SHARE).map(([path]) => path).sort();
+    const split = [...pages].filter(([, page]) => splitsKeyword(page.impressions, total)).map(([path]) => path).sort();
     if (split.length < 2) continue;
     splitting.set(search, split);
     for (let a = 0; a < split.length; a += 1) {

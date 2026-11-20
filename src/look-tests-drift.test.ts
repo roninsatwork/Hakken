@@ -77,12 +77,20 @@ describe("approved looks", () => {
     const saved = new Set(lookFiles.filter((look) => look.plan === "search-console-redesign").map((look) => look.board));
     // A board approved again in a later plan keeps its look there: Google updates with What Hakken sees and
     // Volatility (search-console-volatility-plan.md §2.2); Tracked keywords and Tracked pages as Way 1
-    // (search-console-tracked-way-1-plan-2026-11-18.md).
+    // (search-console-tracked-way-1-plan-2026-11-18.md); Position bands as Way 3 (search-console-position-bands-way-3-plan-2026-11-19.md).
     const redrawn: Record<string, string> = {
       Updates: "search-console-volatility", TrackedKeywords: "search-console-tracked-way-1", TrackedPages: "search-console-tracked-way-1",
+      Bands: "search-console-position-bands-way-3", LowCtr: "search-console-shown-but-not-clicked-way-2",
+      // Keyword cannibalisation as Way 3 (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
+      Competing: "search-console-keyword-cannibalisation-way-3",
     };
     const savedLater = (board: string) => lookFiles.some((look) => look.plan === redrawn[board] && look.board === board);
-    expect(boards.filter((board) => !saved.has(board) && !savedLater(board))).toEqual([]);
+    // A board whose screen was dropped keeps its place on the dated canvas but has no screen to look like: Wins and
+    // losses (Anthony, 2026-11-19: "Yes, drop it"), as Keywords sorted by Up or down lists the same; Almost there
+    // (2026-11-20: "lets remove almost there from the menu"), as Position bands lists the same; Missed demand (the same day:
+    // "Yes, take it out"), as Keywords and Keyword research show the same.
+    const dropped = new Set(["Moves", "Almost", "Demand"]);
+    expect(boards.filter((board) => !saved.has(board) && !savedLater(board) && !dropped.has(board))).toEqual([]);
   });
 
   test("the outline reads parts in order, nested, with titles and headings but no data", () => {

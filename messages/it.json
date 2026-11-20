@@ -6666,7 +6666,7 @@
         },
         "consoleCurvePositions": {
           "label": "Posizioni per cui si calcola la percentuale di clic abituale",
-          "description": "Percentuale di clic per posizione, e Mostrate ma non cliccate, calcolano la percentuale di clic abituale del sito a ogni posizione da 1 a questa.",
+          "description": "Percentuale di clic per posizione, e Tasso di clic basso, calcolano la percentuale di clic abituale del sito a ogni posizione da 1 a questa.",
           "cost": "Nessun costo."
         },
         "consoleUpdatesListed": {
@@ -10898,6 +10898,14 @@
         "ownClicksSharePercent": "dei suoi clic da Google",
         "searchesLost": "ricerche perse",
         "searchesGained": "nuove ricerche",
+        "newestLost": "500 ricerche perse più recenti",
+        "newestGained": "500 ricerche guadagnate più recenti",
+        "clicksShort": "clic in meno di quelli che ricevi di solito",
+        "lowCtrPages": "pagine molto mostrate, poco cliccate",
+        "cannibalisedKeywords": "parole chiave condivise da due pagine",
+        "keywordsShown": "parole chiave mostrate da Google",
+        "impressionSharePercent": "quota delle sue impressioni",
+        "swaps": "giorni in cui Google ha scambiato pagina",
         "linksGained": "link guadagnati",
         "linksLost": "link persi",
         "linkServers": "server che rimandano qui",
@@ -15517,12 +15525,9 @@
       "keywords": "Parole chiave",
       "bands": "Fasce di posizione",
       "newLost": "Nuove e perse",
-      "moves": "Guadagni e perdite",
       "updates": "Aggiornamenti di Google",
-      "almost": "Quasi in cima",
-      "lowCtr": "Mostrate ma non cliccate",
-      "demand": "Domanda persa",
-      "competing": "Pagine in concorrenza",
+      "lowCtr": "Tasso di clic basso",
+      "competing": "Cannibalizzazione delle parole chiave",
       "types": "Per classificazione delle pagine",
       "brand": "Brand e non brand",
       "ctrCurve": "Tasso di clic per posizione",
@@ -15988,7 +15993,6 @@
       "onlyUntracked": "Non seguite",
       "position": "Posizione",
       "anyPosition": "Qualsiasi posizione",
-      "almostAny": "4–20",
       "bands": {
         "1-3": "1–3",
         "4-10": "4–10",
@@ -16002,10 +16006,6 @@
       "anyBrand": "Brand o no",
       "brandYes": "Brand",
       "brandNo": "Non brand",
-      "move": "Guadagni o perdite",
-      "anyMove": "Guadagni e perdite",
-      "wins": "Guadagni",
-      "losses": "Perdite",
       "verdict": "Stima",
       "anyVerdict": "Qualsiasi stima",
       "verdicts": {
@@ -16013,9 +16013,6 @@
         "low": "Troppo bassa",
         "close": "Corretta"
       },
-      "missed": "Elenco",
-      "missedSearched": "Molto cercate, poco mostrate",
-      "missedUntracked": "Mostrate, non ancora seguite",
       "device": "Dispositivo",
       "anyDevice": "Qualsiasi dispositivo",
       "way": "Su o giù",
@@ -16024,60 +16021,108 @@
       "wayDown": "Giù"
     },
     "common": {},
-    "almost": {
-      "title": "Quasi in cima",
-      "description": "Parole chiave per cui Google ti mostra già nelle posizioni da 4 a 20, con quante persone le cercano ogni mese, da Visibilità. Sono le più vicine alle prime tre.",
-      "at4to10": "Parole chiave in 4–10",
-      "at11to20": "Parole chiave in 11–20",
-      "searches": "Ricerche al mese dietro di loro",
-      "sitesFigures": "Dati di Visibilità",
-      "tracked": "Seguite",
-      "youTrack": "Parole chiave che segui"
-    },
     "lowCtr": {
-      "title": "Mostrate ma non cliccate",
-      "description": "Pagine che Google mostra spesso ma che si cliccano poco, per la posizione in cui sono. Il CTR abituale è il tuo tasso di clic in quella posizione, da Tasso di clic per posizione; Attesi sono i clic che una pagina avrebbe avuto con quel tasso. Un tasso di clic basso di solito significa che il titolo o la descrizione su Google vanno migliorati.",
-      "below": "Pagine sotto il tuo tasso di clic abituale",
-      "ofShown": "Delle {count} mostrate da Google",
-      "impressions": "Impressioni ricevute",
-      "clicks": "Clic ricevuti",
-      "atUsual": "Con il tuo tasso abituale",
-      "wouldHave": "Clic che avrebbero avuto"
-    },
-    "demand": {
-      "title": "Domanda persa",
-      "description": "Parole chiave che molte persone cercano ma per cui Google ti mostra appena, dalle ricerche mensili di Visibilità. E parole chiave per cui Google ti mostra ma che non segui ancora. Cliccane una per seguirla.",
-      "fewer": "Meno di {count} impressioni in queste date",
-      "ofShown": "Delle {count} parole chiave mostrate da Google"
+      "title": "Tasso di clic basso",
+      "description": "Pagine che Google mostra spesso ma che le persone cliccano poco. Un titolo migliore su Google spesso risolve.",
+      "boxes": {
+        "pages": "Molto mostrate, poco cliccate",
+        "outOf": "Su {count} pagine mostrate da Google",
+        "shown": "Volte che Google le ha mostrate",
+        "clicks": "Clic ricevuti",
+        "usually": "Clic che riceveresti di solito",
+        "more": "Sono {count} in più di quelli ricevuti"
+      },
+      "positions": {
+        "titleClicks": "Clic a ogni posizione su Google",
+        "titlePages": "Pagine a ogni posizione su Google",
+        "hintClicks": "Ogni barra è una posizione nei risultati di Google, la 1 in cima. La metà in alto sono i clic ricevuti da queste pagine. La metà in basso è quello che ricevi di solito lì.",
+        "hintPages": "Ogni barra è una posizione nei risultati di Google, la 1 in cima. La metà in alto sono le pagine con pochi clic. La metà in basso sono tutte le tue pagine lì.",
+        "heading": "Posizione {position}",
+        "clicksGot": "Clic ricevuti",
+        "clicksUsually": "Clic che riceveresti di solito",
+        "pagesCount": "{count, plural, one {Pagina} other {Pagine}}",
+        "fewClicks": "Pagine con pochi clic",
+        "allThere": "Tutte le tue pagine lì",
+        "count": "Conta",
+        "countClicks": "Clic",
+        "countPages": "Pagine",
+        "empty": "Nessuna pagina ha ricevuto meno clic del solito in queste date.",
+        "csv": {
+          "position": "Posizione"
+        }
+      },
+      "table": {
+        "usually": "Di solito",
+        "usuallyTitle": "I clic che il tuo sito riceve di solito in questa posizione",
+        "usuallyFile": "Clic che riceveresti di solito",
+        "usualRateFile": "CTR abituale"
+      },
+      "eye": {
+        "these": "Molto mostrate, poco cliccate",
+        "usually": "Clic che riceveresti di solito",
+        "position": "Posizione",
+        "firstPage": "Posizioni da 4 a 10"
+      }
     },
     "competing": {
-      "title": "Pagine in concorrenza",
-      "description": "Parole chiave per cui Google mostra due o più delle tue pagine, che così si dividono i clic.",
-      "split": "Parole chiave divise tra pagine",
-      "ofShown": "Delle {count} mostrate da Google",
-      "clicks": "Clic che si dividono",
-      "pages": "Pagine coinvolte"
+      "title": "Cannibalizzazione delle parole chiave",
+      "description": "Parole chiave per cui Google mostra due o più delle tue pagine. Una pagina forte di solito va meglio di due.",
+      "boxes": {
+        "keywords": "Parole chiave condivise da due pagine",
+        "rule": "Ogni pagina ha avuto almeno 1 impressione su 10",
+        "pages": "Pagine in concorrenza",
+        "ofShown": "Su {count} pagine mostrate da Google",
+        "shown": "Volte che Google le ha mostrate",
+        "clicks": "Clic ricevuti",
+        "leftOut": "La tua home page e le ricerche del tuo nome sono escluse"
+      },
+      "chart": {
+        "title": "Quale pagina Google ha mostrato per {keyword} ogni giorno",
+        "titleNone": "Quale pagina Google ha mostrato ogni giorno",
+        "hint": "Spunta una parola chiave nella tabella per disegnare qui le sue pagine. Dove le linee si incrociano, Google ha scambiato una pagina con l'altra.",
+        "swaps": "{count, plural, =0 {Google non ha scambiato pagine in {when}.} one {È successo in un giorno in {when}.} other {È successo in # giorni in {when}.}}",
+        "positionHint": "La posizione 1 è in cima a Google.",
+        "pages": "Pagine",
+        "everyPage": "Ogni pagina",
+        "show": "Mostra",
+        "impressions": "Impressioni",
+        "position": "Posizione",
+        "nothingTicked": "Spunta una pagina nel menu Pagine per disegnarla qui.",
+        "noneTicked": "Spunta una parola chiave nella tabella per disegnare qui le sue pagine.",
+        "empty": "Google non ha mostrato due delle tue pagine per questa parola chiave in queste date.",
+        "failed": "Google non ha risposto. Riprova tra un minuto.",
+        "day": "Giorno"
+      },
+      "table": {
+        "pagesTitle": "Le tue pagine che hanno avuto almeno 1 su 10 delle sue impressioni",
+        "swaps": "Scambi",
+        "swapsTitle": "Giorni in cui Google ha scambiato la pagina che mostrava di più",
+        "topShareFile": "Quota di impressioni della prima pagina",
+        "nextShareFile": "Quota di impressioni della pagina successiva",
+        "tickLabel": "Disegna {name} sul grafico",
+        "tickHeading": "Sul grafico"
+      },
+      "eye": {
+        "these": "Parole chiave condivise da due pagine",
+        "competing": "Pagine in concorrenza",
+        "nextPage": "la sua pagina successiva",
+        "average": "la parola chiave media condivisa da due pagine",
+        "swapped": "Parole chiave per cui Google ha scambiato pagina"
+      }
     },
     "moves": {
-      "title": "Guadagni e perdite",
-      "description": "Le parole chiave i cui clic sono cambiati di più. Clic e posizione si leggono: {before} → {period}.",
-      "gaining": "Parole chiave che guadagnano clic",
-      "losing": "Parole chiave che perdono clic",
-      "against": "Contro {before}",
-      "gained": "Clic guadagnati",
-      "byGaining": "Dalle parole chiave in crescita",
-      "lost": "Clic persi",
-      "byLosing": "Dalle parole chiave in calo",
       "clicksBefore": "Clic prima",
       "positionBefore": "Posizione prima"
     },
     "bands": {
       "title": "Fasce di posizione",
-      "description": "Quante delle tue parole chiave Google mostra in ciascuna fascia di posizioni, nelle date che scegli. Le posizioni sono le medie di Google.",
+      "description": "Quante delle tue parole chiave Google mostra in ogni fascia in queste date. Una fascia è un gruppo di posizioni, come le prime 3.",
       "top3": "Prime 3",
       "below": "21 e oltre",
-      "chartTitle": "Parole chiave per fascia",
-      "chartHint": "Ogni parola chiave per cui Google ha mostrato il tuo sito, secondo la sua posizione media in ciascun giorno, settimana o mese."
+      "chartTitle": "Parole chiave per fascia, {step, select, day {giorno per giorno} week {settimana per settimana} other {mese per mese}}",
+      "chartHint": "Ogni barra è {step, select, day {un giorno} week {una settimana} other {un mese}}. Conta le parole chiave che Google ha mostrato in ogni fascia.",
+      "restOff": "21 e oltre è spento all'inizio. Nelle settimane più vecchie mancano alcune sue parole chiave.",
+      "restOn": "Nelle settimane più vecchie mancano alcune parole chiave da 21 in giù."
     },
     "catchUp": {
       "held": "Dati mostrati fino al {day}.",
@@ -16085,16 +16130,16 @@
     },
     "newLost": {
       "title": "Nuove e perse",
-      "description": "Parole chiave per cui Google ha iniziato a mostrare il tuo sito, e quelle per cui ha smesso. Una parola chiave è persa quando Google non ti mostra per lei da {days} giorni.",
+      "description": "Parole chiave per cui Google ha iniziato a mostrarti, e quelle per cui ha smesso. Una parola chiave è persa dopo {days} giorni senza essere mostrata.",
       "newKeywords": "Parole chiave nuove",
       "lostKeywords": "Parole chiave perse",
       "newPages": "Pagine nuove",
       "lostPages": "Pagine perse",
       "firstTime": "Mostrate per la prima volta",
       "notIn14": "Non mostrate da {days} giorni",
-      "watchedFrom": "Una parola chiave conta come nuova dal {day}: da allora il sito era osservato da {days} giorni.",
+      "watchedFrom": "I tuoi dati partono dal {start}, quindi una parola chiave conta come nuova dal {day}.",
       "chartTitle": "Parole chiave guadagnate e perse",
-      "chartHint": "Parole chiave per cui Google ha iniziato a mostrarti (sopra) e smesso di mostrarti (sotto).",
+      "chartHint": "Le parole chiave nuove salgono sopra la linea, quelle perse scendono sotto.",
       "gained": "Guadagnate",
       "lost": "Perse",
       "net": "Guadagnate meno perse",
@@ -16102,7 +16147,10 @@
       "newOrLost": "Nuove o perse",
       "new": "Nuova",
       "lostWord": "Persa",
-      "notKept": "Nuove e perse si tengono per Web. Scegli Web per vederle."
+      "notKept": "Nuove e perse copre solo i risultati Web. Scegli Web per vederle.",
+      "newestListed": "La tabella elenca le {count} più recenti.",
+      "newestSearched": "La ricerca guarda tra le {count} più recenti.",
+      "lostFigures": "Le parole chiave perse mostrano i clic e le impressioni che avevano negli ultimi 12 mesi."
     },
     "updates": {
       "title": "Aggiornamenti di Google",
@@ -16159,7 +16207,7 @@
     },
     "ctrCurve": {
       "title": "Tasso di clic per posizione",
-      "description": "Quanto spesso le persone cliccano il tuo sito in ciascuna posizione di Google, {period}. Mostrate ma non cliccate lo usa come tuo metro.",
+      "description": "Quanto spesso le persone cliccano il tuo sito in ciascuna posizione di Google, {period}. Tasso di clic basso lo usa come tuo metro.",
       "chartTitle": "Il tuo tasso di clic in ogni posizione",
       "chartHint": "Clic per ogni volta che Google ti ha mostrato, nelle posizioni da 1 a {positions}.",
       "rate": "Tasso di clic",
@@ -16250,10 +16298,17 @@
       "empty": "Nessuna parola chiave ha avuto 10 o più impressioni in entrambi gli ultimi due giorni completi.",
       "positionBefore": "Posizione il giorno prima",
       "chartTitle": "Volatilità, giorno per giorno",
-      "chartHint": "Su 10. Passa sopra una G per l'aggiornamento di Google.",
-      "chartHintUsual": "Su 10. Il tuo solito è {usual}: Alta è il 30% sopra, Molto alta il 60%. Passa sopra una G per l'aggiornamento di Google.",
+      "chartHint": "Su 10. Posizioni migliorate conta le parole chiave salite, Posizioni peggiorate quelle scese. Insieme fanno la linea della Volatilità. Passa sopra una G per l'aggiornamento di Google.",
+      "chartHintUsual": "Su 10. Il tuo solito è {usual}, quindi Alta è il 30% sopra e Molto alta il 60%. Posizioni migliorate conta le parole chiave salite, Posizioni peggiorate quelle scese. Insieme fanno la linea della Volatilità. Passa sopra una G per l'aggiornamento di Google.",
       "chartNothing": "Nessun giorno ha ancora abbastanza parole chiave per un punteggio.",
-      "series": "Volatilità"
+      "series": "Volatilità",
+      "up": "Posizioni migliorate",
+      "down": "Posizioni peggiorate",
+      "show": "Mostra",
+      "every": "Ogni linea",
+      "nothingTicked": "Spunta una linea nel menu Mostra per disegnarla qui.",
+      "partsFrom": "Posizioni migliorate e peggiorate partono dal {day}. I dati di Google per ogni giorno prima di allora non sono conservati.",
+      "partsNone": "Posizioni migliorate e peggiorate compaiono dopo la prossima raccolta."
     },
     "sees": {
       "website": "L'intero sito",
@@ -16341,13 +16396,10 @@
         "seeUpdate": "Vedi l'aggiornamento",
         "seeKeywords": "Vedi le parole chiave",
         "seePages": "Vedi le tue pagine",
-        "seeWins": "Vedi Guadagni e perdite",
         "seeVolatility": "Vedi Volatilità",
-        "seeAlmost": "Vedi Quasi in cima",
-        "seeLowCtr": "Vedi Mostrate ma non cliccate",
-        "seeLosing": "Vedi le parole chiave in calo",
+        "seeBands": "Vedi Fasce di posizione",
+        "seeLowCtr": "Vedi Tasso di clic basso",
         "keywordResearch": "Apri Ricerca parole chiave",
-        "seeDemand": "Vedi Domanda persa",
         "connect": "Collegalo",
         "seeStrategy": "Vedi la strategia",
         "seeCannibalisation": "Vedi la cannibalizzazione delle parole chiave",
@@ -16372,40 +16424,19 @@
         "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
       },
       "bands": {
-        "bands": "Tra i primi tre di Google: {a} parole chiave. Posizioni da 4 a 10: {b}. Seconda pagina: {c}.",
-        "topMore": "{count, plural, one {Una in più} other {# in più}} tra i primi tre rispetto ai giorni prima.",
-        "topFewer": "{count, plural, one {Una in meno} other {# in meno}} tra i primi tre rispetto ai giorni prima.",
-        "pushNear": "Spingi prima {count, plural, one {la parola chiave} other {le # parole chiave}} tra le posizioni 4 e 20: sono le più vicine a nuovi clic."
-      },
-      "moves": {
-        "noMoves": "I clic di nessuna parola chiave sono cambiati {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {gli ultimi 3 mesi} last6Months {gli ultimi 6 mesi} other {gli ultimi 12 mesi}}.",
-        "gainingLosing": "{count, plural, one {Una parola chiave ha guadagnato} other {# parole chiave hanno guadagnato}} clic e {countB, plural, one {una li ha persi} other {# li hanno persi}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {gli ultimi 3 mesi} last6Months {gli ultimi 6 mesi} other {gli ultimi 12 mesi}}.",
-        "netUp": "Nel complesso, i clic sono aumentati di {a}.",
-        "netDown": "Nel complesso, i clic sono calati di {a}.",
-        "seeLosing": "Inizia dalle parole chiave che perdono più clic.",
-        "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
-      },
-      "almost": {
-        "noneNear": "Nessuna delle tue parole chiave è tra le posizioni 4 e 20 in queste date.",
-        "near": "{count, plural, one {Una parola chiave è} other {# parole chiave sono}} tra le posizioni 4 e 20, a poca distanza dai primi posti di Google.",
-        "nearVolume": "Insieme vengono cercate {a} volte al mese.",
-        "improvePages": "Migliora la pagina su cui arriva ciascuna, a partire dalla più cercata."
+        "bands": "Google ha mostrato {a} delle tue parole chiave tra le prime 3, {b} dalla posizione 4 alla 10 e {c} in seconda pagina.",
+        "topMore": "{count, plural, one {Una in più} other {# in più}} tra le prime 3 {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} last3Months {rispetto ai 3 mesi precedenti} last6Months {rispetto ai 6 mesi precedenti} other {rispetto ai 12 mesi precedenti}}.",
+        "topFewer": "{count, plural, one {Una in meno} other {# in meno}} tra le prime 3 {period, select, thisWeek {rispetto agli stessi giorni della settimana scorsa} lastWeek {rispetto alla settimana precedente} thisMonth {rispetto agli stessi giorni del mese scorso} lastMonth {rispetto al mese precedente} last3Months {rispetto ai 3 mesi precedenti} last6Months {rispetto ai 6 mesi precedenti} other {rispetto ai 12 mesi precedenti}}."
       },
       "lowCtr": {
-        "noneLow": "Ogni pagina che Google mostra viene cliccata più o meno quanto la sua posizione porterebbe.",
-        "lowCtr": "{count, plural, one {Una pagina viene cliccata} other {# pagine vengono cliccate}} meno di quanto porterebbe il tuo tasso di clic alla loro posizione: {b} clic invece di {c}.",
-        "rewriteTitles": "Riscrivi i loro titoli e descrizioni su Google, a partire dalle più mostrate."
-      },
-      "demand": {
-        "noneMissed": "Nessuna parola chiave cercata da molti manca il tuo sito.",
-        "missed": "{count, plural, one {Una parola chiave cercata da molti mostra} other {# parole chiave cercate da molti mostrano}} appena il tuo sito.",
-        "missedVolume": "Insieme vengono cercate {a} volte al mese.",
-        "writeForDemand": "Scrivi o migliora una pagina per la più cercata."
+        "noneLow": "Ogni pagina mostrata da Google ha ricevuto più o meno i clic che ricevi di solito alla sua posizione.",
+        "lowCtr": "{count, plural, one {Una pagina mostrata spesso da Google} other {# pagine mostrate spesso da Google}} hanno ricevuto {b} clic. Alle loro posizioni di solito ne riceveresti {c}.",
+        "rewriteTitles": "Dai loro un titolo migliore su Google, partendo dalla pagina a cui mancano più clic."
       },
       "competing": {
         "noneCompeting": "Nessuna parola chiave ha due tue pagine in concorrenza.",
         "competing": "{count, plural, one {Una parola chiave ha} other {# parole chiave hanno}} due o più tue pagine in concorrenza, su {b} pagine.",
-        "splitsClicks": "Google divide i clic tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
+        "splitsClicks": "Google divide le impressioni tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
         "pickOne": "Lo specialista di cannibalizzazione delle parole chiave dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
       },
       "estimates": {
@@ -16445,7 +16476,7 @@
         "seeWins": "Vedi quali parole chiave hanno guadagnato e perso clic."
       },
       "newLost": {
-        "keywordsNewLost": "{count, plural, one {Una parola chiave è nuova} other {# parole chiave sono nuove}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {gli ultimi 3 mesi} last6Months {gli ultimi 6 mesi} other {gli ultimi 12 mesi}}, e {countB, plural, one {una è stata persa} other {# sono state perse}}.",
+        "keywordsNewLost": "Google ha iniziato a mostrarti per {count, plural, one {una parola chiave} other {# parole chiave}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {negli ultimi 3 mesi} last6Months {negli ultimi 6 mesi} other {negli ultimi 12 mesi}}, e ha smesso per {countB, plural, one {una} other {#}}.",
         "pagesNewLost": "{count, plural, one {Una pagina è comparsa} other {# pagine sono comparse}} su Google per la prima volta, e {countB, plural, one {una è uscita} other {# sono uscite}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
       },
@@ -16464,7 +16495,7 @@
       },
       "ctrCurve": {
         "noFirst": "Nessuna delle tue pagine è comparsa in posizione 1 in queste date.",
-        "seeAlmost": "Vedi le parole chiave più vicine ai primi posti.",
+        "seeBands": "Vedi le parole chiave più vicine ai primi posti.",
         "firstAndThird": "In posizione 1 le tue pagine vengono cliccate il {a}% delle volte in cui compaiono; in posizione 3, il {b}%.",
         "firstOnly": "In posizione 1 le tue pagine vengono cliccate il {a}% delle volte in cui compaiono.",
         "seeLowCtr": "Guarda le pagine che Google mostra ma che vengono cliccate di rado."
@@ -19933,7 +19964,7 @@
         "noVisits": "Nessuna visita",
         "itsSearches": "Le sue ricerche in Search Console",
         "openPage": "Apri la pagina",
-        "pagesToPush": "Quasi in cima",
+        "pagesToPush": "Fasce di posizione",
         "conversions": "Conversioni",
         "landingPages": "Funnel",
         "landingPage": "Le sue visite",

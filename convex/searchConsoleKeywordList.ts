@@ -4,10 +4,11 @@ import type { SearchConsolePeriod, SearchType } from "./searchConsoleSchema";
 import { bookOfParts, partsToRead, periodFromParts } from "./searchConsolePeriodReads";
 import { BookNames, wholeBook, type BookScope } from "./searchConsolePeriodBooks";
 import { tokenPlace } from "./utils/searchConsoleTerms";
+import { homeAddressesOf, isHome, pathOfPage } from "./utils/cannibalisationRule";
 import { keywordColumnsOf, keywordTable, pairColumnsOf, type ListRows } from "./searchConsoleKeywordTable";
 import { namedTracked } from "./searchConsoleSpans";
 import type { SortKey } from "./searchConsoleSorts";
-import type { Filters, SitesKeyword, Summary, View, ViewContext, ViewRules } from "./utils/searchConsoleViews";
+import type { CannibalisationFigures, Filters, SharedKeyword, Summary, View, ViewContext, ViewRules } from "./utils/searchConsoleViews";
 
 /**
  * A ready-made list of keywords for the list screens (`readList`), read as
@@ -26,14 +27,12 @@ export type KeywordListAsk = {
   filters: Filters;
   sort: SortKey | undefined;
   direction: "asc" | "desc" | undefined;
-  missed: "searched" | "untracked";
   days: number;
   rules: ViewRules;
   /** The most rows a list holds (`consoleListRows`). */
   most: number;
   tracked: () => Promise<ReadonlySet<string>>;
   brandWords: () => Promise<string[]>;
-  sitesKeywords: () => Promise<SitesKeyword[]>;
 };
 
 export type KeywordList = {
@@ -75,16 +74,11 @@ export async function keywordListOf(
   const names = new BookNames(ctx, book);
   // The company's tracked searches as tokens, where the book holds them: up to 200 look-ups, each a small record.
   const tracked = new Set(await Promise.all([...(await ask.tracked())].map(async (text) => await names.tokenOf("query", text))));
-  const missedSearched = ask.view === "missed" && ask.missed === "searched";
-  // A search, and Missed demand's match with Sites, read every keyword's text: the keyword book whole (§5.5).
-  const bookTexts = ask.filters.q?.trim() || missedSearched ? await wholeBook(ctx, book, "query") : null;
-  const context: ViewContext = {
-    rules: ask.rules,
-    missedList: ask.missed,
-    tracked,
-    days: ask.days,
-    ...(missedSearched ? { sitesKeywords: await ask.sitesKeywords() } : {}),
-  };
+  // A search reads every keyword's text: the keyword book whole (§5.5).
+  const bookTexts = ask.filters.q?.trim() ? await wholeBook(ctx, book, "query") : null;
+  const context: ViewContext = { rules: ask.rules, tracked, days: ask.days };
+  // Keyword cannibalisation leaves the home page out (`cannibalisationRule.ts`): its usual addresses, as places in the book.
+  const homePages = ask.view === "competing" ? await homePagePlaces(ctx, companyWebsiteId, names) : undefined;
   const table = keywordTable(now, before, pairs, {
     view: ask.view,
     filters: ask.filters,
@@ -95,6 +89,7 @@ export async function keywordListOf(
     brandWords: await ask.brandWords(),
     context,
     pagesShown: pairParts?.[0]?.shown ?? null,
+    ...(homePages ? { homePages } : {}),
     bookTexts,
   });
   // The four searches What Hakken sees moved most, named as the rows on screen are (`readList` names them the same).
@@ -105,6 +100,8 @@ export async function keywordListOf(
       if (moved) movers[way] = { ...moved, key: await names.textOf(moved.key) };
     }
   }
+  // Keyword cannibalisation's keywords the eye names, named the same way.
+  if (table.summary.cannibalisation) table.summary.cannibalisation = await namedCannibalisation(table.summary.cannibalisation, names);
   // A tracked list's movers and the busiest onto and off the first page, named the same way.
   if (table.summary.trackedList) table.summary.trackedList = await namedTracked(ctx, companyWebsiteId, table.summary.trackedList, names, false);
   return {
@@ -118,6 +115,24 @@ export async function keywordListOf(
     summary: table.summary,
     names,
   };
+}
+
+/** Keyword cannibalisation's keywords named, where the list keeps them as places in its book (`readList` names them the same). */
+export async function namedCannibalisation(figures: CannibalisationFigures, names: BookNames): Promise<CannibalisationFigures> {
+  const name = async (row: SharedKeyword | null) => (row ? { ...row, key: await names.textOf(row.key) } : null);
+  return { ...figures, busiest: await name(figures.busiest), closest: await name(figures.closest), mostSwapped: await name(figures.mostSwapped), crowded: await name(figures.crowded) };
+}
+
+/** The website's home page, as places in a build's page book: each usual address looked up, a few small records. */
+async function homePagePlaces(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, names: BookNames): Promise<Set<number>> {
+  const hold = await ctx.db.get(companyWebsiteId);
+  const website = hold ? await ctx.db.get(hold.websiteId) : null;
+  const places = new Set<number>();
+  for (const address of homeAddressesOf(website?.displayHost ?? "")) {
+    const at = tokenPlace(await names.tokenOf("page", address));
+    if (at && at.kind === "page" && isHome(pathOfPage(address))) places.add(at.place);
+  }
+  return places;
 }
 
 /**

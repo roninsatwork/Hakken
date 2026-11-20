@@ -227,7 +227,8 @@ describe("HakkenSees and its eye", () => {
 
   describe("a page that hands over its own figures (sees-every-page-plan-2026-10-31.md, phase 1)", () => {
     const page = {
-      screen: "searchConsole.almost", siteId: "site_1" as never, period: "lastMonth", country: "", device: "",
+      // A page the general rules read (Keyword cannibalisation has rules of its own since 20 November 2026).
+      screen: "searchConsole.estimates", siteId: "site_1" as never, period: "lastMonth", country: "", device: "",
       data: { rows: [{ key: "door handles", clicks: 840, ctr: 0.07 }] },
       links: [{ label: "Pages", href: "/app/search-console/site_1/pages" }],
     };
@@ -246,7 +247,7 @@ describe("HakkenSees and its eye", () => {
       fireEvent.click(eye());
       await waitFor(() => expect(askSees).toHaveBeenCalled());
       expect(askSees.mock.calls[0]).toEqual([expect.objectContaining({
-        siteId: "site_1", screen: "searchConsole.almost", path: "/app/search-console/site_1/keywords", period: "lastMonth", facts: [],
+        siteId: "site_1", screen: "searchConsole.estimates", path: "/app/search-console/site_1/keywords", period: "lastMonth", facts: [],
         links: [{ label: "Keywords", href: "/app/search-console/site_1/keywords" }, { label: "Pages", href: "/app/search-console/site_1/pages" }],
         // The click rate as the page shows it, a percentage.
         data: { rows: [{ key: "door handles", clicks: 840, ctrPercent: 7 }] },
@@ -378,7 +379,7 @@ describe("HakkenSees and its eye", () => {
 
   describe("a page that put up no eye itself (sees-every-page-plan-2026-10-31.md: no vanishing eyes)", () => {
     it("still has its section's eye, which points to the chat and writes nothing when pressed", async () => {
-      at.path = "/app/search-console/site_1/almost-there";
+      at.path = "/app/search-console/site_1/pages-competing";
       const askSees = vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const }));
       vi.mocked(useMutation).mockReturnValue(askSees as never);
       render(<><HakkenSeesEye /><SeesStandIn section="searchConsole" siteId={"site_1" as never} /></>);
@@ -388,7 +389,7 @@ describe("HakkenSees and its eye", () => {
     });
 
     it("gives way to the page's own eye, staying open as it does", () => {
-      at.path = "/app/search-console/site_1/almost-there";
+      at.path = "/app/search-console/site_1/pages-competing";
       const view = render(<><HakkenSeesEye /><SeesStandIn section="searchConsole" /></>);
       fireEvent.click(eye());
       view.rerender(<><HakkenSeesEye /><SeesStandIn section="searchConsole" /><HakkenSees says={says} steps={[]} advice="rule" /></>);
@@ -406,7 +407,7 @@ describe("HakkenSees and its eye", () => {
     });
 
     it("names the page by its address, for what the chat is told", () => {
-      expect(standInScreen("searchConsole", "/app/search-console/site_1/almost-there", "site_1")).toBe("searchConsole.almostThere");
+      expect(standInScreen("searchConsole", "/app/search-console/site_1/pages-competing", "site_1")).toBe("searchConsole.pagesCompeting");
       expect(standInScreen("googleAnalytics", "/app/analytics/site_1", "site_1")).toBe("googleAnalytics.overview");
       expect(standInScreen("insights", "/app/insights/page-reviews/page")).toBe("insights.pageReviewsPage");
     });

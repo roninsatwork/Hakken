@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
-  almostSees, appearanceSees, bandsSees, brandSees, competingSees, curveSees, demandSees, estimatesSees, keywordsSees, lowCtrSees,
-  movesSees, newLostSees, pagesSees, performanceSees, placesSees, recordSees, trackedSees, typesSees, websitesSees, type ListFigures,
+  appearanceSees, bandsSees, brandSees, competingSees, curveSees, estimatesSees, keywordsSees, lowCtrSees,
+  newLostSees, pagesSees, performanceSees, placesSees, recordSees, trackedSees, typesSees, websitesSees, type ListFigures,
 } from "@/convex/utils/sees/searchConsoleScreens";
 import { expectWords } from "./seenWords";
 
@@ -30,20 +30,19 @@ describe("What Hakken sees on Search Console's other screens", () => {
     expectWords("keywords", keywordsSees(EMPTY, "lastMonth"), "searchConsole.seen");
   });
 
-  test("Pages, Position bands, Wins and losses", () => {
+  test("Pages, Position bands", () => {
     for (const [screen, box] of [
-      ["pages", pagesSees(LIST, "lastMonth")], ["pages", pagesSees(EMPTY, "lastMonth")], ["bands", bandsSees(LIST)], ["moves", movesSees(LIST, "lastMonth")], ["moves", movesSees(EMPTY, "lastMonth")],
+      ["pages", pagesSees(LIST, "lastMonth")], ["pages", pagesSees(EMPTY, "lastMonth")], ["bands", bandsSees(LIST, "lastMonth")],
     ] as const) expectWords(screen, box, "searchConsole.seen");
-    expect(codes(bandsSees(LIST))).toEqual({ says: ["bands", "topFewer"], steps: ["pushNear"] });
-    expect(codes(movesSees(LIST, "lastMonth"))).toEqual({ says: ["gainingLosing", "netDown"], steps: ["seeLosing", "checkGoogle"] });
+    // No step on Position bands itself since Almost there left the menu (2026-11-20): it would link to the page it's on.
+    expect(codes(bandsSees(LIST, "lastMonth"))).toEqual({ says: ["bands", "topFewer"], steps: [] });
   });
 
-  test("Almost there, Shown but not clicked, Missed demand, Pages competing, Real against estimated", () => {
-    for (const [screen, rule] of [["almost", almostSees], ["lowCtr", lowCtrSees], ["demand", demandSees], ["competing", competingSees], ["estimates", estimatesSees]] as const) {
+  test("Low click rate, Keyword cannibalisation, Real against estimated", () => {
+    for (const [screen, rule] of [["lowCtr", lowCtrSees], ["competing", competingSees], ["estimates", estimatesSees]] as const) {
       expectWords(screen, rule(LIST), "searchConsole.seen");
       expectWords(screen, rule(EMPTY), "searchConsole.seen");
     }
-    expect(codes(demandSees(LIST))).toEqual({ says: ["missed", "missedVolume"], steps: ["writeForDemand"] });
   });
 
   test("Brand and non-brand: the brand's share, and the rest's clicks against the days before", () => {

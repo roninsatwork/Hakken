@@ -18,7 +18,6 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { keywordColumn, ShownHeading } from "../../_components/SearchConsoleTables";
 import { SITE_SERIES_COLOURS } from "../../../sites/_components/SiteCharts";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
-import { SiteGainLossChart } from "../../../sites/_components/SiteGainLossChart";
 import { datedRow } from "../../../sites/_components/datedRows";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatDay, formatMonth, formatNumber, formatShortDay, toCsv } from "../../../sites/_components/siteFormat";
@@ -26,7 +25,8 @@ import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { SITE_ROW_CHOICES } from "../../../sites/_components/siteTableRows";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../../sites/_components/useSiteSort";
-import { SearchConsoleChartCard, useSeriesTicks } from "../../_components/SearchConsoleChartCard";
+import { shiftDay } from "../../../sites/_components/siteRange";
+import { GainLossCard } from "@/src/ui/components/screens/GainLossCard";
 import { CountryNotReady, ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { filePosition, formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
@@ -90,6 +90,15 @@ export default function SearchConsoleNewLostPage() {
   const list = useSiteListPage(api.searchConsoleChanges.searchConsoleNewLost, ask ?? "skip");
   const counts = list.result?.counts ?? null;
   const host = status?.host ?? "";
+  // Past the table's limit (the newest `cut` new and the newest `cut` lost), the bar counts every one, as the boxes do,
+  // and says how many the table lists.
+  const cutAt = list.result?.cut ?? null;
+  const listedMost = counts && cutAt !== null
+    ? (what === "lost" ? 0 : Math.min(counts.newKeywords, cutAt)) + (what === "new" ? 0 : Math.min(counts.lostKeywords, cutAt))
+    : null;
+  const whole = counts ? (what === "lost" ? 0 : counts.newKeywords) + (what === "new" ? 0 : counts.lostKeywords) : null;
+  const barFooter = listedMost !== null && whole !== null && !term && !band ? { ...list.footer, totalCount: whole } : list.footer;
+
   const periods = list.result?.periods ?? [];
   // The eye's figures: the four counts against the span before's, where on Google the new and lost sit, and the chart's
   // days, weeks or months (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6).
@@ -118,10 +127,10 @@ export default function SearchConsoleNewLostPage() {
   });
   // Gained and Lost, each with its tick box, as drawn. A bar unticked is not drawn; the net beside each step still counts both.
   // Amber against blue (2026-10-04): amber against orange read as one colour.
-  const ticks = useSeriesTicks([
+  const GAIN_LOSS = [
     { key: "new" as const, name: t("newLost.gained"), colour: SITE_SERIES_COLOURS[3] },
     { key: "lost" as const, name: t("newLost.lost"), colour: SITE_SERIES_COLOURS[1] },
-  ]);
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -140,32 +149,26 @@ export default function SearchConsoleNewLostPage() {
                 <Figure label={t("newLost.lostPages")} value={counts ? formatNumber(counts.lostPages) : "…"} detail={<span className="text-secondary">{t("newLost.notIn14", { days: status?.limits.lostAfterDays ?? "…" })}</span>} />
               </FigureRow>
               {list.result?.watchedFrom && list.result.watchedFrom > range.from ? (
-                <p className="text-[12px] text-muted">{t("newLost.watchedFrom", { day: formatDay(list.result.watchedFrom), days: status?.limits.newAfterDays ?? "…" })}</p>
+                <p className="text-[12px] text-muted">{t("newLost.watchedFrom", { day: formatDay(list.result.watchedFrom), start: formatDay(shiftDay(list.result.watchedFrom, -(status?.limits.newAfterDays ?? 0))) })}</p>
               ) : null}
-              <SearchConsoleChartCard
+              {/* The shared gain-and-loss card (search-console-new-and-lost-audit-2026-11-19.md): Gained and Lost, each with its tick box. */}
+              <GainLossCard
                 title={t("newLost.chartTitle")}
                 hint={t("newLost.chartHint")}
-                controls={ticks.controls}
                 exportName={`${host}-search-console-new-and-lost-${range.from}-to-${range.to}`}
                 host={host}
                 from={periods[0]?.start ?? null}
                 to={periods.at(-1)?.lastDay ?? null}
                 step={range.step}
                 csv={() => toCsv([t(`chart.${range.step}`), t("newLost.gained"), t("newLost.lost")], periods.map((period) => [period.start, period.gained, period.lost]))}
-              >
-                {list.result === undefined ? (
-                  <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
-                ) : steps.length === 0 ? (
-                  <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
-                ) : (
-                  <SiteGainLossChart
-                    steps={steps}
-                    series={ticks.shown}
-                    netLabel={t("newLost.net")}
-                    startLegend={t("newLost.gained")}
-                  />
-                )}
-              </SearchConsoleChartCard>
+                steps={steps}
+                series={GAIN_LOSS}
+                ticks
+                netLabel={t("newLost.net")}
+                startLegend={t("newLost.gained")}
+                loading={list.result === undefined}
+                empty={steps.length === 0 ? t("chart.nothing") : null}
+              />
               <DataTable
                 rows={list.pageRows}
                 rowKey={(row) => `${row.status}:${row.key}`}
@@ -184,7 +187,11 @@ export default function SearchConsoleNewLostPage() {
                     </Select>
             </>
             }
-            cardHeader={<TableBar footer={list.footer} noun="keywords" actions={<NewLostDownload ask={ask} fileName={`${host}-search-console-new-and-lost-keywords`} />} />}
+            cardHeader={<TableBar footer={barFooter} noun="keywords" actions={<NewLostDownload ask={ask} fileName={`${host}-search-console-new-and-lost-keywords`} />}>
+              {/* The table's limit said, as Keywords says its own (search-console-new-and-lost-audit-2026-11-19.md). */}
+              {listedMost !== null ? <span className="text-[12px] text-secondary">{t(term || band ? "newLost.newestSearched" : "newLost.newestListed", { count: formatNumber(listedMost) })}</span> : null}
+              {what !== "new" ? <span className="text-[12px] text-secondary">{t("newLost.lostFigures")}</span> : null}
+            </TableBar>}
             sort={order.tableSort}
             empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: term || what || band ? t("table.noMatch") : t("table.empty") }}
             footer={list.footer}

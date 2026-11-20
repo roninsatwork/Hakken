@@ -1,0 +1,18 @@
+# Search Console → Keyword cannibalisation — the approved look (board "Competing" of docs/plans/assets/search-console-keyword-cannibalisation-way-3/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Keyword cannibalisation
+choice: Kind of result: Web | Video | News | Discover | Google News
+figures
+  figure: Keywords two pages share
+  figure: Pages competing
+  figure: Times Google showed them
+  figure: Clicks they got
+chart-card: Which page Google showed for ai agency each day
+search: Search keywords…
+filter: Intent
+filter: Position
+table: On the chart | Keyword | Pages | Swaps | Shown | Clicks | Position
+  table-bar
+    download: Download all (CSV)
+  table-footer

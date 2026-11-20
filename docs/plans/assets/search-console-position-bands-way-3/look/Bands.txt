@@ -1,4 +1,4 @@
-# Search Console → Position bands — the approved look (board "Bands" of docs/plans/assets/search-console-redesign/).
+# Search Console → Position bands — the approved look (board "Bands" of docs/plans/assets/search-console-position-bands-way-3/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Position bands
@@ -8,7 +8,7 @@ figures
   figure: #–#
   figure: #–#
   figure: # and below
-chart-card: Keywords in each band
+chart-card: Keywords in each band, week by week
   checkbox: Top #
   checkbox: #–#
   checkbox: #–#

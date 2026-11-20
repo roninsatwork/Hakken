@@ -89,6 +89,19 @@ describe("ChartReveal", () => {
     render(<ChartReveal replay="a"><Figures lines={2} /></ChartReveal>);
     expect(animate).not.toHaveBeenCalled();
   });
+
+  it("moves each figure of a part drawn without recharts on its own, in the motion it names", () => {
+    render(
+      <ChartReveal replay="a" motion="rise" figures="[data-reveal]">
+        <div data-reveal="rise" className="up" />
+        <div data-reveal="fall" className="down" />
+        <div className="words" />
+      </ChartReveal>,
+    );
+    expect(moved()).toEqual(["up", "down"]);
+    expect(animate.mock.calls[0][0][0]).toMatchObject({ transform: "scaleY(0)", transformOrigin: "50% 100%" });
+    expect(animate.mock.calls[1][0][0]).toMatchObject({ transform: "scaleY(0)", transformOrigin: "50% 0%" });
+  });
 });
 
 describe("revealKey", () => {

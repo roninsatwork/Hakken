@@ -336,7 +336,6 @@ Reviewed file inventory: 419 `page.tsx` files. This is a file count, not a count
 | `/app/profile/integrations/telegram` | [src/app/(dashboard)/app/profile/integrations/telegram/page.tsx](../../src/app/(dashboard)/app/profile/integrations/telegram/page.tsx) |
 | `/app/profile` | [src/app/(dashboard)/app/profile/page.tsx](../../src/app/(dashboard)/app/profile/page.tsx) |
 | `/app/reception` | [src/app/(dashboard)/app/reception/page.tsx](../../src/app/(dashboard)/app/reception/page.tsx) |
-| `/app/search-console/[siteId]/almost-there` | [src/app/(dashboard)/app/search-console/[siteId]/almost-there/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/almost-there/page.tsx) |
 | `/app/search-console/[siteId]/brand-and-non-brand` | [src/app/(dashboard)/app/search-console/[siteId]/brand-and-non-brand/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/brand-and-non-brand/page.tsx) |
 | `/app/search-console/[siteId]/click-rate-by-position` | [src/app/(dashboard)/app/search-console/[siteId]/click-rate-by-position/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/click-rate-by-position/page.tsx) |
 | `/app/search-console/[siteId]/connection` | [src/app/(dashboard)/app/search-console/[siteId]/connection/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/connection/page.tsx) |
@@ -347,7 +346,6 @@ Reviewed file inventory: 419 `page.tsx` files. This is a file count, not a count
 | `/app/search-console/[siteId]/keywords/keyword/countries` | [src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/countries/page.tsx) |
 | `/app/search-console/[siteId]/keywords/keyword` | [src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/keywords/keyword/page.tsx) |
 | `/app/search-console/[siteId]/keywords` | [src/app/(dashboard)/app/search-console/[siteId]/keywords/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/keywords/page.tsx) |
-| `/app/search-console/[siteId]/missed-demand` | [src/app/(dashboard)/app/search-console/[siteId]/missed-demand/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/missed-demand/page.tsx) |
 | `/app/search-console/[siteId]/new-and-lost` | [src/app/(dashboard)/app/search-console/[siteId]/new-and-lost/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/new-and-lost/page.tsx) |
 | `/app/search-console/[siteId]` | [src/app/(dashboard)/app/search-console/[siteId]/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/page.tsx) |
 | `/app/search-console/[siteId]/pages/page/countries` | [src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/pages/page/countries/page.tsx) |
@@ -362,7 +360,6 @@ Reviewed file inventory: 419 `page.tsx` files. This is a file count, not a count
 | `/app/search-console/[siteId]/tracked/pages` | [src/app/(dashboard)/app/search-console/[siteId]/tracked/pages/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/tracked/pages/page.tsx) |
 | `/app/search-console/[siteId]/types` | [src/app/(dashboard)/app/search-console/[siteId]/types/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/types/page.tsx) |
 | `/app/search-console/[siteId]/volatility` | [src/app/(dashboard)/app/search-console/[siteId]/volatility/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/volatility/page.tsx) |
-| `/app/search-console/[siteId]/wins-and-losses` | [src/app/(dashboard)/app/search-console/[siteId]/wins-and-losses/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/wins-and-losses/page.tsx) |
 | `/app/search-console` | [src/app/(dashboard)/app/search-console/page.tsx](../../src/app/(dashboard)/app/search-console/page.tsx) |
 | `/app/settings/auth-diagnostics` | [src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx](../../src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx) |
 | `/app/settings/billing` | [src/app/(dashboard)/app/settings/billing/page.tsx](../../src/app/(dashboard)/app/settings/billing/page.tsx) |

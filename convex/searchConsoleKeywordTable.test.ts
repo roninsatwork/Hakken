@@ -131,7 +131,7 @@ describe("a list of keywords read as columns", () => {
   });
 
   /** One list read both ways, with what each says. */
-  const bothWays = async (asks: Array<{ view: View; missed?: "searched" | "untracked"; sort?: (typeof SORT_KEYS)[number]; direction?: "asc" | "desc" } & Filters>) =>
+  const bothWays = async (asks: Array<{ view: View; sort?: (typeof SORT_KEYS)[number]; direction?: "asc" | "desc" } & Filters>) =>
     await t.run(async (ctx) => {
       const out = [];
       for (const ask of asks) {
@@ -142,22 +142,19 @@ describe("a list of keywords read as columns", () => {
           rows: list.rows.slice(), cut: list.cut, listed: list.listed, named: list.named, summary: list.summary,
           from: list.from, to: list.to, comparable: list.comparable, live: list.live, preparing: list.preparing,
         });
-        // Read as columns, the rows are made when asked; Missed demand's few from Sites are rows already.
-        const asColumns = !Array.isArray(columns.rows) || (ask.view === "missed" && ask.missed !== "untracked");
+        // Read as columns, the rows are made when asked.
+        const asColumns = !Array.isArray(columns.rows);
         out.push({ ask, asColumns, columns: said(columns), rows: said(rows) });
       }
       return out;
     });
 
-  const VIEWS: Array<{ view: View; missed?: "searched" | "untracked" }> = [
-    { view: "all" }, { view: "tracked" }, { view: "almost" }, { view: "competing" }, { view: "moves" },
-    { view: "missed", missed: "searched" }, { view: "missed", missed: "untracked" }, { view: "volatility" },
-  ];
+  const VIEWS: Array<{ view: View }> = [{ view: "all" }, { view: "tracked" }, { view: "competing" }, { view: "volatility" }];
 
   test("every page's rule, searched and filtered every way: the same rows, figures and hero boxes", async () => {
     const filters: Filters[] = [
       {}, { q: "door" }, { q: "acme lev" }, { tracked: "yes" }, { tracked: "no" }, { band: "4-10" }, { kind: "BUYING" }, { kind: "UNJUDGED" },
-      { brand: "yes" }, { brand: "no" }, { move: "win" }, { move: "loss" }, { way: "up" }, { way: "down" }, { verdict: "high" },
+      { brand: "yes" }, { brand: "no" }, { way: "up" }, { way: "down" }, { verdict: "high" },
     ];
     const results = await bothWays(VIEWS.flatMap((view) => filters.map((filter) => ({ ...view, ...filter }))));
     for (const result of results) {
@@ -165,11 +162,11 @@ describe("a list of keywords read as columns", () => {
       expect(result.columns, JSON.stringify(result.ask)).toEqual(result.rows);
     }
     // Each rule lists something, so the comparison is of rows, not of nothing.
-    for (const view of VIEWS) expect(results.find((result) => result.ask.view === view.view && result.ask.missed === view.missed)!.rows.rows.length).toBeGreaterThan(0);
+    for (const view of VIEWS) expect(results.find((result) => result.ask.view === view.view)!.rows.rows.length).toBeGreaterThan(0);
   });
 
   test("every heading, either way round, on the rules that add their own figures", async () => {
-    const rules: Array<{ view: View }> = [{ view: "competing" }, { view: "moves" }, { view: "tracked" }, { view: "volatility" }];
+    const rules: Array<{ view: View }> = [{ view: "competing" }, { view: "tracked" }, { view: "volatility" }];
     const results = await bothWays(rules.flatMap((rule) => SORT_KEYS.flatMap((sort) => (["asc", "desc"] as const).map((direction) => ({ ...rule, sort, direction })))));
     for (const result of results) expect(result.columns, JSON.stringify(result.ask)).toEqual(result.rows);
   });

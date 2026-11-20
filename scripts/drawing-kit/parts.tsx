@@ -44,6 +44,9 @@ import { PageFlowChart } from "@/src/ui/components/screens/PageFlowChart";
 import { StepFlowChart } from "@/src/ui/components/screens/StepFlowChart";
 import { HundredGrid } from "@/src/ui/components/screens/HundredGrid";
 import { HundredStrips, stripColour } from "@/src/ui/components/screens/HundredStrips";
+import { MirrorBars } from "@/src/ui/components/screens/MirrorBars";
+import { ShiftLines } from "@/src/ui/components/screens/ShiftLines";
+import { GainLossCard } from "@/src/ui/components/screens/GainLossCard";
 import { TickActions, TickCount } from "@/src/ui/components/screens/TableTicks";
 import { Select } from "@/src/ui/components/screens/Select";
 import { FieldHint, FieldLabel, SegmentedChoice, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
@@ -572,6 +575,71 @@ const PARTS: Part[] = [
           { key: "direct", name: "Direct", top: 21, bottom: 22, colour: stripColour(3), readout: [] },
           { key: "paid", name: "Paid Search", top: 3, bottom: 9, colour: stripColour(4), readout: [] },
         ]}
+      />
+    ),
+  },
+  {
+    id: "mirror-bars",
+    name: "MirrorBars — two counts on one scale of steps",
+    source: "src/ui/components/screens/MirrorBars.tsx, inside MapCard",
+    use: "A bar a step, one count above the line and one below it, each half on its own size, with named zones behind. Keywords and clicks at each place on Google, visits and sales each hour.",
+    render: () => (
+      <MirrorBars
+        topLabel="Keywords that got a click"
+        bottomLabel="Clicks"
+        zones={[{ upTo: "3", name: "Top 3" }, { upTo: "10", name: "4–10" }, { upTo: "12", name: "11–20" }]}
+        bars={[[1, 72, 100], [2, 191, 405], [3, 122, 308], [4, 191, 414], [5, 188, 446], [6, 217, 554], [7, 185, 356], [8, 247, 458], [9, 207, 479], [10, 197, 315], [11, 135, 263], [12, 136, 310]].map(([place, top, bottom]) => ({
+          key: String(place), label: String(place), heading: `Place ${place}`, top, bottom, readout: [],
+        }))}
+      />
+    ),
+  },
+  {
+    id: "shift-lines",
+    name: "ShiftLines — where each thing sat before, and where it sits now",
+    source: "src/ui/components/screens/ShiftLines.tsx, inside MapCard",
+    use: "A row each: a hollow dot before, a filled dot now, joined by a line, orange where it got better and grey where it got worse, on one scale with named zones behind. A keyword's place on Google, a page's, a rate.",
+    render: () => (
+      <ShiftLines
+        min={1}
+        max={30}
+        lowerIsBetter
+        tick={(value) => (value === 30 ? "30+" : String(value))}
+        fromKey="The 3 months before"
+        toKey="The last 3 months"
+        zones={[{ upTo: 3, name: "Top 3" }, { upTo: 10, name: "4–10" }, { upTo: 20, name: "11–20" }, { upTo: 30, name: "21 and below" }]}
+        rows={[
+          { key: "a", label: "door handles", from: 16.3, to: 13.2, figures: "16.3 → 13.2", detail: "40,809 shown", readout: [] },
+          { key: "b", label: "black kitchen handles", from: 8.5, to: 10.6, figures: "8.5 → 10.6", detail: "6,674 shown", readout: [] },
+          { key: "c", label: "kitchen cupboard handles", from: 21.1, to: 12.9, figures: "21.1 → 12.9", detail: "4,477 shown", readout: [] },
+        ]}
+      />
+    ),
+  },
+  {
+    id: "gain-loss-card",
+    name: "GainLossCard — what came and what went, step by step",
+    source: "src/ui/components/screens/GainLossCard.tsx",
+    use: "Gained above the line and lost below it, each step a bar, with a line for gained less lost, its tick boxes, waiting and empty words, and a download. Keywords and pages Google started and stopped showing; links, products.",
+    render: () => (
+      <GainLossCard
+        title="Keywords and pages, gained and lost"
+        exportName="drawing-kit-gain-loss"
+        csv={() => ""}
+        host="acme-shop.test"
+        from="2026-10-01"
+        to="2026-10-28"
+        step="week"
+        ticks
+        netLabel="Gained minus lost"
+        startLegend="Gained"
+        series={[
+          { key: "new", name: "New keywords", colour: SITE_SERIES_COLOURS[3] },
+          { key: "lost", name: "Lost keywords", colour: SITE_SERIES_COLOURS[1] },
+        ]}
+        steps={[["2026-10-01", "1 Oct", 1620, 1410], ["2026-10-08", "8 Oct", 1540, 1690], ["2026-10-15", "15 Oct", 1710, 1380], ["2026-10-22", "22 Oct", 1480, 1520]].map(([day, label, gained, lost]) => ({
+          day: String(day), lastDay: String(day), label: String(label), counts: { new: Number(gained), up: 0, down: 0, lost: Number(lost) },
+        }))}
       />
     ),
   },

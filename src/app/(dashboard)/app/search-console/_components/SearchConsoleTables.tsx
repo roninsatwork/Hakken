@@ -58,7 +58,7 @@ type View = NonNullable<FunctionArgs<typeof api.searchConsoleLists.searchConsole
 const FIRSTS = {
   key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", movedBy: "desc", share: "desc",
   count: "desc", top: "asc", volume: "desc", estimate: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
-  topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc",
+  topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc", swaps: "desc",
 } as const;
 export type SortKey = keyof typeof FIRSTS;
 
@@ -88,6 +88,7 @@ const LIVE_SORTS: SiteSortColumns<ListRow, SortKey> = {
   gap: { value: (row) => row.gap, first: "desc" },
   // Position bands: the top band first; a row Google did not show has none, last, as the server orders it.
   band: { value: (row) => (row.impressions > 0 ? BANDS.indexOf(row.band) : null), first: "asc" },
+  swaps: { value: (row) => row.swaps ?? null, first: "desc" },
 };
 const keyOf = (row: ListRow) => row.key;
 
@@ -99,7 +100,7 @@ function liveSortsFor(choices: PageKindsView["choices"]): SiteSortColumns<ListRo
 }
 
 /** The filter chips a table can show, each kept in the address under its own key. The country is the page's, not a chip (§16). */
-export type ChipId = "tracked" | "band" | "almostBand" | "intent" | "pageType" | "brand" | "move" | "way" | "verdict" | "missed" | "device";
+export type ChipId = "tracked" | "band" | "intent" | "pageType" | "brand" | "way" | "verdict" | "device";
 
 const DEVICES = ["DESKTOP", "MOBILE", "TABLET"] as const;
 /** Every intent and page type a Kind chip can hold: anything else in the address is ignored. */
@@ -118,7 +119,6 @@ function usePageKindParam(chips: readonly ChipId[]): { kinds: PageKindsView; all
   if (!pages) return { kinds, allowed: KINDS };
   return { kinds, allowed: kinds.allowed === undefined ? undefined : ["", ...new Set<string>([...RANK_INTENTS, ...PAGE_TYPES, ...kinds.allowed])] };
 }
-const ALMOST_BANDS: readonly Band[] = ["4-10", "11-20"];
 
 /** The filters chosen, read from the address: only those of the chips the table shows. */
 function useChosen(chips: readonly ChipId[]) {
@@ -128,20 +128,16 @@ function useChosen(chips: readonly ChipId[]) {
   const [band] = useSiteParam<"" | Band>("band", "", ["", ...BANDS]);
   const [kind] = useSiteParam<string>("kind", "", allowed);
   const [brand] = useSiteParam<"" | "yes" | "no">("brand", "", ["", "yes", "no"]);
-  const [move] = useSiteParam<"" | "win" | "loss">("move", "", ["", "win", "loss"]);
   const [way] = useSiteParam<"" | "up" | "down">("way", "", ["", "up", "down"]);
   const [verdict] = useSiteParam<"" | "high" | "low" | "close">("verdict", "", ["", "high", "low", "close"]);
-  const [missed] = useSiteParam<"searched" | "untracked">("list", "searched", ["searched", "untracked"]);
   const [device] = useSiteParam<string>("device", "", ["", ...DEVICES]);
-  const filters: Filters & { missed?: "searched" | "untracked" } = {
+  const filters: Filters = {
     ...(has("tracked") && tracked ? { tracked } : {}),
-    ...((has("band") || has("almostBand")) && band ? { band } : {}),
+    ...(has("band") && band ? { band } : {}),
     ...((has("intent") || has("pageType")) && kind ? { kind } : {}),
     ...(has("brand") && brand ? { brand } : {}),
-    ...(has("move") && move ? { move } : {}),
     ...(has("way") && way ? { way } : {}),
     ...(has("verdict") && verdict ? { verdict } : {}),
-    ...(has("missed") ? { missed } : {}),
   };
   return { filters, device: has("device") ? device : "", kinds };
 }
@@ -209,7 +205,7 @@ export function useSearchConsoleList(options: {
   const pageList = options.dimension === "page" && within === undefined;
   const live = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
-    isLive && ready ? { ...base, ...(filters.missed ? { missed: filters.missed } : {}), ...(device ? { device } : {}), ...(pageList ? { keywordsApart: true } : {}) } : null,
+    isLive && ready ? { ...base, ...(device ? { device } : {}), ...(pageList ? { keywordsApart: true } : {}) } : null,
   );
   // Google's answer is asked once; what the company tracks follows every tick.
   const trackedNow = useQuery(api.searchConsoleTracking.searchConsoleTrackedKeys, isLive && ready ? { siteId, kind: within ? (within.kind === "query" ? "page" : "query") : options.dimension } : "skip");
@@ -244,7 +240,7 @@ export function useSearchConsoleList(options: {
       cut: server.result?.cut ?? null,
       listed: server.result?.listed ?? null,
     };
-  const filtered = Boolean(term) || Object.keys(filters).some((key) => key !== "missed") || Boolean(device);
+  const filtered = Boolean(term) || Object.keys(filters).length > 0 || Boolean(device);
   const liveSummary = live.answer?.ok
     ? (tracksOnly && listedLive ? { ...live.answer.summary, ...figuresOf(listedLive, live.answer.comparable), trackedList: trackedListOf(listedLive, live.answer.comparable) } : live.answer.summary)
     : null;
@@ -299,12 +295,11 @@ export function useSearchConsoleList(options: {
 export type ListSummary = NonNullable<FunctionReturnType<typeof api.searchConsoleLists.searchConsoleListPage>["summary"]>;
 
 /**
- * The hero boxes' figures for a list other than the one on screen (Missed
- * demand's two lists, Types): read from the ready-made period — all
+ * The hero boxes' figures for a list other than the one on screen (Types): read from the ready-made period — all
  * countries', or the country chosen's when the website keeps it ready — or
  * asked of Google for other dates and any other country.
  */
-export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view?: View; missed?: "searched" | "untracked" }): ListSummary | null {
+export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view?: View }): ListSummary | null {
   return useSearchConsoleSummaryRead(ask).summary;
 }
 
@@ -313,7 +308,7 @@ export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view
  * (Performance's squares and bands, search-console-performance-way-3-plan-2026-11-17.md) reads it so. `inCountry`: a
  * list of pages in the country chosen alone, as Pages reads it (review fixes, 18 November 2026: Performance's squares).
  */
-export function useSearchConsoleSummaryRead(ask: { dimension: "query" | "page"; view?: View; missed?: "searched" | "untracked"; inCountry?: boolean }): { summary: ListSummary | null; loading: boolean } {
+export function useSearchConsoleSummaryRead(ask: { dimension: "query" | "page"; view?: View; inCountry?: boolean }): { summary: ListSummary | null; loading: boolean } {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
@@ -409,10 +404,8 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
   const [band, setBand] = useSiteParam<string>("band", "", ["", ...BANDS]);
   const [kind, setKind] = useSiteParam<string>("kind", "", allowed);
   const [brand, setBrand] = useSiteParam<string>("brand", "", ["", "yes", "no"]);
-  const [move, setMove] = useSiteParam<string>("move", "", ["", "win", "loss"]);
   const [way, setWay] = useSiteParam<string>("way", "", ["", "up", "down"]);
   const [verdict, setVerdict] = useSiteParam<string>("verdict", "", ["", "high", "low", "close"]);
-  const [missed, setMissed] = useSiteParam<string>("list", "searched", ["searched", "untracked"]);
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...DEVICES]);
   const bandWord = (value: string) => t(`bands.${value}`);
   return (
@@ -428,15 +421,12 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
               </Select>
             );
           case "band":
-          case "almostBand": {
-            const bands = chip === "band" ? BANDS : ALMOST_BANDS;
             return (
-              <Select key={chip} chip={{ label: t("position"), choice: band && bands.includes(band as Band) ? bandWord(band) : null }} value={band} onChange={setBand}>
-                <option value="">{t(chip === "band" ? "anyPosition" : "almostAny")}</option>
-                {bands.map((entry) => <option key={entry} value={entry}>{bandWord(entry)}</option>)}
+              <Select key={chip} chip={{ label: t("position"), choice: band && BANDS.includes(band as Band) ? bandWord(band) : null }} value={band} onChange={setBand}>
+                <option value="">{t("anyPosition")}</option>
+                {BANDS.map((entry) => <option key={entry} value={entry}>{bandWord(entry)}</option>)}
               </Select>
             );
-          }
           case "intent":
             return (
               <Select key={chip} chip={{ label: tc("intentFilter"), choice: kind ? tc(`intents.${kind}`) : null }} value={kind} onChange={setKind}>
@@ -465,14 +455,6 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
                 <option value="no">{t("brandNo")}</option>
               </Select>
             );
-          case "move":
-            return (
-              <Select key={chip} chip={{ label: t("move"), choice: move ? t(move === "win" ? "wins" : "losses") : null }} value={move} onChange={setMove}>
-                <option value="">{t("anyMove")}</option>
-                <option value="win">{t("wins")}</option>
-                <option value="loss">{t("losses")}</option>
-              </Select>
-            );
           case "way":
             return (
               <Select key={chip} chip={{ label: t("way"), choice: way ? t(way === "up" ? "wayUp" : "wayDown") : null }} value={way} onChange={setWay}>
@@ -486,13 +468,6 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
               <Select key={chip} chip={{ label: t("verdict"), choice: verdict ? t(`verdicts.${verdict}`) : null }} value={verdict} onChange={setVerdict}>
                 <option value="">{t("anyVerdict")}</option>
                 {(["high", "low", "close"] as const).map((entry) => <option key={entry} value={entry}>{t(`verdicts.${entry}`)}</option>)}
-              </Select>
-            );
-          case "missed":
-            return (
-              <Select key={chip} chip={{ label: t("missed"), choice: t(missed === "untracked" ? "missedUntracked" : "missedSearched") }} value={missed} onChange={setMissed}>
-                <option value="searched">{t("missedSearched")}</option>
-                <option value="untracked">{t("missedUntracked")}</option>
               </Select>
             );
           case "device":
@@ -526,8 +501,8 @@ type Figure = "clicks" | "change" | "impressions" | "ctr" | "position" | "moved"
 /**
  * The figure columns most tables share, right-aligned and sortable: with
  * `change`, the clicks gained or lost on the days before ("New" for a row not
- * shown then), and `moved`, the places risen or fallen — Wins and losses'
- * and the tracked lists' alike.
+ * shown then), and `moved`, the places risen or fallen — the tracked lists'
+ * and Volatility's alike.
  *
  * Each is one line (the table rule, AGENTS.md "Tables are lean"; Anthony on
  * the lean Keywords board, 2026-11-17: "its the two lines thats not good").

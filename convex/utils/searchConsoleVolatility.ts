@@ -9,6 +9,16 @@
  * day's score is the average move of the keywords counted: 0 when nothing
  * moved, 10 when every one moved ten places or more. Fewer than 10 keywords
  * counted is too few to judge, and the day has no score.
+ *
+ * The score is also kept in two parts that add up to it (Anthony,
+ * 2026-11-20: "a selector to the volatility chart for positive volatility
+ * and negative volatility"; named on screen "Positions improved" and
+ * "Positions declined", "not up and down"): the moves of the keywords that
+ * climbed (`volatilityUp`), and of those that fell (`volatilityDown`), each
+ * over every keyword counted. A day of 2.4 might be 0.9 improved and 1.5
+ * declined. Rows built before 2026-11-20 have no
+ * parts, and a week or month past the days kept as days is never rebuilt, so
+ * the parts reach back only as far as those days.
  */
 
 /** Impressions a keyword needs on both days to count. */
@@ -36,14 +46,27 @@ export type VolatilityLevel = "NORMAL" | "HIGH" | "VERY_HIGH";
 /** A keyword's day as the kept lines add it up. */
 export type Standing = { impressions: number; positionSum: number };
 
-/** What a day, week or month row keeps (`searchConsoleWeeks`): its score, if it has one, the keywords counted, and the big moves either way. */
-export type Volatility = { volatility?: number; volatilityKeywords: number; movedUp5: number; movedDown5: number };
+/**
+ * What a day, week or month row keeps (`searchConsoleWeeks`): its score, if it has one, and its two parts (Positions improved, `volatilityUp`; Positions declined, `volatilityDown`),
+ * the keywords counted, and the big moves either way.
+ */
+export type Volatility = { volatility?: number; volatilityUp?: number; volatilityDown?: number; volatilityKeywords: number; movedUp5: number; movedDown5: number };
 
 const oneDecimal = (value: number) => Math.round(value * 10) / 10;
+
+/**
+ * A score's two parts to one decimal, so that they add up to the score as written: the declined part is what is left once
+ * the improved part is rounded. 0.95 improved and 1.45 declined of 2.4 are 1.0 and 1.4, never 1.0 and 1.5, which read as 2.5.
+ */
+const partsOf = (score: number, up: number) => {
+  const climbed = Math.min(oneDecimal(up), score);
+  return { volatilityUp: climbed, volatilityDown: oneDecimal(score - climbed) };
+};
 
 /** One day against the day before. */
 export function dayVolatility(today: ReadonlyMap<string, Standing>, before: ReadonlyMap<string, Standing>): Volatility {
   let moved = 0;
+  let climbed = 0;
   let counted = 0;
   let up = 0;
   let down = 0;
@@ -53,23 +76,35 @@ export function dayVolatility(today: ReadonlyMap<string, Standing>, before: Read
     // Positive when the keyword fell: its position's number grew.
     const change = now.positionSum / now.impressions - then.positionSum / then.impressions;
     counted += 1;
-    moved += Math.min(Math.abs(change), MOVE_COUNTED_TO);
+    const counts = Math.min(Math.abs(change), MOVE_COUNTED_TO);
+    moved += counts;
+    if (change < 0) climbed += counts;
     if (change <= -BIG_MOVE) up += 1;
     else if (change >= BIG_MOVE) down += 1;
   }
   const counts = { volatilityKeywords: counted, movedUp5: up, movedDown5: down };
-  return counted >= VOLATILITY_KEYWORDS_LEAST ? { ...counts, volatility: oneDecimal(moved / counted) } : counts;
+  if (counted < VOLATILITY_KEYWORDS_LEAST) return counts;
+  const volatility = oneDecimal(moved / counted);
+  return { ...counts, volatility, ...partsOf(volatility, climbed / counted) };
 }
 
-/** A week or a month: the average of its days' scores, and its days' counts added up. */
+/**
+ * A week or a month: the average of its days' scores, and of their improved parts, and its days' counts added up. It has
+ * parts only when every day with a score has them.
+ */
 export function periodVolatility(days: readonly Volatility[]): Volatility {
   const scored = days.flatMap((day) => (day.volatility === undefined ? [] : [day.volatility]));
+  const ups = days.flatMap((day) => (day.volatility === undefined || day.volatilityUp === undefined ? [] : [day.volatilityUp]));
   const counts = {
     volatilityKeywords: days.reduce((sum, day) => sum + day.volatilityKeywords, 0),
     movedUp5: days.reduce((sum, day) => sum + day.movedUp5, 0),
     movedDown5: days.reduce((sum, day) => sum + day.movedDown5, 0),
   };
-  return scored.length > 0 ? { ...counts, volatility: oneDecimal(scored.reduce((sum, one) => sum + one, 0) / scored.length) } : counts;
+  if (scored.length === 0) return counts;
+  const volatility = oneDecimal(scored.reduce((sum, one) => sum + one, 0) / scored.length);
+  return ups.length === scored.length
+    ? { ...counts, volatility, ...partsOf(volatility, ups.reduce((sum, one) => sum + one, 0) / ups.length) }
+    : { ...counts, volatility };
 }
 
 /** A score's level against the website's usual; Normal while there is no usual yet. */

@@ -1,0 +1,318 @@
+"use client";
+
+// Two new shared parts, drawn as they'd be built in src/ui/components/screens/: each takes plain figures and words, reads
+// nothing, and is drawn in real pixels at the width it's given, so any section can use it.
+import { useRef, useState, type MouseEvent } from "react";
+import { useElementWidth } from "@/src/hooks/useElementWidth";
+import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
+import { LAYER } from "@/src/ui/lib/layers";
+
+type Readout = ReadonlyArray<{ value: string; label: string }>;
+
+/** The hover panel that follows the pointer, as HundredStrips' does. */
+function useFollowingTip(width: number) {
+  const tip = useRef<HTMLDivElement>(null);
+  const onMove = (event: MouseEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - box.left;
+    if (!tip.current) return;
+    tip.current.style.left = `${x}px`;
+    tip.current.style.top = `${event.clientY - box.top}px`;
+    tip.current.style.transform = `translate(${x > width - 260 ? "calc(-100% - 12px)" : "12px"}, 12px)`;
+  };
+  return { tip, onMove };
+}
+
+// ——— MoveFlow ———
+
+/**
+ * Where things went between two dates: a column of groups before, a column of groups now, and a ribbon from each group
+ * before to each group now, as wide as what moved. Any ordered groups: Google's position bands, Bing's, a tracked list's
+ * places, a page's Classification. A group may sit on one side only ("Not shown before"). Pressing a group keeps its ribbons
+ * lit. Every group is named in the list under the chart, with before → now.
+ */
+export type FlowGroup = { key: string; name: string; colour: string };
+export type Flow = { from: string; to: string; value: number; readout: Readout };
+
+const FLOW_HEIGHT = 380;
+const FLOW_GAP = 10;
+const FLOW_BLOCK = 14;
+const FLOW_WORDS = 170;
+const FLOW_HEAD = 26;
+
+export function MoveFlow({ groups, flows, leftLabel, rightLabel, format = (value: number) => value.toLocaleString("en-GB") }: {
+  groups: readonly FlowGroup[];
+  flows: readonly Flow[];
+  leftLabel: string;
+  rightLabel: string;
+  format?: (value: number) => string;
+}) {
+  const [watch, measured] = useElementWidth<HTMLDivElement>();
+  const width = measured || 800;
+  const { tip, onMove } = useFollowingTip(width);
+  const [hover, setHover] = useState<Flow | null>(null);
+  const [lit, setLit] = useState<string | null>(null);
+  const total = flows.reduce((sum, flow) => sum + flow.value, 0);
+  const sideOf = (side: "from" | "to") => groups
+    .map((group) => ({ group, value: flows.filter((flow) => flow[side] === group.key).reduce((sum, flow) => sum + flow.value, 0) }))
+    .filter((one) => one.value > 0);
+  const left = sideOf("from");
+  const right = sideOf("to");
+  const room = (count: number) => FLOW_HEIGHT - FLOW_GAP * Math.max(0, count - 1);
+  const scale = Math.min(room(left.length), room(right.length)) / Math.max(1, total);
+  // Each group's block, top to bottom, and where each ribbon leaves and arrives inside it.
+  const blocks = (side: typeof left) => {
+    let y = FLOW_HEAD;
+    return new Map(side.map((one) => { const at = { y, h: one.value * scale }; y += at.h + FLOW_GAP; return [one.group.key, at]; }));
+  };
+  const leftAt = blocks(left);
+  const rightAt = blocks(right);
+  const order = (key: string) => groups.findIndex((group) => group.key === key);
+  const leftUsed = new Map<string, number>();
+  const rightUsed = new Map<string, number>();
+  const ribbons = [...flows]
+    .filter((flow) => flow.value > 0)
+    .sort((a, b) => order(a.from) - order(b.from) || order(a.to) - order(b.to))
+    .map((flow) => {
+      const h = flow.value * scale;
+      const y0 = (leftAt.get(flow.from)?.y ?? 0) + (leftUsed.get(flow.from) ?? 0);
+      leftUsed.set(flow.from, (leftUsed.get(flow.from) ?? 0) + h);
+      return { flow, h, y0 };
+    })
+    .sort((a, b) => order(a.flow.to) - order(b.flow.to) || order(a.flow.from) - order(b.flow.from))
+    .map((ribbon) => {
+      const y1 = (rightAt.get(ribbon.flow.to)?.y ?? 0) + (rightUsed.get(ribbon.flow.to) ?? 0);
+      rightUsed.set(ribbon.flow.to, (rightUsed.get(ribbon.flow.to) ?? 0) + ribbon.h);
+      return { ...ribbon, y1 };
+    });
+  const [x0, x1] = [FLOW_WORDS + FLOW_BLOCK, width - FLOW_WORDS - FLOW_BLOCK];
+  const mid = (x0 + x1) / 2;
+  const colourOf = (key: string) => groups.find((group) => group.key === key)?.colour ?? CHART_COMPARATOR_GREY;
+  const shown = (flow: Flow) => lit === null || flow.from === lit || flow.to === lit;
+  const height = FLOW_HEAD + FLOW_HEIGHT + 8;
+  const words = (x: number, y: number, h: number, anchor: "start" | "end", name: string, value: number) => (
+    <text x={x} y={y + h / 2 + 4} textAnchor={anchor} fill="currentColor" className="text-foreground" style={{ fontSize: 12 }}>
+      {name} <tspan className="text-secondary" fill="currentColor">{format(value)}</tspan>
+    </text>
+  );
+  return (
+    <div ref={watch} data-part="move-flow" className="relative flex flex-col gap-3" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+      <svg width={width} height={height} role="img" aria-label={`${leftLabel} to ${rightLabel}. ${flows.map((flow) => `${flow.from} to ${flow.to} ${flow.value}`).join(", ")}`}>
+        <text x={FLOW_WORDS} y={14} textAnchor="end" fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{leftLabel}</text>
+        <text x={width - FLOW_WORDS} y={14} fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{rightLabel}</text>
+        {ribbons.map(({ flow, h, y0, y1 }) => (
+          <path
+            key={`${flow.from}-${flow.to}`}
+            data-flow={`${flow.from}-${flow.to}`}
+            d={`M${x0} ${y0} C${mid} ${y0} ${mid} ${y1} ${x1} ${y1} L${x1} ${y1 + h} C${mid} ${y1 + h} ${mid} ${y0 + h} ${x0} ${y0 + h} Z`}
+            fill={colourOf(flow.from)}
+            fillOpacity={hover === flow ? 0.6 : shown(flow) ? 0.3 : 0.06}
+            className="cursor-pointer"
+            onMouseEnter={() => setHover(flow)}
+          />
+        ))}
+        {left.map(({ group, value }) => {
+          const at = leftAt.get(group.key)!;
+          return (
+            <g key={`l-${group.key}`} className="cursor-pointer" onClick={() => setLit(lit === group.key ? null : group.key)}>
+              <rect x={FLOW_WORDS} y={at.y} width={FLOW_BLOCK} height={Math.max(1, at.h)} rx={2} fill={group.colour} />
+              {at.h >= 12 ? words(FLOW_WORDS - 8, at.y, at.h, "end", group.name, value) : null}
+            </g>
+          );
+        })}
+        {right.map(({ group, value }) => {
+          const at = rightAt.get(group.key)!;
+          return (
+            <g key={`r-${group.key}`} className="cursor-pointer" onClick={() => setLit(lit === group.key ? null : group.key)}>
+              <rect x={width - FLOW_WORDS - FLOW_BLOCK} y={at.y} width={FLOW_BLOCK} height={Math.max(1, at.h)} rx={2} fill={group.colour} />
+              {at.h >= 12 ? words(width - FLOW_WORDS + 8, at.y, at.h, "start", group.name, value) : null}
+            </g>
+          );
+        })}
+      </svg>
+      <div className="grid gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+        {groups.map((group) => {
+          const before = left.find((one) => one.group.key === group.key)?.value ?? 0;
+          const now = right.find((one) => one.group.key === group.key)?.value ?? 0;
+          return (
+            <button key={group.key} type="button" aria-pressed={lit === group.key} onClick={() => setLit(lit === group.key ? null : group.key)} className="flex items-center gap-2 text-left text-[13px]" style={{ opacity: lit === null || lit === group.key ? 1 : 0.45 }}>
+              <span className="block h-3 w-3 shrink-0 rounded-[3px]" style={{ backgroundColor: group.colour }} />
+              <span className="min-w-0 flex-1 truncate text-foreground">{group.name}</span>
+              <span className="whitespace-nowrap font-mono text-[12px] text-secondary">{format(before)} → {format(now)}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div ref={tip} className={`pointer-events-none absolute ${LAYER.RAISED}`} style={{ visibility: hover ? "visible" : "hidden" }}>
+        {hover ? (
+          <ChartTooltipSurface heading={`${groups.find((group) => group.key === hover.from)?.name} → ${groups.find((group) => group.key === hover.to)?.name}`} wide>
+            {hover.readout.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}
+          </ChartTooltipSurface>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ——— MirrorBars ———
+
+/**
+ * Two figures on one scale of steps, one above a line and one below it: a bar a step, each half with its own size, so a
+ * step that has a lot of one and little of the other shows at a glance. Zones behind name runs of steps (Google's top 3,
+ * first page). Any two counts over the same steps: keywords and clicks at each place on Google, visits and conversions
+ * at each hour, people and sales on each day of the week. Each bar says its figure where it fits.
+ */
+export type MirrorBar = { key: string; label: string; heading: string; top: number; bottom: number; readout: Readout };
+export type MirrorZone = { upTo: string; name: string };
+
+const MIRROR_HALF = 130;
+const MIRROR_MIDDLE = 22;
+const MIRROR_HEAD = 22;
+
+export function MirrorBars({ bars, zones, topLabel, bottomLabel, topColour = CHART_SERIES_ORANGE, bottomColour = CHART_COMPARATOR_GREY, format = (value: number) => value.toLocaleString("en-GB") }: {
+  bars: readonly MirrorBar[];
+  zones: readonly MirrorZone[];
+  topLabel: string;
+  bottomLabel: string;
+  topColour?: string;
+  bottomColour?: string;
+  format?: (value: number) => string;
+}) {
+  const [watch, measured] = useElementWidth<HTMLDivElement>();
+  const width = measured || 800;
+  const { tip, onMove } = useFollowingTip(width);
+  const [hover, setHover] = useState<MirrorBar | null>(null);
+  const step = width / Math.max(1, bars.length);
+  const bar = Math.max(2, step - 4);
+  const [mostTop, mostBottom] = [Math.max(1, ...bars.map((one) => one.top)), Math.max(1, ...bars.map((one) => one.bottom))];
+  const line = MIRROR_HEAD + MIRROR_HALF;
+  const height = line + MIRROR_MIDDLE + MIRROR_HALF + 18;
+  let first = 0;
+  const bands = zones.map((zone) => {
+    const last = bars.findIndex((one) => one.key === zone.upTo);
+    const band = { ...zone, from: first, to: last };
+    first = last + 1;
+    return band;
+  });
+  const fits = step >= 26;
+  return (
+    <div ref={watch} data-part="mirror-bars" className="relative flex flex-col gap-3" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+      <svg width={width} height={height} role="img" aria-label={`${topLabel}. ${bottomLabel}. ${bars.map((one) => `${one.label} ${one.top} and ${one.bottom}`).join(", ")}`}>
+        {bands.map((band, at) => (
+          <g key={band.name}>
+            <rect x={band.from * step} y={MIRROR_HEAD - 4} width={(band.to - band.from + 1) * step} height={height - MIRROR_HEAD} fill="currentColor" className="text-foreground" fillOpacity={at % 2 === 0 ? 0.05 : 0.02} />
+            <text x={band.from * step + 4} y={12} fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{band.name}</text>
+          </g>
+        ))}
+        {bars.map((one, at) => {
+          const x = at * step + (step - bar) / 2;
+          const [up, down] = [(one.top / mostTop) * (MIRROR_HALF - 16), (one.bottom / mostBottom) * (MIRROR_HALF - 16)];
+          const below = line + MIRROR_MIDDLE;
+          return (
+            <g key={one.key} data-bar={one.key} onMouseEnter={() => setHover(one)} opacity={hover === null || hover === one ? 1 : 0.55}>
+              <rect x={at * step} y={MIRROR_HEAD} width={step} height={height - MIRROR_HEAD} fill="transparent" />
+              <rect x={x} y={line - up} width={bar} height={Math.max(one.top > 0 ? 1 : 0, up)} rx={2} fill={topColour} />
+              <rect x={x} y={below} width={bar} height={Math.max(one.bottom > 0 ? 1 : 0, down)} rx={2} fill={bottomColour} />
+              {fits && one.top > 0 ? <text x={x + bar / 2} y={line - up - 4} textAnchor="middle" fill="currentColor" className="text-secondary" style={{ fontSize: 10 }}>{format(one.top)}</text> : null}
+              {fits && one.bottom > 0 ? <text x={x + bar / 2} y={below + down + 11} textAnchor="middle" fill="currentColor" className="text-secondary" style={{ fontSize: 10 }}>{format(one.bottom)}</text> : null}
+              <text x={at * step + step / 2} y={line + MIRROR_MIDDLE / 2 + 4} textAnchor="middle" fill="currentColor" className="text-foreground" style={{ fontSize: 11 }}>{one.label}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-secondary">
+        <span className="flex items-center gap-2"><span className="block h-3 w-3 rounded-[3px]" style={{ backgroundColor: topColour }} />{topLabel}</span>
+        <span className="flex items-center gap-2"><span className="block h-3 w-3 rounded-[3px]" style={{ backgroundColor: bottomColour }} />{bottomLabel}</span>
+      </div>
+      <div ref={tip} className={`pointer-events-none absolute ${LAYER.RAISED}`} style={{ visibility: hover ? "visible" : "hidden" }}>
+        {hover ? (
+          <ChartTooltipSurface heading={hover.heading} wide>
+            {hover.readout.map((entry) => <ChartTooltipRow key={entry.label} value={entry.value} label={entry.label} />)}
+          </ChartTooltipSurface>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ——— ShiftLines ———
+
+/**
+ * Where each thing sat before and where it sits now, on one scale: a row each, a hollow dot before and a filled dot now,
+ * joined by a line, orange where it got better and grey where it got worse, so the shape and the words carry it as well
+ * as the colour. Bands behind the rows name the zones of the scale (Google's top 3, first page, second page), so a row
+ * close to an edge shows it. Any figure with a before and a now: a keyword's place, a page's place, a rate.
+ */
+export type ShiftRow = { key: string; label: string; from: number | null; to: number; detail: string; readout: Readout };
+export type ShiftZone = { upTo: number; name: string };
+
+const SHIFT_ROW = 30;
+const SHIFT_LABEL = 230;
+const SHIFT_DETAIL = 230;
+const SHIFT_HEAD = 24;
+
+export function ShiftLines({ rows, min, max, zones, lowerIsBetter = false, format = (value: number) => String(value), fromLabel, toLabel }: {
+  rows: readonly ShiftRow[];
+  min: number;
+  max: number;
+  zones: readonly ShiftZone[];
+  lowerIsBetter?: boolean;
+  format?: (value: number) => string;
+  fromLabel: string;
+  toLabel: string;
+}) {
+  const [watch, measured] = useElementWidth<HTMLDivElement>();
+  const width = measured || 800;
+  const { tip, onMove } = useFollowingTip(width);
+  const [hover, setHover] = useState<ShiftRow | null>(null);
+  const [left, right] = [SHIFT_LABEL, width - SHIFT_DETAIL];
+  const clamp = (value: number) => Math.min(max, Math.max(min, value));
+  const xOf = (value: number) => left + ((clamp(value) - min) / (max - min)) * (right - left);
+  const height = SHIFT_HEAD + rows.length * SHIFT_ROW + 22;
+  let start = min;
+  const bands = zones.map((zone) => { const band = { ...zone, from: start }; start = zone.upTo; return band; });
+  return (
+    <div ref={watch} data-part="shift-lines" className="relative flex flex-col gap-3" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+      <svg width={width} height={height} role="img" aria-label={rows.map((row) => `${row.label} ${row.from === null ? "" : format(row.from)} to ${format(row.to)}`).join(", ")}>
+        {bands.map((band, at) => (
+          <g key={band.name}>
+            <rect x={xOf(band.from)} y={SHIFT_HEAD - 6} width={Math.max(0, xOf(band.upTo) - xOf(band.from))} height={rows.length * SHIFT_ROW + 6} fill="currentColor" className="text-foreground" fillOpacity={at % 2 === 0 ? 0.05 : 0.02} />
+            <text x={(xOf(band.from) + xOf(band.upTo)) / 2} y={12} textAnchor="middle" fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{band.name}</text>
+            {at > 0 ? <line x1={xOf(band.from)} x2={xOf(band.from)} y1={SHIFT_HEAD - 6} y2={SHIFT_HEAD + rows.length * SHIFT_ROW} stroke="currentColor" className="text-secondary" strokeOpacity={0.5} strokeDasharray="3 3" /> : null}
+          </g>
+        ))}
+        {rows.map((row, at) => {
+          const y = SHIFT_HEAD + at * SHIFT_ROW + SHIFT_ROW / 2;
+          const better = row.from !== null && (lowerIsBetter ? row.to < row.from : row.to > row.from);
+          const colour = row.from === null || better ? CHART_SERIES_ORANGE : CHART_COMPARATOR_GREY;
+          return (
+            <g key={row.key} data-row={row.key} onMouseEnter={() => setHover(row)} opacity={hover === null || hover === row ? 1 : 0.5}>
+              <rect x={0} y={y - SHIFT_ROW / 2} width={width} height={SHIFT_ROW} fill="transparent" />
+              <text x={left - 12} y={y + 4} textAnchor="end" fill="currentColor" className="text-foreground" style={{ fontSize: 13 }}>{row.label.length > 30 ? `${row.label.slice(0, 29)}…` : row.label}</text>
+              {row.from !== null ? <line x1={xOf(row.from)} x2={xOf(row.to)} y1={y} y2={y} stroke={colour} strokeWidth={2} /> : null}
+              {row.from !== null ? <circle cx={xOf(row.from)} cy={y} r={4.5} fill="none" stroke={colour} strokeWidth={2} /> : null}
+              <circle cx={xOf(row.to)} cy={y} r={5} fill={colour} />
+              <text x={right + 16} y={y + 4} fill="currentColor" className="font-mono text-secondary" style={{ fontSize: 12 }}>{row.from === null ? format(row.to) : `${format(row.from)} → ${format(row.to)}`}</text>
+              <text x={width} y={y + 4} textAnchor="end" fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{row.detail}</text>
+            </g>
+          );
+        })}
+        {[min, ...zones.map((zone) => zone.upTo)].map((tick) => (
+          <text key={tick} x={xOf(tick)} y={height - 4} textAnchor="middle" fill="currentColor" className="text-secondary" style={{ fontSize: 11 }}>{tick === max ? `${tick}+` : tick}</text>
+        ))}
+      </svg>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-secondary">
+        <span className="flex items-center gap-2"><svg width="12" height="12" aria-hidden><circle cx="6" cy="6" r="4" fill="none" stroke="currentColor" strokeWidth="2" /></svg>{fromLabel}</span>
+        <span className="flex items-center gap-2"><svg width="12" height="12" aria-hidden><circle cx="6" cy="6" r="5" fill="currentColor" /></svg>{toLabel}</span>
+      </div>
+      <div ref={tip} className={`pointer-events-none absolute ${LAYER.RAISED}`} style={{ visibility: hover ? "visible" : "hidden" }}>
+        {hover ? (
+          <ChartTooltipSurface heading={hover.label} wide>
+            {hover.readout.map((line) => <ChartTooltipRow key={line.label} value={line.value} label={line.label} />)}
+          </ChartTooltipSurface>
+        ) : null}
+      </div>
+    </div>
+  );
+}

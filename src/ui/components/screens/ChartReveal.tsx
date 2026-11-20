@@ -10,10 +10,11 @@ const KIND_LAYER = '[class*="recharts-zIndex-layer"]';
 /**
  * How the figures come in: `wipe`, uncovered from the left, for lines, bands
  * and anything else along dates; `rise`, upright bars growing up from their
- * line; `along`, bars lying along growing out from the left; `fade`, for
- * slices, boxes and dots that run along nothing.
+ * line; `fall`, bars hanging under a line growing down from it (MirrorBars'
+ * lower half, 2026-11-19); `along`, bars lying along growing out from the
+ * left; `fade`, for slices, boxes and dots that run along nothing.
  */
-export type RevealMotion = "wipe" | "rise" | "along" | "fade";
+export type RevealMotion = "wipe" | "rise" | "fall" | "along" | "fade";
 
 /** A layer grows from its own edge, not the chart's corner. */
 const grow = (from: string, origin: string): Keyframe[] => [
@@ -25,6 +26,7 @@ const MOTIONS: Record<RevealMotion, Keyframe[]> = {
   wipe: [{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }],
   // Each bar its own share of the way, so halfway reads as half of every bar — not a flat line cutting the tall ones.
   rise: grow("scaleY(0)", "50% 100%"),
+  fall: grow("scaleY(0)", "50% 0%"),
   along: grow("scaleX(0)", "0% 50%"),
   fade: [{ opacity: 0 }, { opacity: 1 }],
 };
@@ -35,15 +37,23 @@ const TIMING: KeyframeAnimationOptions = { duration: 600, easing: "cubic-bezier(
 /**
  * The layers to move: each kind's own, so a chart's lines wipe in as one and
  * a stack of bars rises as one block rather than each band in its own box.
+ * A part drawn without recharts names its own figures (`figures`), each moving
+ * alone, so each bar grows its own share of the way.
  */
-function layersOf(frame: HTMLElement): Element[] {
+function layersOf(frame: HTMLElement, figures?: string): Element[] {
   const layers = new Set<Element>();
-  for (const figure of frame.querySelectorAll(FIGURES)) {
+  for (const figure of frame.querySelectorAll(figures ? `${FIGURES}, ${figures}` : FIGURES)) {
     const layer = figure.parentElement;
-    layers.add(layer?.matches(KIND_LAYER) ? layer : figure);
+    layers.add(figures && figure.matches(figures) ? figure : layer?.matches(KIND_LAYER) ? layer : figure);
   }
   return [...layers];
 }
+
+/** A figure may name its own motion (`data-reveal="fall"`): bars above a line rise while those under it fall. */
+const motionOf = (layer: Element, motion: RevealMotion): RevealMotion => {
+  const own = layer.getAttribute("data-reveal");
+  return own && own in MOTIONS ? (own as RevealMotion) : motion;
+};
 
 /**
  * What a chart's rows show, for `replay`: new when their first, last or
@@ -68,10 +78,12 @@ export function revealKey(rows: ReadonlyArray<Record<string, unknown>>, xKey = "
  * the finished chart, never a blank one, and a computer set to reduce motion
  * gets the chart drawn at once.
  */
-export function ChartReveal({ replay, motion = "wipe", children }: {
+export function ChartReveal({ replay, motion = "wipe", figures, children }: {
   /** What the chart shows — `revealKey` of its rows — so new figures play it again. */
   replay: string;
   motion?: RevealMotion;
+  /** For a part drawn without recharts (MirrorBars, ShiftLines): a selector for the figures it draws with. */
+  figures?: string;
   children: ReactNode;
 }) {
   const box = useRef<HTMLDivElement>(null);
@@ -80,9 +92,9 @@ export function ChartReveal({ replay, motion = "wipe", children }: {
     const frame = box.current;
     if (!frame || typeof window.matchMedia !== "function" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const play = () => {
-      const layers = layersOf(frame);
+      const layers = layersOf(frame, figures);
       if (layers.length === 0) return false;
-      for (const layer of layers) layer.animate?.(MOTIONS[motion], TIMING);
+      for (const layer of layers) layer.animate?.(MOTIONS[motionOf(layer, motion)], TIMING);
       return true;
     };
     if (play()) return;
@@ -92,7 +104,7 @@ export function ChartReveal({ replay, motion = "wipe", children }: {
     });
     watch.observe(frame, { childList: true, subtree: true });
     return () => watch.disconnect();
-  }, [replay, motion]);
+  }, [replay, motion, figures]);
 
   return <div ref={box} className="w-full">{children}</div>;
 }

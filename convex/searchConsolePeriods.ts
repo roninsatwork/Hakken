@@ -198,6 +198,8 @@ const chartPeriodValidator = v.object({
   brandClicks: v.number(),
   otherClicks: v.number(),
   volatility: v.optional(v.number()),
+  volatilityUp: v.optional(v.number()),
+  volatilityDown: v.optional(v.number()),
   volatilityKeywords: v.optional(v.number()),
   movedUp5: v.optional(v.number()),
   movedDown5: v.optional(v.number()),
@@ -278,6 +280,9 @@ const shownPeriodValidator = v.object({
   otherClicks: v.number(),
   /** Volatility's score (search-console-volatility-plan.md §3): missing where too few keywords counted, or on a row built before it. */
   volatility: v.optional(v.number()),
+  /** Its Up and Down parts, which add up to it: missing on a row built before 2026-11-20. */
+  volatilityUp: v.optional(v.number()),
+  volatilityDown: v.optional(v.number()),
 });
 
 /**
@@ -367,7 +372,9 @@ export const searchConsoleChartFigures = tenantQuery({
           rest: row.rest,
           brandClicks: row.brandClicks,
           otherClicks: row.otherClicks,
-          ...(row.volatility === undefined || (complete && !complete.has(row.week)) ? {} : { volatility: row.volatility }),
+          ...(row.volatility === undefined || (complete && !complete.has(row.week))
+            ? {}
+            : { volatility: row.volatility, ...(row.volatilityUp === undefined || row.volatilityDown === undefined ? {} : { volatilityUp: row.volatilityUp, volatilityDown: row.volatilityDown }) }),
         };
       });
     if (!LISTS_OF[args.searchType].includes("pair")) return { ...nothing, notReady: false, preparing: false, noSearches: true };
@@ -750,6 +757,8 @@ export async function buildSitePeriods(
       pairSpans: shortSpans,
       keywordSpans: searchType === "web" && country === undefined ? FAN_OUT_PERIODS.map((period) => daysSpan(period, newest, oldest)) : [],
       chart: { chartWeeks, brandWords: target?.brandWords ?? [], dayLine: firstDayKeptFor(searchType, newest) },
+      // Keyword cannibalisation's Swaps, for the periods every day of which is kept (20 November 2026).
+      swapSpans: uniqueSpans(slots.filter((slot) => slot.which === "NOW" && !isLong(slot) && !asNinety(slot) && slot.span).map((slot) => slot.span!)),
     }) : null;
     const anyPairs = streamed !== null || (lists.includes("pair") && onlyLong && await anyKeptOf(searchType, "pair"));
     const pairsAsked = anyPairs ? await askedOf(searchType, "pair") : null;
@@ -802,7 +811,9 @@ export async function buildSitePeriods(
         // Its positions are never read (`pagesByKeyword`): not kept (keep-less-history-plan.md, 5.2). A link to one of a
         // page's sections folded into the page here, at build, so the screen groups by place (core-data plan §5.2).
         const folded = competing.map((pair) => ({ ...pair, page: pageWithoutSection(pair.page ?? "") }));
-        await writeParts(searchType, "competing", slot, pack(folded, true).map((packed) => ({ ...packed, positionSums: [], shown })));
+        // Keyword cannibalisation's Swaps beside each pair (`withSwaps`): only where every day of the period was read, never part-counted.
+        const parts = pack(folded, true).map((packed) => ({ ...packed, positionSums: [], shown }));
+        await writeParts(searchType, "competing", slot, !isLong(slot) && streamed ? streamed.withSwaps(slot.span!, parts) : parts);
       } else {
         await writeParts(searchType, "competing", slot, null);
       }

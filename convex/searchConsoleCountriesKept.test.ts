@@ -330,6 +330,8 @@ describe("reading the home countries", () => {
 
     const list = await reader.action(api.searchConsoleLists.searchConsoleLiveList, thirty);
     expect(list.ok && list.rows.flat().map((one) => one.key).sort()).toEqual(["emergency plumber", "plumber leeds"]);
+    // A list asked of Google carries the whole list's own figures, as a ready-made one does: Position bands' eye (2026-11-19).
+    expect(list.ok && list.summary?.wholeList?.bandClicks["1-3"]).toBe(list.ok ? list.rows.flat().filter((one) => one.band === "1-3").reduce((sum, one) => sum + one.clicks, 0) : -1);
     const splits = await reader.action(api.searchConsoleLists.searchConsoleKeySplits, {
       siteId, searchType: "web", dimension: "query", key: "plumber leeds", from: "2026-08-28", to: NEWEST,
     });
