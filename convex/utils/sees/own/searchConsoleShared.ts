@@ -32,16 +32,18 @@ export const fairBefore = (now: number | null | undefined, before: number | null
 export const unitOf = (measure: string): FindingFact["unit"] => (MEASURES[measure]?.kind === "percent" ? "percent" : MEASURES[measure]?.kind === "place" || MEASURES[measure]?.kind === "score" ? "score" : "count");
 
 /** A figure set against another's, named (`apartOther`): another group's, another place's, the span before's. */
-export function against(list: string, name: string, measure: string, value: number, mean: number, score: number, other: string, extra: { facts?: FindingFact[] } = {}): OwnFound {
+export function against(list: string, name: string, measure: string, value: number, mean: number, score: number, other: string, extra: { facts?: FindingFact[]; decimals?: 2 } = {}): OwnFound {
   const kind = value > mean ? "rowAbove" : "rowBelow";
   const words = measureWords(measure);
   const unit = unitOf(measure);
+  // Two decimals where the page shows two (Click rate by position's boxes), one everywhere else.
+  const round = extra.decimals === 2 ? (figure: number) => Math.round(figure * 100) / 100 : round1;
   return {
     id: `${kind}:${list}:${measure}:${name}`, kind, list, score,
-    params: { name, measure, value: round1(value), mean: round1(mean), against: "other", other, ...(MEASURES[measure]?.lessIsBetter ? { lessIsBetter: 1 } : {}) },
+    params: { name, measure, value: round(value), mean: round(mean), against: "other", other, ...(MEASURES[measure]?.lessIsBetter ? { lessIsBetter: 1 } : {}) },
     facts: [
-      { key: "value", value: round1(value), unit, label: `${name}: ${words}` },
-      { key: "mean", value: round1(mean), unit, label: `${other}: ${words}` },
+      { key: "value", value: round(value), unit, label: `${name}: ${words}` },
+      { key: "mean", value: round(mean), unit, label: `${other}: ${words}` },
       ...(extra.facts ?? []),
     ],
   };
@@ -63,6 +65,20 @@ export function ratesApart(list: string, name: string, clicks: number, shown: nu
     facts: [
       { key: "clicks", value: clicks, unit: "count", label: `${name}: clicks` },
       { key: "shown", value: shown, unit: "count", label: `${name}: times shown` },
+    ],
+  });
+}
+
+/**
+ * Two click rates as Click rate by position's boxes say them: clicks for every 100 impressions, two decimals ("1.86 against
+ * 0.49"), so the eye never says per 1,000 beside boxes per 100 (Anthony, 20 November 2026: "Yes, fix both").
+ */
+export function ratesPer100(list: string, name: string, clicks: number, shown: number, otherClicks: number, otherShown: number, score: number, other: string): OwnFound {
+  return against(list, name, "clicksPerHundred", (100 * clicks) / shown, (100 * otherClicks) / otherShown, score, other, {
+    decimals: 2,
+    facts: [
+      { key: "clicks", value: clicks, unit: "count", label: `${name}: clicks` },
+      { key: "shown", value: shown, unit: "count", label: `${name}: impressions` },
     ],
   });
 }

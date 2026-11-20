@@ -8,7 +8,7 @@
  */
 
 import { countsByType, type ClassificationType, type PageKinds } from "./pageKinds";
-import { wordStartMatcher } from "./wordStarts";
+import { wordStartMatcher, wordsOf } from "./wordStarts";
 import { compareTermsQuickly } from "./searchConsoleTerms";
 import { splitPagesOf } from "./cannibalisationRule";
 
@@ -134,11 +134,22 @@ const positionOf = (row: { impressions: number; positionSum: number }) => (row.i
 
 /**
  * Whether a keyword uses any of the website's brand words, as written or
- * misspelt in its Profile: each word of the brand starting a word of the
- * keyword, so "art" is not found inside "smart".
+ * misspelt in its Profile: the brand's words in the keyword in their own order,
+ * side by side, each starting a word of it, so "art" is not found inside
+ * "smart". In order since 20 November 2026 (Anthony's Brand and non-brand
+ * redo, search-console-breakdowns-plan-2026-11-20.md): "handles and more
+ * calgary" holds both of More Handles' words, and it's another shop.
  */
 export function isBrand(keyword: string, brandWords: readonly string[]): boolean {
-  return brandWords.some((word) => wordStartMatcher(word)?.(keyword) ?? false);
+  const words = wordsOf(keyword);
+  return brandWords.some((brand) => {
+    const wanted = wordsOf(brand);
+    if (wanted.length === 0) return false;
+    for (let at = 0; at + wanted.length <= words.length; at += 1) {
+      if (wanted.every((part, offset) => words[at + offset].startsWith(part))) return true;
+    }
+    return false;
+  });
 }
 
 /**

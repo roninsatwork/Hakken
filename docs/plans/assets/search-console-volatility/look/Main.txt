@@ -10,7 +10,7 @@ figures
 chart-card: Volatility, day by day
   filter: Show
 search: Search keywords…
-filter: Brand or not
+filter: Searches
 filter: Up or down
 table: Keyword | Position | Moved | Clicks
   table-bar

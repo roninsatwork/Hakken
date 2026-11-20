@@ -19,6 +19,9 @@ import SearchConsoleAppearancePage from "./[siteId]/rich-results/page";
  * read as the outline saved beside its board in
  * docs/plans/assets/search-console-redesign/look/. By page classification and
  * Real against estimated were taken out on 2026-11-20, their looks with them.
+ * Brand and non-brand (Way 1), Click rate by position (Way 3) and Rich results
+ * (Way 3) were approved again the same day, their looks beside the picked boards
+ * in docs/plans/assets/search-console-breakdowns/ (search-console-breakdowns-plan-2026-11-20.md).
  */
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "" }));
@@ -34,7 +37,8 @@ vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLi
 // A chart card's caption names the platform: the root layout's settings, not rendered here.
 vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 
-const PLAN = "search-console-redesign";
+/** The three breakdowns as Anthony picked them on 20 November 2026. */
+const BREAKDOWNS = "search-console-breakdowns";
 
 /** A summary with no kinds of its own, for the lists below to add to. */
 const BASE = { ...SUMMARY, types: [] };
@@ -69,19 +73,22 @@ const BRAND_PERIODS = {
   step: "week", byWeek: false, reach: null, chartWeeks: 16, notReady: false, preparing: false, notBuilt: false,
 };
 
-/** The website's click rate at its first two positions. */
+/** The website's click rate at its first two positions, on mobile and on desktop too. */
+const CURVE_POINTS = [
+  { position: 1, keywords: 3, impressions: 1564, clicks: 313, ctr: 313 / 1564 },
+  { position: 2, keywords: 5, impressions: 2210, clicks: 221, ctr: 0.1 },
+];
 const CURVE = {
   live: false,
   preparing: false,
-  points: [
-    { position: 1, keywords: 3, impressions: 1564, clicks: 313, ctr: 313 / 1564 },
-    { position: 2, keywords: 5, impressions: 2210, clicks: 221, ctr: 0.1 },
-  ],
+  points: CURVE_POINTS,
+  before: CURVE_POINTS.map((point) => ({ ...point, clicks: point.clicks - 20, ctr: (point.clicks - 20) / point.impressions })),
+  devices: { mobile: CURVE_POINTS, desktop: CURVE_POINTS.map((point) => ({ ...point, clicks: point.clicks / 2, ctr: point.ctr / 2 })), cut: null },
 };
 
-/** One kind of rich result, its pages counted after the collection. */
+/** One kind of rich result, its pages counted after the collection, and its clicks the month before. */
 const RICH = {
-  rows: [{ ...ROW, key: "REVIEW_SNIPPET", count: 3 }],
+  rows: [{ ...ROW, key: "REVIEW_SNIPPET", count: 3, previousClicks: 30 }],
   preparing: false, current: true, named: 1, listed: 1, comparable: true, live: false, from: "2026-08-28", to: "2026-09-26",
 };
 /** The website's clicks in the dates, for Rich results' share of all clicks. */
@@ -91,7 +98,15 @@ const PERFORMANCE = {
     { day: "2026-09-26", clicks: 44, impressions: 2000, ctr: 0.022, position: 5.9 },
   ],
   totals: { clicks: 82, impressions: 3900, ctr: 82 / 3900, position: 5.95 },
-  previous: null, named: null, live: false,
+  previous: { clicks: 70, impressions: 3500, ctr: 0.02, position: 6.1 },
+  named: null, live: false,
+};
+/** Rich results' six months: every click, and each month's kinds. */
+const LOOK_MONTHS = {
+  notReady: false,
+  months: ["2026-04-01", "2026-05-01", "2026-06-01", "2026-07-01", "2026-08-01", "2026-09-01"].map((month, at) => ({
+    month, days: 30, clicks: 80 + at, looks: [{ key: "REVIEW_SNIPPET", clicks: 30 + at, impressions: 900 }],
+  })),
 };
 
 
@@ -146,10 +161,12 @@ describe("Search Console's approved looks: pages competing and the breakdowns", 
       "searchConsoleLists:searchConsoleListPage": BRANDED,
       "searchConsoleChanges:searchConsoleBrandWords": BRAND_WORDS,
       "searchConsolePeriods:searchConsoleChartFigures": BRAND_PERIODS,
+      "searchConsoleReads:searchConsolePerformance": PERFORMANCE,
     });
     const { container } = render(<SearchConsoleBrandPage />);
     await screen.findByText("ai agency");
-    await expectApprovedLook(container, PLAN, "Brand", "Search Console → Brand and non-brand");
+    await screen.findByText("Clicks from brand searches");
+    await expectApprovedLook(container, BREAKDOWNS, "Brand", "Search Console → Brand and non-brand");
   });
 
   it("15 · Click rate by position", async () => {
@@ -160,7 +177,7 @@ describe("Search Console's approved looks: pages competing and the breakdowns", 
     });
     const { container } = render(<SearchConsoleCtrCurvePage />);
     await screen.findByText("1,564");
-    await expectApprovedLook(container, PLAN, "CtrCurve", "Search Console → Click rate by position");
+    await expectApprovedLook(container, BREAKDOWNS, "CtrCurve", "Search Console → Click rate by position");
   });
 
   it("16 · Rich results", async () => {
@@ -169,9 +186,12 @@ describe("Search Console's approved looks: pages competing and the breakdowns", 
       "searchConsoleConnect:searchConsoleStatus": STATUS,
       "searchConsoleLists:searchConsoleSplitList": RICH,
       "searchConsoleReads:searchConsolePerformance": PERFORMANCE,
+      "searchConsoleBreakdowns:searchConsoleLookMonths": LOOK_MONTHS,
+      "searchConsoleLists:searchConsoleListPage": { ...list([ROW]), summary: { ...BASE, rows: 12 } },
     });
     const { container } = render(<SearchConsoleAppearancePage />);
     await screen.findByText("Review snippet");
-    await expectApprovedLook(container, PLAN, "Appearance", "Search Console → Rich results");
+    await screen.findByText("Clicks from rich results");
+    await expectApprovedLook(container, BREAKDOWNS, "Appearance", "Search Console → Rich results");
   });
 });

@@ -38,7 +38,7 @@ const STILL_TO_DO = new Set([
   // Missed demand ("searchConsole.demand") left the same day: taken out of the menu, as Keywords and Keyword research show the same.
   // By page classification ("searchConsole.types") and Real against estimated ("searchConsole.estimates") left on 20 November
   // 2026: taken out of the menu, as Classifications and Pages show the same.
-  "searchConsole.appearance",
+  // Rich results ("searchConsole.appearance") left on 20 November 2026 with its redo (search-console-breakdowns-plan-2026-11-20.md).
   // Keyword cannibalisation ("searchConsole.competing") left on 20 November 2026 with its redo (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
   // Wins and losses ("searchConsole.moves") left on 19 November 2026: dropped, as Keywords sorted by Up or down lists the same.
   // Shown but not clicked ("searchConsole.lowCtr") left on 20 November 2026 with its redo (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
@@ -48,7 +48,7 @@ const STILL_TO_DO = new Set([
   "insights.trackRecord", "insights.experiments", "insights.findingsSection", "insights.strategyService",
 ]);
 /** The list's size: lower it as pages leave, never raise it. */
-const STILL_TO_DO_MOST = 21;
+const STILL_TO_DO_MOST = 20;
 
 /**
  * Pages that show no one website's own figures, and so carry no eye (Anthony, 2026-11-03: "We dont need the eye on non

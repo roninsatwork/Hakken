@@ -18,7 +18,7 @@ import {
 import { historyLimitDay, shiftDay } from "./searchConsoleDays";
 import { UNKNOWN, factsFor, type Facts, type FactsWanted } from "./searchConsoleFacts";
 import { countryScope, stillKeptReady } from "./searchConsoleCountries";
-import { askLive, countryFilters } from "./searchConsoleReads";
+import { DEVICE_CURVES, keepLookMonths, lookMonthSpans, pagesPerAppearance } from "./searchConsoleBreakdowns";
 import { consoleLimitsOf } from "./searchConsoleLimits";
 import { FAN_OUT_LIMITS } from "./fanOutLimits";
 import { buildSeenDays } from "./searchConsoleSeenDays";
@@ -484,9 +484,10 @@ export const settledSlots = internalQuery({
 /**
  * The lists whose spans before are kept, for each row's change: the pages', and since 18 November 2026 the countries'
  * and devices', for Countries and devices' boxes and Up or down (search-console-countries-and-devices-way-1-plan-
- * 2026-11-18.md). Rich results show no change, so keep none.
+ * 2026-11-18.md); since 20 November 2026 the kinds of rich result's, for Rich results' boxes and Up or down
+ * (search-console-breakdowns-plan-2026-11-20.md).
  */
-const KEEPS_BEFORE: ReadonlySet<SearchConsoleList> = new Set<SearchConsoleList>(["page", "country", "device"]);
+const KEEPS_BEFORE: ReadonlySet<SearchConsoleList> = new Set<SearchConsoleList>(["page", "country", "device", "appearance"]);
 
 /** A part as written: its rows, and what each row carries beside them. */
 export type PartToWrite = Packed & {
@@ -518,6 +519,8 @@ export const buildTarget = internalQuery({
     google: v.union(v.null(), v.object({ connectionId: v.id("searchConsoleConnections"), property: v.string() })),
     chartWeeks: v.number(),
     richResultKinds: v.number(),
+    /** Click rate by position's whole positions, 1 to this: its mobile and desktop lists keep as many. */
+    curvePositions: v.number(),
     /** Whether the website has Classifications of its own: the home country's own pages then need no page types kept. */
     classified: v.boolean(),
   }),
@@ -532,56 +535,11 @@ export const buildTarget = internalQuery({
       google: connection && connection.status === "CONNECTED" && connection.property ? { connectionId: connection._id, property: connection.property } : null,
       chartWeeks: limits?.chartWeeks ?? FAN_OUT_LIMITS.consoleChartWeeks.fallback,
       richResultKinds: limits?.richResultKinds ?? FAN_OUT_LIMITS.consoleRichResultKinds.fallback,
+      curvePositions: limits?.curvePositions ?? FAN_OUT_LIMITS.consoleCurvePositions.fallback,
       classified: (await ctx.db.query("pageClassifications").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.companyWebsiteId)).first()) !== null,
     };
   },
 });
-
-type GoogleTarget = { connectionId: Id<"searchConsoleConnections">; property: string };
-
-/** Asks of Google at once while counting them. */
-const ASKS_AT_ONCE = 4;
-
-/**
- * How many of the website's pages Google showed in each kind of rich result
- * over a period — in one country, for a country kept ready. Google will not
- * list a kind beside its pages, so each kind is asked on its own: here, once
- * after each collection, so Rich results reads it ready-made rather than
- * asking each time it opens (drift fixes, 2026-10-03). Null when Google
- * refuses or is busy for any of them: the page then asks for them itself.
- */
-async function pagesPerAppearance(
-  ctx: ActionCtx,
-  google: GoogleTarget | null,
-  searchType: SearchType,
-  span: PeriodSpan,
-  country: string | undefined,
-  rows: readonly Row[],
-  kindsCounted: number,
-): Promise<Counts | null> {
-  if (!google) return null;
-  const ordered = [...rows].sort((left, right) => right.clicks - left.clicks || right.impressions - left.impressions);
-  const asked = ordered.slice(0, kindsCounted).map((row) => row.key);
-  // Kinds past the limit (`consoleRichResultKinds`) are counted as unknown, never as no pages.
-  const counts: Counts = new Map(ordered.slice(kindsCounted).map((row) => [row.key, { count: UNKNOWN, top: "" }]));
-  for (let at = 0; at < asked.length; at += ASKS_AT_ONCE) {
-    const answers = await Promise.all(asked.slice(at, at + ASKS_AT_ONCE).map(async (kind) => ({
-      kind,
-      answer: await askLive(ctx, google, {
-        startDate: span.from,
-        endDate: span.to,
-        type: searchType,
-        dimensions: ["page"],
-        dimensionFilterGroups: [{ filters: [{ dimension: "searchAppearance", operator: "equals", expression: kind }, ...countryFilters(country)] }],
-      }),
-    })));
-    for (const { kind, answer } of answers) {
-      if (!answer.ok) return null;
-      counts.set(kind, { count: answer.rows.length, top: "" });
-    }
-  }
-  return counts;
-}
 
 /**
  * A website's ready-made periods, rebuilt from what is kept: every list of
@@ -696,7 +654,7 @@ export async function buildSitePeriods(
   const held = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId, ...scope });
   const types = options.searchType === undefined ? held : held.filter((type) => type === options.searchType);
   const target = await ctx.runQuery(internal.searchConsoleFacts.factsTarget, { companyWebsiteId });
-  const { google, chartWeeks, richResultKinds, classified } = await ctx.runQuery(internal.searchConsolePeriods.buildTarget, { companyWebsiteId });
+  const { google, chartWeeks, richResultKinds, curvePositions, classified } = await ctx.runQuery(internal.searchConsolePeriods.buildTarget, { companyWebsiteId });
   // The 90 days, the 90 days before and twelve months asked of Google, a week at a time: the days are
   // kept 60 days (`searchConsoleLongLists.ts`; keep-less-history-plan.md, part 3). Asked of nobody when
   // the website is not connected, or Google will not answer: the long periods built before then stay.
@@ -866,7 +824,10 @@ export async function buildSitePeriods(
       const wanted = lists.includes(list) && !(country !== undefined && list === "country");
       // A day at a time into each period, as the pairs (SL1); the pages', countries' and devices' spans before too.
       const keepsBefore = KEEPS_BEFORE.has(list);
-      const listSpans = uniqueSpans(slots.filter((slot) => !isLong(slot) && !asNinety(slot) && slot.span && (slot.which === "NOW" || keepsBefore)).map((slot) => slot.span!));
+      // Rich results' months inside the days kept, added up with the periods (`keepLookMonths`, 20 November 2026).
+      const dayLine = firstDayKeptFor(searchType, newest);
+      const monthSpans = list === "appearance" && !onlyLong ? lookMonthSpans(newest).filter((month) => month.from >= dayLine).map((month) => ({ from: month.from, to: month.to })) : [];
+      const listSpans = uniqueSpans([...slots.filter((slot) => !isLong(slot) && !asNinety(slot) && slot.span && (slot.which === "NOW" || keepsBefore)).map((slot) => slot.span!), ...monthSpans]);
       const listed = wanted && !onlyLong ? await streamList(ctx, companyWebsiteId, country, searchType, list, newest, listSpans) : null;
       const anyKept = listed !== null || (wanted && onlyLong && await anyKeptOf(searchType, list));
       if (list === "page") pagesKept = anyKept;
@@ -875,7 +836,7 @@ export async function buildSitePeriods(
       const pageFacts = list === "page" && anyKept ? await factsOf("page", [...(listed?.keys.texts ?? []), ...keysAsked(asked, "key")]) : undefined;
       for (const slot of slots) {
         if (settled.has(slotKey(slot)) && !missing.has(slotKey(slot))) continue;
-        // Rich results show no change on the period before: none is kept for them (5.3).
+        // A list whose period before isn't kept: none is written for it (5.3).
         const before = slot.which === "BEFORE" && !keepsBefore;
         const rows = anyKept && slot.span && !before ? (isLong(slot) ? rowsFor(asked, slot.span) : listed?.sums.get(spanKey(slot.span))?.rows() ?? []) : null;
         // Google not asked, or not answering: the long period built before stays.
@@ -885,6 +846,10 @@ export async function buildSitePeriods(
           ? await pagesPerAppearance(ctx, google, searchType, slot.span, country, rows, richResultKinds)
           : null;
         await write(searchType, list, slot, rows, list === "page" ? (slot.which === "NOW" ? pageCounts.get(slotKey(slot)) : undefined) : (appearancePages ?? undefined), pageFacts);
+      }
+      // Rich results month by month, the last six (20 November 2026): with the nightly build, never the long periods' alone.
+      if (list === "appearance" && anyKept && !onlyLong) {
+        await keepLookMonths(ctx, { companyWebsiteId, ...scope, searchType }, google, newest, dayLine, (span) => listed?.sums.get(spanKey(span))?.rows() ?? null);
       }
     }
     // The main home country's own pages (18 November 2026, search-console-demand-by-classification-way-2-plan-2026-11-18.md):
@@ -906,6 +871,27 @@ export async function buildSitePeriods(
         // Each page's keywords and top one, from this build's pairs (the country's), for Pages' download (18 November 2026). A
         // settled period asked again here has no pairs added up in this build: its download leaves the two columns empty.
         await write(searchType, "countryPage", slot, rows, slot.which === "NOW" ? pageCounts.get(slotKey(slot)) : undefined, facts);
+      }
+    }
+    // Click rate by position on mobile and on desktop (20 November 2026, search-console-breakdowns-plan-2026-11-20.md):
+    // nothing kept splits keywords by device, so each period's pairs are asked of Google on each device a week at a time, in
+    // a job of its own once this one is done (`keepDeviceCurves`): a year of weeks on two devices ran a settle past its time.
+    // A finished period settled before then is asked once, and kept; a period on another's very days is kept once.
+    if (anyPairs && google) {
+      const wanted = new Map<string, Slot>();
+      for (const [list] of DEVICE_CURVES) {
+        const missing = await missingBefore(searchType, list, ["NOW"]);
+        for (const slot of slots) {
+          if (slot.which !== "NOW" || slot.span === null || (settled.has(slotKey(slot)) && !missing.has(slotKey(slot)))) continue;
+          if (asNinety(slot)) await writeParts(searchType, list, slot, []);
+          else wanted.set(slotKey(slot), slot);
+        }
+      }
+      if (wanted.size > 0) {
+        await ctx.scheduler.runAfter(0, internal.searchConsoleBreakdowns.keepDeviceCurves, {
+          companyWebsiteId, ...scope, searchType, connectionId: google.connectionId, property: google.property, curvePositions, builtAt,
+          slots: [...wanted.values()].map((slot) => ({ period: slot.period, from: slot.span!.from, to: slot.span!.to })),
+        });
       }
     }
     await writeHeld(searchType);

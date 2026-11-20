@@ -34,6 +34,7 @@ const positionBands = readFixture("moreHandlesSearchConsolePositionBands") as { 
 /** Shown but not clicked's list for every period, the United Kingdom, read on dev on 20 November 2026 (no asks of Google). */
 const lowCtr = readFixture("moreHandlesSearchConsoleLowCtr") as { kindNames: Record<string, string>; periods: Record<string, { summary: unknown; rows: unknown[] }> };
 const cannibalisation = readFixture("moreHandlesSearchConsoleCannibalisation") as { periods: Record<string, { summary: unknown; rows: unknown[] }> };
+const appearance = readFixture("moreHandlesSearchConsoleAppearance") as { periods: Record<string, Record<string, unknown>> };
 /** The United Kingdom's own pages, each against its dates before, and its own figures, as Google answered on 18 November 2026. */
 const pagesRead = readFixture("moreHandlesSearchConsolePages") as Record<string, unknown>;
 const pageScreen = readFixture("moreHandlesSearchConsolePageScreen") as Record<string, unknown>;
@@ -432,6 +433,20 @@ describe("Search Console finds the biggest things on every period the date menu 
     // The page short by most clicks is named by its title, never its address.
     expect(lines.some((line) => /^(Guide To Bathroom|What is a|Top Guide|Black Cupboard|Contact Us)/.test(line)), lines.join("\n")).toBe(true);
     expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(period === "thisWeek" ? 3 : 5);
+  });
+
+  // Rich results' own rules since 20 November 2026 (search-console-breakdowns-plan-2026-11-20.md): the kinds' figures, every click
+  // beside them and the chart's six months, as the page hands them, on every period the date menu offers, this week included.
+  // Their share of every click and the kind with most clicks on every period; their clicks against the period before where
+  // it's kept whole (the last 12 months reach past Google's 16 months, so none).
+  test.each(["thisWeek", ...ALL] as Period[])("Rich results: %s", (period) => {
+    const lines = said("searchConsole.appearance", period, { ...appearance.periods[period], names: { rich: "Rich results", plain: "Plain results" } });
+    clean(lines);
+    expect(lines.some((line) => /^Rich results holds [\d.]+% of the list's clicks/.test(line)), lines.join("\n")).toBe(true);
+    // Against the period before where it's kept whole: none past Google's 16 months.
+    if (!NO_FAIR_BEFORE.includes(period)) expect(lines[0], lines.join("\n")).toMatch(/^Rich results: clicks (up|down)/);
+    expect(lines.some((line) => /^Product snippet/.test(line)), lines.join("\n")).toBe(true);
+    expect(lines.length, lines.join("\n")).toBeGreaterThanOrEqual(4);
   });
 
   // Way 3 since 20 November 2026 (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md): its own figures handed over

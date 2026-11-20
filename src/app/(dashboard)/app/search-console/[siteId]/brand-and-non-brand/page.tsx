@@ -7,25 +7,20 @@ import { BadgeCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 
-import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../sites/_components/SiteCharts";
-import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
-import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
-import { SearchConsoleChartCard, useSeriesTicks } from "../../_components/SearchConsoleChartCard";
-import { DaysBeforeChange } from "../../_components/SearchConsoleFigures";
+import { BrandBoxes, BrandDaysCard } from "../../_components/BrandParts";
+import { usePerformanceDates } from "../../_components/PerformanceParts";
+import { useSiteFiguresFor } from "../../_components/SearchConsoleFigures";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { CountryNotReady } from "../../_components/SearchConsoleNotices";
-import { formatPosition, formatRate } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { figureColumns, useSearchConsoleList, type ChipId, type ListSummary, keywordColumn } from "../../_components/SearchConsoleTables";
+import { figureColumns, useSearchConsoleList, type ChipId, keywordColumn } from "../../_components/SearchConsoleTables";
 import { useChartPeriods } from "../../_components/useChartPeriods";
+import { periodArg } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { brandSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { moverWorthNaming } from "@/convex/utils/sees/own/searchConsole";
 
 const CHIPS: readonly ChipId[] = ["brand", "band", "device"];
-
-type Split = NonNullable<ListSummary["brand"]>["now"];
-
-const shareOf = (split: Split) => (split.brandClicks + split.nonBrandClicks > 0 ? split.brandClicks / (split.brandClicks + split.nonBrandClicks) : 0);
 
 /**
  * Brand and non-brand (search-console-plan.md §13.3, drawn as "14 · Brand
@@ -35,6 +30,9 @@ const shareOf = (split: Split) => (split.brandClicks + split.nonBrandClicks > 0 
  * other. In the country chosen (search-console-plan.md §16): the days, weeks
  * and months are added up collection by collection, so a country the website
  * does not keep ready has no chart, and its list is asked of Google.
+ *
+ * Redone as Way 1 on 20 November 2026 (search-console-breakdowns-plan-2026-11-20.md): four boxes against the period
+ * before, every click counted (the hidden ones too, from Performance's own read), the shared day chart and the lean table.
  */
 export default function SearchConsoleBrandPage() {
   const t = useTranslations("searchConsole");
@@ -44,30 +42,40 @@ export default function SearchConsoleBrandPage() {
   const chart = useChartPeriods(list);
   const { figures, periods, country } = chart;
   const split = list.summary?.brand ?? null;
-  const days = list.range.days;
   const host = list.status?.host ?? "";
-  const points = chart.rows((period) => ({ brand: period.brandClicks, other: period.otherClicks }));
+  const dates = usePerformanceDates();
+  // Every click, hidden searches too: the boxes' third and fourth, and the chart's Out of every 100. Performance's own read.
+  const held = Boolean(list.status?.connection?.newestDay) && !list.range.waiting && list.range.days > 0;
+  const every = useSiteFiguresFor(held ? { siteId: list.siteId, searchType: list.kind, from: list.range.from, to: list.range.to, ...periodArg(list.range) } : null).figures;
   // The eye's figures: the list's, its brand words, the chart's periods and the page's own names for the two kinds of
   // search; its "Do first" steps may open the searches that gained and lost most, each on its own screen.
-  const brandName = t("filters.brandYes");
-  const otherName = t("filters.brandNo");
+  const brandName = t("performance.squares.groups.brand");
+  const otherName = t("performance.squares.groups.named");
   const brandWords = words?.names ?? null;
   // The chart's periods by their first day (`day`), so the eye keeps the newest of a long chart, never its oldest.
-  const seesData = useMemo(() => (list.pageData ? { ...list.pageData, brandWords, chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null, names: { brand: brandName, other: otherName } } : undefined), [list.pageData, brandWords, periods, brandName, otherName]);
+  const hiddenName = t("performance.squares.groups.hidden");
+  const totals = every?.totals ?? null;
+  const previous = every?.previous ?? null;
+  // Only once every click is in, so the eye never writes the share of named clicks alone while the totals are on their way.
+  const everyIn = every !== undefined;
+  const seesData = useMemo(() => (list.pageData && everyIn ? {
+    ...list.pageData,
+    brandWords,
+    chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null,
+    // Every click, the hidden ones too, as the boxes count them: the eye's share and hidden clicks are the boxes'.
+    every: totals ? { clicks: totals.clicks, before: previous?.clicks ?? null } : null,
+    names: { brand: brandName, other: otherName, hidden: hiddenName },
+  } : undefined), [list.pageData, everyIn, brandWords, periods, totals, previous, brandName, otherName, hiddenName]);
   const movers = list.summary?.wholeList?.movers;
+  // Only the searches the eye may name: the same bar as its findings (`moverWorthNaming`).
   const seesLinks = useMemo(() => [movers?.otherDown, movers?.otherUp, movers?.brandDown]
-    .flatMap((moved) => (moved ? [{ label: moved.key, href: recordHref("keywords/keyword", moved.key) }] : [])), [movers, recordHref]);
-  // Brand and Non-brand, each with its tick box, as drawn. Amber against blue (2026-10-04): amber against orange read as one line.
-  const ticks = useSeriesTicks([
-    { key: "brand", name: t("filters.brandYes"), colour: SITE_SERIES_COLOURS[3] },
-    { key: "other", name: t("filters.brandNo"), colour: SITE_SERIES_COLOURS[1] },
-  ]);
+    .flatMap((moved) => (moved && moverWorthNaming(moved) ? [{ label: moved.key, href: recordHref("keywords/keyword", moved.key) }] : [])), [movers, recordHref]);
   const description = (
     <>
       {t("brand.description")}{" "}
       {words && words.names.length > 0 ? (
         <>
-          {t("brand.yourWords")} <span className="text-foreground">{words.names.join(", ")}</span>.
+          {t("brand.yourWords")} <BrandWords names={words.names} />.
         </>
       ) : (
         t("brand.noWords")
@@ -81,22 +89,7 @@ export default function SearchConsoleBrandPage() {
       icon={<BadgeCheck className="h-5 w-5 text-brand" />}
       title={t("brand.title")}
       description={description}
-      heroes={
-        <FigureRow>
-          <Figure label={t("brand.brandClicks")} value={split ? formatNumber(split.now.brandClicks) : "…"} detail={split ? <Growth now={split.now.brandClicks} before={split.before?.brandClicks ?? null} days={days} /> : null} />
-          <Figure label={t("brand.otherClicks")} value={split ? formatNumber(split.now.nonBrandClicks) : "…"} detail={split ? <Growth now={split.now.nonBrandClicks} before={split.before?.nonBrandClicks ?? null} days={days} /> : null} />
-          <Figure
-            label={t("brand.share")}
-            value={split ? formatRate(shareOf(split.now)) : "…"}
-            detail={split ? <PointsChange now={shareOf(split.now)} before={split.before ? shareOf(split.before) : null} days={days} /> : null}
-          />
-          <Figure
-            label={t("brand.otherImpressions")}
-            value={split ? formatNumber(split.now.nonBrandImpressions) : "…"}
-            detail={split ? <Growth now={split.now.nonBrandImpressions} before={split.before?.nonBrandImpressions ?? null} days={days} /> : null}
-          />
-        </FigureRow>
-      }
+      heroes={<BrandBoxes split={split} figures={every} against={dates.inBefore} />}
       table={{
         list,
         chips: CHIPS,
@@ -108,73 +101,49 @@ export default function SearchConsoleBrandPage() {
           { header: t("table.keyword"), field: "key" },
           { header: t("table.brand"), field: "brand" },
           { header: t("table.clicks"), field: "clicks" },
+          { header: t("table.change"), field: "change" },
           { header: t("table.impressions"), field: "impressions" },
           { header: `${t("table.ctr")} (%)`, field: "ctr" },
           { header: t("table.position"), field: "position" },
         ],
         columns: [
           keywordColumn(t("table.keyword"), recordHref),
-          { key: "brand", header: t("table.brand"), sortable: true, cell: (row) => <span className="text-[12px] text-secondary">{t(row.brand ? "filters.brandYes" : "filters.brandNo")}</span> },
-          // The lean table (AGENTS.md "Tables are lean", 2026-11-17): one line a row, the rest on the row's own screen. Click-through rate stays: brand searches are clicked far more often.
-          ...figureColumns(t, ["clicks", "impressions", "ctr", "position"]),
+          // The lean table (AGENTS.md "Tables are lean", 2026-11-17), as drawn on 20 November 2026: the Searches menu says brand
+          // or not, so the Brand column left for Up or down. Click-through rate stays: brand searches are clicked more often.
+          ...figureColumns(t, ["clicks", "change", "impressions", "ctr", "position"]),
         ],
       }}
     >
       {country && figures?.notReady ? <CountryNotReady country={country} /> : (
-        <SearchConsoleChartCard
-          title={t("brand.chartTitle")}
-          hint={t("brand.chartHint")}
-          controls={ticks.controls}
-          exportName={`${host}-search-console-brand-${list.range.from}-to-${list.range.to}`}
-          host={host}
-          from={chart.from}
-          to={chart.to}
-          step={chart.step}
-          csv={() => toCsv([chart.periodHeader, t("filters.brandYes"), t("filters.brandNo")], (periods ?? []).map((period) => [period.start, period.brandClicks, period.otherClicks]))}
-        >
-          {periods === undefined ? (
-            <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
-          ) : figures?.preparing || figures?.notBuilt ? (
-            <p className="py-10 text-center text-[13px] text-secondary">{t(figures.preparing ? "chart.preparing" : "chart.notBuilt")}</p>
-          ) : points.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
-          ) : (
-            <>
-              {chart.note ? <p className="mb-3 text-[12px] text-secondary">{chart.note}</p> : null}
-              <SiteLineChart
-                height={280}
-                data={points}
-                series={ticks.shown}
-                sharedScale
-              />
-            </>
-          )}
-        </SearchConsoleChartCard>
+        periods === undefined ? (
+          <div className="h-[380px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />
+        ) : figures?.preparing || figures?.notBuilt ? (
+          <p className="py-10 text-center text-[13px] text-secondary">{t(figures.preparing ? "chart.preparing" : "chart.notBuilt")}</p>
+        ) : (
+          <BrandDaysCard
+            periods={periods}
+            step={chart.step}
+            figures={every}
+            host={host}
+            inNow={dates.inNow}
+            note={chart.note}
+            exportName={`${host}-search-console-brand-${list.range.from}-to-${list.range.to}`}
+          />
+        )
       )}
     </SearchConsoleListScreen>
   );
 }
 
-/** A share against the same days before, in percentage points: up 0.6 points on the 30 days before. */
-function PointsChange({ now, before, days }: { now: number; before: number | null; days: number }) {
-  const t = useTranslations("searchConsole");
-  return (
-    <DaysBeforeChange
-      by={before === null ? null : (now - before) * 100}
-      days={days}
-      still={0.05}
-      write={(change) => t("figures.points", { change: formatPosition(change) })}
-    />
-  );
-}
-
-/** A figure against the same days before, as a whole per cent: up 6% on the 30 days before. */
-function Growth({ now, before, days }: { now: number; before: number | null; days: number }) {
-  return (
-    <DaysBeforeChange
-      by={before === null ? null : now - before}
-      days={days}
-      write={(change) => (before !== null && before > 0 ? formatRate(change / before) : formatNumber(change))}
-    />
+/** The website's brand words as a sentence says them: "More Handles and MoreHandles". */
+function BrandWords({ names }: { names: readonly string[] }) {
+  const t = useTranslations("searchConsole.brand");
+  const last = names.at(-1) ?? "";
+  const first = names.slice(0, -1);
+  return first.length === 0 ? <span className="text-foreground">{last}</span> : (
+    <>
+      {first.map((name, at) => <span key={name}>{at > 0 ? ", " : null}<span className="text-foreground">{name}</span></span>)}
+      {` ${t("and")} `}<span className="text-foreground">{last}</span>
+    </>
   );
 }

@@ -18,6 +18,8 @@ export type Measure = {
   kind: "count" | "percent" | "place" | "score";
   /** A figure where less is better (errors, angry clicks): its rise is the bad news. */
   lessIsBetter?: boolean;
+  /** Said with two decimals, as its page shows it (Click rate by position's "1.86"); one otherwise. */
+  decimals?: 2;
   /** A percentage's own base, where its row holds it: a click rate is of the times shown, a conversion rate of the visits. */
   weighBy?: string;
   /**
@@ -254,6 +256,9 @@ const SCORES: Record<string, Measure> = {
   // Search Console's (own/searchConsole.ts): a click rate under 2%, said as clicks for every 1,000 times shown, since a
   // percentage keeps one decimal and 0.85% against 0.92% read "0.9% against 0.9%".
   clicksPerThousand: { words: "clicks for every 1,000 times shown", kind: "score" },
+  // Click rate by position's own (search-console-breakdowns-plan-2026-11-20.md): said as its boxes say it, for every 100
+  // impressions with two decimals ("1.86"), never per 1,000 beside boxes per 100.
+  clicksPerHundred: { words: "clicks for every 100 impressions", kind: "score", decimals: 2 },
   // Visibility's Backlinks and Keywords (own/visibility.ts, `linksAndKeywords`): how many links each linking website gives,
   // on average, beside a typical rival's (many links from few websites: one site's footer on every page).
   linksPerWebsite: { words: "links from each linking website, on average", kind: "score" },

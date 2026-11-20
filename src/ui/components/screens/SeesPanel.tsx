@@ -180,6 +180,8 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
   // A place or a score keeps its tenth (4.3rd on Google, 4.6 stars); a count is whole.
   const figure = (field: string | number | undefined, value: string | number | undefined) => {
     const kind = MEASURES[String(field)]?.kind;
+    // Two decimals where the page shows two (Click rate by position, 20 November 2026), so the panel and the boxes agree.
+    if (MEASURES[String(field)]?.decimals === 2) return two(value);
     return kind === "percent" ? percent(value) : kind === "place" || kind === "score" ? one(value) : whole(value);
   };
   const device = (value: string | number | undefined) => (["mobile", "desktop", "tablet"].includes(String(value)) ? t(`devices.${String(value)}` as "devices.mobile") : String(value));

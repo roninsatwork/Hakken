@@ -8,18 +8,21 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
-import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { Change } from "@/src/ui/components/screens/Change";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
-import { formatNumber } from "../../../sites/_components/siteFormat";
+import { formatMonth, formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
-import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
+import { useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { useSiteFiguresFor } from "../../_components/SearchConsoleFigures";
 import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
-import { filePercent, filePosition, formatPosition, formatRate, appearanceName } from "../../_components/searchConsoleFormat";
+import { filePercent, filePosition, formatPosition, appearanceName } from "../../_components/searchConsoleFormat";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
-import { SearchConsoleChips, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
+import { useSearchConsoleSummaryRead, type ListRow } from "../../_components/SearchConsoleTables";
+import { LookBoxes, LookMonthsCard } from "../../_components/LookParts";
+import { usePerformanceDates } from "../../_components/PerformanceParts";
+import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import {
   countryArg,
   isReadyMade,
@@ -31,21 +34,21 @@ import {
 } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { appearanceSees } from "@/convex/utils/sees/searchConsoleScreens";
-import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
-const CHIPS: readonly ChipId[] = ["device"];
-
-/** A kind of rich result; `counted` false when its pages are not counted (past the kinds counted), as against still coming (`pages` null). */
-type Kind = { key: string; clicks: number; impressions: number; ctr: number; position: number; pages: number | null; counted: boolean };
-const SORTS: SiteSortColumns<Kind, "key" | "clicks" | "impressions" | "ctr" | "position" | "pages"> = {
-  key: { value: (row) => row.key, first: "asc" },
+/**
+ * A kind of rich result; `counted` false when its pages are not counted (past the kinds counted), as against still coming
+ * (`pages` null). `change` its clicks up or down since the period before, where that's kept.
+ */
+type Kind = { key: string; name: string; clicks: number; impressions: number; ctr: number; position: number; pages: number | null; counted: boolean; previousClicks: number | null; change: number | null };
+const SORTS: SiteSortColumns<Kind, "key" | "clicks" | "change" | "impressions" | "position" | "pages"> = {
+  key: { value: (row) => row.name, first: "asc" },
   clicks: { value: (row) => row.clicks, first: "desc" },
+  change: { value: (row) => row.change, first: "desc" },
   impressions: { value: (row) => row.impressions, first: "desc" },
-  ctr: { value: (row) => row.ctr, first: "desc" },
   position: { value: (row) => row.position, first: "asc" },
   pages: { value: (row) => row.pages, first: "desc" },
 };
-const nameOf = (row: Kind) => row.key;
+const nameOf = (row: Kind) => row.name;
 
 /**
  * Rich results (search-console-plan.md §13.3, drawn as "16 · Rich results"):
@@ -56,6 +59,10 @@ const nameOf = (row: Kind) => row.key;
  * (search-console-plan.md §16). The pages for each kind are counted after
  * each collection for the ready-made periods (drift fixes, 2026-10-03), so
  * only other dates, one device or a country not kept ready ask Google.
+ *
+ * Redone as Way 3 on 20 November 2026 (search-console-breakdowns-plan-2026-11-20.md): three boxes against the period
+ * before (now kept for rich results too), every click of the last six months by kind, and the lean table with Up or down.
+ * The Device menu went with it, as Countries and devices splits by device.
  */
 export default function SearchConsoleAppearancePage() {
   const t = useTranslations("searchConsole");
@@ -63,14 +70,12 @@ export default function SearchConsoleAppearancePage() {
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const periodWords = useSearchConsolePeriodWords(range.period);
   const [search, setSearch, term] = useSiteSearch();
   const held = Boolean(status?.connection?.newestDay);
   const [country] = useSearchConsoleCountry();
-  const [device] = useSiteParam<string>("device", "", ["", "DESKTOP", "MOBILE", "TABLET"]);
   const dates = { siteId, searchType: kind, from: range.from, to: range.to };
-  // Other dates or one device are asked of Google; so is a country the website does not keep ready, the server says.
-  const asksGoogle = Boolean(device) || !isReadyMade(range, status?.connection?.newestDay);
+  // Other dates are asked of Google; so is a country the website does not keep ready, the server says.
+  const asksGoogle = !isReadyMade(range, status?.connection?.newestDay);
   const split = useQuery(
     api.searchConsoleLists.searchConsoleSplitList,
     held && !asksGoogle ? { ...dates, dimension: "appearance", ...countryArg(country) } : "skip",
@@ -78,7 +83,7 @@ export default function SearchConsoleAppearancePage() {
   const fromLive = asksGoogle || split?.live === true;
   const liveSplit = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
-    held && fromLive ? { ...dates, dimension: "appearance" as const, ...countryArg(country), ...(device ? { device } : {}) } : null,
+    held && fromLive ? { ...dates, dimension: "appearance" as const, ...countryArg(country) } : null,
   );
   const appearances: ListRow[] | undefined = fromLive ? (liveSplit.answer === undefined ? undefined : liveSplit.answer.ok ? liveSplit.answer.rows.flat() : []) : split?.rows;
   const performance = useSiteFiguresFor(held ? dates : null).figures;
@@ -91,7 +96,10 @@ export default function SearchConsoleAppearancePage() {
   const rows: Kind[] | undefined = appearances?.map((row) => {
     const counted = countedReady ? (row.count ?? 0) >= 0 : pages.answer === undefined || pagesOf.has(row.key);
     return {
-      key: appearanceName(row.key, known),
+      key: row.key,
+      name: appearanceName(row.key, known),
+      previousClicks: row.previousClicks ?? null,
+      change: row.previousClicks === null || row.previousClicks === undefined ? null : row.clicks - row.previousClicks,
       clicks: row.clicks,
       impressions: row.impressions,
       ctr: row.ctr,
@@ -101,30 +109,49 @@ export default function SearchConsoleAppearancePage() {
     };
   });
   const matches = wordStartMatcher(term.toLowerCase());
-  const matching = rows?.filter((row) => !matches || matches(row.key));
+  const matching = rows?.filter((row) => !matches || matches(row.name));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "clicks", name: nameOf });
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
-  const clicks = (rows ?? []).reduce((sum, row) => sum + row.clicks, 0);
-  const impressions = (rows ?? []).reduce((sum, row) => sum + row.impressions, 0);
-  const all = performance?.totals?.clicks ?? 0;
+  const when = usePerformanceDates();
+  // Every page Google showed in the country chosen, as Pages counts them: the third box's "out of".
+  const pagesShown = useSearchConsoleSummaryRead({ dimension: "page", inCountry: true }).summary?.rows ?? null;
+  // The last six months, kept as the periods are built; a country not kept ready has none, as Brand and non-brand's chart.
+  const months = useQuery(api.searchConsoleBreakdowns.searchConsoleLookMonths, held ? { siteId, searchType: kind, ...countryArg(country) } : "skip");
+  const newestMonth = status?.connection?.newestDay?.slice(0, 7) ?? null;
+  const all = performance?.totals ? { now: performance.totals.clicks, before: performance.previous?.clicks ?? null } : null;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Star className="h-5 w-5 text-brand" />} title={t("appearance.title")} description={t("appearance.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <SearchConsoleSees screen="appearance" seen={rows ? appearanceSees(rows.length, [...rows].sort((left, right) => right.clicks - left.clicks)[0] ? { name: [...rows].sort((left, right) => right.clicks - left.clicks)[0].key } : null) : null} data={rows ? { kinds: rows, totals: performance?.totals ?? null } : undefined} />
+          <SearchConsoleSees
+            screen="appearance"
+            seen={rows ? appearanceSees(rows.length, [...rows].sort((left, right) => right.clicks - left.clicks)[0] ? { name: [...rows].sort((left, right) => right.clicks - left.clicks)[0].name } : null) : null}
+            data={rows && performance ? {
+              kinds: rows.map((row) => ({ name: row.name, clicks: row.clicks, previousClicks: row.previousClicks, impressions: row.impressions, position: row.position, pages: row.pages })),
+              totals: performance.totals ?? null,
+              previous: performance.previous ?? null,
+              months: months ? months.months.map((month) => ({ ...month, name: formatMonth(month.month.slice(0, 7)) })) : null,
+              pagesShown,
+              names: { plain: t("appearance.months.plain"), rich: t("appearance.title") },
+            } : undefined}
+          />
           <ResultKindSwitch />
-          <FigureRow columns={3}>
-            <Figure label={t("appearance.kinds")} value={rows ? formatNumber(rows.length) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
-            <Figure label={t("appearance.clicks")} value={rows ? formatNumber(clicks) : "…"} detail={<span className="text-secondary">{t("appearance.ofAll", { share: all > 0 ? formatRate(clicks / all) : "–" })}</span>} />
-            <Figure label={t("appearance.impressions")} value={rows ? formatNumber(impressions) : "…"} detail={<span className="text-secondary">{periodWords.name}</span>} />
-          </FigureRow>
+          <LookBoxes looks={rows} all={all} against={when.inBefore} pagesShown={pagesShown} />
+          {months?.notReady && country ? <CountryNotReady country={country} /> : (
+            <LookMonthsCard
+              months={months?.months}
+              newestMonth={newestMonth}
+              nameOf={(key) => appearanceName(key, known)}
+              host={status.host}
+              exportName={`${status.host}-search-console-rich-results-months`}
+            />
+          )}
           <DataTable
             rows={pager.pageRows}
             rowKey={(row) => row.key}
             search={{ value: search, onChange: setSearch, placeholder: t("appearance.searchPlaceholder") }}
-            filters={<SearchConsoleChips chips={CHIPS} />}
             cardHeader={
               <TableBar
                 footer={pager.footer}
@@ -135,8 +162,9 @@ export default function SearchConsoleAppearancePage() {
                     fileName={`${status.host}-search-console-rich-results-${range.from}-${range.to}`}
                     rows={sorted}
                     columns={[
-                      { header: t("table.richResult"), value: (row) => row.key },
+                      { header: t("table.richResult"), value: (row) => row.name },
                       { header: t("table.clicks"), value: (row) => row.clicks },
+                      { header: t("table.change"), value: (row) => row.change },
                       { header: t("table.impressions"), value: (row) => row.impressions },
                       { header: `${t("table.ctr")} (%)`, value: (row) => filePercent(row.ctr) },
                       { header: t("table.position"), value: (row) => filePosition(row.position) },
@@ -150,10 +178,11 @@ export default function SearchConsoleAppearancePage() {
             empty={{ icon: <Star className="h-8 w-8 text-muted/30" />, label: term ? t("table.noMatch") : t("appearance.empty") }}
             footer={pager.footer}
             columns={[
-              { key: "key", header: t("table.richResult"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <span className="block truncate text-[13px] text-foreground">{row.key}</span> },
+              // The lean table, as drawn (20 November 2026): Up or down took CTR's place.
+              { key: "key", header: t("table.richResult"), sortable: true, className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (row) => <span className="block truncate text-[13px] text-foreground" title={row.name}>{row.name}</span> },
               { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },
-              { key: "impressions", header: t("table.impressions"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
-              { key: "ctr", header: t("table.ctr"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.ctr)}</span> },
+              { key: "change", header: t("table.change"), align: "right", sortable: true, className: "whitespace-nowrap", cell: (row) => <Change by={row.change} format={formatNumber} /> },
+              { key: "impressions", header: <span title={t("table.shownTitle")}>{t("table.shown")}</span>, align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
               { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatPosition(row.position)}</span> },
               { key: "pages", header: t("table.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{!row.counted ? "–" : row.pages === null ? "…" : formatNumber(row.pages)}</span> },
             ]}

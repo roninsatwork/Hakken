@@ -14,6 +14,21 @@ export function formatRate(value: number | null | undefined): string {
   return new Intl.NumberFormat(readerLocale(), { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
 }
 
+/**
+ * Clicks for every 100 impressions, with two decimals: "0.49", "1.86". Click rate by position's, where most of the rates are
+ * under 1 and one decimal read 0.14 and 0.07 alike (search-console-breakdowns-plan-2026-11-20.md).
+ */
+export function formatPer100(rate: number | null | undefined): string {
+  if (rate === null || rate === undefined) return "–";
+  return new Intl.NumberFormat(readerLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(rate * 100);
+}
+
+/** A click-through rate as a percentage with two decimals, for rates mostly under 1%: "0.49%". */
+export function formatFineRate(rate: number | null | undefined): string {
+  if (rate === null || rate === undefined) return "–";
+  return new Intl.NumberFormat(readerLocale(), { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(rate);
+}
+
 /** Google's average position, with one decimal: "21.4". */
 export function formatPosition(value: number | null | undefined): string {
   if (value === null || value === undefined) return "–";

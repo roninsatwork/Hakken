@@ -209,6 +209,17 @@ describe("found in review, 2026-10-03", () => {
     expect(isBrand("acme shop leeds", ["Acme shop"])).toBe(true);
   });
 
+  test("a brand of two words counts only with its words side by side, in order (20 November 2026)", () => {
+    const brand = ["More Handles", "MoreHandles"];
+    expect(isBrand("more handles carlisle", brand)).toBe(true);
+    expect(isBrand("morehandles.co.uk", brand)).toBe(true);
+    expect(isBrand("discount code more handles", brand)).toBe(true);
+    // Another shop's name, with both words in it.
+    expect(isBrand("handles and more calgary", brand)).toBe(false);
+    expect(isBrand("door handles and more", brand)).toBe(false);
+    expect(isBrand("more door handles", brand)).toBe(false);
+  });
+
 });
 
 describe("Tracked keywords and Tracked pages (drawn 2026-10-03)", () => {

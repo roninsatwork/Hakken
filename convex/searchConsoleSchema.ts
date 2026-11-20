@@ -122,8 +122,12 @@ export const periodListValidator = v.union(
   // The main home country's own pages, Google's country filter on, for Demand by Classification (18 November 2026,
   // search-console-demand-by-classification-way-2-plan-2026-11-18.md): `page` is every country's since 17 November.
   v.literal("countryPage"),
+  // Click rate by position on mobile and on desktop (20 November 2026, search-console-breakdowns-plan-2026-11-20.md): a row
+  // a whole position, its keywords the row's count, asked of Google a period at a time (`searchConsoleBreakdowns.ts`).
+  v.literal("mobileCurve"),
+  v.literal("desktopCurve"),
 );
-export type SearchConsolePeriodList = "query" | "pair" | "pairByPage" | "competing" | "page" | "country" | "device" | "appearance" | "countryPage";
+export type SearchConsolePeriodList = "query" | "pair" | "pairByPage" | "competing" | "page" | "country" | "device" | "appearance" | "countryPage" | "mobileCurve" | "desktopCurve";
 
 /**
  * The ready-made periods (plan §14.3, item 4): the date menu's seven calendar
@@ -504,6 +508,12 @@ export const searchConsoleTables = {
     volatilityKeywords: v.optional(v.number()),
     movedUp5: v.optional(v.number()),
     movedDown5: v.optional(v.number()),
+    /**
+     * A month's rich results (20 November 2026, search-console-breakdowns-plan-2026-11-20.md): each kind's clicks and
+     * impressions, for Rich results' last six months. On MONTH rows only, kept as the periods are built
+     * (`keepLookMonths`); missing on a month not kept yet.
+     */
+    looks: v.optional(v.array(v.object({ key: v.string(), clicks: v.number(), impressions: v.number() }))),
     builtAt: v.number(),
   }).index("by_hold_country_type_week", ["companyWebsiteId", "country", "searchType", "week"]),
 

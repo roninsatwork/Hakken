@@ -83,6 +83,8 @@ describe("approved looks", () => {
       Bands: "search-console-position-bands-way-3", LowCtr: "search-console-shown-but-not-clicked-way-2",
       // Keyword cannibalisation as Way 3 (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
       Competing: "search-console-keyword-cannibalisation-way-3",
+      // Brand and non-brand as Way 1, Click rate by position and Rich results as Way 3 (search-console-breakdowns-plan-2026-11-20.md).
+      Brand: "search-console-breakdowns", CtrCurve: "search-console-breakdowns", Appearance: "search-console-breakdowns",
     };
     const savedLater = (board: string) => lookFiles.some((look) => look.plan === redrawn[board] && look.board === board);
     // A board whose screen was dropped keeps its place on the dated canvas but has no screen to look like: Wins and

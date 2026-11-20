@@ -318,8 +318,27 @@ follows it, with New and lost:
 - **What moved to the row's own screen:** Track on Keywords, Pages, Almost there and Missed demand (the record screen has
   its own Track box); Pages and Top page on Keywords and the tracked keywords; Keywords and Top keyword on Pages and the
   tracked pages; CTR on the two tracked lists, which keep Track because unticking is what they are for; Position on
-  Shown but not clicked, which had six figures; the count of pages on Pages competing. Brand and non-brand keeps CTR
-  and leaves out Up or down.
+  Shown but not clicked, which had six figures; the count of pages on Pages competing. Brand and non-brand keeps CTR;
+  since its redo (below) the Searches menu took the Brand column's place, and Up or down came in.
+- **The Breakdowns redone** (Anthony, 2026-11-20, picked on the canvas; `docs/plans/active/search-console-breakdowns-plan-2026-11-20.md`):
+  - *Brand and non-brand* (Way 1): four boxes, every click counted (Performance's own read, `useSiteFiguresFor`), so the
+    clicks from searches Google hides have a box of their own; the shared `DaysChart` with Show; the lean table. The
+    chip is "Searches" (Every search, Brand searches, Other searches), Volatility's too. A brand's words must now be in a
+    search side by side and in order (`isBrand`); each list takes it when it's next built, and a list settled before keeps
+    the flags it was built with, as the fast keyword table can't judge a keyword it holds only as a place in the book.
+  - *Click rate by position* (Way 3): three boxes for positions 1 to 3, 4 to 10 and 11 to 20 against the period before,
+    and mobile against desktop at each position (`BarsCard`). The devices are kept as period lists of their own
+    (`mobileCurve`, `desktopCurve`: a row a position, its keywords the count, `shown` at Google's most when a week was cut),
+    the pairs on each device asked a week at a time in a job the build schedules once it's done (`keepDeviceCurves`,
+    `deviceCurvesOf`), each week once for every period it falls in, and added up keyword by keyword as every keyword list is; other
+    dates and countries not kept ask Google from the screen (`searchConsoleLiveDeviceCurve`), sending back the positions
+    only. The Device menu went: the columns are the devices.
+  - *Rich results* (Way 3): the kinds' period before is now kept (`KEEPS_BEFORE`), so the boxes and Up or down compare;
+    each month's kinds go on the month's chart row (`searchConsoleWeeks.looks`, `keepLookMonths`), a finished month asked
+    of Google once and a month inside the 60 days added up from them; the last six months are drawn whatever the dates
+    (`searchConsoleLookMonths`). Its eye has rules of its own (`own/searchConsoleLooks.ts`), and Ask Hakken reads it
+    (`screen: "appearance"`). The Device menu went, as Countries and devices splits by device.
+  - The code for the devices and the months is in `convex/searchConsoleBreakdowns.ts`.
 
 Still over the rule, frozen in `scripts/table-columns-allowlist.json` and waiting on Anthony: the table on a keyword's or
 a page's own screen (Track and six more) and the list of connected websites.

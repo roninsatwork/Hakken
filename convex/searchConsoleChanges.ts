@@ -15,6 +15,8 @@ import { addUp, beforeOf, historyLimitDay, shiftDay, type Figures } from "./sear
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
 import { chartStepValidator } from "./searchConsolePeriods";
 import { curveRows, keywordFiguresOf } from "./searchConsoleKeywordList";
+import { readPeriod } from "./searchConsolePeriodReads";
+import { DEVICE_CURVES, DEVICE_PAIRS_CUT, curveOfRows, devicesValidator } from "./searchConsoleBreakdowns";
 import { BookNames } from "./searchConsolePeriodBooks";
 import { seenDaysBetween } from "./searchConsoleSeenDays";
 import { checkedLongest, consoleLimitsOf, type ConsoleLimits } from "./searchConsoleLimits";
@@ -678,6 +680,11 @@ export const searchConsoleCurve = tenantQuery({
     points: v.array(v.object({ position: v.number(), keywords: v.number(), impressions: v.number(), clicks: v.number(), ctr: v.number() })),
     /** The same curve over the span before, where it is kept: for What Hakken sees (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6). */
     before: v.optional(v.union(v.null(), v.array(v.object({ position: v.number(), keywords: v.number(), impressions: v.number(), clicks: v.number(), ctr: v.number() })))),
+    /**
+     * The same on mobile and on desktop, kept as the periods are built (20 November 2026, search-console-breakdowns-plan-
+     * 2026-11-20.md): null where they aren't kept yet, and the screen asks Google (`searchConsoleLiveDeviceCurve`).
+     */
+    devices: v.optional(v.union(v.null(), devicesValidator)),
   }),
   handler: async (ctx, args) => await readCurve(ctx, args),
 });
@@ -693,9 +700,12 @@ export async function readCurve(ctx: SiteReader, args: ObjectType<typeof readCur
   const period = scope.read === "LIVE" ? null : periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection?.newestDay);
   if (!period) return { live: Boolean(connection?.newestDay), preparing: false, points: [] };
   const kept = scope.read === "KEPT" ? scope.country : undefined;
-  const [keywords, earlier] = await Promise.all([
-    keywordFiguresOf(ctx, site.hold._id, args.searchType, period, kept),
-    keywordFiguresOf(ctx, site.hold._id, args.searchType, period, kept, "BEFORE"),
+  const [[keywords, earlier], [mobile, desktop]] = await Promise.all([
+    Promise.all([
+      keywordFiguresOf(ctx, site.hold._id, args.searchType, period, kept),
+      keywordFiguresOf(ctx, site.hold._id, args.searchType, period, kept, "BEFORE"),
+    ]),
+    Promise.all(DEVICE_CURVES.map(([list]) => readPeriod(ctx, site.hold._id, args.searchType, list, period, "NOW", kept))),
   ]);
   if (!keywords) return { live: false, preparing: true, points: [] };
   // A keyword at a time, never a row object for each (step 4b).
@@ -704,5 +714,8 @@ export async function readCurve(ctx: SiteReader, args: ObjectType<typeof readCur
     preparing: false,
     points: ctrCurve(curveRows(keywords), limits.curvePositions),
     before: earlier ? ctrCurve(curveRows(earlier), limits.curvePositions) : null,
+    devices: mobile && desktop && (mobile.rows.length > 0 || desktop.rows.length > 0)
+      ? { mobile: curveOfRows(mobile.rows), desktop: curveOfRows(desktop.rows), cut: (mobile.shown ?? 0) >= DEVICE_PAIRS_CUT || (desktop.shown ?? 0) >= DEVICE_PAIRS_CUT ? DEVICE_PAIRS_CUT : null }
+      : null,
   };
 }

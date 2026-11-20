@@ -10890,6 +10890,7 @@
         "newADay": "nuove ricerche al giorno",
         "pageOne": "ricerche sulla prima pagina di Google",
         "clicksPerThousand": "clic ogni 1.000 volte mostrato",
+        "clicksPerHundred": "clic ogni 100 impressioni",
         "ownClicksSharePercent": "dei suoi clic da Google",
         "searchesLost": "ricerche perse",
         "searchesGained": "nuove ricerche",
@@ -15993,10 +15994,10 @@
       },
       "pageType": "Tipo di pagina",
       "anyPageType": "Qualsiasi tipo",
-      "brand": "Brand o no",
-      "anyBrand": "Brand o no",
-      "brandYes": "Brand",
-      "brandNo": "Non brand",
+      "brand": "Ricerche",
+      "anyBrand": "Ogni ricerca",
+      "brandYes": "Ricerche del brand",
+      "brandNo": "Altre ricerche",
       "device": "Dispositivo",
       "anyDevice": "Qualsiasi dispositivo",
       "way": "Su o giù",
@@ -16154,32 +16155,58 @@
     },
     "brand": {
       "title": "Brand e non brand",
-      "description": "Clic dalle ricerche che usano il tuo nome, rispetto a quelle che non lo usano.",
-      "yourWords": "Le tue parole di brand:",
+      "description": "Clic dalle ricerche con il tuo nome, e da ogni altra ricerca.",
+      "yourWords": "Le tue parole di brand sono",
+      "and": "e",
       "noWords": "Il tuo sito non ha ancora parole di brand.",
       "change": "Cambia le parole di brand",
-      "brandClicks": "Clic di brand",
-      "otherClicks": "Clic non di brand",
-      "share": "Quota di clic di brand",
-      "otherImpressions": "Impressioni non di brand",
-      "chartTitle": "Clic di brand e non di brand",
-      "chartHint": "Clic dalle ricerche con le tue parole di brand, e da ogni altra ricerca."
+      "boxes": {
+        "brand": "Clic dalle ricerche del brand",
+        "other": "Clic dalle altre ricerche",
+        "outOf100": "Su ogni 100 clic",
+        "fromBrand": "Dalle ricerche del brand",
+        "hidden": "Ricerche che Google nasconde",
+        "hiddenShare": "{count} clic su ogni 100 sono arrivati da queste"
+      },
+      "chart": {
+        "clicks": "Clic",
+        "share": "Su ogni 100 clic",
+        "hint": "Clic dalle ricerche del brand e dalle altre ricerche che Google nomina, in {when}.",
+        "day": "Giorno"
+      }
     },
     "ctrCurve": {
       "title": "Tasso di clic per posizione",
-      "description": "Quanto spesso le persone cliccano il tuo sito in ciascuna posizione di Google, {period}. Tasso di clic basso lo usa come tuo metro.",
-      "chartTitle": "Il tuo tasso di clic in ogni posizione",
-      "chartHint": "Clic per ogni volta che Google ti ha mostrato, nelle posizioni da 1 a {positions}.",
-      "rate": "Tasso di clic",
-      "searchPlaceholder": "Cerca posizioni…"
+      "description": "Quanto spesso le persone cliccano il tuo sito in ciascuna posizione di Google, {period}. La posizione 1 è la prima di Google.",
+      "searchPlaceholder": "Cerca posizioni…",
+      "position": "Posizione {position}",
+      "boxes": {
+        "top3": "Posizioni da 1 a 3",
+        "first": "Posizioni da 4 a 10",
+        "second": "Posizioni da 11 a 20",
+        "per100": "Clic ogni 100 impressioni"
+      },
+      "chart": {
+        "title": "Percentuale di clic in ogni posizione, su cellulare e computer",
+        "hint": "Ogni coppia di barre è una posizione di Google, la 1 in cima.",
+        "show": "Mostra",
+        "first": "Posizioni da 1 a 10",
+        "second": "Posizioni da 11 a 20",
+        "figure": "Clic ogni 100 impressioni",
+        "position": "Posizione",
+        "empty": "Niente da mostrare per queste date.",
+        "failed": "Google non ha risposto. Riprova tra un minuto."
+      },
+      "table": {
+        "mobileTitle": "Percentuale di clic su cellulare",
+        "desktopTitle": "Percentuale di clic su computer",
+        "mobileFile": "CTR su cellulare",
+        "desktopFile": "CTR su computer"
+      }
     },
     "appearance": {
       "title": "Risultati avanzati",
-      "description": "I tipi speciali di risultato in cui Google mostra le tue pagine, come le stelle delle recensioni, i video o i risultati tradotti, e i clic che porta ciascuno.",
-      "kinds": "Tipi di risultato avanzato",
-      "clicks": "Clic da questi",
-      "ofAll": "{share} di tutti i clic",
-      "impressions": "Impressioni",
+      "description": "Risultati che Google mostra con dettagli in più, come prezzi o stelle, e i clic che portano.",
       "searchPlaceholder": "Cerca risultati avanzati…",
       "empty": "Google non ha mostrato nessuna tua pagina come risultato avanzato in queste date.",
       "names": {
@@ -16189,7 +16216,29 @@
         "PRODUCT_SNIPPETS": "Snippet di prodotto",
         "FAQ_RICH_RESULTS": "FAQ",
         "AMP_BLUE_LINK": "AMP",
-        "RECIPE_FEATURE": "Ricetta"
+        "RECIPE_FEATURE": "Ricetta",
+        "MERCHANT_LISTINGS": "Schede del commerciante"
+      },
+      "boxes": {
+        "clicks": "Clic dai risultati avanzati",
+        "outOf100": "Su ogni 100 clic",
+        "fromRich": "Dai risultati avanzati",
+        "pages": "Pagine con dettagli in più",
+        "shownAs": "Mostrate come {kind}",
+        "outOf": "Su {count} pagine mostrate da Google"
+      },
+      "months": {
+        "title": "Clic ogni mese, per come ti ha mostrato Google",
+        "hint": "Ogni barra è tutti i tuoi clic in un mese. In grigio i risultati semplici, senza dettagli in più.",
+        "notCounted": "{count, plural, one {Un mese non è ancora contato.} other {# mesi non sono ancora contati.}}",
+        "others": "Altri risultati avanzati",
+        "plain": "Risultati semplici",
+        "soFar": "{month} finora",
+        "month": "Mese",
+        "count": "Conta",
+        "clicks": "Clic",
+        "share": "Su ogni 100",
+        "empty": "Niente da mostrare per questi mesi."
       }
     },
     "country": {

@@ -514,6 +514,7 @@ import type * as roleRuns from "../roleRuns.js";
 import type * as scheduler from "../scheduler.js";
 import type * as searchConsoleAgentRun from "../searchConsoleAgentRun.js";
 import type * as searchConsoleApi from "../searchConsoleApi.js";
+import type * as searchConsoleBreakdowns from "../searchConsoleBreakdowns.js";
 import type * as searchConsoleCannibalisation from "../searchConsoleCannibalisation.js";
 import type * as searchConsoleCatchUp from "../searchConsoleCatchUp.js";
 import type * as searchConsoleChanges from "../searchConsoleChanges.js";
@@ -927,6 +928,7 @@ import type * as utils_sees_own_searchConsoleBands from "../utils/sees/own/searc
 import type * as utils_sees_own_searchConsoleCannibalisation from "../utils/sees/own/searchConsoleCannibalisation.js";
 import type * as utils_sees_own_searchConsoleDemand from "../utils/sees/own/searchConsoleDemand.js";
 import type * as utils_sees_own_searchConsoleIndexing from "../utils/sees/own/searchConsoleIndexing.js";
+import type * as utils_sees_own_searchConsoleLooks from "../utils/sees/own/searchConsoleLooks.js";
 import type * as utils_sees_own_searchConsoleLowCtr from "../utils/sees/own/searchConsoleLowCtr.js";
 import type * as utils_sees_own_searchConsolePages from "../utils/sees/own/searchConsolePages.js";
 import type * as utils_sees_own_searchConsolePlaces from "../utils/sees/own/searchConsolePlaces.js";
@@ -1582,6 +1584,7 @@ declare const fullApi: ApiFromModules<{
   scheduler: typeof scheduler;
   searchConsoleAgentRun: typeof searchConsoleAgentRun;
   searchConsoleApi: typeof searchConsoleApi;
+  searchConsoleBreakdowns: typeof searchConsoleBreakdowns;
   searchConsoleCannibalisation: typeof searchConsoleCannibalisation;
   searchConsoleCatchUp: typeof searchConsoleCatchUp;
   searchConsoleChanges: typeof searchConsoleChanges;
@@ -1995,6 +1998,7 @@ declare const fullApi: ApiFromModules<{
   "utils/sees/own/searchConsoleCannibalisation": typeof utils_sees_own_searchConsoleCannibalisation;
   "utils/sees/own/searchConsoleDemand": typeof utils_sees_own_searchConsoleDemand;
   "utils/sees/own/searchConsoleIndexing": typeof utils_sees_own_searchConsoleIndexing;
+  "utils/sees/own/searchConsoleLooks": typeof utils_sees_own_searchConsoleLooks;
   "utils/sees/own/searchConsoleLowCtr": typeof utils_sees_own_searchConsoleLowCtr;
   "utils/sees/own/searchConsolePages": typeof utils_sees_own_searchConsolePages;
   "utils/sees/own/searchConsolePlaces": typeof utils_sees_own_searchConsolePlaces;

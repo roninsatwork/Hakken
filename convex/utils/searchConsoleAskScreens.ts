@@ -11,6 +11,8 @@ export const SEARCH_CONSOLE_SCREENS = [
   "lowCtr",
   // Keyword cannibalisation, with its redo the same day (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
   "competing",
+  // Rich results, with its redo the same day (search-console-breakdowns-plan-2026-11-20.md).
+  "appearance",
 ] as const;
 export type SearchConsoleScreen = (typeof SEARCH_CONSOLE_SCREENS)[number];
 
@@ -19,4 +21,5 @@ export const SEARCH_CONSOLE_SEGMENT: Record<SearchConsoleScreen, string> = {
   performance: "", keywords: "keywords", pages: "pages", brand: "brand-and-non-brand", bands: "position-bands", ctrCurve: "click-rate-by-position",
   services: "demand-by-service", updates: "google-updates", newLost: "new-and-lost", volatility: "volatility", keyword: "keywords/keyword", page: "pages/page",
   indexing: "indexing", places: "countries-and-devices", lowCtr: "shown-but-not-clicked", competing: "pages-competing",
+  appearance: "rich-results",
 };

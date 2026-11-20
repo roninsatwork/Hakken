@@ -10,6 +10,7 @@ import { readList } from "./searchConsoleLists";
 import { namedRows } from "./searchConsolePeriodBooks";
 import { readCurve, readNewLost, readUpdates } from "./searchConsoleChanges";
 import { readDemand } from "./searchConsoleDemand";
+import { readLookMonths } from "./searchConsoleBreakdowns";
 import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { readVolatility } from "./searchConsoleVolatility";
@@ -113,8 +114,34 @@ export const searchConsoleScreenInternal = internalQuery({
 
     if (args.screen === "ctrCurve") {
       const curve = await readCurve(site, { siteId: hold._id, searchType: "web", from, to });
-      const point = (one: { position: number; keywords: number; impressions: number; clicks: number; ctr: number }) => ({ place: one.position, searches: one.keywords, timesShown: one.impressions, clicks: one.clicks, clickedPercent: percent(one.ctr) });
-      return { ...base, ...(curve.preparing ? { note: "The figures are still being added up." } : {}), places: curve.points.map(point), spanBefore: { ...base.spanBefore, places: curve.before ? curve.before.map(point) : null } };
+      const point = (one: { position: number; keywords: number; impressions: number; clicks: number; ctr: number }) => ({ position: one.position, searches: one.keywords, timesShown: one.impressions, clicks: one.clicks, clickedPercent: percent(one.ctr) });
+      return {
+        ...base,
+        ...(curve.preparing ? { note: "The figures are still being added up." } : {}),
+        positions: curve.points.map(point),
+        spanBefore: { ...base.spanBefore, positions: curve.before ? curve.before.map(point) : null },
+        // Mobile against desktop, as the screen's chart (Way 3, 20 November 2026): kept with the ready-made periods.
+        onMobile: curve.devices ? curve.devices.mobile.map(point) : null,
+        onDesktop: curve.devices ? curve.devices.desktop.map(point) : null,
+        ...(curve.devices ? {} : { devicesNote: "Mobile and desktop aren't kept for these dates yet: open the screen to see them." }),
+      };
+    }
+
+    if (args.screen === "appearance") {
+      // Rich results (Way 3, 20 November 2026): each kind against the span before, every click beside them, and six months.
+      const list = await readList(ctx, hold._id, { ...ask, dimension: "appearance", sort: "clicks", direction: "desc" });
+      if (list.live) return { ...base, note: "These dates are not a ready-made period: open the screen to read them." };
+      const figures = await readPerformance(site, { siteId: hold._id, ...ask });
+      const months = await readLookMonths(ctx, hold, { searchType: "web" });
+      const kinds = await namedRows(list, list.rows.slice(0, ROWS));
+      return {
+        ...base,
+        kinds: kinds.map((row) => ({ kind: row.key, clicks: row.clicks, clicksBefore: row.previousClicks ?? null, timesShown: row.impressions, position: round(row.position), pages: row.count !== null && row.count >= 0 ? row.count : null })),
+        everyClick: figures.totals?.clicks ?? null,
+        everyClickBefore: figures.previous?.clicks ?? null,
+        lastSixMonths: months.months.map((month) => ({ month: month.month.slice(0, 7), everyClick: month.clicks, kinds: month.looks })),
+        rule: "Plain results are everyClick less the kinds' clicks. One page can show more than one kind, so never add the kinds' pages together.",
+      };
     }
 
     if (args.screen === "services") {
@@ -314,7 +341,7 @@ export const searchConsoleScreenInternal = internalQuery({
 
     const whole = summary?.wholeList;
     // Pages' boxes are the country's own figures, Performance's read: its pages share out only the clicks Google ties to a page.
-    const boxes = args.screen === "pages" ? await readPerformance(site, { siteId: hold._id, ...ask }) : null;
+    const boxes = args.screen === "pages" || args.screen === "brand" ? await readPerformance(site, { siteId: hold._id, ...ask }) : null;
     return {
       ...base,
       ...held,
@@ -323,7 +350,10 @@ export const searchConsoleScreenInternal = internalQuery({
         countryClicks: boxes.totals?.clicks ?? null,
         countryClicksBefore: boxes.previous?.clicks ?? null,
         // Ask Hakken's first answer on Pages (18 November 2026) called the pages' 1,946 "your entire website", beside 7,124.
-        pagesRule: "totals.clicks is only what Google tied to a page. The website's own clicks in the country are countryClicks, and the rest came from searches Google keeps private. Never call the pages' total the website's.",
+        ...(args.screen === "pages"
+          ? { pagesRule: "totals.clicks is only what Google tied to a page. The website's own clicks in the country are countryClicks, and the rest came from searches Google keeps private. Never call the pages' total the website's." }
+          // Brand and non-brand's boxes count every click (Way 1, 20 November 2026): brand searches out of every 100 of countryClicks.
+          : { brandRule: "brandAndNonBrand counts only the searches Google names. The screen's Out of every 100 clicks is brand clicks out of countryClicks, every click counted; the rest came from searches Google hides." }),
       } : {}),
       ...(args.screen === "brand" || args.screen === "keywords" ? { brandAndNonBrand: summary?.brand ?? null, mostMoved: whole?.movers ?? null } : {}),
       ...(args.screen === "bands" || args.screen === "keywords" ? {

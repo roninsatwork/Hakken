@@ -1,0 +1,20 @@
+# Search Console → Brand and non-brand — the approved look (board "Brand" of docs/plans/assets/search-console-breakdowns/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Brand and non-brand
+choice: Kind of result: Web | Video | News | Discover | Google News
+figures
+  figure: Clicks from brand searches
+  figure: Clicks from other searches
+  figure: Out of every # clicks
+  figure: Searches Google hides
+chart-card: Clicks each week
+filter: Show
+search: Search keywords…
+filter: Searches
+filter: Position
+filter: Device
+table: Keyword | Clicks | Up or down | Shown | CTR | Position
+  table-bar
+    download: Download all (CSV)
+  table-footer

@@ -365,8 +365,29 @@ describe("Click rate by position and brand words", () => {
       ],
       // The same curve over the span before, for What Hakken sees: none is kept here.
       before: null,
+      // Mobile and desktop (20 November 2026): not built here, so the screen asks Google for them.
+      devices: null,
     });
     expect(await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-09-01", to: "2026-09-10" })).toMatchObject({ live: true, points: [] });
+  });
+
+  test("mobile and desktop come from their own kept lists, a row a position, and say when Google cut its answer", async () => {
+    const { t, siteId, reader } = await setup();
+    await period(t, siteId, "thisMonth", [["a", 18, 100, 1.2]]);
+    for (const [list, clicks, shown] of [["mobileCurve", 30, 100], ["desktopCurve", 10, 100]] as const) {
+      await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
+        companyWebsiteId: siteId, searchType: "web", list, period: "thisMonth", which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
+        keys: ["1", "2"], clicks: [clicks, 1], impressions: [shown, 50], positionSums: [shown, 100], counts: [4, 2], tops: ["", ""],
+        shown: list === "mobileCurve" ? 50_000 : 10, builtAt: 1,
+      });
+    }
+    const curve = await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-09-01", to: NEWEST });
+    expect(curve.devices).toEqual({
+      mobile: [{ position: 1, keywords: 4, impressions: 100, clicks: 30, ctr: 0.3 }, { position: 2, keywords: 2, impressions: 50, clicks: 1, ctr: 0.02 }],
+      desktop: [{ position: 1, keywords: 4, impressions: 100, clicks: 10, ctr: 0.1 }, { position: 2, keywords: 2, impressions: 50, clicks: 1, ctr: 0.02 }],
+      // Google gave its most pairs for mobile: the screen says some small keywords aren't counted.
+      cut: 50_000,
+    });
   });
 
   test("the brand words come from the website's Profile; only the platform's team is offered the way to change them", async () => {

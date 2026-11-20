@@ -1,0 +1,16 @@
+# Search Console → Rich results — the approved look (board "Appearance" of docs/plans/assets/search-console-breakdowns/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Rich results
+choice: Kind of result: Web | Video | News | Discover | Google News
+figures
+  figure: Clicks from rich results
+  figure: Out of every # clicks
+  figure: Pages with extra details
+chart-card: Clicks each month, by how Google showed you
+filter: Count
+search: Search rich results…
+table: Rich result | Clicks | Up or down | Shown | Position | Pages
+  table-bar
+    download: Download all (CSV)
+  table-footer

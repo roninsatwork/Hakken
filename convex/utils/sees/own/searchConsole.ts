@@ -1,6 +1,6 @@
 import type { FindingFact } from "../findings";
 import { isNumber, isRow, moved, named, partOf, round1, rowsOf, type OwnFound, type Row } from "./shared";
-import { FAIR_BEFORE, LEAST_CHANGE, RATE_UNDER, SHOWN_LEAST, SPLIT_SHARE_LEAST, WEBSITE_PLACES_MOVED, against, apartWhole, changeOf, fairBefore, namesOf, newAgainstLost, placeAgainst, ratesApart, shareMoved, smallRates, text, wordsOf, type Words } from "./searchConsoleShared";
+import { FAIR_BEFORE, LEAST_CHANGE, RATE_UNDER, SHOWN_LEAST, SPLIT_SHARE_LEAST, WEBSITE_PLACES_MOVED, against, apartWhole, changeOf, fairBefore, namesOf, newAgainstLost, placeAgainst, ratesApart, ratesPer100, shareMoved, smallRates, text, wordsOf, type Words } from "./searchConsoleShared";
 import { pagesFindings } from "./searchConsolePages";
 import { placesFindings } from "./searchConsolePlaces";
 import { indexingFindings, reasonFindings } from "./searchConsoleIndexing";
@@ -8,6 +8,7 @@ import { demandFindings } from "./searchConsoleDemand";
 import { trackedFindings } from "./searchConsoleTracked";
 import { lowCtrFindings } from "./searchConsoleLowCtr";
 import { cannibalisationFindings } from "./searchConsoleCannibalisation";
+import { looksFindings } from "./searchConsoleLooks";
 import { NEW_LOST_EYE_NEWEST } from "../../searchConsoleViews";
 
 /**
@@ -236,6 +237,18 @@ function brandMoves(list: string, split: Row, names: Words, score: number): OwnF
 // Brand and non-brand
 // ---------------------------------------------------------------------------
 
+/** Brand and non-brand's movers: a search with fewer clicks than this on both sides isn't named. */
+const MOVER_CLICKS_LEAST = 20;
+
+/**
+ * Whether a search that gained or lost clicks is worth naming, in the eye's findings and as a step's link: 5 clicks moved or
+ * more, and 20 clicks one side or the other ("alexander & wilks", 10 to 1, came back as a step through the page's links).
+ */
+export function moverWorthNaming(row: { clicks: number; previousClicks: number | null } | null | undefined): boolean {
+  if (!row || row.previousClicks === null || row.previousClicks <= 0) return false;
+  return Math.abs(row.clicks - row.previousClicks) >= 5 && Math.max(row.clicks, row.previousClicks) >= MOVER_CLICKS_LEAST;
+}
+
 function brandFindings(data: Row): OwnFound[] {
   const found: OwnFound[] = [];
   const words = wordsOf(data);
@@ -256,16 +269,23 @@ function brandFindings(data: Row): OwnFound[] {
   if (fair) found.push(...brandMoves("split", split!, names, 1.4));
   // How much more often a search for the name is clicked than any other: the business's own name against the market.
   found.push({ ...ratesApart("rate", brand, brandClicks, brandShown, otherClicks, otherShown, 0, other, smallRates(brandClicks + otherClicks, brandShown + otherShown)), score: 1.1 });
-  const share = (100 * brandClicks) / (brandClicks + otherClicks);
-  if (fair) {
-    const shareBefore = (100 * (before!.brandClicks as number)) / ((before!.brandClicks as number) + (before!.nonBrandClicks as number));
+  // Out of every 100 clicks, every click counted, the hidden searches' too, as the screen's third box (Way 1, 20 November
+  // 2026); only the clicks Google names where the page sends no totals.
+  const every = isRow(data.every) && isNumber(data.every.clicks) && data.every.clicks > 0 ? data.every : null;
+  const all = every ? (every.clicks as number) : brandClicks + otherClicks;
+  const allBefore = every ? (isNumber(every.before) && every.before > 0 ? every.before : null) : before ? (before.brandClicks as number) + (before.nonBrandClicks as number) : null;
+  const share = (100 * brandClicks) / all;
+  // The clicks Google names no search for, as the fourth box.
+  if (every && all > brandClicks + otherClicks) found.push(partOf("hidden", text(names, "hidden", "Searches Google hides"), "clicks", all - brandClicks - otherClicks, all, 0.95));
+  if (fair && allBefore !== null) {
+    const shareBefore = (100 * (before!.brandClicks as number)) / allBefore;
     if (Math.abs(share - shareBefore) >= 0.5) found.push(shareMoved("share", brand, "clicks", share, shareBefore, 0.8 + Math.min(0.5, Math.abs(share - shareBefore) / 10)));
     // Non-brand searches shown more or less, beside their clicks: is it demand, or is it the clicks?
     const shownChange = changeOf(otherShown, before!.nonBrandImpressions as number);
     const clickChange = changeOf(otherClicks, before!.nonBrandClicks as number);
     if (Math.abs(shownChange) >= 0.03) found.push(moved("shown", other, "impressions", otherShown, before!.nonBrandImpressions as number, 0.9 + Math.min(0.5, Math.abs(shownChange - clickChange) * 2), { name: text(words, "clicks", "Clicks"), change: clickChange }));
   } else {
-    found.push(partOf("share", brand, "clicks", brandClicks, brandClicks + otherClicks, 0.8));
+    found.push(partOf("share", brand, "clicks", brandClicks, all, 0.8));
   }
   // The searches that gained and lost most clicks over the whole list, never only the page of it on screen.
   const whole = isRow(summary.wholeList) ? summary.wholeList : {};
@@ -273,7 +293,9 @@ function brandFindings(data: Row): OwnFound[] {
   for (const [way, score] of [["otherDown", 1.2], ["otherUp", 1.0], ["brandDown", 0.85]] as const) {
     const row = isRow(movers[way]) ? movers[way] : null;
     if (!row || typeof row.key !== "string" || !isNumber(row.clicks) || !isNumber(row.previousClicks) || row.previousClicks <= 0) continue;
-    if (Math.abs(row.clicks - row.previousClicks) < 5) continue;
+    // A search worth naming had at least 20 clicks one side or the other: "alexander & wilks", 10 to 1, was too small to act on
+    // (the first press, 20 November 2026).
+    if (!moverWorthNaming({ clicks: row.clicks, previousClicks: row.previousClicks })) continue;
     found.push(moved(`mover${way}`, row.key, "clicks", row.clicks, row.previousClicks, score + Math.min(0.3, Math.abs(row.clicks - row.previousClicks) / 100)));
   }
   // Without a fair span before: the newest weeks against the weeks before them, from the chart.
@@ -317,12 +339,11 @@ function curveFindings(data: Row): OwnFound[] {
   const nameOf = (point: Row) => named(point) ?? `${text(names, "place", "Place")} ${point.position}`;
   const trusted = (point: Row | undefined): point is Row => Boolean(point) && (point!.impressions as number) >= SHOWN_LEAST;
   const sum = (list: Row[], field: string) => list.reduce((total, point) => total + (point[field] as number), 0);
-  const small = smallRates(sum(points, "clicks"), sum(points, "impressions"));
 
   // The headline: the top place against the next, as the chart's first two bars.
   const [first, second] = [at(1), at(2)];
   if (trusted(first) && trusted(second)) {
-    const one = ratesApart("top", nameOf(first), first.clicks as number, first.impressions as number, second.clicks as number, second.impressions as number, 0, nameOf(second), small);
+    const one = ratesPer100("top", nameOf(first), first.clicks as number, first.impressions as number, second.clicks as number, second.impressions as number, 0, nameOf(second));
     found.push({ ...one, score: 1.4 + Math.min(0.4, Math.abs(Math.log(Math.max(0.01, (one.params.value as number) / Math.max(0.01, one.params.mean as number))))) });
   }
   // A place clicked more often than the one above it, the biggest such gap where both are shown enough to trust.
@@ -333,18 +354,18 @@ function curveFindings(data: Row): OwnFound[] {
     .map((one) => ({ ...one, gap: (one.point.clicks as number) / (one.point.impressions as number) - (one.above.clicks as number) / (one.above.impressions as number) }))
     .filter((one) => one.gap > 0 && one.gap / ((one.above.clicks as number) / Math.max(1, one.above.impressions as number) || 1) >= 0.2)
     .sort((left, right) => right.gap - left.gap)[0];
-  if (outOfOrder) found.push({ ...ratesApart("order", nameOf(outOfOrder.point), outOfOrder.point.clicks as number, outOfOrder.point.impressions as number, outOfOrder.above.clicks as number, outOfOrder.above.impressions as number, 0, nameOf(outOfOrder.above), small), score: 1.1 });
+  if (outOfOrder) found.push({ ...ratesPer100("order", nameOf(outOfOrder.point), outOfOrder.point.clicks as number, outOfOrder.point.impressions as number, outOfOrder.above.clicks as number, outOfOrder.above.impressions as number, 0, nameOf(outOfOrder.above)), score: 1.1 });
   // Google's first page against its second.
   const pageOne = points.filter((point) => (point.position as number) <= 10);
   const pageTwo = points.filter((point) => (point.position as number) > 10 && (point.position as number) <= 20);
   if (sum(pageOne, "impressions") >= SHOWN_LEAST && sum(pageTwo, "impressions") >= SHOWN_LEAST) {
-    found.push({ ...ratesApart("pages", text(names, "firstPage", "Google's first page"), sum(pageOne, "clicks"), sum(pageOne, "impressions"), sum(pageTwo, "clicks"), sum(pageTwo, "impressions"), 0, text(names, "secondPage", "Google's second page"), small), score: 0.9 });
+    found.push({ ...ratesPer100("pages", text(names, "firstPage", "Google's first page"), sum(pageOne, "clicks"), sum(pageOne, "impressions"), sum(pageTwo, "clicks"), sum(pageTwo, "impressions"), 0, text(names, "secondPage", "Google's second page")), score: 0.9 });
   }
   // What a climb into the top 3 is worth here: the top three places' click rate against places 4 to 10.
   const fourToTen = points.filter((point) => (point.position as number) >= 4 && (point.position as number) <= 10);
   const topPlaces = points.filter((point) => (point.position as number) <= 3);
   if (sum(topPlaces, "impressions") >= SHOWN_LEAST && sum(fourToTen, "impressions") >= SHOWN_LEAST) {
-    found.push({ ...ratesApart("climb", text(names, "topThree", "Places 1 to 3"), sum(topPlaces, "clicks"), sum(topPlaces, "impressions"), sum(fourToTen, "clicks"), sum(fourToTen, "impressions"), 0, text(names, "fourToTen", "Places 4 to 10"), small), score: 1.0 });
+    found.push({ ...ratesPer100("climb", text(names, "topThree", "Places 1 to 3"), sum(topPlaces, "clicks"), sum(topPlaces, "impressions"), sum(fourToTen, "clicks"), sum(fourToTen, "impressions"), 0, text(names, "fourToTen", "Places 4 to 10")), score: 1.0 });
   }
   // Where the clicks come from: the top three places' share of every click, beside their share of the times shown.
   const top = points.filter((point) => (point.position as number) <= 3);
@@ -366,7 +387,21 @@ function curveFindings(data: Row): OwnFound[] {
     .map((one) => ({ ...one, move: Math.abs(Math.log(Math.max(0.01, ((one.point.clicks as number) / (one.point.impressions as number)) / ((one.then.clicks as number) / (one.then.impressions as number))))) }))
     .filter((one) => one.move >= Math.log(1.2))
     .sort((left, right) => right.move - left.move)[0];
-  if (movedMost) found.push({ ...ratesApart("before", nameOf(movedMost.point), movedMost.point.clicks as number, movedMost.point.impressions as number, movedMost.then.clicks as number, movedMost.then.impressions as number, 0, beforeName, small), score: 1.0 + Math.min(0.4, movedMost.move) });
+  if (movedMost) found.push({ ...ratesPer100("before", nameOf(movedMost.point), movedMost.point.clicks as number, movedMost.point.impressions as number, movedMost.then.clicks as number, movedMost.then.impressions as number, 0, beforeName), score: 1.0 + Math.min(0.4, movedMost.move) });
+  // Mobile against desktop, as the screen's chart sets them side by side (Way 3, 20 November 2026): the top three positions,
+  // and Google's first page below them, where both are shown enough to trust.
+  const devices = isRow(data.devices) ? data.devices : null;
+  if (devices) {
+    const mobile = rowsOf(devices.mobile).filter((point) => isNumber(point.position) && isNumber(point.clicks) && isNumber(point.impressions));
+    const desktop = rowsOf(devices.desktop).filter((point) => isNumber(point.position) && isNumber(point.clicks) && isNumber(point.impressions));
+    const within = (list: Row[], from: number, to: number) => list.filter((point) => (point.position as number) >= from && (point.position as number) <= to);
+    for (const [key, from, to, name, score] of [["devicesTop", 1, 3, text(names, "topThree", "Places 1 to 3"), 1.15], ["devicesFirst", 4, 10, text(names, "fourToTen", "Places 4 to 10"), 0.9]] as const) {
+      const [m, d] = [within(mobile, from, to), within(desktop, from, to)];
+      if (sum(m, "impressions") < SHOWN_LEAST || sum(d, "impressions") < SHOWN_LEAST) continue;
+      const one = ratesPer100(key, `${text(names, "mobile", "Mobile")}, ${name}`, sum(m, "clicks"), sum(m, "impressions"), sum(d, "clicks"), sum(d, "impressions"), 0, `${text(names, "desktop", "Desktop")}, ${name}`);
+      found.push({ ...one, score });
+    }
+  }
   return found;
 }
 
@@ -776,4 +811,6 @@ export const SEARCH_CONSOLE_OWN: Readonly<Record<string, { general: boolean; fin
   "searchConsole.lowCtr": { general: false, find: lowCtrFindings },
   // Keyword cannibalisation (Pages competing until 20 November 2026; search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
   "searchConsole.competing": { general: false, find: cannibalisationFindings },
+  // Rich results since 20 November 2026 (search-console-breakdowns-plan-2026-11-20.md).
+  "searchConsole.appearance": { general: false, find: looksFindings },
 };

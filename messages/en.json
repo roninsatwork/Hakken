@@ -10890,6 +10890,7 @@
         "newADay": "new searches a day",
         "pageOne": "searches on Google's first page",
         "clicksPerThousand": "clicks for every 1,000 times shown",
+        "clicksPerHundred": "clicks for every 100 impressions",
         "ownClicksSharePercent": "of its clicks from Google",
         "searchesLost": "searches lost",
         "searchesGained": "new searches",
@@ -15993,10 +15994,10 @@
       },
       "pageType": "Page type",
       "anyPageType": "Any type",
-      "brand": "Brand or not",
-      "anyBrand": "Brand or not",
-      "brandYes": "Brand",
-      "brandNo": "Non-brand",
+      "brand": "Searches",
+      "anyBrand": "Every search",
+      "brandYes": "Brand searches",
+      "brandNo": "Other searches",
       "device": "Device",
       "anyDevice": "Any device",
       "way": "Up or down",
@@ -16154,32 +16155,58 @@
     },
     "brand": {
       "title": "Brand and non-brand",
-      "description": "Clicks from searches that use your name, against those that don't.",
-      "yourWords": "Your brand words:",
+      "description": "Clicks from searches with your name, and from every other search.",
+      "yourWords": "Your brand words are",
+      "and": "and",
       "noWords": "Your website has no brand words yet.",
       "change": "Change brand words",
-      "brandClicks": "Brand clicks",
-      "otherClicks": "Non-brand clicks",
-      "share": "Brand share of clicks",
-      "otherImpressions": "Non-brand impressions",
-      "chartTitle": "Brand and non-brand clicks",
-      "chartHint": "Clicks from searches with your brand words, and from every other search."
+      "boxes": {
+        "brand": "Clicks from brand searches",
+        "other": "Clicks from other searches",
+        "outOf100": "Out of every 100 clicks",
+        "fromBrand": "From brand searches",
+        "hidden": "Searches Google hides",
+        "hiddenShare": "{count} in every 100 clicks came from them"
+      },
+      "chart": {
+        "clicks": "Clicks",
+        "share": "Out of every 100 clicks",
+        "hint": "Clicks from brand searches and from other searches Google names, in {when}.",
+        "day": "Day"
+      }
     },
     "ctrCurve": {
       "title": "Click rate by position",
-      "description": "How often people click your website at each of Google's positions, {period}. Low click rate uses this as your yardstick.",
-      "chartTitle": "Your click rate at each position",
-      "chartHint": "Clicks for each time Google showed you, at positions 1 to {positions}.",
-      "rate": "Click rate",
-      "searchPlaceholder": "Search positions…"
+      "description": "How often people click your website at each position in Google, {period}. Position 1 is the top of Google.",
+      "searchPlaceholder": "Search positions…",
+      "position": "Position {position}",
+      "boxes": {
+        "top3": "Positions 1 to 3",
+        "first": "Positions 4 to 10",
+        "second": "Positions 11 to 20",
+        "per100": "Clicks for every 100 impressions"
+      },
+      "chart": {
+        "title": "Click-through rate at each position, on mobile and desktop",
+        "hint": "Each pair of bars is a position in Google, 1 at the top.",
+        "show": "Show",
+        "first": "Positions 1 to 10",
+        "second": "Positions 11 to 20",
+        "figure": "Clicks for every 100 impressions",
+        "position": "Position",
+        "empty": "Nothing to show for these dates.",
+        "failed": "Google didn't answer. Try again in a minute."
+      },
+      "table": {
+        "mobileTitle": "Click-through rate on mobile",
+        "desktopTitle": "Click-through rate on desktop",
+        "mobileFile": "Mobile CTR",
+        "desktopFile": "Desktop CTR"
+      }
     },
     "appearance": {
       "title": "Rich results",
-      "description": "The special kinds of result Google shows your pages in, such as review stars, videos or translated results, and the clicks each brings.",
-      "kinds": "Kinds of rich result",
-      "clicks": "Clicks from them",
-      "ofAll": "{share} of all clicks",
-      "impressions": "Impressions",
+      "description": "Results Google shows with extra details, like prices or stars, and the clicks they bring.",
       "searchPlaceholder": "Search rich results…",
       "empty": "Google showed none of your pages as a rich result in these dates.",
       "names": {
@@ -16189,7 +16216,29 @@
         "PRODUCT_SNIPPETS": "Product snippet",
         "FAQ_RICH_RESULTS": "FAQ",
         "AMP_BLUE_LINK": "AMP",
-        "RECIPE_FEATURE": "Recipe"
+        "RECIPE_FEATURE": "Recipe",
+        "MERCHANT_LISTINGS": "Merchant listings"
+      },
+      "boxes": {
+        "clicks": "Clicks from rich results",
+        "outOf100": "Out of every 100 clicks",
+        "fromRich": "From rich results",
+        "pages": "Pages with extra details",
+        "shownAs": "Shown as {kind}",
+        "outOf": "Out of {count} pages Google showed"
+      },
+      "months": {
+        "title": "Clicks each month, by how Google showed you",
+        "hint": "Each bar is all your clicks in a month. Grey is plain results, with no extra details.",
+        "notCounted": "{count, plural, one {One month isn't counted yet.} other {# months aren't counted yet.}}",
+        "others": "Other rich results",
+        "plain": "Plain results",
+        "soFar": "{month} so far",
+        "month": "Month",
+        "count": "Count",
+        "clicks": "Clicks",
+        "share": "Out of every 100",
+        "empty": "Nothing to show for these months."
       }
     },
     "country": {

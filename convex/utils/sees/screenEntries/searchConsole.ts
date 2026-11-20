@@ -78,22 +78,33 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
       "any country but the one chosen in the menu: every figure on the screen is that country's",
     ],
   },
+  // Brand and non-brand as Anthony chose it on 20 November 2026 (search-console-breakdowns-plan-2026-11-20.md).
   "searchConsole.brand": {
-    about: "Brand and non-brand: clicks from searches using the business's own name (its brand words, set in its Profile) against every other search",
+    about: "Brand and non-brand: clicks from brand searches (searches with the business's own name in them, its brand words set in its Profile, the words side by side and in order) against the other searches Google names, in the country chosen in the menu",
     parts: [
-      "the four boxes: brand clicks, non-brand clicks, the brand's share of the clicks and non-brand times shown, against the span before",
-      "the chart: brand and non-brand clicks in each day, week or month",
-      "the table: each search, marked brand or not, with its clicks, times shown, share clicked and place",
+      "the four boxes: clicks from brand searches and from other searches, each against the span before; brand searches out of every 100 clicks, every click counted, the searches Google hides too; and the clicks from searches Google hides, with how many in every 100 that is",
+      "the chart: clicks each day, week or month from brand searches and from the other searches Google names; Show switches it to out of every 100 clicks",
+      "the table: each search with its clicks, up or down, times shown, share clicked and position; the Searches menu shows brand searches or other searches alone",
     ],
-    never: SEARCH_CONSOLE_NEVER,
+    never: [...SEARCH_CONSOLE_NEVER, "the word place for a spot in Google's results: always say position, as the page does"],
   },
+  // Click rate by position as Anthony chose it on 20 November 2026 (search-console-breakdowns-plan-2026-11-20.md).
   "searchConsole.ctrCurve": {
-    about: "Click rate by position: how often people clicked the website at each of Google's places, 1 to 20, from its own searches",
+    about: "Click rate by position: how often people clicked the website at each position on Google, 1 at the top to 20, from its own searches, on mobile and on desktop, in the country chosen in the menu",
     parts: [
-      "the chart: the share clicked at each place",
-      "the table: each place with its searches, times shown, clicks and share clicked",
+      "the three boxes: positions 1 to 3, 4 to 10 and 11 to 20, each its clicks for every 100 impressions, against the span before",
+      "the chart: the click-through rate at each position on mobile and on desktop, side by side; Show switches between positions 1 to 10 and 11 to 20",
+      "the table: each position with its searches, times shown, clicks, and its click-through rate on mobile and on desktop",
     ],
-    never: [...SEARCH_CONSOLE_NEVER, "other websites' click rates or any rate the page does not show: the page is the website's own"],
+    never: [
+      ...SEARCH_CONSOLE_NEVER,
+      "other websites' click rates or any rate the page does not show: the page is the website's own",
+      "the word place for a spot in Google's results: always say position, as the page does",
+      "tablets: the page sets mobile against desktop only",
+      // The second press, 20 November 2026: "1.9 clicks for every 100 times shown" beside boxes saying 1.86 for every 100 impressions.
+      "a click rate rounded to one decimal, or per 1,000: say it for every 100 impressions with two decimals, as the boxes do (1.86 against 0.49)",
+      "times shown: say impressions, as the page does",
+    ],
   },
   // Countries and devices as Anthony chose it on 18 November 2026 (search-console-countries-and-devices-way-1-plan-2026-11-18.md).
   "searchConsole.places": {
@@ -206,7 +217,21 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
     ],
     never: SEARCH_CONSOLE_NEVER,
   },
-  "searchConsole.appearance": { writer: "INSIGHTS_TECHNICAL", about: "rich results: how the website's listings appear in Google" },
+  // Rich results as Anthony chose it on 20 November 2026 (search-console-breakdowns-plan-2026-11-20.md).
+  "searchConsole.appearance": {
+    writer: "INSIGHTS_TECHNICAL",
+    about: "Rich results: the results Google showed the website's pages in with extra details, such as a price or stars, and the clicks each kind brought, in the country chosen in the menu. Plain results are every click less the rich results'",
+    parts: [
+      "the three boxes: clicks from rich results against the span before; rich results out of every 100 clicks, against it; and the pages shown with the kind most pages had, out of every page Google showed",
+      "the chart: every click of the last six months, a bar a month, split into each kind of rich result and plain results; the newest month runs to Google's newest day",
+      "the table: each kind with its clicks, up or down, times shown, position and pages",
+    ],
+    never: [
+      ...SEARCH_CONSOLE_NEVER,
+      "a kind of rich result by any name but the page's, such as Product snippet and Merchant listings",
+      "a kind's clicks added to another's as one figure of pages: one page can show more than one kind",
+    ],
+  },
   // Shown but not clicked as Anthony chose it on 20 November 2026 (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
   "searchConsole.lowCtr": {
     about: "Low click rate (called Shown but not clicked until 20 November 2026): pages Google showed a lot that people rarely clicked, in the country chosen in the menu. Each page is set against what the website usually gets at the same position on Google, from Click rate by position: the clicks it got against the clicks it would usually get there",

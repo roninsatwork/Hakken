@@ -1,0 +1,1313 @@
+{
+ "_note": "Rich results for More Handles, the United Kingdom, web, every period the date menu offers, read on dev on 20 November 2026 with no asks of Google (searchConsoleSplitList appearance, searchConsolePerformance, Pages' count, searchConsoleLookMonths). Only the fields the page hands its eye.",
+ "periods": {
+  "thisWeek": {
+   "kinds": [
+    {
+     "name": "Product snippet",
+     "clicks": 275,
+     "previousClicks": 312,
+     "impressions": 53365,
+     "position": 17.67371872950436,
+     "pages": 2210
+    },
+    {
+     "name": "Merchant listings",
+     "clicks": 12,
+     "previousClicks": 22,
+     "impressions": 191,
+     "position": 3.4031413612565444,
+     "pages": 41
+    }
+   ],
+   "totals": {
+    "clicks": 657,
+    "ctr": 0.006258036862408916,
+    "impressions": 104985,
+    "position": 12.525751297804447
+   },
+   "previous": {
+    "clicks": 622,
+    "ctr": 0.0070246767180529674,
+    "impressions": 88545,
+    "position": 13.141137274832007
+   },
+   "months": [
+    {
+     "clicks": 7307,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 5,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4217,
+       "impressions": 522729,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 202,
+       "impressions": 3896,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-06-01",
+     "name": "June"
+    },
+    {
+     "clicks": 7805,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4744,
+       "impressions": 596884,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 249,
+       "impressions": 4455,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-07-01",
+     "name": "July"
+    },
+    {
+     "clicks": 8619,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 4,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 5020,
+       "impressions": 623121,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 340,
+       "impressions": 5579,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-08-01",
+     "name": "August"
+    },
+    {
+     "clicks": 7518,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "TRANSLATED_RESULT"
+      },
+      {
+       "clicks": 4199,
+       "impressions": 506182,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 390,
+       "impressions": 5287,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-09-01",
+     "name": "September"
+    },
+    {
+     "clicks": 7124,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 3708,
+       "impressions": 521346,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 304,
+       "impressions": 3060,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 6,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-10-01",
+     "name": "October"
+    },
+    {
+     "clicks": 3747,
+     "days": 18,
+     "looks": [
+      {
+       "clicks": 1842,
+       "impressions": 334017,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 115,
+       "impressions": 1355,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-11-01",
+     "name": "November"
+    }
+   ],
+   "pagesShown": 3471
+  },
+  "lastWeek": {
+   "kinds": [
+    {
+     "name": "Product snippet",
+     "clicks": 747,
+     "previousClicks": 709,
+     "impressions": 136766,
+     "position": 21.100807218168256,
+     "pages": 3365
+    },
+    {
+     "name": "Merchant listings",
+     "clicks": 55,
+     "previousClicks": 40,
+     "impressions": 644,
+     "position": 3.5139751552795033,
+     "pages": 105
+    },
+    {
+     "name": "Review snippet",
+     "clicks": 0,
+     "previousClicks": 0,
+     "impressions": 1,
+     "position": 40,
+     "pages": 0
+    }
+   ],
+   "totals": {
+    "clicks": 1401,
+    "ctr": 0.006603071064315138,
+    "impressions": 212174,
+    "position": 13.527274783903778
+   },
+   "previous": {
+    "clicks": 1462,
+    "ctr": 0.007529445694774194,
+    "impressions": 194171,
+    "position": 14.322720694645442
+   },
+   "months": [
+    {
+     "clicks": 7307,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 5,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4217,
+       "impressions": 522729,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 202,
+       "impressions": 3896,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-06-01",
+     "name": "June"
+    },
+    {
+     "clicks": 7805,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4744,
+       "impressions": 596884,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 249,
+       "impressions": 4455,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-07-01",
+     "name": "July"
+    },
+    {
+     "clicks": 8619,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 4,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 5020,
+       "impressions": 623121,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 340,
+       "impressions": 5579,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-08-01",
+     "name": "August"
+    },
+    {
+     "clicks": 7518,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "TRANSLATED_RESULT"
+      },
+      {
+       "clicks": 4199,
+       "impressions": 506182,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 390,
+       "impressions": 5287,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-09-01",
+     "name": "September"
+    },
+    {
+     "clicks": 7124,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 3708,
+       "impressions": 521346,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 304,
+       "impressions": 3060,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 6,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-10-01",
+     "name": "October"
+    },
+    {
+     "clicks": 3747,
+     "days": 18,
+     "looks": [
+      {
+       "clicks": 1842,
+       "impressions": 334017,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 115,
+       "impressions": 1355,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-11-01",
+     "name": "November"
+    }
+   ],
+   "pagesShown": 4171
+  },
+  "thisMonth": {
+   "kinds": [
+    {
+     "name": "Product snippet",
+     "clicks": 1842,
+     "previousClicks": 2108,
+     "impressions": 334017,
+     "position": 21.179389073011254,
+     "pages": 4052
+    },
+    {
+     "name": "Merchant listings",
+     "clicks": 115,
+     "previousClicks": 186,
+     "impressions": 1355,
+     "position": 3.4907749077490773,
+     "pages": 200
+    },
+    {
+     "name": "Review snippet",
+     "clicks": 0,
+     "previousClicks": 0,
+     "impressions": 3,
+     "position": 16.666666666666668,
+     "pages": 0
+    }
+   ],
+   "totals": {
+    "clicks": 3747,
+    "ctr": 0.006990489054390371,
+    "impressions": 536014,
+    "position": 13.597161641300413
+   },
+   "previous": {
+    "clicks": 4099,
+    "ctr": 0.008732870875374965,
+    "impressions": 469376,
+    "position": 11.540832935642214
+   },
+   "months": [
+    {
+     "clicks": 7307,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 5,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4217,
+       "impressions": 522729,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 202,
+       "impressions": 3896,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-06-01",
+     "name": "June"
+    },
+    {
+     "clicks": 7805,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4744,
+       "impressions": 596884,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 249,
+       "impressions": 4455,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-07-01",
+     "name": "July"
+    },
+    {
+     "clicks": 8619,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 4,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 5020,
+       "impressions": 623121,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 340,
+       "impressions": 5579,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-08-01",
+     "name": "August"
+    },
+    {
+     "clicks": 7518,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "TRANSLATED_RESULT"
+      },
+      {
+       "clicks": 4199,
+       "impressions": 506182,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 390,
+       "impressions": 5287,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-09-01",
+     "name": "September"
+    },
+    {
+     "clicks": 7124,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 3708,
+       "impressions": 521346,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 304,
+       "impressions": 3060,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 6,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-10-01",
+     "name": "October"
+    },
+    {
+     "clicks": 3747,
+     "days": 18,
+     "looks": [
+      {
+       "clicks": 1842,
+       "impressions": 334017,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 115,
+       "impressions": 1355,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-11-01",
+     "name": "November"
+    }
+   ],
+   "pagesShown": 5421
+  },
+  "lastMonth": {
+   "kinds": [
+    {
+     "name": "Product snippet",
+     "clicks": 3708,
+     "previousClicks": 4199,
+     "impressions": 521346,
+     "position": 15.460554027459692,
+     "pages": 4554
+    },
+    {
+     "name": "Merchant listings",
+     "clicks": 304,
+     "previousClicks": 390,
+     "impressions": 3060,
+     "position": 3.3290849673202616,
+     "pages": 410
+    },
+    {
+     "name": "Review snippet",
+     "clicks": 0,
+     "previousClicks": 0,
+     "impressions": 6,
+     "position": 8.666666666666666,
+     "pages": 0
+    }
+   ],
+   "totals": {
+    "clicks": 7124,
+    "ctr": 0.008450931453028764,
+    "impressions": 842984,
+    "position": 12.158704079792736
+   },
+   "previous": {
+    "clicks": 7518,
+    "ctr": 0.009152933613838243,
+    "impressions": 821376,
+    "position": 11.674660569580801
+   },
+   "months": [
+    {
+     "clicks": 7307,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 5,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4217,
+       "impressions": 522729,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 202,
+       "impressions": 3896,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-06-01",
+     "name": "June"
+    },
+    {
+     "clicks": 7805,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4744,
+       "impressions": 596884,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 249,
+       "impressions": 4455,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-07-01",
+     "name": "July"
+    },
+    {
+     "clicks": 8619,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 4,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 5020,
+       "impressions": 623121,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 340,
+       "impressions": 5579,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-08-01",
+     "name": "August"
+    },
+    {
+     "clicks": 7518,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "TRANSLATED_RESULT"
+      },
+      {
+       "clicks": 4199,
+       "impressions": 506182,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 390,
+       "impressions": 5287,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-09-01",
+     "name": "September"
+    },
+    {
+     "clicks": 7124,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 3708,
+       "impressions": 521346,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 304,
+       "impressions": 3060,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 6,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-10-01",
+     "name": "October"
+    },
+    {
+     "clicks": 3747,
+     "days": 18,
+     "looks": [
+      {
+       "clicks": 1842,
+       "impressions": 334017,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 115,
+       "impressions": 1355,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-11-01",
+     "name": "November"
+    }
+   ],
+   "pagesShown": 6439
+  },
+  "last3Months": {
+   "kinds": [
+    {
+     "name": "Product snippet",
+     "clicks": 11811,
+     "previousClicks": 13724,
+     "impressions": 1613913,
+     "position": 15.860910718235742,
+     "pages": 6359
+    },
+    {
+     "name": "Merchant listings",
+     "clicks": 961,
+     "previousClicks": 719,
+     "impressions": 12130,
+     "position": 3.0756801319043694,
+     "pages": 1478
+    },
+    {
+     "name": "Review snippet",
+     "clicks": 0,
+     "previousClicks": 0,
+     "impressions": 12,
+     "position": 10.083333333333334,
+     "pages": 0
+    },
+    {
+     "name": "Translated result",
+     "clicks": 0,
+     "previousClicks": 0,
+     "impressions": 1,
+     "position": 17,
+     "pages": 1
+    }
+   ],
+   "totals": {
+    "clicks": 21959,
+    "ctr": 0.008468853370707,
+    "impressions": 2592913,
+    "position": 12.328379702674173
+   },
+   "previous": {
+    "clicks": 23303,
+    "ctr": 0.008602025903899317,
+    "impressions": 2709013,
+    "position": 12.935279380349964
+   },
+   "months": [
+    {
+     "clicks": 7307,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 5,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4217,
+       "impressions": 522729,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 202,
+       "impressions": 3896,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-06-01",
+     "name": "June"
+    },
+    {
+     "clicks": 7805,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4744,
+       "impressions": 596884,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 249,
+       "impressions": 4455,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-07-01",
+     "name": "July"
+    },
+    {
+     "clicks": 8619,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 4,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 5020,
+       "impressions": 623121,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 340,
+       "impressions": 5579,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-08-01",
+     "name": "August"
+    },
+    {
+     "clicks": 7518,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "TRANSLATED_RESULT"
+      },
+      {
+       "clicks": 4199,
+       "impressions": 506182,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 390,
+       "impressions": 5287,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-09-01",
+     "name": "September"
+    },
+    {
+     "clicks": 7124,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 3708,
+       "impressions": 521346,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 304,
+       "impressions": 3060,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 6,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-10-01",
+     "name": "October"
+    },
+    {
+     "clicks": 3747,
+     "days": 18,
+     "looks": [
+      {
+       "clicks": 1842,
+       "impressions": 334017,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 115,
+       "impressions": 1355,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-11-01",
+     "name": "November"
+    }
+   ],
+   "pagesShown": 10073
+  },
+  "last6Months": {
+   "kinds": [
+    {
+     "name": "Product snippet",
+     "clicks": 25535,
+     "previousClicks": null,
+     "impressions": 3351686,
+     "position": 15.333601656002383,
+     "pages": 7474
+    },
+    {
+     "name": "Merchant listings",
+     "clicks": 1680,
+     "previousClicks": null,
+     "impressions": 26297,
+     "position": 3.474122523481766,
+     "pages": 2618
+    },
+    {
+     "name": "Review snippet",
+     "clicks": 0,
+     "previousClicks": null,
+     "impressions": 28,
+     "position": 12.428571428571429,
+     "pages": 2
+    },
+    {
+     "name": "Translated result",
+     "clicks": 0,
+     "previousClicks": null,
+     "impressions": 2,
+     "position": 9.5,
+     "pages": 1
+    }
+   ],
+   "totals": {
+    "clicks": 45262,
+    "ctr": 0.008536897723581958,
+    "impressions": 5301926,
+    "position": 12.638474395908204
+   },
+   "previous": null,
+   "months": [
+    {
+     "clicks": 7307,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 5,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4217,
+       "impressions": 522729,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 202,
+       "impressions": 3896,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-06-01",
+     "name": "June"
+    },
+    {
+     "clicks": 7805,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4744,
+       "impressions": 596884,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 249,
+       "impressions": 4455,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-07-01",
+     "name": "July"
+    },
+    {
+     "clicks": 8619,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 4,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 5020,
+       "impressions": 623121,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 340,
+       "impressions": 5579,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-08-01",
+     "name": "August"
+    },
+    {
+     "clicks": 7518,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "TRANSLATED_RESULT"
+      },
+      {
+       "clicks": 4199,
+       "impressions": 506182,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 390,
+       "impressions": 5287,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-09-01",
+     "name": "September"
+    },
+    {
+     "clicks": 7124,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 3708,
+       "impressions": 521346,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 304,
+       "impressions": 3060,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 6,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-10-01",
+     "name": "October"
+    },
+    {
+     "clicks": 3747,
+     "days": 18,
+     "looks": [
+      {
+       "clicks": 1842,
+       "impressions": 334017,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 115,
+       "impressions": 1355,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-11-01",
+     "name": "November"
+    }
+   ],
+   "pagesShown": 12376
+  },
+  "last12Months": {
+   "kinds": [
+    {
+     "name": "Product snippet",
+     "clicks": 29881,
+     "previousClicks": null,
+     "impressions": 3878272,
+     "position": 15.171535415772798,
+     "pages": 7684
+    },
+    {
+     "name": "Merchant listings",
+     "clicks": 1913,
+     "previousClicks": null,
+     "impressions": 30031,
+     "position": 3.5121374579601077,
+     "pages": 3008
+    },
+    {
+     "name": "Review snippet",
+     "clicks": 0,
+     "previousClicks": null,
+     "impressions": 36,
+     "position": 12.527777777777779,
+     "pages": 4
+    },
+    {
+     "name": "Translated result",
+     "clicks": 0,
+     "previousClicks": null,
+     "impressions": 2,
+     "position": 9.5,
+     "pages": 1
+    }
+   ],
+   "totals": {
+    "clicks": 52715,
+    "ctr": 0.008553125594248742,
+    "impressions": 6163244,
+    "position": 12.67372555751484
+   },
+   "previous": null,
+   "months": [
+    {
+     "clicks": 7307,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 5,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4217,
+       "impressions": 522729,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 202,
+       "impressions": 3896,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-06-01",
+     "name": "June"
+    },
+    {
+     "clicks": 7805,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 4744,
+       "impressions": 596884,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 249,
+       "impressions": 4455,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-07-01",
+     "name": "July"
+    },
+    {
+     "clicks": 8619,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 4,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 5020,
+       "impressions": 623121,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 340,
+       "impressions": 5579,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-08-01",
+     "name": "August"
+    },
+    {
+     "clicks": 7518,
+     "days": 30,
+     "looks": [
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "REVIEW_SNIPPET"
+      },
+      {
+       "clicks": 0,
+       "impressions": 1,
+       "key": "TRANSLATED_RESULT"
+      },
+      {
+       "clicks": 4199,
+       "impressions": 506182,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 390,
+       "impressions": 5287,
+       "key": "MERCHANT_LISTINGS"
+      }
+     ],
+     "month": "2026-09-01",
+     "name": "September"
+    },
+    {
+     "clicks": 7124,
+     "days": 31,
+     "looks": [
+      {
+       "clicks": 3708,
+       "impressions": 521346,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 304,
+       "impressions": 3060,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 6,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-10-01",
+     "name": "October"
+    },
+    {
+     "clicks": 3747,
+     "days": 18,
+     "looks": [
+      {
+       "clicks": 1842,
+       "impressions": 334017,
+       "key": "PRODUCT_SNIPPETS"
+      },
+      {
+       "clicks": 115,
+       "impressions": 1355,
+       "key": "MERCHANT_LISTINGS"
+      },
+      {
+       "clicks": 0,
+       "impressions": 3,
+       "key": "REVIEW_SNIPPET"
+      }
+     ],
+     "month": "2026-11-01",
+     "name": "November"
+    }
+   ],
+   "pagesShown": 13064
+  }
+ }
+}
