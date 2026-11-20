@@ -15885,7 +15885,7 @@
     },
     "connection": {
       "title": "Connection",
-      "description": "How {host} is connected to Google Search Console.",
+      "description": "How your figures get here from Google Search Console.",
       "chooseTitle": "Choose the property",
       "chooseDescription": "{account} can read these Search Console properties for {host}. Choose the one that covers the whole website.",
       "use": "Use this property",
@@ -15897,21 +15897,12 @@
         "siteFullUser": "Full user",
         "siteRestrictedUser": "Restricted user"
       },
-      "property": "Property",
-      "account": "Google account",
-      "connected": "Connected",
-      "lastUpdated": "Last updated",
-      "history": "History",
-      "collected": "Collected",
-      "updatedDetail": "{when} · Google's figures to {day}",
-      "notYet": "Not yet",
-      "collectedDetail": "By the Search Console Collector agent: at once when connected, then on its own schedule in Admin → Schedules",
       "collectingTitle": "Collecting its last 90 days now",
       "collectingBody": "{host} is connected to Google Search Console. Its last 90 days are coming in now, then its day totals back to Google's 16 months: a few minutes for a small website, about 40 for a large one.",
       "nothingCollectedTitle": "Connected, with nothing collected yet",
       "nothingCollectedBody": "{host} is connected to Google Search Console. Its last 90 days come in on the Search Console agent's next run.",
-      "disconnect": "Disconnect",
-      "confirm": "Disconnecting stops collecting and gives Google's access back. The figures collected so far stay, marked with the day it was disconnected.",
+      "disconnect": "Disconnect Search Console",
+      "confirm": "{analytics, select, yes {No new figures will come in. You keep all your figures so far, and Google Analytics stays connected.} other {No new figures will come in. You keep all your figures so far.}}",
       "confirmDisconnect": "Disconnect",
       "keep": "Keep it connected",
       "reconnect": "Connect again",
@@ -15943,9 +15934,26 @@
       "disconnectedOn": "Disconnected on {day}",
       "keptTo": "The figures to {day} are still here. Nothing new comes in until it's connected again.",
       "keptNone": "Nothing new comes in until it's connected again.",
-      "historyKept": "Totals from {from}, and searches and pages from {day}; longer periods are asked of Google, which keeps 16 months.",
       "disconnectTitle": "Disconnect Search Console?",
-      "searchesLetGo": "Google sent more searches for the last 3, 6 or 12 months than fit at once. The {count} shown least are left out of those lists, but your totals still count them."
+      "searchesLetGo": "Google sent more searches for the last 3, 6 or 12 months than fit at once. The {count} shown least are left out of those lists, but your totals still count them.",
+      "status": {
+        "working": "Connected and working since {day}",
+        "notUpdating": "Connected, but not updating"
+      },
+      "lines": {
+        "source": "Your figures come from Google Search Console every morning. This is covered by your subscription.",
+        "lastToday": "The last update was today at {time}, with figures up to {day}.",
+        "lastOn": "The last update was on {when}, with figures up to {day}.",
+        "lastNone": "Your first figures are on their way.",
+        "history": "Your totals go back to {from}. Each search and page goes back to {day}.",
+        "historyOne": "Your figures go back to {day}.",
+        "older": "For older dates, Google is asked when you choose them. Google keeps 16 months.",
+        "accountShared": "It's connected with {account}, the same account as Google Analytics. It only reads your figures, and never changes anything.",
+        "account": "It's connected with {account}. It only reads your figures, and never changes anything.",
+        "domain": "It reads the domain property {host}{access, select, none {} other {, with {access} access}}. That covers every address on the domain.",
+        "prefix": "It reads the address {property}{access, select, none {} other {, with {access} access}}. That covers this address and everything under it."
+      },
+      "disconnectHint": "{analytics, select, yes {Google Analytics stays connected, and you keep all your figures so far.} other {You keep all your figures so far.}}"
     },
     "keywords": {
       "title": "Keywords",

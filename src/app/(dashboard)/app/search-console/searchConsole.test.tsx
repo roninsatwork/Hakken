@@ -54,6 +54,7 @@ const CONNECTION = {
   lastCollectedAt: Date.parse("2026-09-27T10:02:00Z"),
   problem: null,
   attempt: null,
+  analytics: null,
 };
 
 function status(overrides: Record<string, unknown> = {}, connection: Record<string, unknown> | null = {}) {
@@ -344,15 +345,54 @@ describe("the connection", () => {
     at("/app/search-console/site_1/connection");
     answer({ "searchConsoleConnect:searchConsoleStatus": status() });
     render(<SearchConsoleConnectionPage />);
-    expect(screen.getByText("sc-domain:acme-shop.test")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.connection.lines.domain acme-shop.test searchConsole.connection.permissions.siteOwner")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.connection.disconnectHint no")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "searchConsole.connection.disconnect" }));
     const dialog = await screen.findByRole("dialog");
-    expect(dialog).toHaveTextContent("searchConsole.connection.confirm");
+    expect(dialog).toHaveTextContent("searchConsole.connection.confirm no");
     expect(screen.getByRole("button", { name: "searchConsole.connection.keep" })).toBeInTheDocument();
     expect(mutations.disconnect).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "searchConsole.connection.confirmDisconnect" }));
     await waitFor(() => expect(mutations.disconnect).toHaveBeenCalledWith({ siteId: "site_1" }));
+  });
+
+  it("says how the figures get here in plain lines, as Google Analytics' Connection does", () => {
+    at("/app/search-console/site_1/connection");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": status({}, { analytics: "SAME", daysFrom: "2025-06-11", oldestDay: "2026-07-08" }),
+    });
+    render(<SearchConsoleConnectionPage />);
+    expect(screen.getByText(/^searchConsole\.connection\.status\.working \S/)).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.connection.lines.source")).toBeInTheDocument();
+    expect(screen.getByText(/^searchConsole\.connection\.lines\.last(Today|On) /)).toBeInTheDocument();
+    // Its totals reach further back than each search and page: both are said.
+    expect(screen.getByText(/^searchConsole\.connection\.lines\.history .+2025 .+2026$/)).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.connection.lines.older")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.connection.lines.accountShared owner@acme-shop.test")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.connection.lines.domain acme-shop.test searchConsole.connection.permissions.siteOwner")).toBeInTheDocument();
+    // Google Analytics is connected too, so disconnecting says it stays.
+    expect(screen.getByText("searchConsole.connection.disconnectHint yes")).toBeInTheDocument();
+  });
+
+  it("says a property on an address, and only how far back the kept figures go once disconnected", () => {
+    at("/app/search-console/site_1/connection");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": status({}, { property: "https://www.acme-shop.test/", permission: "siteFullUser" }),
+    });
+    render(<SearchConsoleConnectionPage />);
+    expect(screen.getByText("searchConsole.connection.lines.prefix https://www.acme-shop.test/ searchConsole.connection.permissions.siteFullUser")).toBeInTheDocument();
+    expect(screen.getByText("searchConsole.connection.lines.account owner@acme-shop.test")).toBeInTheDocument();
+    cleanup();
+
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": status({}, { status: "DISCONNECTED", disconnectedAt: Date.parse("2026-09-28T10:00:00Z") }),
+    });
+    render(<SearchConsoleConnectionPage />);
+    expect(screen.getByText(/^searchConsole\.connection\.lines\.historyOne /)).toBeInTheDocument();
+    expect(screen.queryByText("searchConsole.connection.lines.source")).not.toBeInTheDocument();
+    expect(screen.queryByText(/status\.working/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "searchConsole.connection.disconnect" })).not.toBeInTheDocument();
   });
 
   it("says why the last sign-in did not connect, with the account it was tried with", () => {

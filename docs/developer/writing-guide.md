@@ -67,6 +67,7 @@ its redo may be the very thing that's wrong, so it can't set the standard.
 | Search Console, Brand and non-brand ("Brand searches", "Other searches Google names", "Searches Google hides", as Performance) | `searchConsole.brand` |
 | Search Console, Click rate by position ("position", never "place"; rates with two decimals) | `searchConsole.ctrCurve` |
 | Search Console, Rich results (Google's names for each kind; "Plain results" for the rest) | `searchConsole.appearance` |
+| Search Console, Connection (Google Analytics' Connection lines: a status line, then plain sentences) | `searchConsole.connection` |
 
 When a screen is redone, add it here. Name the screens you checked
 whenever you give a word or a pattern as the standard.

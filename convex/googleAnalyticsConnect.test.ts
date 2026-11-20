@@ -459,6 +459,11 @@ describe("one Google sign-in for both sections", () => {
     expect(consoleConnection.googleConnectionId).not.toBe(analytics.googleConnectionId);
     expect(revokes(google)).toHaveLength(0);
     expect((await admin.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId }))?.connection?.sharedWithSearchConsole).toBe(false);
+    // Not yet connected while its property is still to be chosen; once chosen, Search Console says it's on another account.
+    expect((await admin.query(api.searchConsoleConnect.searchConsoleStatus, { siteId }))?.connection?.analytics).toBeNull();
+    await admin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId, property: "properties/312456789" });
+    await finishScheduled(t);
+    expect((await admin.query(api.searchConsoleConnect.searchConsoleStatus, { siteId }))?.connection?.analytics).toBe("OTHER");
   });
 
   test("disconnecting Analytics leaves Search Console connected and its grant kept; disconnecting both gives it back", async () => {
@@ -468,11 +473,15 @@ describe("one Google sign-in for both sections", () => {
     await admin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId, property: "properties/312456789" });
     await finishScheduled(t);
     await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, { siteId, events: [] });
+    // Search Console's Connection page says Analytics is on the same account, and that it stays connected.
+    const analyticsBeside = async () => (await admin.query(api.searchConsoleConnect.searchConsoleStatus, { siteId }))?.connection?.analytics;
+    expect(await analyticsBeside()).toBe("SAME");
 
     await admin.mutation(api.googleAnalyticsConnect.disconnectGoogleAnalytics, { siteId });
     await finishScheduled(t);
     expect(await analyticsOf(t, siteId)).toMatchObject({ status: "DISCONNECTED" });
     expect(await consoleOf(t, siteId)).toMatchObject({ status: "CONNECTED" });
+    expect(await analyticsBeside()).toBeNull();
     expect(revokes(google)).toHaveLength(0);
     expect((await signIns(t)).tokens).toHaveLength(1);
 

@@ -118,7 +118,36 @@ Built on dev, not committed.
   Pressed again with Refresh (a super admin's, not charged to the company): Click rate $0.024 then $0.050, now in clicks from
   impressions ("533 clicks from 28,663 impressions"); Brand $0.079 (sent back once) then $0.027, "alexander & wilks" gone,
   every figure right. About $0.29 of model time in all for the seven presses.
-- **Not done**: the full gate; nothing committed. Connection, drawn as one way, waits on his word.
+- **Then**: the full gate passed and it was committed (f393c7b0) and pushed to dev on his "Yes, gate and commit" and
+  "plkease push everythibng", with vite 8.3.8 after it (571a5e7d).
+
+## Connection — built 20 November 2026, on Anthony's "Yes, build it"
+
+Drawn as one way on the same canvas (board `Connection` here, a copy of the canvas's), in Google Analytics' Connection
+words, and built as drawn. Built on dev; the full gate passed and it was committed on dev on his "Yes, gate and commit",
+not pushed.
+
+1. Title, and "How your figures get here from Google Search Console."
+2. One status line: "Connected and working since Monday 5 October", or "Connected, but not updating" with Google's
+   reason above it. None once disconnected: the banner over every page says it.
+3. Plain sentences, one a row: every morning and covered by your subscription; the last update; how far back the totals
+   and each search and page go (one sentence when they start the same day); older dates asked of Google, which keeps 16
+   months; the Google account, and "the same account as Google Analytics" when it is; the property, a domain's or an
+   address's, with its access in Google's words (Owner, Full user, Restricted user). Disconnected, only how far back.
+4. Disconnect Search Console, with "Google Analytics stays connected, and you keep all your figures so far." under it
+   when Analytics is connected, and "You keep all your figures so far." when it isn't. The yes-or-no says the same.
+
+- **Server**: `searchConsoleStatus` says `analytics` (SAME, OTHER or null: Google Analytics connected with this Google
+  account, another, or not connected), tested in `convex/googleAnalyticsConnect.test.ts` on a shared sign-in and on an
+  agency's and a client's.
+- **Shared part**: `ConnectionLines` and `lastUpdate` (`src/app/(dashboard)/app/sites/_components/ConnectionLines.tsx`),
+  taken out of Google Analytics' Connection, which draws with them now and reads as before.
+- **Choosing a property** lost its card, as Google Analytics' did.
+- **Words**: `searchConsole.connection` in English and Italian; the old facts' words went, and `collectedDetail` came
+  off both frozen lists.
+- **Checked**: the screen's tests (two new), the look (`look/Connection.txt`), the backend and drift tests, the guards,
+  the type check and lint on the changed files. In Anthony's Chrome on More Handles it reads as the board, with today's
+  figures; Google Analytics' Connection reads as before.
 
 ## Change log
 
@@ -127,3 +156,6 @@ Built on dev, not committed.
   from Google's keyword totals (7.5% at position 1 on mobile beside the website's 2.45%), then from one ask a span (cut at
   50,000 for three months and longer): now pairs a week at a time. Judging kept brand flags again on read made the fast
   keyword table read every period but two as no brand clicks: dropped, kept flags stand.
+- **2026-11-20** — Committed (f393c7b0) and pushed to dev.
+- **2026-11-20** — Connection built as drawn, on his "Yes, build it" (above); the full gate passed (9,684 tests, coverage,
+  smoke, build) and it was committed on dev on his "Yes, gate and commit". Not pushed.

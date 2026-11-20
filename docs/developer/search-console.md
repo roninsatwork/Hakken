@@ -339,6 +339,12 @@ follows it, with New and lost:
     (`searchConsoleLookMonths`). Its eye has rules of its own (`own/searchConsoleLooks.ts`), and Ask Hakken reads it
     (`screen: "appearance"`). The Device menu went, as Countries and devices splits by device.
   - The code for the devices and the months is in `convex/searchConsoleBreakdowns.ts`.
+  - *Connection* (drawn as one way on the same canvas, built on his "Yes, build it"): said as Google Analytics'
+    Connection says it, a status line and then plain sentences, one a row (the shared `ConnectionLines` and `lastUpdate`
+    in `sites/_components/ConnectionLines.tsx`, which Google Analytics' page now draws with too). The status says whether
+    Google Analytics is connected beside it, and on the same Google account (`analytics`: SAME, OTHER or null), so the
+    account line and the words under Disconnect can say so. Disconnected, the page says only how far back the kept
+    figures go: the banner over every page says the rest. Choosing a property lost its card.
 
 Still over the rule, frozen in `scripts/table-columns-allowlist.json` and waiting on Anthony: the table on a keyword's or
 a page's own screen (Track and six more) and the list of connected websites.

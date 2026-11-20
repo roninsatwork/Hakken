@@ -20,7 +20,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
-import { formatDateTime, formatLongDate, formatTime } from "@/src/lib/dates";
+import { formatDateTime, formatLongDate } from "@/src/lib/dates";
 import { isCopyAddress } from "@/convex/utils/analyticsAddresses";
 import { NEVER_TICKED, PURCHASE_EVENT } from "@/convex/utils/analyticsEvents";
 import { eventsWithAddresses } from "@/convex/utils/analyticsAddresses";
@@ -30,6 +30,7 @@ import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteP
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { formatDay, formatNumber } from "../../../sites/_components/siteFormat";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
+import { ConnectionLines, lastUpdate } from "../../../sites/_components/ConnectionLines";
 import { AnalyticsConnectCard, useBeginAnalyticsConnect } from "../../_components/AnalyticsNotices";
 import { currencySign, formatMoney } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
@@ -212,17 +213,13 @@ function HowItWorks({ status }: { status: AnalyticsStatus }) {
   const account = connection.googleAccount ?? t("someone");
   const working = connection.status === "CONNECTED" && !connection.problem;
   const since = connection.connectedAt ? formatLongDate(connection.connectedAt) : "";
-  const updated = connection.lastCollectedAt && connection.newestDay
-    ? new Date(connection.lastCollectedAt).toDateString() === new Date().toDateString()
-      ? t("lines.lastToday", { time: formatTime(connection.lastCollectedAt, { options: { hour: "2-digit", minute: "2-digit" } }), day: formatDay(connection.newestDay) })
-      : t("lines.lastOn", { when: formatDateTime(connection.lastCollectedAt), day: formatDay(connection.newestDay) })
-    : t("lines.lastNone");
+  const last = lastUpdate(connection.lastCollectedAt, connection.newestDay);
   const converting = connection.addressesRead.filter((address) => address.counted).map((address) => address.host);
   const read = [...connection.addresses, ...converting];
   const leftOut = new Set([...connection.otherAddresses.map((host) => host.toLowerCase()), ...connection.addressesRead.map((address) => address.host)].filter((host) => !converting.includes(host))).size;
   const lines = [
     t("lines.source"),
-    updated,
+    t(`lines.${last.key}`, last.values),
     ...(connection.oldestDay ? [t("lines.history", { day: formatDay(connection.oldestDay) })] : []),
     connection.sharedWithSearchConsole ? t("lines.accountShared", { account }) : t("lines.account", { account }),
     `${t("lines.counted", { read: read.join(" and "), count: read.length })}${leftOut > 0 ? ` ${t("lines.leftOut", { count: leftOut })}` : ""}`,
@@ -232,10 +229,10 @@ function HowItWorks({ status }: { status: AnalyticsStatus }) {
       {connection.status === "CONNECTED" && connection.problem ? (
         <Notice tone="warning">{t(`problem.${connection.problem}`, { account, property: connection.propertyName ?? connection.property ?? "" })}</Notice>
       ) : null}
-      <div className="flex flex-col gap-1.5">
-        {working ? <StatusLabel tone="success" size="md">{t("status.working", { day: since })}</StatusLabel> : <StatusLabel tone="warning" size="md">{t("status.notUpdating")}</StatusLabel>}
-      </div>
-      <CompactList rows={lines} rowKey={(line) => line} empty="–" columns={[{ key: "line", className: "text-[13px] text-foreground", cell: (line) => line }]} />
+      <ConnectionLines
+        status={working ? <StatusLabel tone="success" size="md">{t("status.working", { day: since })}</StatusLabel> : <StatusLabel tone="warning" size="md">{t("status.notUpdating")}</StatusLabel>}
+        lines={lines}
+      />
     </>
   );
 }

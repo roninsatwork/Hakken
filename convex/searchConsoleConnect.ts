@@ -447,6 +447,11 @@ export const searchConsoleStatus = tenantQuery({
         ),
         /** The most searches one long period's memory guard let go, while one has (`MOST_PAIRS_HELD`): the screens say so. */
         searchesLetGo: v.optional(v.number()),
+        /**
+         * Google Analytics on the same website: "SAME" when it's connected with this Google account, "OTHER" with
+         * another, null when it isn't connected. The Connection page says which, and that disconnecting leaves it be.
+         */
+        analytics: v.union(v.literal("SAME"), v.literal("OTHER"), v.null()),
       }),
     ),
   })),
@@ -494,11 +499,22 @@ export const searchConsoleStatus = tenantQuery({
             ? { outcome: connection.attempt.outcome, account: connection.attempt.account ?? null, at: connection.attempt.at }
             : null,
           ...(connection.searchesLetGo?.length ? { searchesLetGo: Math.max(...connection.searchesLetGo.map((entry) => entry.searches)) } : {}),
+          analytics: await analyticsBeside(ctx, connection),
         }
         : null,
     };
   },
 });
+
+/** Google Analytics beside a website's Search Console: connected with the same Google account, with another, or not at all. */
+async function analyticsBeside(ctx: { db: QueryCtx["db"] }, connection: Doc<"searchConsoleConnections">): Promise<"SAME" | "OTHER" | null> {
+  const analytics = await ctx.db
+    .query("googleAnalyticsConnections")
+    .withIndex("by_hold", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId))
+    .first();
+  if (!analytics || (analytics.status !== "CONNECTED" && analytics.status !== "COUNTING")) return null;
+  return analytics.googleConnectionId !== undefined && analytics.googleConnectionId === connection.googleConnectionId ? "SAME" : "OTHER";
+}
 
 /** Whether a website's own Search Console run is still going: started, not finished, and moved within the time a live run moves in (SF1). */
 export async function siteRunGoing(ctx: { db: QueryCtx["db"] }, connection: Doc<"searchConsoleConnections">): Promise<boolean> {

@@ -11,28 +11,27 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
-import { formatDate, formatDateTime } from "@/src/lib/dates";
-import { SiteFacts } from "../../../sites/_components/SiteRecordParts";
+import { formatLongDate } from "@/src/lib/dates";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { ConnectionLines, lastUpdate } from "../../../sites/_components/ConnectionLines";
 import { formatDay } from "../../../sites/_components/siteFormat";
 import { ConnectCard, useBeginConnect, type SearchConsoleStatus } from "../../_components/SearchConsoleNotices";
 import { useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
-const PANEL = "rounded-2xl border border-border-dim bg-card/40 p-6";
-
 /**
  * A website's connection to Google Search Console (docs/plans/active/
- * search-console-plan.md §3): where a sign-in comes back to and says how it
- * went — connected, a property to choose, or why it could not connect — and,
- * once connected, which property and account, how far back the figures go,
- * and the way to disconnect. The company's admins act here (SC4); everyone
- * else reads it.
+ * search-console-plan.md §3, redone 2026-11-20 in search-console-breakdowns-plan-2026-11-20.md):
+ * where a sign-in comes back to and says how it went — connected, a property to
+ * choose, or why it could not connect — and, once connected, how the figures get
+ * here in plain sentences, and the way to disconnect. The company's admins act
+ * here (SC4); everyone else reads it. A connection page has no What Hakken sees.
  */
 export default function SearchConsoleConnectionPage() {
   const t = useTranslations("searchConsole.connection");
   const status = useSearchConsoleStatus();
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Plug className="h-5 w-5 text-brand" />} title={t("title")} description={t("description", { host: status?.host ?? "" })} />
+      <PageHeader icon={<Plug className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       {status ? <ConnectionBody status={status} /> : null}
     </div>
   );
@@ -81,7 +80,7 @@ function ChooseProperty({ status }: { status: SearchConsoleStatus }) {
   const account = status.connection?.googleAccount ?? t("someone");
 
   return (
-    <div className={`${PANEL} flex flex-col gap-4`}>
+    <>
       <div className="flex flex-col gap-1">
         <h2 className="text-[15px] font-medium text-foreground">{t("chooseTitle")}</h2>
         <p className="text-[13px] text-secondary">{t("chooseDescription", { account, host: status.host })}</p>
@@ -119,80 +118,86 @@ function ChooseProperty({ status }: { status: SearchConsoleStatus }) {
           <Button variant="quiet" disabled={busy} onClick={() => void start()}>{t("another")}</Button>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }
 
-/** A website connected once: its property and account, how far its figures go, and the way to disconnect. */
+/**
+ * A website connected once, as Google Analytics' Connection says it (his pick on the Breakdowns and Connection canvas,
+ * 2026-11-20): one line saying if it's working, then plain sentences saying how the figures get here, which account
+ * and property it reads, and the way to disconnect. Disconnected, it says only how far back the kept figures go: the
+ * banner over every page says the rest.
+ */
 function ConnectionDetails({ status }: { status: SearchConsoleStatus }) {
+  const t = useTranslations("searchConsole.connection");
+  const connection = status.connection!;
+  const account = connection.googleAccount ?? t("someone");
+  const disconnected = connection.status === "DISCONNECTED";
+  const working = connection.status === "CONNECTED" && !connection.problem;
+  const last = lastUpdate(connection.lastCollectedAt, connection.newestDay);
+  const access = connection.permission ? t(`permissions.${connection.permission as "siteOwner"}`) : "none";
+  const property = connection.property;
+  const history = connection.oldestDay
+    ? connection.daysFrom && connection.daysFrom !== connection.oldestDay
+      ? [t("lines.history", { from: formatDay(connection.daysFrom), day: formatDay(connection.oldestDay) })]
+      : [t("lines.historyOne", { day: formatDay(connection.oldestDay) })]
+    : [];
+  const lines = disconnected ? history : [
+    t("lines.source"),
+    t(`lines.${last.key}`, last.values),
+    ...history,
+    ...(connection.oldestDay ? [t("lines.older")] : []),
+    connection.analytics === "SAME" ? t("lines.accountShared", { account }) : t("lines.account", { account }),
+    ...(property
+      ? [property.startsWith("sc-domain:")
+        ? t("lines.domain", { host: property.slice("sc-domain:".length), access })
+        : t("lines.prefix", { property, access })]
+      : []),
+  ];
+  const statusLine = disconnected ? null : working
+    ? <StatusLabel tone="success" size="md">{t("status.working", { day: connection.connectedAt ? formatLongDate(connection.connectedAt) : "" })}</StatusLabel>
+    : <StatusLabel tone="warning" size="md">{t("status.notUpdating")}</StatusLabel>;
+
+  return (
+    <>
+      {connection.status === "CONNECTED" && connection.problem ? (
+        <Notice tone="warning">{t(`problem.${connection.problem}`, { account, property: property ?? "" })}</Notice>
+      ) : null}
+      <ConnectionLines status={statusLine} lines={lines} />
+      {status.canManage && connection.status === "CONNECTED" ? <Disconnect analytics={connection.analytics !== null} /> : null}
+    </>
+  );
+}
+
+/** The way to disconnect, saying what stays: the figures so far, and Google Analytics when it's connected too. */
+function Disconnect({ analytics }: { analytics: boolean }) {
   const t = useTranslations("searchConsole.connection");
   const siteId = useSearchConsoleSiteId();
   const disconnect = useMutation(api.searchConsoleConnect.disconnectSearchConsole);
   const { run, isBusy } = useAdminAction({ scope: "search-console-disconnect" });
   const [confirming, setConfirming] = useState(false);
-  const confirmDisconnect = async () => {
-    const outcome = await run(() => disconnect({ siteId }), { fallbackMessage: t("failed") });
-    if (outcome.ok) setConfirming(false);
-  };
-  const connection = status.connection!;
-  const account = connection.googleAccount ?? t("someone");
-  const facts = [
-    {
-      key: "property",
-      label: t("property"),
-      value: (
-        <span className="inline-flex items-center gap-2">
-          <span className="font-mono">{connection.property ?? "–"}</span>
-          {connection.permission ? <TagLabel>{t(`permissions.${connection.permission as "siteOwner"}`)}</TagLabel> : null}
-        </span>
-      ),
-    },
-    { key: "account", label: t("account"), value: account },
-    { key: "connected", label: t("connected"), value: connection.connectedAt ? formatDate(connection.connectedAt) : "–" },
-    {
-      key: "updated",
-      label: t("lastUpdated"),
-      value: connection.lastCollectedAt && connection.newestDay
-        ? t("updatedDetail", { when: formatDateTime(connection.lastCollectedAt), day: formatDay(connection.newestDay) })
-        : t("notYet"),
-    },
-    {
-      key: "history",
-      label: t("history"),
-      value: connection.oldestDay
-        ? t("historyKept", { from: formatDay(connection.daysFrom ?? connection.oldestDay), day: formatDay(connection.oldestDay) })
-        : t("notYet"),
-    },
-    { key: "collected", label: t("collected"), value: t("collectedDetail") },
-  ];
-
+  const stays = analytics ? "yes" : "no";
   return (
-    <div className="flex flex-col gap-4">
-      {connection.status === "CONNECTED" && connection.problem ? (
-        <Notice tone="warning">{t(`problem.${connection.problem}`, { account, property: connection.property ?? "" })}</Notice>
-      ) : null}
-      <div className={PANEL}>
-        <SiteFacts facts={facts} empty="–" />
+    <>
+      <div className="flex flex-col items-start gap-2">
+        <Button variant="outline" onClick={() => setConfirming(true)}>{t("disconnect")}</Button>
+        <p className="text-[12px] text-muted">{t("disconnectHint", { analytics: stays })}</p>
       </div>
-      {status.canManage && connection.status === "CONNECTED" ? (
-        <>
-          <div>
-            <Button variant="outline" onClick={() => setConfirming(true)}>{t("disconnect")}</Button>
-          </div>
-          {/* A yes or a no, so the kit's confirmation (AGENTS.md: a pop-up is only for a yes or a no). */}
-          <ConfirmationModal
-            isOpen={confirming}
-            onClose={() => setConfirming(false)}
-            title={t("disconnectTitle")}
-            cancelLabel={t("keep")}
-            confirmLabel={t("confirmDisconnect")}
-            isSubmitting={isBusy()}
-            onConfirm={() => void confirmDisconnect()}
-          >
-            {t("confirm")}
-          </ConfirmationModal>
-        </>
-      ) : null}
-    </div>
+      {/* A yes or a no, so the kit's confirmation (AGENTS.md: a pop-up is only for a yes or a no). */}
+      <ConfirmationModal
+        isOpen={confirming}
+        onClose={() => setConfirming(false)}
+        title={t("disconnectTitle")}
+        cancelLabel={t("keep")}
+        confirmLabel={t("confirmDisconnect")}
+        isSubmitting={isBusy()}
+        onConfirm={async () => {
+          const outcome = await run(() => disconnect({ siteId }), { fallbackMessage: t("failed") });
+          if (outcome.ok) setConfirming(false);
+        }}
+      >
+        {t("confirm", { analytics: stays })}
+      </ConfirmationModal>
+    </>
   );
 }

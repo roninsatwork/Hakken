@@ -10,6 +10,7 @@ import SearchConsoleCompetingPage from "./[siteId]/pages-competing/page";
 import SearchConsoleBrandPage from "./[siteId]/brand-and-non-brand/page";
 import SearchConsoleCtrCurvePage from "./[siteId]/click-rate-by-position/page";
 import SearchConsoleAppearancePage from "./[siteId]/rich-results/page";
+import SearchConsoleConnectionPage from "./[siteId]/connection/page";
 
 /**
  * Search Console's last opportunities and its breakdowns hold to the looks
@@ -21,7 +22,8 @@ import SearchConsoleAppearancePage from "./[siteId]/rich-results/page";
  * Real against estimated were taken out on 2026-11-20, their looks with them.
  * Brand and non-brand (Way 1), Click rate by position (Way 3) and Rich results
  * (Way 3) were approved again the same day, their looks beside the picked boards
- * in docs/plans/assets/search-console-breakdowns/ (search-console-breakdowns-plan-2026-11-20.md).
+ * in docs/plans/assets/search-console-breakdowns/ (search-console-breakdowns-plan-2026-11-20.md),
+ * and Connection, drawn as one way on the same canvas, on his "Yes, build it".
  */
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "" }));
@@ -193,5 +195,13 @@ describe("Search Console's approved looks: pages competing and the breakdowns", 
     await screen.findByText("Review snippet");
     await screen.findByText("Clicks from rich results");
     await expectApprovedLook(container, BREAKDOWNS, "Appearance", "Search Console → Rich results");
+  });
+
+  it("17 · Connection", async () => {
+    at("/app/search-console/site_1/connection");
+    answer({ "searchConsoleConnect:searchConsoleStatus": { ...STATUS, connection: { ...STATUS.connection, analytics: "SAME" } } });
+    const { container } = render(<SearchConsoleConnectionPage />);
+    await screen.findByText("Disconnect Search Console");
+    await expectApprovedLook(container, BREAKDOWNS, "Connection", "Search Console → Connection");
   });
 });

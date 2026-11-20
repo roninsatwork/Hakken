@@ -15885,7 +15885,7 @@
     },
     "connection": {
       "title": "Collegamento",
-      "description": "Come {host} è collegato a Google Search Console.",
+      "description": "Come arrivano qui i tuoi dati da Google Search Console.",
       "chooseTitle": "Scegli la proprietà",
       "chooseDescription": "{account} può leggere queste proprietà di Search Console per {host}. Scegli quella che copre tutto il sito.",
       "use": "Usa questa proprietà",
@@ -15897,21 +15897,12 @@
         "siteFullUser": "Utente completo",
         "siteRestrictedUser": "Utente limitato"
       },
-      "property": "Proprietà",
-      "account": "Account Google",
-      "connected": "Collegato",
-      "lastUpdated": "Ultimo aggiornamento",
-      "history": "Storico",
-      "collected": "Raccolta",
-      "updatedDetail": "{when} · Dati di Google fino al {day}",
-      "notYet": "Non ancora",
-      "collectedDetail": "Dall'agente Collector di Search Console: subito al collegamento, poi con la sua pianificazione in Admin → Pianificazioni",
       "collectingTitle": "Raccolta degli ultimi 90 giorni in corso",
       "collectingBody": "{host} è collegato a Google Search Console. I suoi ultimi 90 giorni stanno arrivando ora, poi i totali giornalieri fino ai 16 mesi di Google: pochi minuti per un sito piccolo, circa 40 per uno grande.",
       "nothingCollectedTitle": "Collegato, ma non è stato ancora raccolto nulla",
       "nothingCollectedBody": "{host} è collegato a Google Search Console. I suoi ultimi 90 giorni arrivano alla prossima esecuzione dell'agente Search Console.",
-      "disconnect": "Scollega",
-      "confirm": "Scollegando si ferma la raccolta e si restituisce l'accesso a Google. I dati raccolti finora restano, segnati con il giorno dello scollegamento.",
+      "disconnect": "Disconnetti Search Console",
+      "confirm": "{analytics, select, yes {Non arriveranno nuovi dati. Tieni tutti i dati raccolti finora e Google Analytics resta collegato.} other {Non arriveranno nuovi dati. Tieni tutti i dati raccolti finora.}}",
       "confirmDisconnect": "Scollega",
       "keep": "Lascialo collegato",
       "reconnect": "Collega di nuovo",
@@ -15943,9 +15934,26 @@
       "disconnectedOn": "Scollegato il {day}",
       "keptTo": "I dati fino al {day} sono ancora qui. Non arriva niente di nuovo finché non viene ricollegato.",
       "keptNone": "Non arriva niente di nuovo finché non viene ricollegato.",
-      "historyKept": "Totali dal {from}, ricerche e pagine dal {day}; i periodi più lunghi sono chiesti a Google, che conserva 16 mesi.",
       "disconnectTitle": "Scollegare Search Console?",
-      "searchesLetGo": "Google ha mandato più ricerche di quante ne stiano insieme per gli ultimi 3, 6 o 12 mesi. Le {count} mostrate meno sono fuori da quegli elenchi, ma i tuoi totali le contano ancora."
+      "searchesLetGo": "Google ha mandato più ricerche di quante ne stiano insieme per gli ultimi 3, 6 o 12 mesi. Le {count} mostrate meno sono fuori da quegli elenchi, ma i tuoi totali le contano ancora.",
+      "status": {
+        "working": "Collegato e funzionante dal {day}",
+        "notUpdating": "Collegato, ma non si aggiorna"
+      },
+      "lines": {
+        "source": "I tuoi dati arrivano da Google Search Console ogni mattina. È incluso nel tuo abbonamento.",
+        "lastToday": "L'ultimo aggiornamento è di oggi alle {time}, con dati fino al {day}.",
+        "lastOn": "L'ultimo aggiornamento è del {when}, con dati fino al {day}.",
+        "lastNone": "I primi dati stanno arrivando.",
+        "history": "I tuoi totali risalgono al {from}. Ogni ricerca e pagina risale al {day}.",
+        "historyOne": "I tuoi dati risalgono al {day}.",
+        "older": "Per le date più vecchie, i dati si chiedono a Google quando le scegli. Google conserva 16 mesi.",
+        "accountShared": "È collegato con {account}, lo stesso account di Google Analytics. Legge solo i tuoi dati e non cambia mai nulla.",
+        "account": "È collegato con {account}. Legge solo i tuoi dati e non cambia mai nulla.",
+        "domain": "Legge la proprietà di dominio {host}{access, select, none {} other {, con accesso {access}}}. Copre ogni indirizzo del dominio.",
+        "prefix": "Legge l'indirizzo {property}{access, select, none {} other {, con accesso {access}}}. Copre questo indirizzo e tutto ciò che sta sotto."
+      },
+      "disconnectHint": "{analytics, select, yes {Google Analytics resta collegato e tieni tutti i dati raccolti finora.} other {Tieni tutti i dati raccolti finora.}}"
     },
     "keywords": {
       "title": "Parole chiave",
