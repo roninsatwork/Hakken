@@ -181,8 +181,14 @@ and the rule that came from it. Every rule is now in the code.
 - No tracking advice unless tracking health found a fault that breaks the
   conversion figures.
 - Each step uses one of the page's links.
-- A sentence left off takes with it the next one if that one leans on it ("Its purchases also jumped from 5 to 22"), so nothing points at the wrong thing (Campaigns, 2026-11-05).
-- What fails goes back to the agent once, with why, in the same conversation.
+- A sentence left off takes with it the next one if that one leans on it ("Its purchases also jumped from 5 to 22"), so nothing points at the wrong thing (Campaigns, 2026-11-05). So does a next one naming no figure of its own that says "they", "it" or "those" anywhere ("Sitting in places 11 to 20 means they are shown more often"; Volatility, 2026-11-20, `POINTS_BACK`).
+- A short lead-in before a colon is cut off and what follows stands ("Positive gains dominate: 20 searches climbed…"; `withoutLeadIn`, up to four words naming no figure). The writer is told never to join two ideas with a colon or a dash.
+- No sentence saying one figure caused another ("Those gains lifted times shown", "That drop brought visits down"): the
+  figures show both happened, never that one made the other (`CAUSE_TALK`; Volatility, 2026-11-20). The writer is told
+  the same in `SEES_FORMAT`, and Jev's guess check names it too.
+- What fails goes back to the agent once, with why, in the same conversation: every fault at once, a crowded sentence
+  left off after the first included, so the rewrite knows why a finding went (Volatility, 2026-11-20). After the rewrite a
+  sentence one figure over stands, the first one too, if it alone carries a finding not yet said.
 
 **The second look** was removed on 31 October 2026: it said "useful" every
 time and cost a sixth of a press. Jev's checks (a guess stated as fact, a step

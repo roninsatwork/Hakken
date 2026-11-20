@@ -164,6 +164,11 @@ export const SEES_FORMAT = [
   // Anthony, 2026-11-03, on the Visits eye ("this is really poor from the ai"): the writer said visits "held steady on
   // weekdays" with no day on the page, and that people were "likely hitting a dead end".
   "Say only what the figures you were given show. Never guess at a reason, a day, a time or a pattern they do not hold, and never write \"likely\", \"probably\" or \"may be because\": where the figures cannot say why, make finding out a step.",
+  // Anthony, 20 November 2026, on the Volatility eye's second press ("Yes, tighten it"): "Those gains lifted times shown
+  // over the last seven days", when 20 searches climbing on one day shows nothing about a week of times shown.
+  "Never say one figure caused another (\"those gains lifted times shown\", \"that drop brought visits down\"): the figures show both happened, never that one made the other. Say each in a sentence of its own.",
+  // The same day, on its third press: "Positive gains dominate: 20 searches climbed…" (docs/developer/writing-guide.md).
+  "Never join two ideas with a colon or a dash, and never open a sentence with a heading such as \"Positive gains dominate:\". Write two sentences.",
   // Anthony, 17 November 2026, on the Pages eye's first press: a step about linking blog guides to product pages was linked
   // to Tracked pages, the one link left once each step had to have its own.
   "Each step is one thing a person can do, in plain words, saying where: the device, channel, classification, step or product it is about — never advice that would fit any website. Link it to the page where that step is done; never to a page that doesn't show what the step is about, even if two steps then share a link. Never glue a figure onto a step. Use the words the page uses for things, never Google's own names for events.",
@@ -205,6 +210,14 @@ export const SEES_SHOP_FORMAT = [
  * once": the Visits eye, 2026-11-03). Never Google Maps: a place on the map is a figure of its own.
  */
 const PART_TALK = /\b(in|on|from) the (table|chart|graph|treemap|boxes|box|panel|line)\b|\bthe (table|chart|graph|treemap) (shows|says)\b/i;
+/**
+ * Words that say one figure made another happen, which no figure shows (Anthony, 2026-11-20, "Yes, tighten it", on the
+ * Volatility eye's "Those gains lifted times shown over the last seven days"): a move named as the subject of a verb of
+ * cause, or a phrase of cause. Measured that day on the 213 sentences the eye had written on dev and the 53 real answers
+ * kept (`eyeRealAnswers.json`): it caught that one and Overview's "That drop brought Paid Search down to 1,099 visits",
+ * and nothing else. A cause offered as a possibility ("could have lifted") is never caught: no verb follows the move.
+ */
+export const CAUSE_TALK = /\b(?:th(?:ose|ese|is|at)|the|its|their|your)\s+(?:\w+\s+)?(?:gains?|rises?|climbs?|falls?|drops?|losses?|moves?|changes?|increases?|jumps?|slips?|dips?|growth|declines?)\s+(?:lifted|drove|pushed|pulled|brought|caused|helped|dragged|boosted|sent|cut|fed|fuelled|fueled|lowered|raised)\b|\b(?:thanks to|as a result of|because of|which (?:lifted|drove|pushed|brought|helped|boosted|cut|raised|lowered)|led to|resulting in)\b/i;
 /** The same said first, then a comma: cut off, and the sentence stands ("37.9% of returning visits left at once"). */
 const LEADING_PART = /^(in|on|from) the (table|chart|graph|treemap|boxes|box|panel|line),?\s+/i;
 
@@ -359,6 +372,29 @@ export type SeesVerdict = { ok: true; says: string[]; steps: Array<{ words: stri
  * whatever's left above it, and says something untrue (Campaigns, 2026-11-05: Low Bid's purchases read as Performance Max's). So it goes too.
  */
 const LEANS_ON_THE_LAST = /^(?:it|it's|its|they|they're|their|them|this|that|these|those|both|also|he|she|his|her)\b/i;
+/**
+ * The same further in, in a sentence naming no figure of its own: a remark on the sentence before, which points at nothing
+ * once that one is left off (Volatility, 2026-11-20: "Sitting in places 11 to 20 means they are shown more often", its
+ * "they" the climbing searches of a sentence left off as too long). Never "this" or "that", which start ordinary clauses
+ * ("means that"). Measured that day on the eye's 266 saved sentences: 5 name no figure and say one of these, and each
+ * goes only after a sentence left off. Two of them remark on what came before ("With numbers this small…, it is too early
+ * to tell"); the other three would stand alone, a cost taken so that no sentence points at one gone.
+ */
+const POINTS_BACK = /\b(?:it|it's|its|they|they're|their|them|these|those)\b/i;
+/**
+ * A short lead-in before a colon, naming no figure: cut off, and what follows stands ("Positive gains dominate: 20
+ * searches climbed five places or more", Volatility, 2026-11-20). A colon never joins two ideas in words a client reads
+ * (docs/developer/writing-guide.md). Up to four words, and three or more after it; a time (12:30) or an address has no space after its colon.
+ */
+export function withoutLeadIn(text: string): string {
+  const at = text.indexOf(": ");
+  if (at < 0) return text;
+  const before = text.slice(0, at);
+  const after = text.slice(at + 2).trim();
+  const words = before.match(/[\p{L}\p{N}'’]+/gu) ?? [];
+  if (words.length === 0 || words.length > 4 || /\d|\[\[/.test(before) || (after.match(/\p{L}{2,}/gu) ?? []).length < 3) return text;
+  return after;
+}
 
 /**
  * Words as the reader is spoken to (Anthony, 17 November 2026, on the Pages eye's first press: "down from 9,393 earlier",
@@ -417,6 +453,10 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
   const typed = (text: string) => typedNumbers(withoutNames(text, options.namesWithNumbers ?? []));
   const faults: string[] = [];
   const left: string[] = [];
+  // Crowded sentences after the first, left off before the rewrite: said to the writer only when the words go back
+  // anyway, so it knows why a finding it is told it left out went (Volatility, 2026-11-20: told only "It left out a
+  // finding", the writer wrote the same three-figure sentences again, and after the rewrite every one was lost).
+  const crowded: string[] = [];
   const salvage = options.salvage === true;
   const jargon = (text: string) => (options.analytics ? text.match(ANALYTICS_JARGON)?.[0] ?? null : null);
   let figures = 0;
@@ -438,10 +478,10 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
       lastLeftOff = true;
       continue;
     }
-    const cut = line.trim().replace(LEADING_PART, "");
+    const cut = withoutLeadIn(line.trim().replace(LEADING_PART, ""));
     // A capital to start, but a name that starts small keeps its spelling: never "IOS led the growth".
     const trimmed = /^\p{Ll}+\p{Lu}/u.test(cut) ? cut : cut.charAt(0).toUpperCase() + cut.slice(1);
-    if (lastLeftOff && LEANS_ON_THE_LAST.test(trimmed)) {
+    if (lastLeftOff && (LEANS_ON_THE_LAST.test(trimmed) || (namedFacts(trimmed).length === 0 && POINTS_BACK.test(trimmed)))) {
       if (salvage) left.push(`A sentence leaned on one that was left off: "${trimmed}".`);
       continue;
     }
@@ -455,16 +495,20 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
       continue;
     }
     // Too many figures in the first sentence sends the words back; a later one is left off and the rest stand
-    // (sees-every-page-plan-2026-10-31.md: whole answers were lost to one crowded sentence on Products and Clarity).
+    // (sees-every-page-plan-2026-10-31.md: whole answers were lost to one crowded sentence on Products and Clarity), and
+    // is named to the writer only if the words go back for another reason.
     // After the rewrite, one figure over stands if it alone carries a finding not yet said: told to cover two findings, a
     // writer put them in one sentence, and leaving it off lost the very findings it was asked for (Live, 2026-11-06:
-    // conversions at a third of usual, the page's biggest news, gone).
+    // conversions at a third of usual, the page's biggest news, gone). The first sentence too (Volatility, 2026-11-20:
+    // its first three sentences each named three figures, each the one carrying its finding, and nothing was left).
     const named = namedFacts(trimmed);
     if (named.length > MOST_SENTENCE_FIGURES) {
-      const carriesAFinding = salvage && named.length === MOST_SENTENCE_FIGURES + 1 && says.length > 0
+      const carriesAFinding = salvage && named.length === MOST_SENTENCE_FIGURES + 1
         && (options.mustCover ?? []).some((finding) => !finding.keys.some((key) => namedKept.includes(key)) && finding.keys.some((key) => named.includes(key)));
       if (!carriesAFinding) {
-        if (says.length === 0) fault(`A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.`);
+        const why = `A sentence named more than ${MOST_SENTENCE_FIGURES} figures: "${trimmed}". Choose the ones that tell the story.`;
+        if (says.length === 0) fault(why);
+        else if (!salvage) crowded.push(why);
         continue;
       }
     }
@@ -481,6 +525,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
       : jargon(filled.text) ? `A sentence used "${jargon(filled.text)}", which the page never says: use the page's own words.`
       : trackingTalk(filled.text) ? `A sentence spoke about tracking or what counts, and tracking health found nothing wrong: "${filled.text}".`
       : PART_TALK.test(filled.text) ? `A sentence named a part of the page ("${filled.text.match(PART_TALK)?.[0]}"): say what it shows, never where.`
+      : CAUSE_TALK.test(filled.text) ? `A sentence said one figure caused another: "${filled.text}". The figures show both happened, never that one made the other: say each on its own.`
       : null;
     if (why) {
       fault(why);
@@ -523,10 +568,11 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     steps.push({ words: filled.text, link: link.label, href: link.href });
   }
   if (says.length === 0 && faults.length === 0) faults.push(left.length > 0 ? `Every sentence had a fault: ${left.join(" ")}`.slice(0, 900) : "It said nothing.");
-  for (const finding of options.mustCover ?? []) {
-    if (!options.coverIfItCan && !finding.keys.some((key) => namedKept.includes(key))) faults.push(`It left out a finding: "${finding.words}". Cover it by naming one of its figures, in a sentence of its own.`);
-  }
-  if (faults.length > 0) return { ok: false, why: faults.join(" ") };
+  const uncovered = (options.mustCover ?? [])
+    .filter((finding) => !options.coverIfItCan && !finding.keys.some((key) => namedKept.includes(key)))
+    .map((finding) => `It left out a finding: "${finding.words}". Cover it by naming one of its figures, in a sentence of its own.`);
+  // Every fault goes back at once: the crowded sentences left off before the findings they lost, so the rewrite reads why.
+  if (faults.length > 0 || uncovered.length > 0) return { ok: false, why: [...faults, ...crowded, ...uncovered].join(" ") };
   return { ok: true, says, steps, ...(left.length > 0 ? { left } : {}) };
 }
 

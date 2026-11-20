@@ -729,7 +729,7 @@ export const DECISIONS: readonly DecisionDefinition[] = [
       instructions: {
         task: "Decide whether the sentence states, as fact, a cause or a reason the figures given do not show.",
         context: "`sentence` is one sentence written for a business owner about their website; `figures` are the only figures it may rest on.",
-        yes: "It says why something happened, or what people did or felt, as a fact, when the figures only show that it happened (\"shoppers simply reloaded the checkout fewer times\").",
+        yes: "It says why something happened, or what people did or felt, as a fact, when the figures only show that it happened (\"shoppers simply reloaded the checkout fewer times\"), or says one figure caused another when the figures only show both happened (\"those gains lifted times shown\").",
         no: "It says only what the figures show, or offers a reason as a possibility (\"may\", \"could\", \"worth checking\").",
       },
     },

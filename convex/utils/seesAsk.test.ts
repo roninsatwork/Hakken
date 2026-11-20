@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import { beforeNamed, factsOf, fromSeesKey, namesWithNumbersIn, seesFrom, seesKey, seesPath, spoken, writerFor, withoutNames, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
+import { CAUSE_TALK, withoutLeadIn, beforeNamed, factsOf, fromSeesKey, namesWithNumbersIn, seesFrom, seesKey, seesPath, spoken, writerFor, withoutNames, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
 /**
@@ -194,6 +194,78 @@ describe("the findings code found (sees-findings plan, phase 3)", () => {
     expect(seesFrom(answer, facts, links, { salvage: true })).toMatchObject({ ok: true, says: [expect.stringContaining("Conversions fell")] });
     const fourFigures = { says: ["Conversions fell to [[conv.worth.now]].", "They made [[conv.total.now]] and [[conv.purchases.now]], under [[conv.rate.now]] and [[conv.worth.now]]."], steps: [] };
     expect(seesFrom(fourFigures, facts, links, { mustCover: carrying, salvage: true, coverIfItCan: true })).toMatchObject({ ok: true, says: [expect.stringContaining("Conversions fell")] });
+  });
+
+  test("words that go back name every crowded sentence too, so the rewrite knows why a finding went (Volatility, 2026-11-20)", () => {
+    const facts = factsByKey(factsOf(ask));
+    // The press's shape: a first sentence that stands, then the sentence carrying a finding, with three figures.
+    const answer = { says: ["Conversions fell to [[conv.worth.now]].", "They made [[conv.total.now]] and [[conv.purchases.now]], under [[conv.rate.now]]."], steps: [] };
+    const carrying = [{ keys: ["conv.purchases.now"], words: "Purchases fell" }];
+    const sent = seesFrom(answer, facts, links, { mustCover: carrying });
+    expect(sent.ok).toBe(false);
+    const why = (sent as { why: string }).why;
+    // Both faults, the crowded sentence first: told only "It left out a finding", the writer wrote it the same way again.
+    expect(why).toContain("A sentence named more than 2 figures: \"They made");
+    expect(why.indexOf("named more than 2 figures")).toBeLessThan(why.indexOf("It left out a finding"));
+    // When nothing else sends the words back, a crowded later sentence is still left off quietly and the rest stand.
+    expect(seesFrom(answer, facts, links)).toMatchObject({ ok: true, says: [expect.stringContaining("Conversions fell")] });
+  });
+
+  test("after the rewrite, a first sentence one figure over stands when it carries a finding not yet said (Volatility, 2026-11-20)", () => {
+    const facts = factsByKey(factsOf(ask));
+    const carrying = [{ keys: ["conv.purchases.now"], words: "Purchases fell" }];
+    const first = { says: ["They made [[conv.total.now]] and [[conv.purchases.now]], under [[conv.rate.now]].", "Conversions fell to [[conv.worth.now]]."], steps: [] };
+    expect(seesFrom(first, facts, links, { mustCover: carrying, salvage: true })).toMatchObject({ ok: true, says: [expect.stringContaining("They made"), expect.stringContaining("Conversions fell")] });
+    // Before the rewrite it still goes back, and with nothing to carry it is left off after it.
+    expect(seesFrom(first, facts, links, { mustCover: carrying })).toMatchObject({ ok: false, why: expect.stringContaining("more than 2 figures") });
+    expect(seesFrom(first, facts, links, { salvage: true })).toMatchObject({ ok: true, says: [expect.stringContaining("Conversions fell")] });
+  });
+
+  test("a sentence saying one figure caused another goes back, and after the rewrite is left off (Volatility, 2026-11-20)", () => {
+    // The two the eye had written on dev by 20 November 2026, word for word.
+    expect(CAUSE_TALK.test("Those gains lifted times shown over the last seven days to 228,614, up from 193,221 the seven days before.")).toBe(true);
+    expect(CAUSE_TALK.test("That drop brought Paid Search down to 1,099 visits from 1,976 in September, cutting its conversions in half.")).toBe(true);
+    expect(CAUSE_TALK.test("Conversions fell because of Google's update.")).toBe(true);
+    // What the figures show, or a cause offered as a possibility, stands.
+    for (const fine of [
+      "20 searches climbed five places or more that day, while only 4 fell.",
+      "Google's November core update barely shook your pages, moving places 3.2 against 3.3 before it.",
+      "Those gains could have lifted times shown: worth checking on Pages.",
+      "Times shown rose to 228,614, and clicks rose to 1,436.",
+    ]) expect(CAUSE_TALK.test(fine), fine).toBe(false);
+    const facts = factsByKey(factsOf(ask));
+    const answer = { says: ["Conversions fell to [[conv.total.now]].", "That drop brought purchases down to [[conv.purchases.now]]."], steps: [] };
+    expect(seesFrom(answer, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("said one figure caused another") });
+    expect(seesFrom(answer, facts, links, { salvage: true })).toMatchObject({ ok: true, says: [expect.stringContaining("Conversions fell")] });
+  });
+
+  test("a remark naming no figure that points back goes with the sentence left off before it (Volatility, 2026-11-20)", () => {
+    const facts = factsByKey(factsOf(ask));
+    const tooLong = "Your fastest-climbing searches, such as heritage brass light switches and frelan hardware door handles, jumped well onto page two of Google this week.";
+    const remark = "Sitting on page two means they are shown more often, though people are not clicking them yet.";
+    expect(seesFrom({ says: ["Conversions fell to [[conv.total.now]].", tooLong, remark], steps: [] }, facts, links, { salvage: true }))
+      .toMatchObject({ ok: true, says: ["Conversions fell to 28,623."] });
+    // With the sentence before it kept, it has something to point at, and stands.
+    const kept = seesFrom({ says: ["Conversions fell to [[conv.total.now]].", "Searches on page two are shown more often.", remark], steps: [] }, facts, links, { salvage: true });
+    expect(kept).toMatchObject({ ok: true, says: [expect.any(String), expect.any(String), expect.stringContaining("Sitting on page two")] });
+    // A sentence with a figure of its own, after one left off, stands: its "they" has something in it to point at.
+    expect(seesFrom({ says: ["Conversions fell to [[conv.total.now]].", tooLong, "Purchases fell to [[conv.purchases.now]], though they were shown more."], steps: [] }, facts, links, { salvage: true }))
+      .toMatchObject({ ok: true, says: [expect.any(String), expect.stringContaining("Purchases fell")] });
+  });
+
+  test("a short lead-in before a colon is cut off, and what follows stands (Volatility, 2026-11-20)", () => {
+    expect(withoutLeadIn("Positive gains dominate: 20 searches climbed five places or more on 18 Nov, while 4 fell.")).toBe("20 searches climbed five places or more on 18 Nov, while 4 fell.");
+    expect(withoutLeadIn("Gains: [[f1.value]] searches climbed five places or more.")).toBe("[[f1.value]] searches climbed five places or more.");
+    // A long one, one naming a figure, a time, an address, or too little after it, is left as written.
+    for (const kept of [
+      "The biggest drop is at the basket: 14% of visits added items, but only 6% began checkout.",
+      "On [[f3.value]] days: the score moved more than usual.",
+      "Collected at 04:00 each night, as Google sends them.",
+      "Read from https://example.com/page, as Google sends it.",
+      "Positive gains: up again.",
+    ]) expect(withoutLeadIn(kept), kept).toBe(kept);
+    const facts = factsByKey(factsOf(ask));
+    expect(seesFrom({ says: ["Big news: conversions fell to [[conv.total.now]]."], steps: [] }, facts, links)).toMatchObject({ ok: true, says: ["Conversions fell to 28,623."] });
   });
 
   test("words that leave out a finding to cover go back; naming one of its figures covers it", () => {
