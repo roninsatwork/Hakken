@@ -12,7 +12,8 @@ import { SEARCH_CONSOLE_GROUPS, SEARCH_CONSOLE_PAGES, pageForPath, useSearchCons
 /**
  * A website's pages in the Search Console section, grouped as drawn
  * (search-console-plan.md §13.1): what the company tracks first, then
- * Google's own figures, Changes, Opportunities, Breakdowns and Settings. The
+ * Google's own figures, Changes, Breakdowns and Settings (Opportunities folded
+ * into Breakdowns on 2026-11-20). The
  * menu is the Sites one (`SectionMenu`) — "Jump to a page", each group
  * folding away — and opens as Sites does: Tracked, Google's figures and the
  * page's own group, the rest closed. Page names only, never a mark or a

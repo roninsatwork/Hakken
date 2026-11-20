@@ -138,11 +138,10 @@ describe("the menu's Tracked group", () => {
       "searchConsole.menu.groups.tracked",
       "searchConsole.menu.groups.figures",
       "searchConsole.menu.groups.changes",
-      "searchConsole.menu.groups.opportunities",
       "searchConsole.menu.groups.breakdowns",
       "searchConsole.menu.groups.settings",
     ]);
-    expect(groups.map((group) => group.getAttribute("aria-expanded"))).toEqual(["true", "true", "false", "false", "false", "false"]);
+    expect(groups.map((group) => group.getAttribute("aria-expanded"))).toEqual(["true", "true", "false", "false", "false"]);
 
     const items = within(menu).getAllByRole("link");
     expect(items.slice(0, 3).map((item) => item.getAttribute("href"))).toEqual([

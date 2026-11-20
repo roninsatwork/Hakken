@@ -38,7 +38,8 @@ export type ResultKind = (typeof RESULT_KINDS)[number];
  * first (Anthony, 2026-10-03), then Google's own figures, what changed, what
  * to do, and how it breaks down.
  */
-export const SEARCH_CONSOLE_GROUPS = ["tracked", "figures", "changes", "opportunities", "breakdowns", "settings"] as const;
+/** The menu's groups. Opportunities folded into Breakdowns on 2026-11-20 (Anthony: "do we need the 3 sub menus"). */
+export const SEARCH_CONSOLE_GROUPS = ["tracked", "figures", "changes", "breakdowns", "settings"] as const;
 export type SearchConsoleGroup = (typeof SEARCH_CONSOLE_GROUPS)[number];
 
 /** The section's pages, in the order its menu lists them. */
@@ -55,11 +56,12 @@ export const SEARCH_CONSOLE_PAGES = [
   { id: "newLost", segment: "new-and-lost", group: "changes" },
   { id: "volatility", segment: "volatility", group: "changes" },
   { id: "updates", segment: "google-updates", group: "changes" },
-  { id: "lowCtr", segment: "shown-but-not-clicked", group: "opportunities" },
-  { id: "competing", segment: "pages-competing", group: "opportunities" },
   { id: "brand", segment: "brand-and-non-brand", group: "breakdowns" },
-  { id: "ctrCurve", segment: "click-rate-by-position", group: "breakdowns" },
   { id: "appearance", segment: "rich-results", group: "breakdowns" },
+  // The two click rate pages side by side.
+  { id: "ctrCurve", segment: "click-rate-by-position", group: "breakdowns" },
+  { id: "lowCtr", segment: "shown-but-not-clicked", group: "breakdowns" },
+  { id: "competing", segment: "pages-competing", group: "breakdowns" },
   { id: "connection", segment: "connection", group: "settings" },
 ] as const satisfies readonly { id: string; segment: string; group: SearchConsoleGroup }[];
 export type SearchConsolePageId = (typeof SEARCH_CONSOLE_PAGES)[number]["id"];

@@ -26,7 +26,8 @@ request or test suite was run for this review.
 
 The section's `_components/useSearchConsole.ts` defines `SEARCH_CONSOLE_PAGES`,
 menu groups, result kinds and URL propagation. Groups cover tracked lists,
-figures, changes, opportunities, breakdowns and settings. The result menu omits
+figures, changes, breakdowns and settings (Opportunities' two pages, Low click rate
+and Keyword cannibalisation, folded into Breakdowns on 2026-11-20). The result menu omits
 image search. Shared page/list/chart components use source queries and actions;
 a directory name alone does not prove that a feature has fresh data or that a
 particular deployment has connected its property.
