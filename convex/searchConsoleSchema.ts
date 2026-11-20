@@ -164,7 +164,6 @@ export const consoleScreenLimitFields = {
   consoleMissedKeywords: v.optional(v.number()),
   consoleSearchedALot: v.optional(v.number()),
   consoleBarelyShown: v.optional(v.number()),
-  consoleEstimateOff: v.optional(v.number()),
   consoleCurvePositions: v.optional(v.number()),
   consoleUpdatesListed: v.optional(v.number()),
   consoleUpdateWindowDays: v.optional(v.number()),
@@ -401,8 +400,11 @@ export const searchConsoleTables = {
    * rebuilt after every collection. A search's list carries how many of the
    * website's pages it brought people to and the top one; a page's, how many
    * searches and the top one. `kinds` is a page's type or a search's intent
-   * (Sites' own judgments), `volumes` a search's searches a month from Sites,
-   * `estimates` a page's estimated visits from Sites — each where known.
+   * (Sites' own judgments), `volumes` a search's searches a month from Sites
+   * — each where known. `estimates`, a page's estimated visits from Sites, is
+   * no longer written (2026-11-20: Real against estimated taken out, "Yes,
+   * remove it") and no longer read; rows built before keep it until their
+   * period is built again. Remove the field once no row holds it.
    */
   searchConsolePeriods: defineTable({
     companyWebsiteId: v.id("companyWebsites"),

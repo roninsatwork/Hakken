@@ -35,8 +35,6 @@ export type ListFigures = {
   lost: number;
   volume: number;
   expected: number;
-  high: number;
-  low: number;
   pagesInvolved: number | null;
   bands: Record<string, number>;
   bandsBefore: Record<string, number> | null;
@@ -121,12 +119,6 @@ export function competingSees(list: ListFigures): Seen {
   );
 }
 
-/** Real against estimated. */
-export function estimatesSees(list: ListFigures): Seen {
-  if (list.rows === 0) return seen([{ code: "estimatesClose" }]);
-  return seen([{ code: "estimatesOff", a: list.rows, b: list.high, c: list.low }]);
-}
-
 /** Brand and non-brand. */
 export function brandSees(list: ListFigures): Seen {
   const split = list.brand;
@@ -180,11 +172,6 @@ export function newLostSees(counts: { newKeywords: number; lostKeywords: number;
   );
 }
 
-/** By page classification: the kind of page bringing the most clicks, named by the screen (`text`). */
-export function typesSees(top: { name: string; clicks: number } | null, clicks: number): Seen {
-  if (!top || clicks === 0) return seen([{ code: "noTypes" }]);
-  return seen([{ code: "topType", text: top.name, a: percent(top.clicks / clicks) }]);
-}
 
 /**
  * Countries and devices: the country bringing the most clicks, named by the screen, and mobile's share of that

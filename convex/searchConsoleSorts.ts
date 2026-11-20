@@ -16,7 +16,7 @@ import { compareTermsQuickly } from "./utils/searchConsoleTerms";
 /** The headings a list orders by, each the best first on its first press. */
 export const SORT_KEYS = [
   "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "movedBy", "share", "count", "top",
-  "volume", "estimate", "kind", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap", "band", "swaps",
+  "volume", "kind", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap", "band", "swaps",
 ] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 const SORTS: ListSorts<ListRow, SortKey> = {
@@ -34,7 +34,6 @@ const SORTS: ListSorts<ListRow, SortKey> = {
   count: { value: (row) => row.count, first: "desc" },
   top: { value: (row) => row.top, first: "asc" },
   volume: { value: (row) => row.volume, first: "desc" },
-  estimate: { value: (row) => row.estimate, first: "desc" },
   kind: { value: (row) => row.kind, first: "asc" },
   brand: { value: (row) => (row.brand === null ? null : row.brand ? 0 : 1), first: "asc" },
   usualCtr: { value: (row) => row.usualCtr, first: "desc" },

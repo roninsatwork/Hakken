@@ -208,7 +208,7 @@ describe("Search Console's lists of pages", () => {
     expect(live.summary.types).toEqual([{ type: "INFORMATIONAL", rows: 2, clicks: 60 }, { type: "SERVICE", rows: 1, clicks: 30 }]);
   });
 
-  test("asked of Google once the website has Classifications, a list of pages looks up none of Sites' facts; Real against estimated its estimates alone (speed fixes, 18 November 2026)", async () => {
+  test("asked of Google once the website has Classifications, a list of pages looks up none of Sites' facts (speed fixes, 18 November 2026)", async () => {
     const t = harness();
     const { holdId, userId, websiteId } = await setUp(t);
     const own = await classify(t, holdId);
@@ -232,11 +232,9 @@ describe("Search Console's lists of pages", () => {
     const dates = { siteId: holdId, searchType: "web" as const, dimension: "page" as const, from: "2026-09-25", to: "2026-09-26" };
     const live = await reader.action(api.searchConsoleLists.searchConsoleLiveList, dates);
     const plumbers = live.ok ? live.rows.flat().find((one) => one.key === url("/plumbers/")) : null;
-    // Its Classification, never Sites' type; and no estimate, which no screen of this list shows.
-    expect(plumbers).toMatchObject({ kind: own.services, estimate: null });
-    const estimates = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...dates, view: "estimates" });
-    // Sites' 300 visits a month, read against the two days chosen.
-    expect(estimates.ok && estimates.rows.flat().find((one) => one.key === url("/plumbers/"))).toMatchObject({ kind: own.services, estimate: 20 });
+    // Its Classification, never Sites' type; and no estimate, which no screen shows since 2026-11-20.
+    expect(plumbers).toMatchObject({ kind: own.services });
+    expect(plumbers).not.toHaveProperty("estimate");
   });
 
   test("a download names each page's classification, and Not sorted in words", async () => {

@@ -39,14 +39,12 @@ describe("Sites' facts", () => {
   test("a live list looks up only the facts its screen shows (speed fixes, 18 November 2026)", () => {
     // Every list of keywords has the Intent chip; none shows the searches a month since Almost there and Missed demand were
     // taken out of the menu on 2026-11-20: Visibility's figures stay in Visibility.
-    expect(factsWanted("query", "all", false)).toEqual({ kind: true, number: false });
-    expect(factsWanted("query", "tracked", true)).toEqual({ kind: true, number: false });
-    // A page's type until the website has Classifications, which name every page in its place; its estimate only on Real against estimated.
-    expect(factsWanted("page", "all", false)).toEqual({ kind: true, number: false });
-    expect(factsWanted("page", "all", true)).toBeNull();
-    expect(factsWanted("page", "tracked", true)).toBeNull();
-    expect(factsWanted("page", "estimates", true)).toEqual({ kind: false, number: true });
-    expect(factsWanted("page", "estimates", false)).toEqual(EVERY_FACT);
+    expect(factsWanted("query", false)).toEqual({ kind: true, number: false });
+    expect(factsWanted("query", true)).toEqual({ kind: true, number: false });
+    // A page's type until the website has Classifications, which name every page in its place; its estimate on no list
+    // since Real against estimated was taken out (2026-11-20).
+    expect(factsWanted("page", false)).toEqual({ kind: true, number: false });
+    expect(factsWanted("page", true)).toBeNull();
   });
 
   test("a lookup reads only what is wanted, and what it reads is the same", async () => {

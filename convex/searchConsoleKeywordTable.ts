@@ -43,9 +43,8 @@ export type KeywordColumns = {
   /** Its intent, as a code into `kinds`; 0 where the list keeps none. */
   kind: Uint16Array | null;
   kinds: readonly string[];
-  /** Sites' searches a month, and estimated visits; NaN where the list keeps none, below 0 not known. */
+  /** Sites' searches a month; NaN where the list keeps none, below 0 not known. */
   volume: Float64Array | null;
-  estimate: Float64Array | null;
   /** Its use of the website's brand words, judged at build: 1 yes, 0 no, 2 not judged. */
   brand: Uint8Array | null;
 };
@@ -79,7 +78,7 @@ export type KeywordTableAsk = {
 export type KeywordTable = { rows: ListRows; listed: number; named: number; summary: Summary; cut: number | null };
 
 /** A stored part as columns are read from it: its keywords and pages as places in the build's book, packed. */
-type StoredPart = Pick<Doc<"searchConsolePeriods">, "keys" | "clicks" | "impressions" | "positionSums" | "counts" | "tops" | "pages" | "pageBook" | "kinds" | "kindBook" | "volumes" | "estimates" | "brands">;
+type StoredPart = Pick<Doc<"searchConsolePeriods">, "keys" | "clicks" | "impressions" | "positionSums" | "counts" | "tops" | "pages" | "pageBook" | "kinds" | "kindBook" | "volumes" | "brands">;
 
 /** Whether a period's parts hold places in their build's book throughout — older parts hold text, and are read as rows. */
 function inBook(parts: readonly StoredPart[]): boolean {
@@ -109,7 +108,6 @@ export function keywordColumnsOf(parts: readonly StoredPart[]): KeywordColumns |
     kind: has((part) => part.kinds) ? new Uint16Array(length) : null,
     kinds: [""],
     volume: has((part) => part.volumes) ? new Float64Array(length).fill(Number.NaN) : null,
-    estimate: has((part) => part.estimates) ? new Float64Array(length).fill(Number.NaN) : null,
     brand: has((part) => part.brands) ? new Uint8Array(length).fill(2) : null,
   };
   const kindCodes = new Map<string, number>();
@@ -143,7 +141,6 @@ export function keywordColumnsOf(parts: readonly StoredPart[]): KeywordColumns |
       if (tops && columns.top) columns.top[at] = tops[index] ?? NONE;
       if (kinds && columns.kind) columns.kind[at] = kindOf(kinds[index]);
       if (volumes && columns.volume) columns.volume[at] = volumes[index] ?? UNKNOWN;
-      if (part.estimates && columns.estimate) columns.estimate[at] = part.estimates[index] ?? UNKNOWN;
       if (brands && columns.brand) columns.brand[at] = brands[index] === 1 ? 1 : 0;
     }
   }
@@ -363,7 +360,6 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
     return code === undefined || code === 0 ? null : now.kinds[code];
   };
   const volumeOf = (row: number) => known(column(now.volume, row) ?? Number.NaN);
-  const estimateOf = (row: number) => known(column(now.estimate, row) ?? Number.NaN);
   const brandWords = ask.brandWords;
   const brandOf = (row: number): boolean | null => {
     if (!brandWords) return null;
@@ -406,14 +402,12 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
       tracked: trackedOf(row),
       kind: kindOf(row),
       volume: volumeOf(row),
-      estimate: estimateOf(row),
       brand: brandOf(row),
       usualCtr: null,
       expected: null,
       topShare: null,
       next: null,
       nextShare: null,
-      verdict: null,
       gap: null,
     };
     const at = slotOf(row);
@@ -453,7 +447,7 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
   for (const row of listed) {
     tally.add({
       clicks: clicksOf(row), impressions: impressionsOf(row), position: positionOf(row), previousClicks: previousClicksOf(row), change: changeOf(row),
-      tracked: trackedOf(row), volume: volumeOf(row), estimate: estimateOf(row), kind: kindOf(row), band: bandOf(positionOf(row)),
+      tracked: trackedOf(row), volume: volumeOf(row), kind: kindOf(row), band: bandOf(positionOf(row)),
     });
   }
   const summary = tally.summary();
@@ -519,13 +513,12 @@ export function keywordTable(now: KeywordColumns, before: KeywordColumns | null,
     && (!filters.band || bandOf(positionOf(row)) === filters.band)
     && (!filters.kind || (kindOf(row) ?? "UNJUDGED") === filters.kind)
     && (!filters.brand || (filters.brand === "yes") === (brandOf(row) === true))
-    && (!filters.way || (filters.way === "up" ? (positionChangeOf(row) ?? 0) > 0 : (positionChangeOf(row) ?? 0) < 0))
-    && !filters.verdict;
-  const kept = filters.q || filters.tracked || filters.band || filters.kind || filters.brand || filters.way || filters.verdict
+    && (!filters.way || (filters.way === "up" ? (positionChangeOf(row) ?? 0) > 0 : (positionChangeOf(row) ?? 0) < 0));
+  const kept = filters.q || filters.tracked || filters.band || filters.kind || filters.brand || filters.way
     ? listed.filter(passes)
     : listed;
   const order = ordered(kept, ask, {
-    positionOf, source, nameOf, clicksOf, impressionsOf, changeOf, positionChangeOf, countOf, volumeOf, estimateOf, kindOf, brandOf, total,
+    positionOf, source, nameOf, clicksOf, impressionsOf, changeOf, positionChangeOf, countOf, volumeOf, kindOf, brandOf, total,
     topOf: (row) => {
       const at = slotOf(row);
       return ask.view === "competing" && competing && at !== NONE ? competing.top[at] : topOf(row);
@@ -555,7 +548,6 @@ type Readers = {
   positionChangeOf: (row: number) => number | null;
   countOf: (row: number) => number | null;
   volumeOf: (row: number) => number | null;
-  estimateOf: (row: number) => number | null;
   kindOf: (row: number) => string | null;
   brandOf: (row: number) => boolean | null;
   topOf: (row: number) => number;
@@ -600,7 +592,6 @@ function sortValue(key: SortKey, read: Readers): ((row: number) => number) | nul
       return competing && at !== NONE ? competing.competing.next[at] : Number.NaN;
     };
     case "volume": return (row) => numberOr(read.volumeOf(row));
-    case "estimate": return (row) => numberOr(read.estimateOf(row));
     case "brand": return (row) => {
       const brand = read.brandOf(row);
       return brand === null ? Number.NaN : brand ? 0 : 1;
@@ -626,7 +617,7 @@ function sortValue(key: SortKey, read: Readers): ((row: number) => number) | nul
 /** The first direction each heading's first press orders by (`SORTS`). */
 const FIRST: Record<SortKey, "asc" | "desc"> = {
   key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", movedBy: "desc", share: "desc",
-  count: "desc", top: "asc", volume: "desc", estimate: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
+  count: "desc", top: "asc", volume: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
   topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc", swaps: "desc",
 };
 
@@ -693,7 +684,6 @@ type Listed = {
   change: number | null;
   tracked: boolean;
   volume: number | null;
-  estimate: number | null;
   kind: string | null;
   band: Band;
 };
@@ -704,7 +694,7 @@ class Tally {
   private readonly kinds = new Map<string, KindCount>();
   private rows = 0;
   private sum = { clicks: 0, impressions: 0, previousClicks: 0, positionSum: 0 };
-  private counts = { tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0, volume: 0, estimate: 0 };
+  private counts = { tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0, volume: 0 };
 
   constructor(private readonly all: AllFigures, private readonly beforeHeld: boolean) {}
 
@@ -724,7 +714,6 @@ class Tally {
       this.counts.lost -= change;
     }
     this.counts.volume += row.volume ?? 0;
-    this.counts.estimate += row.estimate ?? 0;
     if (row.impressions > 0) this.bands[row.band] += 1;
     const kind = row.kind ?? "UNJUDGED";
     // As `summarise` counts them, row for row.
@@ -750,8 +739,6 @@ class Tally {
       position: this.sum.impressions > 0 ? this.sum.positionSum / this.sum.impressions : null,
       ...this.counts,
       expected: 0,
-      high: 0,
-      low: 0,
       pagesInvolved: null,
       pagesShown: null,
       bands: this.bands,

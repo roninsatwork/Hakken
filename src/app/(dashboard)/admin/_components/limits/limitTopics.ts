@@ -38,7 +38,7 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
     keys: [
       "consoleListRows", "consolePairedRows", "consoleLiveFactsRows", "consoleRichResultKinds", "consoleTopCountries",
       "consoleNewLostRows", "consoleNewAfterDays", "consoleLostAfterDays", "consoleMissedKeywords", "consoleSearchedALot",
-      "consoleBarelyShown", "consoleEstimateOff", "consoleCurvePositions", "consoleUpdatesListed", "consoleUpdateWindowDays",
+      "consoleBarelyShown", "consoleCurvePositions", "consoleUpdatesListed", "consoleUpdateWindowDays",
       "consoleChartWeeks", "consoleLongestRange",
     ],
   },
@@ -125,7 +125,6 @@ export const LIMIT_UNITS: Record<string, LimitUnit> = {
   consoleMissedKeywords: "keywords",
   consoleSearchedALot: "searches",
   consoleBarelyShown: "impressions",
-  consoleEstimateOff: "percent",
   consoleCurvePositions: "positions",
   consoleUpdatesListed: "updates",
   consoleUpdateWindowDays: "days",

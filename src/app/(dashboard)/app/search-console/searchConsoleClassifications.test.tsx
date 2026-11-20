@@ -5,8 +5,6 @@ import { useQuery } from "convex/react";
 
 import { convexPath } from "@/src/test/siteViewFixtures";
 import SearchConsolePagesPage from "./[siteId]/pages/page";
-import SearchConsoleEstimatesPage from "./[siteId]/real-against-estimated/page";
-import SearchConsoleTypesPage from "./[siteId]/types/page";
 import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
@@ -36,9 +34,10 @@ vi.mock("@/src/ui/components/layout/Header", () => ({ default: () => null }));
 /**
  * A website's own classifications on Search Console's screens (docs/plans/
  * active/page-groups-plan.md, decision 2): once it has any, a page's kind is
- * its classification's own name — or Not sorted — the filter offers them,
- * and Types adds its page figures up by the classifications' type. Without
- * any, every screen reads as before.
+ * its classification's own name — or Not sorted — and the filter offers
+ * them. Without any, every screen reads as before. (By page classification and
+ * Real against estimated, which added pages up by classification and named it
+ * in a column, were taken out on 2026-11-20.)
  */
 
 const STATUS = {
@@ -58,11 +57,6 @@ const CHOICES = [
 const BLANK = {
   rows: 0, of: 0, impressions: 0, previousClicks: null, position: null, tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0, volume: 0, estimate: 0, expected: 0,
   high: 0, low: 0, pagesInvolved: null, pagesShown: null, bands: { "1-3": 0, "4-10": 0, "11-20": 0, "21-50": 0, "51+": 0 }, bandsBefore: null, brand: null,
-};
-
-const ROW = {
-  impressions: 400, ctr: 0.1, position: 4, band: "4-10", previousClicks: null, change: null, previousPosition: null, positionChange: null, share: 0.5,
-  count: 1, top: "plumber", tracked: false, volume: null, brand: null, usualCtr: null, expected: null, topShare: null, next: null, nextShare: null,
 };
 
 function list(rows: Array<Record<string, unknown>>, summary: Record<string, unknown>) {
@@ -101,49 +95,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("Types", () => {
-  it("without classifications: pages by kind, and clicks from articles and service pages", () => {
-    at("/app/search-console/site_1/types");
-    answer({
-      choices: null,
-      pages: list([], { clicks: 100, kinds: [{ kind: "ARTICLE", rows: 3, clicks: 60 }, { kind: "SERVICE", rows: 1, clicks: 30 }], types: [] }),
-    });
-    render(<SearchConsoleTypesPage />);
-    expect(screen.getByText("searchConsole.types.pagesTitle")).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.types.fromArticles")).toBeInTheDocument();
-    expect(screen.getByText("sites.common.pageTypes.ARTICLE")).toBeInTheDocument();
-    expect(screen.queryByText("searchConsole.types.fromInformational")).not.toBeInTheDocument();
-  });
-
-  it("with classifications: pages by classification, Not sorted among them, and the page figures by type", () => {
-    at("/app/search-console/site_1/types");
-    answer({
-      choices: CHOICES,
-      pages: list([], {
-        clicks: 100,
-        kinds: [{ kind: "class_hub", rows: 2, clicks: 40 }, { kind: "class_journal", rows: 1, clicks: 20 }, { kind: "class_services", rows: 1, clicks: 30 }, { kind: "NOT_SORTED", rows: 1, clicks: 10 }],
-        types: [{ type: "INFORMATIONAL", rows: 3, clicks: 60 }, { type: "SERVICE", rows: 1, clicks: 30 }],
-      }),
-    });
-    render(<SearchConsoleTypesPage />);
-    expect(screen.getByText("searchConsole.types.pagesTitleClassified")).toBeInTheDocument();
-    expect(screen.queryByText("searchConsole.types.pagesTitle")).not.toBeInTheDocument();
-    // The company's own names, and Not sorted in words — never an automatic kind.
-    for (const name of ["Content hub", "Journal", "Plumbing services", "sites.common.notSorted"]) expect(screen.getAllByText(name).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/sites\.common\.pageTypes\./)).not.toBeInTheDocument();
-    // The two page figures, fed by type: Content hub and Journal are both informational content.
-    const informational = screen.getByText("searchConsole.types.fromInformational").closest("div")?.parentElement as HTMLElement;
-    expect(within(informational).getByText("60")).toBeInTheDocument();
-    const services = screen.getByText("searchConsole.types.fromServices").closest("div")?.parentElement as HTMLElement;
-    expect(within(services).getByText("30")).toBeInTheDocument();
-    // Each opens its pages.
-    const links = screen.getAllByRole("link").map((link) => link.getAttribute("href") ?? "");
-    expect(links.some((href) => href.includes("/pages") && href.includes("kind=class_hub"))).toBe(true);
-    expect(links.some((href) => href.includes("/pages") && href.includes("kind=NOT_SORTED"))).toBe(true);
-  });
-});
-
-describe("the Pages filter and the type column", () => {
+describe("the Pages filter", () => {
   const optionsOf = (label: string) => within(screen.getByRole("combobox", { name: label })).getAllByRole("option").map((option) => option.textContent);
 
   it("offers Hakken's page types while the website has no classifications", () => {
@@ -160,27 +112,5 @@ describe("the Pages filter and the type column", () => {
     answer({ choices: CHOICES, pages: list([], { clicks: 0, kinds: [], types: [] }) });
     render(<SearchConsolePagesPage />);
     expect(optionsOf("sites.common.classification")).toEqual(["sites.common.anyClassification", "Content hub", "Journal", "Plumbing services", "sites.common.notSorted"]);
-  });
-
-  it("names a page's classification in Real against estimated, under a Classification heading", () => {
-    at("/app/search-console/site_1/real-against-estimated");
-    const rows = [
-      { ...ROW, key: "https://acme-shop.test/hub/boilers/", clicks: 40, kind: "class_hub", estimate: 90, gap: 50, verdict: "high" },
-      { ...ROW, key: "https://acme-shop.test/contact/", clicks: 10, kind: "NOT_SORTED", estimate: 10, gap: 0, verdict: "close" },
-    ];
-    answer({ choices: CHOICES, pages: list(rows, { clicks: 50, kinds: [], types: [] }) });
-    render(<SearchConsoleEstimatesPage />);
-    expect(screen.getByRole("columnheader", { name: "sites.common.classification" })).toBeInTheDocument();
-    expect(screen.getAllByText("Content hub").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("sites.common.notSorted").length).toBeGreaterThan(0);
-  });
-
-  it("keeps the Type heading and Hakken's words without classifications", () => {
-    at("/app/search-console/site_1/real-against-estimated");
-    const rows = [{ ...ROW, key: "https://acme-shop.test/hub/boilers/", clicks: 40, kind: "ARTICLE", estimate: 90, gap: 50, verdict: "high" }];
-    answer({ choices: null, pages: list(rows, { clicks: 40, kinds: [], types: [] }) });
-    render(<SearchConsoleEstimatesPage />);
-    expect(screen.getByRole("columnheader", { name: "searchConsole.table.type" })).toBeInTheDocument();
-    expect(screen.getAllByText("sites.common.pageTypes.ARTICLE").length).toBeGreaterThan(0);
   });
 });

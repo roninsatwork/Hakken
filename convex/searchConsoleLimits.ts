@@ -26,8 +26,6 @@ export const consoleLimitsValidator = v.object({
   missedKeywords: v.number(),
   searchedALot: v.number(),
   barelyShown: v.number(),
-  /** Per cent of Google's clicks. */
-  estimateOff: v.number(),
   curvePositions: v.number(),
   updatesListed: v.number(),
   updateWindowDays: v.number(),
@@ -51,7 +49,6 @@ export async function consoleLimitsOf(ctx: { db: QueryCtx["db"] }, hold: Pick<Do
     missedKeywords: limits.consoleMissedKeywords,
     searchedALot: limits.consoleSearchedALot,
     barelyShown: limits.consoleBarelyShown,
-    estimateOff: limits.consoleEstimateOff,
     curvePositions: limits.consoleCurvePositions,
     updatesListed: limits.consoleUpdatesListed,
     updateWindowDays: limits.consoleUpdateWindowDays,
@@ -66,7 +63,6 @@ export function viewRulesOf(limits: ConsoleLimits): ViewRules {
     curvePositions: limits.curvePositions,
     barelyShown: limits.barelyShown,
     searchedALot: limits.searchedALot,
-    estimateOff: limits.estimateOff / 100,
   };
 }
 

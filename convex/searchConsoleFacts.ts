@@ -8,8 +8,7 @@ import { holdBrandNames } from "./holdProfiles";
 import { normaliseKeyword } from "./seoJudgments";
 import { searchVolumeOf } from "./searchVolumes";
 import { pagePath, pageTypeByAddress } from "./utils/siteShapes";
-import type { PeriodRow } from "./searchConsolePeriodReads";
-import type { ListRow, View } from "./utils/searchConsoleViews";
+import type { ListRow } from "./utils/searchConsoleViews";
 
 /**
  * What Sites already knows about the keywords and pages Search Console
@@ -60,12 +59,13 @@ export const EVERY_FACT: FactsWanted = { kind: true, number: true };
  * The facts a live list of `kind` shows, by the page's own rule (`view`) — null when it shows none, and nothing is looked
  * up. A keyword's intent is on every list of keywords (the Intent chip); its searches a month on no Search Console list since
  * Almost there and Missed demand were taken out of the menu on 2026-11-20: Visibility's figures stay in Visibility. A page's type only until the website has Classifications, which name every page
- * on every list in its place (`withPageKinds`); its estimated visits only on Real against estimated.
+ * on every list in its place (`withPageKinds`). Its estimated visits on none since Real against estimated was taken out
+ * (2026-11-20, "Yes, remove it").
  */
-export function factsWanted(kind: "query" | "page", view: View, classified: boolean): FactsWanted | null {
+export function factsWanted(kind: "query" | "page", classified: boolean): FactsWanted | null {
   const wanted = kind === "query"
     ? { kind: true, number: false }
-    : { kind: !classified, number: view === "estimates" };
+    : { kind: !classified, number: false };
   return wanted.kind || wanted.number ? wanted : null;
 }
 
@@ -232,26 +232,10 @@ export function factKeys(rows: readonly { key: string; clicks: number }[], most:
 }
 
 /**
- * A live list's rows with the facts its screen shows (`factsWanted`) — Sites' intent and searches a month, or page type
- * and estimated visits — beside the first few thousand. A fact not wanted is left as the row has it.
+ * A live list's rows, as a page's rule has listed them, with the facts its screen shows (`factsWanted`) — Sites' intent
+ * and searches a month, or a page's type — beside the first few thousand: so a rule that keeps few rows looks up few. A
+ * fact not wanted is left as the row has it.
  */
-export async function withFacts(
-  ctx: ActionCtx,
-  target: { websiteId: Id<"websites">; place: number },
-  kind: "query" | "page",
-  rows: PeriodRow[],
-  most: number,
-  want: FactsWanted = EVERY_FACT,
-): Promise<PeriodRow[]> {
-  const facts = await factsFor(ctx, target, kind, factKeys(rows, most), want);
-  return rows.map((row) => {
-    const known = facts.get(row.key);
-    if (!known) return row;
-    return { ...row, ...(want.kind ? { kind: known.kind } : {}), ...(want.number ? (kind === "query" ? { volume: known.number } : { estimate: known.number }) : {}) };
-  });
-}
-
-/** The same, on rows a page's rule has listed: so a rule that keeps few rows looks up few. */
 export async function withListFacts(
   ctx: ActionCtx,
   target: { websiteId: Id<"websites">; place: number },
@@ -269,6 +253,6 @@ export function withFactsKnown(rows: ListRow[], facts: Facts, kind: "query" | "p
     const known = facts.get(row.key);
     if (!known) return row;
     const number = known.number === UNKNOWN ? null : known.number;
-    return { ...row, ...(want.kind ? { kind: known.kind } : {}), ...(want.number ? (kind === "query" ? { volume: number } : { estimate: number }) : {}) };
+    return { ...row, ...(want.kind ? { kind: known.kind } : {}), ...(want.number && kind === "query" ? { volume: number } : {}) };
   });
 }

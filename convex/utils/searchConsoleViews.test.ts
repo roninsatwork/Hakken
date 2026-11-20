@@ -20,8 +20,8 @@ import {
   type ViewRules,
 } from "./searchConsoleViews";
 
-/** The rules as the limits start them (fanOutLimits.ts): 20 positions, 50 impressions, 100 searches, a quarter off. */
-const rules: ViewRules = { curvePositions: 20, barelyShown: 50, searchedALot: 100, estimateOff: 0.25 };
+/** The rules as the limits start them (fanOutLimits.ts): 20 positions, 50 impressions, 100 searches. */
+const rules: ViewRules = { curvePositions: 20, barelyShown: 50, searchedALot: 100 };
 
 /**
  * The rules each Search Console page lists by (docs/plans/active/
@@ -138,25 +138,9 @@ describe("each page's rule", () => {
     expect(filterRows(listed, { way: "up" }).map((entry) => entry.key)).toEqual(["rose"]);
   });
 
-  test("each rule follows the website's limits: how far off, and the positions counted", () => {
-    const rows = shaped([row("barely", 0, 14, 61.2), row("/b/", 9, 10, 4, { estimate: 11 })]);
-    const stricter: ViewRules = { curvePositions: 5, barelyShown: 10, searchedALot: 150, estimateOff: 0.1 };
-    expect(applyView("estimates", rows, { rules: stricter }).map((entry) => entry.verdict)).toEqual(["high"]);
+  test("each rule follows the website's limits: the positions counted", () => {
+    const stricter: ViewRules = { curvePositions: 5, barelyShown: 10, searchedALot: 150 };
     expect(ctrCurve([{ clicks: 1, impressions: 10, position: 7 }], stricter.curvePositions)).toEqual([]);
-  });
-
-  test("Real against estimated: an estimate more than a quarter off Google's clicks is too high or too low", () => {
-    const rows = shaped([
-      row("/a/", 1, 10, 4, { estimate: 1033 }),
-      row("/b/", 9, 10, 4, { estimate: 11 }),
-      row("/c/", 40, 10, 4, { estimate: 12 }),
-      row("/d/", 4, 10, 4, { estimate: -1 }),
-    ]);
-    expect(applyView("estimates", rows, { rules }).map((entry) => [entry.key, entry.verdict, entry.gap])).toEqual([
-      ["/a/", "high", 1032],
-      ["/b/", "close", 0],
-      ["/c/", "low", -28],
-    ]);
   });
 });
 
@@ -225,12 +209,6 @@ describe("found in review, 2026-10-03", () => {
     expect(isBrand("acme shop leeds", ["Acme shop"])).toBe(true);
   });
 
-  test("Sites' monthly estimate is read against the days chosen", () => {
-    // 100 visits a month is about 296 over 90 days: 300 clicks is about right, not too low.
-    const rows = shaped([row("/a/", 300, 1000, 4, { estimate: 100 })]);
-    expect(applyView("estimates", rows, { rules, days: 90 })).toEqual([expect.objectContaining({ estimate: 296, verdict: "close", gap: 0 })]);
-    expect(applyView("estimates", rows, { rules, days: 30 })).toEqual([expect.objectContaining({ estimate: 99, verdict: "low", gap: -201 })]);
-  });
 });
 
 describe("Tracked keywords and Tracked pages (drawn 2026-10-03)", () => {
@@ -321,33 +299,25 @@ describe("a page's section links", () => {
     expect(pageWithoutSection(PAGE)).toBe(PAGE);
   });
 
-  test("are folded into their page: clicks and impressions added, position weighted, Sites' estimate the page's own", () => {
+  test("are folded into their page: clicks and impressions added, position weighted, Sites' type the page's own", () => {
     const rows = shaped([
-      row(PAGE, 6, 300, 4, { estimate: 1000, kind: "CONTENT_HUB" }),
-      row(`${PAGE}#types-and-uses`, 2, 100, 8, { estimate: 1000 }),
-      row(`${PAGE}#costs`, 0, 100, 12, { estimate: 1000 }),
+      row(PAGE, 6, 300, 4, { kind: "CONTENT_HUB" }),
+      row(`${PAGE}#types-and-uses`, 2, 100, 8),
+      row(`${PAGE}#costs`, 0, 100, 12),
       row("https://acme-shop.test/other/", 3, 50, 2),
     ], [row(PAGE, 4, 200, 5), row(`${PAGE}#costs`, 1, 50, 9)]);
     const folded = withSectionsInPages(rows);
     expect(folded).toHaveLength(2);
     const page = folded.find((entry) => entry.key === PAGE)!;
-    expect(page).toMatchObject({ clicks: 8, impressions: 500, estimate: 1000, kind: "CONTENT_HUB", previousClicks: 5, change: 3 });
+    expect(page).toMatchObject({ clicks: 8, impressions: 500, kind: "CONTENT_HUB", previousClicks: 5, change: 3 });
     expect(page.position).toBeCloseTo((4 * 300 + 8 * 100 + 12 * 100) / 500);
     expect(page.ctr).toBeCloseTo(8 / 500);
     // A page without section links stands as it was.
     expect(folded.find((entry) => entry.key.endsWith("/other/"))).toBe(rows[3]);
   });
 
-  test("Real against estimated weighs the page once, against its whole clicks", () => {
-    const rows = shaped([
-      row(PAGE, 600, 3000, 4, { estimate: 800 }),
-      row(`${PAGE}#types-and-uses`, 200, 1000, 6, { estimate: 800 }),
-    ]);
-    expect(VIEWS_BY_WHOLE_PAGE.has("estimates")).toBe(true);
-    const listed = applyView("estimates", withSectionsInPages(rows), { rules, days: 30.44 });
-    expect(listed.map((entry) => [entry.key, entry.clicks, entry.estimate, entry.verdict])).toEqual([[PAGE, 800, 800, "close"]]);
-    // Unfolded, the section link alone read the whole page's estimate as too high.
-    expect(applyView("estimates", rows, { rules, days: 30.44 }).map((entry) => entry.verdict)).toEqual(["high", "high"]);
+  test("Low click rate weighs a page once, its section links folded in (Real against estimated, which did too, was taken out on 2026-11-20)", () => {
+    expect([...VIEWS_BY_WHOLE_PAGE]).toEqual(["lowCtr"]);
   });
 
   test("a page and its section link are one page for a keyword, not two competing", () => {

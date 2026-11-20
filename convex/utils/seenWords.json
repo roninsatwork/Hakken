@@ -1360,10 +1360,6 @@
         "splitsClicks": "Google shares the impressions between them, so neither page does as well as one would.",
         "pickOne": "The Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
       },
-      "estimates": {
-        "estimatesClose": "The estimated visits are close to Google’s clicks for your pages.",
-        "estimatesOff": "{count, plural, one {One page’s} other {# pages’}} estimated visits are far from Google’s clicks: {b} too high and {c} too low."
-      },
       "brand": {
         "noBrandClicks": "There are no clicks to split into brand and non-brand in these dates.",
         "brandShare": "{a}% of your clicks come from searches using your brand's name.",
@@ -1400,10 +1396,6 @@
         "keywordsNewLost": "Google started showing you for {count, plural, one {one keyword} other {# keywords}} {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {in the last 3 months} last6Months {in the last 6 months} other {in the last 12 months}}, and stopped for {countB, plural, one {one} other {#}}.",
         "pagesNewLost": "{count, plural, one {One page} other {# pages}} appeared in Google for the first time, and {countB, plural, one {one} other {#}} dropped out.",
         "checkGoogle": "See whether Google moved, or your pages did."
-      },
-      "types": {
-        "noTypes": "There are no clicks to split by classification in these dates.",
-        "topType": "{text} bring the most clicks: {a}% of them."
       },
       "places": {
         "noPlaces": "There are no clicks to split by country in these dates.",
@@ -2814,10 +2806,6 @@
         "splitsClicks": "Google divide le impressioni tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
         "pickOne": "Lo specialista di cannibalizzazione delle parole chiave dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
       },
-      "estimates": {
-        "estimatesClose": "Le visite stimate sono vicine ai clic di Google per le tue pagine.",
-        "estimatesOff": "Le visite stimate {count, plural, one {di una pagina sono lontane} other {di # pagine sono lontane}} dai clic di Google: {b} troppo alte e {c} troppo basse."
-      },
       "brand": {
         "noBrandClicks": "Non ci sono clic da dividere tra brand e non brand in queste date.",
         "brandShare": "Il {a}% dei tuoi clic arriva da ricerche con il nome del tuo brand.",
@@ -2854,10 +2842,6 @@
         "keywordsNewLost": "Google ha iniziato a mostrarti per {count, plural, one {una parola chiave} other {# parole chiave}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {negli ultimi 3 mesi} last6Months {negli ultimi 6 mesi} other {negli ultimi 12 mesi}}, e ha smesso per {countB, plural, one {una} other {#}}.",
         "pagesNewLost": "{count, plural, one {Una pagina è comparsa} other {# pagine sono comparse}} su Google per la prima volta, e {countB, plural, one {una è uscita} other {# sono uscite}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
-      },
-      "types": {
-        "noTypes": "Non ci sono clic da dividere per classificazione in queste date.",
-        "topType": "{text} portano più clic: il {a}%."
       },
       "places": {
         "noPlaces": "Non ci sono clic da dividere per paese in queste date.",

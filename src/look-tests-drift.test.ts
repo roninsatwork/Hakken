@@ -88,8 +88,9 @@ describe("approved looks", () => {
     // A board whose screen was dropped keeps its place on the dated canvas but has no screen to look like: Wins and
     // losses (Anthony, 2026-11-19: "Yes, drop it"), as Keywords sorted by Up or down lists the same; Almost there
     // (2026-11-20: "lets remove almost there from the menu"), as Position bands lists the same; Missed demand (the same day:
-    // "Yes, take it out"), as Keywords and Keyword research show the same.
-    const dropped = new Set(["Moves", "Almost", "Demand"]);
+    // "Yes, take it out"), as Keywords and Keyword research show the same; By page classification (the same day: "Yes, take
+    // it out"), as Classifications shows the same; Real against estimated (the same day: "lets take out thi spage too please").
+    const dropped = new Set(["Moves", "Almost", "Demand", "Types", "Estimates"]);
     expect(boards.filter((board) => !saved.has(board) && !savedLater(board) && !dropped.has(board))).toEqual([]);
   });
 

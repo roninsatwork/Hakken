@@ -36,18 +36,19 @@ const STILL_TO_DO = new Set([
   // Almost there ("searchConsole.almost") left on 20 November 2026: taken out of the menu, as Position bands lists the same.
   "searchConsole.record",
   // Missed demand ("searchConsole.demand") left the same day: taken out of the menu, as Keywords and Keyword research show the same.
-  "searchConsole.estimates", "searchConsole.appearance",
+  // By page classification ("searchConsole.types") and Real against estimated ("searchConsole.estimates") left on 20 November
+  // 2026: taken out of the menu, as Classifications and Pages show the same.
+  "searchConsole.appearance",
   // Keyword cannibalisation ("searchConsole.competing") left on 20 November 2026 with its redo (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
   // Wins and losses ("searchConsole.moves") left on 19 November 2026: dropped, as Keywords sorted by Up or down lists the same.
   // Shown but not clicked ("searchConsole.lowCtr") left on 20 November 2026 with its redo (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
-  "searchConsole.types",
   // Visibility's screens outside the plan's thirty-one.
   "visibility.keywordsBandsMoved", "visibility.pageRecord", "visibility.yourPages", "visibility.paidKeywords",
   // Insights' screens outside the plan's twenty.
   "insights.trackRecord", "insights.experiments", "insights.findingsSection", "insights.strategyService",
 ]);
 /** The list's size: lower it as pages leave, never raise it. */
-const STILL_TO_DO_MOST = 23;
+const STILL_TO_DO_MOST = 21;
 
 /**
  * Pages that show no one website's own figures, and so carry no eye (Anthony, 2026-11-03: "We dont need the eye on non

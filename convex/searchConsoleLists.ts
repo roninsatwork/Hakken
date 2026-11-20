@@ -12,7 +12,7 @@ import { VOLATILITY_PERIOD, searchTypeValidator, type SearchType } from "./searc
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { askGoogle, countryFilter, inParts, listFilters, liveRows, type Filter, type ListKind, type LiveProblem } from "./searchConsoleLiveAsks";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
-import { beforeOf, daysIn, historyLimitDay, periodOf } from "./searchConsoleDays";
+import { beforeOf, historyLimitDay, periodOf } from "./searchConsoleDays";
 export { periodOf } from "./searchConsoleDays";
 import { periodFromParts, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
 import { keySeriesAnswer, namedMovers, namedTracked, totalsOf } from "./searchConsoleSpans";
@@ -21,7 +21,7 @@ import type { ListRows } from "./searchConsoleKeywordTable";
 import { BookNames, BookShelf, keysAsText, namedRows, textsFrom } from "./searchConsolePeriodBooks";
 import { SORT_KEYS, sortRows, type SortKey } from "./searchConsoleSorts";
 import { checkedLongest, consoleLimitsOf, consoleLimitsValidator, viewRulesOf, type ConsoleLimits } from "./searchConsoleLimits";
-import { factKeys, factsFor, factsWanted, withFacts, withFactsKnown, withListFacts } from "./searchConsoleFacts";
+import { factKeys, factsFor, factsWanted, withFactsKnown, withListFacts } from "./searchConsoleFacts";
 import { pageKindSetupValidator, readPageKinds, readPageKindSetup } from "./pageKinds";
 import { classificationTypeValidator } from "./pagesSchema";
 import { loadSite } from "./websiteSiteRows";
@@ -103,14 +103,12 @@ const rowValidator = v.object({
   tracked: v.boolean(),
   kind: nullable(v.string()),
   volume: nullable(v.number()),
-  estimate: nullable(v.number()),
   brand: nullable(v.boolean()),
   usualCtr: nullable(v.number()),
   expected: nullable(v.number()),
   topShare: nullable(v.number()),
   next: nullable(v.string()),
   nextShare: nullable(v.number()),
-  verdict: v.union(v.literal("high"), v.literal("low"), v.literal("close"), v.null()),
   gap: nullable(v.number()),
   /** Keyword cannibalisation: days Google swapped the page it showed most; null for a period not counted day by day. */
   swaps: v.optional(nullable(v.number())),
@@ -145,10 +143,7 @@ const summaryValidator = v.object({
   gained: v.number(),
   lost: v.number(),
   volume: v.number(),
-  estimate: v.number(),
   expected: v.number(),
-  high: v.number(),
-  low: v.number(),
   pagesInvolved: v.union(v.number(), v.null()),
   pagesShown: v.union(v.number(), v.null()),
   bands: v.record(v.string(), v.number()),
@@ -212,7 +207,6 @@ const filterArgs = {
   brand: v.optional(v.union(v.literal("yes"), v.literal("no"))),
   /** Volatility: keywords whose position rose, or fell. */
   way: v.optional(v.union(v.literal("up"), v.literal("down"))),
-  verdict: v.optional(v.union(v.literal("high"), v.literal("low"), v.literal("close"))),
 };
 
 /** One keyword's pages, or one page's keywords: the pairs that hold it. */
@@ -323,7 +317,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   if (dimension === "query" && !how.rows) {
     const keywords = await keywordListOf(ctx, companyWebsiteId, {
       searchType: args.searchType, period, country, view, filters: args, sort: args.sort, direction: args.direction,
-      days: daysIn(args.from, args.to), rules: viewRulesOf(limits), most: limits.listRows, tracked: async () => await trackedOf(ctx, companyWebsiteId, "query"),
+      rules: viewRulesOf(limits), most: limits.listRows, tracked: async () => await trackedOf(ctx, companyWebsiteId, "query"),
       brandWords: async () => await brandWordsOf(ctx, companyWebsiteId),
     });
     if (keywords === "PREPARING") return { ...empty, live: false, preparing: true };
@@ -366,7 +360,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   // A list of pages reads the website's classifications once, and names each page by them.
   const pageKinds = dimension === "page" ? await readPageKinds(ctx, companyWebsiteId) : null;
   const shaped = withPageKinds(shapeRows(sourceRowsOf(view, now.rows, tracked), before?.rows ?? null, { tracked, brandWords }), pageKinds);
-  const context: ViewContext = { rules: viewRulesOf(limits), tracked, days: daysIn(args.from, args.to) };
+  const context: ViewContext = { rules: viewRulesOf(limits), tracked };
   if (view === "lowCtr") {
     // The website's own click rate at each position, from its keywords a keyword at a time (step 4b).
     context.curve = ctrCurve(curveRows(await keywordFiguresOf(ctx, companyWebsiteId, args.searchType, period, country)), limits.curvePositions);
@@ -701,7 +695,7 @@ export const searchConsoleLiveList = tenantAction({
     const pageKeywords = !args.keywordsApart || within !== undefined || PAIR_VIEWS.has(view);
     const how = { within, inCountry: args.inCountry === true };
     // Only the facts the screen shows (`factsWanted`): none on a list of pages once the website has Classifications.
-    const want = kind ? factsWanted(kind, view, target.pageKinds !== null) : null;
+    const want = kind ? factsWanted(kind, target.pageKinds !== null) : null;
     const facts = kind && want ? target.facts : null;
     // The "all" rule lists every row Google answered, in its order: their facts are looked up as soon as the answer for the
     // dates is in, while the dates before are still being asked.
@@ -719,15 +713,12 @@ export const searchConsoleLiveList = tenantAction({
     if (!now.ok) return now;
     // One keyword's pages, or one page's keywords: each row's count across the whole website — a page's keywords,
     // a keyword's pages — from the list kept for the dates, when they are a ready-made period (5.1).
-    const counted = within ? await withKeptCounts(ctx, companyId, args, within.kind === "query" ? "page" : "query", now.rows, limits.pairedRows) : now.rows;
-    // Real against estimated chooses its rows by Sites' estimates: those are looked up before its rule; every other page's after.
-    const factsFirst = view === "estimates" && kind !== null && want !== null && facts !== null;
-    const rows = factsFirst && kind && want && facts ? await withFacts(ctx, facts, kind, counted, limits.liveFactsRows, want) : counted;
+    const rows = within ? await withKeptCounts(ctx, companyId, args, within.kind === "query" ? "page" : "query", now.rows, limits.pairedRows) : now.rows;
     const tracked = new Set(target.tracked);
     const earlierRows = earlier.ok ? earlier.rows : null;
     const pageKinds = dimension === "page" && target.pageKinds ? pageKindsFrom(target.pageKinds) : null;
     const shaped = withPageKinds(shapeRows(sourceRowsOf(view, rows, tracked), earlierRows, { tracked, brandWords: target.brandWords }), pageKinds);
-    const context: ViewContext = { rules: viewRulesOf(limits), tracked, days: daysIn(args.from, args.to) };
+    const context: ViewContext = { rules: viewRulesOf(limits), tracked };
     if (view === "lowCtr") {
       const keywords = [...bySide(now.pairs, "query").values()];
       context.curve = ctrCurve(keywords.map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })), limits.curvePositions);
@@ -736,7 +727,7 @@ export const searchConsoleLiveList = tenantAction({
     const weighed = dimension === "page" && VIEWS_BY_WHOLE_PAGE.has(view) ? withSectionsInPages(shaped) : shaped;
     const ruled = applyView(view, weighed, context);
     // A page's classification stays its kind once the website has any; Sites' type only names the rest.
-    const listed = factsFirst || !kind || !want || !facts ? ruled
+    const listed = !kind || !want || !facts ? ruled
       : withPageKinds(earlyFacts ? withFactsKnown(ruled, earlyFacts, kind, want) : await withListFacts(ctx, facts, kind, ruled, limits.liveFactsRows, want), pageKinds);
     const sorted = sortRows(listed, undefined, undefined);
     const named = listed.reduce((sum, row) => sum + row.clicks, 0);

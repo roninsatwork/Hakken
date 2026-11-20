@@ -5,21 +5,20 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { PAGE_ROW, ROW, STATUS, SUMMARY, list } from "@/src/test/searchConsoleFixtures";
+import { ROW, STATUS, SUMMARY, list } from "@/src/test/searchConsoleFixtures";
 import SearchConsoleCompetingPage from "./[siteId]/pages-competing/page";
-import SearchConsoleTypesPage from "./[siteId]/types/page";
 import SearchConsoleBrandPage from "./[siteId]/brand-and-non-brand/page";
 import SearchConsoleCtrCurvePage from "./[siteId]/click-rate-by-position/page";
 import SearchConsoleAppearancePage from "./[siteId]/rich-results/page";
-import SearchConsoleEstimatesPage from "./[siteId]/real-against-estimated/page";
 
 /**
  * Search Console's last opportunities and its breakdowns hold to the looks
  * Anthony approved on the "Search Console — keywords and pages" canvas
- * (design-drift-plan D4): Pages competing, Types, Brand and
- * non-brand, Click rate by position, Rich results and Real against
- * estimated, each rendered with sample rows in English, read as the outline
- * saved beside its board in docs/plans/assets/search-console-redesign/look/.
+ * (design-drift-plan D4): Keyword cannibalisation, Brand and non-brand, Click
+ * rate by position and Rich results, each rendered with sample rows in English,
+ * read as the outline saved beside its board in
+ * docs/plans/assets/search-console-redesign/look/. By page classification and
+ * Real against estimated were taken out on 2026-11-20, their looks with them.
  */
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "" }));
@@ -48,18 +47,6 @@ const COMPETING_ROW = {
 };
 const COMPETING = { ...list([COMPETING_ROW]), summary: { ...BASE, rows: 1, of: 69, pagesInvolved: 2, pagesShown: 12 } };
 
-/** The website's pages by kind, and its keywords by what the searcher wants. */
-const PAGE_KINDS = {
-  ...list([]),
-  summary: { ...BASE, rows: 4, clicks: 100, kinds: [{ kind: "ARTICLE", rows: 3, clicks: 60 }, { kind: "SERVICE", rows: 1, clicks: 40 }] },
-};
-const KEYWORD_KINDS = {
-  ...list([]),
-  summary: {
-    ...BASE, rows: 6, clicks: 100,
-    kinds: [{ kind: "RESEARCHING", rows: 3, clicks: 40 }, { kind: "BUYING", rows: 2, clicks: 35 }, { kind: "BRANDED", rows: 1, clicks: 25 }],
-  },
-};
 
 /** Brand clicks against every other search, now and the 30 days before. */
 const BRANDED = {
@@ -107,9 +94,6 @@ const PERFORMANCE = {
   previous: null, named: null, live: false,
 };
 
-/** A page whose Sites estimate is well over Google's clicks. */
-const ESTIMATED_ROW = { ...PAGE_ROW, kind: "ARTICLE", estimate: 120, gap: 76, verdict: "high" };
-const ESTIMATES = { ...list([ESTIMATED_ROW]), summary: { ...BASE, estimate: 120, high: 1, low: 0 } };
 
 /**
  * Answers each Convex read by its name; an answer given as a function is
@@ -155,18 +139,6 @@ describe("Search Console's approved looks: pages competing and the breakdowns", 
     await expectApprovedLook(container, "search-console-keyword-cannibalisation-way-3", "Competing", "Search Console → Keyword cannibalisation");
   });
 
-  it("13 · Types", async () => {
-    at("/app/search-console/site_1/types");
-    answer({
-      "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleLists:searchConsoleListPage": (args: { dimension: string }) => (args.dimension === "page" ? PAGE_KINDS : KEYWORD_KINDS),
-      "pageKinds:pageKindChoices": null,
-    });
-    const { container } = render(<SearchConsoleTypesPage />);
-    await screen.findByText("Article");
-    await expectApprovedLook(container, PLAN, "Types", "Search Console → By page classification");
-  });
-
   it("14 · Brand and non-brand", async () => {
     at("/app/search-console/site_1/brand-and-non-brand");
     answer({
@@ -201,17 +173,5 @@ describe("Search Console's approved looks: pages competing and the breakdowns", 
     const { container } = render(<SearchConsoleAppearancePage />);
     await screen.findByText("Review snippet");
     await expectApprovedLook(container, PLAN, "Appearance", "Search Console → Rich results");
-  });
-
-  it("17 · Real against estimated", async () => {
-    at("/app/search-console/site_1/real-against-estimated");
-    answer({
-      "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleLists:searchConsoleListPage": ESTIMATES,
-      "pageKinds:pageKindChoices": null,
-    });
-    const { container } = render(<SearchConsoleEstimatesPage />);
-    await screen.findAllByText(/ai-agency/);
-    await expectApprovedLook(container, PLAN, "Estimates", "Search Console → Real against estimated");
   });
 });

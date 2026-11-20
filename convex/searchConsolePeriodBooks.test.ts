@@ -17,8 +17,8 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 
 const EMPTY_ROW: ListRow = {
   key: "", clicks: 1, impressions: 1, ctr: 1, position: 1, band: "1-3", previousClicks: null, change: null, previousPosition: null,
-  positionChange: null, share: 0, count: null, top: null, tracked: false, kind: null, volume: null, estimate: null, brand: null,
-  usualCtr: null, expected: null, topShare: null, next: null, nextShare: null, verdict: null, gap: null,
+  positionChange: null, share: 0, count: null, top: null, tracked: false, kind: null, volume: null, brand: null,
+  usualCtr: null, expected: null, topShare: null, next: null, nextShare: null, gap: null,
 };
 
 async function hold(t: ReturnType<typeof harness>) {

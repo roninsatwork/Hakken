@@ -7,7 +7,6 @@ import SearchConsolePage from "./page";
 import SearchConsolePerformancePage from "./[siteId]/page";
 import SearchConsoleSearchesPage from "./[siteId]/keywords/page";
 import SearchConsoleConnectionPage from "./[siteId]/connection/page";
-import SearchConsoleTypesPage from "./[siteId]/types/page";
 import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 import { useScreenDay } from "@/src/test/realTime";
 
@@ -318,15 +317,6 @@ describe("the pages beyond Google's own", () => {
     expect(screen.getByText("ai agency")).toBeInTheDocument();
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsoleListPage")).at(-1)?.[1];
     expect(asked).toMatchObject({ dimension: "query", sort: "change", direction });
-  });
-
-  it("Types draws each kind's share of the pages and of the clicks, each opening its list", () => {
-    at("/app/search-console/site_1/types");
-    answer({ "searchConsoleConnect:searchConsoleStatus": status(), "searchConsoleLists:searchConsoleListPage": LIST });
-    render(<SearchConsoleTypesPage />);
-    const links = screen.getAllByRole("link").map((link) => link.getAttribute("href") ?? "");
-    expect(links.some((href) => href.includes("/keywords") && href.includes("kind=BUYING"))).toBe(true);
-    expect(links.some((href) => href.includes("/pages") && href.includes("kind=BUYING"))).toBe(true);
   });
 });
 

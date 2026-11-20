@@ -6659,11 +6659,6 @@
           "description": "Domanda mancata elenca una parola chiave per cui Google ha mostrato il sito meno volte di così nelle date scelte.",
           "cost": "Nessun costo."
         },
-        "consoleEstimateOff": {
-          "label": "Quanto una stima può discostarsi dai clic di Google",
-          "description": "Reali e stimati chiama la stima di Visibilità troppo alta, o troppo bassa, quando si discosta dai clic di Google più di così, in percentuale dei clic.",
-          "cost": "Nessun costo."
-        },
         "consoleCurvePositions": {
           "label": "Posizioni per cui si calcola la percentuale di clic abituale",
           "description": "Percentuale di clic per posizione, e Tasso di clic basso, calcolano la percentuale di clic abituale del sito a ogni posizione da 1 a questa.",
@@ -15528,11 +15523,9 @@
       "updates": "Aggiornamenti di Google",
       "lowCtr": "Tasso di clic basso",
       "competing": "Cannibalizzazione delle parole chiave",
-      "types": "Per classificazione delle pagine",
       "brand": "Brand e non brand",
       "ctrCurve": "Tasso di clic per posizione",
       "appearance": "Risultati avanzati",
-      "estimates": "Reali contro stimati",
       "trackedKeywords": "Parole chiave monitorate",
       "trackedPages": "Pagine monitorate",
       "volatility": "Volatilità",
@@ -15819,8 +15812,6 @@
       "band": "Fascia",
       "brand": "Brand",
       "dates": "Date",
-      "difference": "Differenza",
-      "estimate": "Stima",
       "expected": "Attesi",
       "moved": "Spostamento",
       "nextPage": "Pagina seguente",
@@ -16006,13 +15997,6 @@
       "anyBrand": "Brand o no",
       "brandYes": "Brand",
       "brandNo": "Non brand",
-      "verdict": "Stima",
-      "anyVerdict": "Qualsiasi stima",
-      "verdicts": {
-        "high": "Troppo alta",
-        "low": "Troppo bassa",
-        "close": "Corretta"
-      },
       "device": "Dispositivo",
       "anyDevice": "Qualsiasi dispositivo",
       "way": "Su o giù",
@@ -16168,30 +16152,6 @@
       "empty": "Nessun aggiornamento di Google è iniziato nei giorni disponibili.",
       "volatilityBefore": "Volatilità prima"
     },
-    "types": {
-      "title": "Per classificazione delle pagine",
-      "description": "Le tue pagine per classificazione, e le tue parole chiave per ciò che cerca chi cerca: quante ce ne sono di ciascuna e quanti clic porta ognuna. Clicca una riga per vederne le pagine o le parole chiave.",
-      "fromArticles": "Clic dagli articoli",
-      "fromServices": "Clic dalle pagine di servizio",
-      "fromBrand": "Clic dalle ricerche di brand",
-      "fromCommercial": "Clic dalle ricerche commerciali",
-      "ofClicks": "{share} dei clic",
-      "pagesTitle": "Pagine per classificazione",
-      "pagesHint": "Tutte le {count} pagine mostrate da Google, ciascuna con la sua classificazione: la sua quota delle pagine e dei clic.",
-      "fromInformational": "Clic dai contenuti informativi",
-      "pagesTitleClassified": "Pagine per classificazione",
-      "pagesHintClassified": "Tutte le {count} pagine mostrate da Google, ciascuna con la tua classificazione: la sua quota delle pagine e dei clic.",
-      "keywordsTitle": "Parole chiave per intento",
-      "keywordsHint": "Tutte le {count} parole chiave per cui Google ti ha mostrato, ciascuna giudicata per ciò che cerca chi cerca: la sua quota delle parole chiave e dei clic.",
-      "pages": "Pagine",
-      "keywords": "Parole chiave",
-      "clicks": "Clic",
-      "kind": "Classificazione",
-      "count": "Quante",
-      "pagesLine": "{count, plural, =1 {# pagina} other {{rows} pagine}} ({share}) · {clicks} dei clic",
-      "keywordsLine": "{count, plural, =1 {# parola chiave} other {{rows} parole chiave}} ({share}) · {clicks} dei clic",
-      "readoutShare": "{what} ({share} del totale)"
-    },
     "brand": {
       "title": "Brand e non brand",
       "description": "Clic dalle ricerche che usano il tuo nome, rispetto a quelle che non lo usano.",
@@ -16231,19 +16191,6 @@
         "AMP_BLUE_LINK": "AMP",
         "RECIPE_FEATURE": "Ricetta"
       }
-    },
-    "estimates": {
-      "title": "Reali contro stimati",
-      "description": "I clic sono quelli contati da Google; la Stima sono le visite stimate da Visibilità per le stesse date. Dove differiscono molto, fidati di Google.",
-      "sites": "Stima di Visibilità",
-      "visitsIn": "Visite, {period}",
-      "google": "Clic di Google",
-      "high": "Pagine stimate troppo in alto",
-      "low": "Pagine stimate troppo in basso",
-      "byAQuarter": "Di oltre il {percent}%",
-      "aboutRight": "Corretta",
-      "tooHigh": "{count} troppo alta",
-      "tooLow": "{count} troppo bassa"
     },
     "country": {
       "label": "Paese",
@@ -16439,10 +16386,6 @@
         "splitsClicks": "Google divide le impressioni tra loro, così nessuna pagina rende quanto ne renderebbe una sola.",
         "pickOne": "Lo specialista di cannibalizzazione delle parole chiave dà a ogni parola chiave una pagina, e dice cosa fare con ciascuna delle altre."
       },
-      "estimates": {
-        "estimatesClose": "Le visite stimate sono vicine ai clic di Google per le tue pagine.",
-        "estimatesOff": "Le visite stimate {count, plural, one {di una pagina sono lontane} other {di # pagine sono lontane}} dai clic di Google: {b} troppo alte e {c} troppo basse."
-      },
       "brand": {
         "noBrandClicks": "Non ci sono clic da dividere tra brand e non brand in queste date.",
         "brandShare": "Il {a}% dei tuoi clic arriva da ricerche con il nome del tuo brand.",
@@ -16479,10 +16422,6 @@
         "keywordsNewLost": "Google ha iniziato a mostrarti per {count, plural, one {una parola chiave} other {# parole chiave}} {period, select, thisWeek {questa settimana} lastWeek {la settimana scorsa} thisMonth {questo mese} lastMonth {il mese scorso} last3Months {negli ultimi 3 mesi} last6Months {negli ultimi 6 mesi} other {negli ultimi 12 mesi}}, e ha smesso per {countB, plural, one {una} other {#}}.",
         "pagesNewLost": "{count, plural, one {Una pagina è comparsa} other {# pagine sono comparse}} su Google per la prima volta, e {countB, plural, one {una è uscita} other {# sono uscite}}.",
         "checkGoogle": "Verifica se si è mosso Google o le tue pagine."
-      },
-      "types": {
-        "noTypes": "Non ci sono clic da dividere per classificazione in queste date.",
-        "topType": "{text} portano più clic: il {a}%."
       },
       "places": {
         "noPlaces": "Non ci sono clic da dividere per paese in queste date.",
@@ -16530,9 +16469,6 @@
         "reasonClicked": "{a} di queste hanno ricevuto comunque clic.",
         "reasonNone": "Google non ha dato {text} per nessuna pagina controllata finora."
       }
-    },
-    "everyCountry": {
-      "pages": "Le pagine contano i clic da ogni paese, non solo dal tuo paese principale. Google include le ricerche che tiene private solo quando non si sceglie un paese."
     },
     "services": {
       "title": "Classificazioni",

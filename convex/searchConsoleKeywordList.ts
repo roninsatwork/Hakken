@@ -27,7 +27,6 @@ export type KeywordListAsk = {
   filters: Filters;
   sort: SortKey | undefined;
   direction: "asc" | "desc" | undefined;
-  days: number;
   rules: ViewRules;
   /** The most rows a list holds (`consoleListRows`). */
   most: number;
@@ -76,7 +75,7 @@ export async function keywordListOf(
   const tracked = new Set(await Promise.all([...(await ask.tracked())].map(async (text) => await names.tokenOf("query", text))));
   // A search reads every keyword's text: the keyword book whole (§5.5).
   const bookTexts = ask.filters.q?.trim() ? await wholeBook(ctx, book, "query") : null;
-  const context: ViewContext = { rules: ask.rules, tracked, days: ask.days };
+  const context: ViewContext = { rules: ask.rules, tracked };
   // Keyword cannibalisation leaves the home page out (`cannibalisationRule.ts`): its usual addresses, as places in the book.
   const homePages = ask.view === "competing" ? await homePagePlaces(ctx, companyWebsiteId, names) : undefined;
   const table = keywordTable(now, before, pairs, {

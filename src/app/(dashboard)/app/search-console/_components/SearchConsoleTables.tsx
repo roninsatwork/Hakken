@@ -57,7 +57,7 @@ type View = NonNullable<FunctionArgs<typeof api.searchConsoleLists.searchConsole
 /** Each heading's first press: the best first — a top position, a name A to Z, any other figure the most. */
 const FIRSTS = {
   key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", movedBy: "desc", share: "desc",
-  count: "desc", top: "asc", volume: "desc", estimate: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
+  count: "desc", top: "asc", volume: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
   topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc", swaps: "desc",
 } as const;
 export type SortKey = keyof typeof FIRSTS;
@@ -77,7 +77,6 @@ const LIVE_SORTS: SiteSortColumns<ListRow, SortKey> = {
   count: { value: (row) => row.count, first: "desc" },
   top: { value: (row) => row.top, first: "asc" },
   volume: { value: (row) => row.volume, first: "desc" },
-  estimate: { value: (row) => row.estimate, first: "desc" },
   kind: { value: (row) => row.kind, first: "asc" },
   brand: { value: (row) => (row.brand === null ? null : row.brand ? 0 : 1), first: "asc" },
   usualCtr: { value: (row) => row.usualCtr, first: "desc" },
@@ -100,7 +99,7 @@ function liveSortsFor(choices: PageKindsView["choices"]): SiteSortColumns<ListRo
 }
 
 /** The filter chips a table can show, each kept in the address under its own key. The country is the page's, not a chip (§16). */
-export type ChipId = "tracked" | "band" | "intent" | "pageType" | "brand" | "way" | "verdict" | "device";
+export type ChipId = "tracked" | "band" | "intent" | "pageType" | "brand" | "way" | "device";
 
 const DEVICES = ["DESKTOP", "MOBILE", "TABLET"] as const;
 /** Every intent and page type a Kind chip can hold: anything else in the address is ignored. */
@@ -109,8 +108,8 @@ const KINDS: readonly string[] = ["", ...new Set<string>([...RANK_INTENTS, ...PA
 /**
  * The values the Kind chip may hold on a table of pages: an intent or a page
  * type — or, once the website has classifications, a classification's id or
- * Not sorted. While they are on their way any value is held, so a link from
- * Types to one classification's pages is not dropped.
+ * Not sorted. While they are on their way any value is held, so a link to one
+ * classification's pages is not dropped.
  */
 function usePageKindParam(chips: readonly ChipId[]): { kinds: PageKindsView; allowed: readonly string[] | undefined } {
   const siteId = useSearchConsoleSiteId();
@@ -129,7 +128,6 @@ function useChosen(chips: readonly ChipId[]) {
   const [kind] = useSiteParam<string>("kind", "", allowed);
   const [brand] = useSiteParam<"" | "yes" | "no">("brand", "", ["", "yes", "no"]);
   const [way] = useSiteParam<"" | "up" | "down">("way", "", ["", "up", "down"]);
-  const [verdict] = useSiteParam<"" | "high" | "low" | "close">("verdict", "", ["", "high", "low", "close"]);
   const [device] = useSiteParam<string>("device", "", ["", ...DEVICES]);
   const filters: Filters = {
     ...(has("tracked") && tracked ? { tracked } : {}),
@@ -137,7 +135,6 @@ function useChosen(chips: readonly ChipId[]) {
     ...((has("intent") || has("pageType")) && kind ? { kind } : {}),
     ...(has("brand") && brand ? { brand } : {}),
     ...(has("way") && way ? { way } : {}),
-    ...(has("verdict") && verdict ? { verdict } : {}),
   };
   return { filters, device: has("device") ? device : "", kinds };
 }
@@ -405,7 +402,6 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
   const [kind, setKind] = useSiteParam<string>("kind", "", allowed);
   const [brand, setBrand] = useSiteParam<string>("brand", "", ["", "yes", "no"]);
   const [way, setWay] = useSiteParam<string>("way", "", ["", "up", "down"]);
-  const [verdict, setVerdict] = useSiteParam<string>("verdict", "", ["", "high", "low", "close"]);
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...DEVICES]);
   const bandWord = (value: string) => t(`bands.${value}`);
   return (
@@ -461,13 +457,6 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
                 <option value="">{t("anyWay")}</option>
                 <option value="up">{t("wayUp")}</option>
                 <option value="down">{t("wayDown")}</option>
-              </Select>
-            );
-          case "verdict":
-            return (
-              <Select key={chip} chip={{ label: t("verdict"), choice: verdict ? t(`verdicts.${verdict}`) : null }} value={verdict} onChange={setVerdict}>
-                <option value="">{t("anyVerdict")}</option>
-                {(["high", "low", "close"] as const).map((entry) => <option key={entry} value={entry}>{t(`verdicts.${entry}`)}</option>)}
               </Select>
             );
           case "device":
@@ -685,7 +674,7 @@ export function nameColumn<Row extends { name: string }>(header: string): DataTa
 
 /**
  * A page in a Search Console list, as a link to its own screen, on one line (`PageNameCell`): never narrower than 160
- * pixels, as All pages' Page column. Pages, Tracked pages, Shown but not clicked and Real against estimated take it, which
+ * pixels, as All pages' Page column. Pages, Tracked pages and Low click rate take it, which
  * each wrote out for themselves until the table rule (AGENTS.md "Tables are lean", 2026-11-17).
  */
 export function pageColumn<Row extends { key: string; title?: string }>(

@@ -154,6 +154,20 @@ const nextConfig: NextConfig = {
         destination: "/app/search-console/:siteId/keywords",
         permanent: true,
       },
+      // By page classification was taken out the same day (Anthony: "i think its a duplicat amnd we dotn need it", then
+      // "Yes, take it out"): Classifications shows each classification's times shown, clicks and pages. Old links open it.
+      {
+        source: "/app/search-console/:siteId/types",
+        destination: "/app/search-console/:siteId/demand-by-service",
+        permanent: true,
+      },
+      // Real against estimated too ("lets take out thi spage too please"): its rows were the website's pages, Google's
+      // clicks beside Visibility's estimate. Old links open Pages.
+      {
+        source: "/app/search-console/:siteId/real-against-estimated",
+        destination: "/app/search-console/:siteId/pages",
+        permanent: true,
+      },
       {
         source: "/admin/companies/:id/users",
         destination: "/admin/companies/:id/directory/users",

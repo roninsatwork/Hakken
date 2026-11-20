@@ -146,8 +146,9 @@ page's days and one page's devices are asked of no country
 `everyCountry`), in the nightly collection, the long periods and live asks
 alike; a country kept ready holds the same every-country pages. A page's
 searches stay the home country's, so a website's pages add up to more than
-its home-country clicks, and each page screen says so
-(`SearchConsoleEveryCountry`). The kept page lists were fetched again once,
+its home-country clicks. Each page screen said so until every screen came to follow the
+country menu (2026-11-18); the notice (`SearchConsoleEveryCountry`) went on 2026-11-20 with
+the last two screens that showed it. The kept page lists were fetched again once,
 and every period built again with its long periods asked afresh
 (`searchConsolePageRefetch.ts`, `fresh` on `rebuildSitePeriods`).
 
@@ -296,6 +297,18 @@ follows it, with New and lost:
   the List menu (`filters.missed`), its eye entry and words, and `searchConsole.almost` (whose words it borrowed) went
   with it. Its three limits on the admin Limits screen (`consoleMissedKeywords`, `consoleSearchedALot`,
   `consoleBarelyShown`) are left for now: they're saved settings, read by nothing since.
+- **By page classification was taken out of the menu** (Anthony, 2026-11-20: "i think its a duplicat amnd we dotn need
+  it", then "Yes, take it out"). Classifications shows each classification's times shown, clicks and pages, and Brand
+  and non-brand the brand searches. Its chart of keywords by what the searcher wants went with it; Keywords' "What the
+  searcher wants" menu still filters to each. Old links open Classifications (`next.config.ts`). Its page, look, eye rule
+  (`typesSees`) and words went; `KindBars` and `usePageKinds` stay, shared with Sites and Google Analytics.
+- **Real against estimated was taken out the same day** ("lets take out thi spage too please"). Old links open Pages.
+  Its page, look, eye rule (`estimatesSees`) and words went, and then, on "Yes, remove it", everything behind it: the
+  `estimates` list rule and its row figures (`estimate`, `verdict`) and summary counts (`estimate`, `high`, `low`), the
+  Estimate menu (`verdict` chip), the Estimate sort and download column, the admin limit `consoleEstimateOff` (no value
+  was saved on dev), and Visibility's estimate for each page, which the nightly build looked up and kept on the period
+  lists: it now asks a page's type alone (`PAGE_TYPE_ONLY` in `convex/searchConsolePeriods.ts`). The `estimates` field
+  on `searchConsolePeriods` stays in the schema, no longer written or read, until no row built before holds it.
 - **Almost there was taken out of the menu** (Anthony, 2026-11-20: "lets remove almost there from the menu"). Position
   bands lists the same keywords at 4–10 and 11–20. Old links (forwarded in `next.config.ts`) and the eye's links from
   Keywords, Click rate by position and Google Analytics' Overview open Position bands; Position bands' own eye says no

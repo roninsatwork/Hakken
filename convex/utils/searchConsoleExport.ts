@@ -9,7 +9,7 @@
 /** The figures a download can hold, by the row's own names. */
 export const EXPORT_FIELDS = [
   "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "count", "top", "tracked", "kind",
-  "volume", "estimate", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "verdict", "gap", "previousClicks", "previousPosition", "swaps",
+  "volume", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap", "previousClicks", "previousPosition", "swaps",
 ] as const;
 export type ExportField = (typeof EXPORT_FIELDS)[number];
 

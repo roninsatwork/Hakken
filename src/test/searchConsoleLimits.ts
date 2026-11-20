@@ -17,7 +17,6 @@ export const STARTING_CONSOLE_LIMITS: ConsoleLimits = {
   missedKeywords: 500,
   searchedALot: 100,
   barelyShown: 50,
-  estimateOff: 25,
   curvePositions: 20,
   updatesListed: 100,
   updateWindowDays: 14,

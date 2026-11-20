@@ -139,8 +139,6 @@ export const FAN_OUT_LIMITS = {
   consoleSearchedALot: { choices: [50, 100, 250, 500], fallback: 100, scope: "site" },
   /** Impressions under which Missed demand counts a keyword as barely shown. */
   consoleBarelyShown: { choices: [10, 25, 50, 100], fallback: 50, scope: "site" },
-  /** How far, in per cent of Google's clicks, Sites' estimate can be before Real against estimated calls it too high or too low. */
-  consoleEstimateOff: { choices: [10, 25, 50], fallback: 25, scope: "site" },
   /** Positions, from 1, the website's usual click rate is worked out for (Click rate by position, Shown but not clicked). */
   consoleCurvePositions: { choices: [10, 20, 30], fallback: 20, scope: "site" },
   /** Google's updates the Google updates page lists, newest first. */
@@ -305,7 +303,6 @@ const limitsArg = v.object({
   consoleMissedKeywords: limitValue,
   consoleSearchedALot: limitValue,
   consoleBarelyShown: limitValue,
-  consoleEstimateOff: limitValue,
   consoleCurvePositions: limitValue,
   consoleUpdatesListed: limitValue,
   consoleUpdateWindowDays: limitValue,

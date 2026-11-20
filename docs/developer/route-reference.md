@@ -353,12 +353,10 @@ Reviewed file inventory: 419 `page.tsx` files. This is a file count, not a count
 | `/app/search-console/[siteId]/pages` | [src/app/(dashboard)/app/search-console/[siteId]/pages/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/pages/page.tsx) |
 | `/app/search-console/[siteId]/pages-competing` | [src/app/(dashboard)/app/search-console/[siteId]/pages-competing/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/pages-competing/page.tsx) |
 | `/app/search-console/[siteId]/position-bands` | [src/app/(dashboard)/app/search-console/[siteId]/position-bands/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/position-bands/page.tsx) |
-| `/app/search-console/[siteId]/real-against-estimated` | [src/app/(dashboard)/app/search-console/[siteId]/real-against-estimated/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/real-against-estimated/page.tsx) |
 | `/app/search-console/[siteId]/rich-results` | [src/app/(dashboard)/app/search-console/[siteId]/rich-results/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/rich-results/page.tsx) |
 | `/app/search-console/[siteId]/shown-but-not-clicked` | [src/app/(dashboard)/app/search-console/[siteId]/shown-but-not-clicked/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/shown-but-not-clicked/page.tsx) |
 | `/app/search-console/[siteId]/tracked/keywords` | [src/app/(dashboard)/app/search-console/[siteId]/tracked/keywords/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/tracked/keywords/page.tsx) |
 | `/app/search-console/[siteId]/tracked/pages` | [src/app/(dashboard)/app/search-console/[siteId]/tracked/pages/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/tracked/pages/page.tsx) |
-| `/app/search-console/[siteId]/types` | [src/app/(dashboard)/app/search-console/[siteId]/types/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/types/page.tsx) |
 | `/app/search-console/[siteId]/volatility` | [src/app/(dashboard)/app/search-console/[siteId]/volatility/page.tsx](../../src/app/(dashboard)/app/search-console/[siteId]/volatility/page.tsx) |
 | `/app/search-console` | [src/app/(dashboard)/app/search-console/page.tsx](../../src/app/(dashboard)/app/search-console/page.tsx) |
 | `/app/settings/auth-diagnostics` | [src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx](../../src/app/(dashboard)/app/settings/auth-diagnostics/page.tsx) |

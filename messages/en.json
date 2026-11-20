@@ -6659,11 +6659,6 @@
           "description": "Missed demand lists a keyword Google showed the website for fewer times than this in the dates chosen.",
           "cost": "No cost."
         },
-        "consoleEstimateOff": {
-          "label": "How far an estimate can be from Google’s clicks",
-          "description": "Real against estimated calls Visibility’s estimate too high, or too low, when it is further than this from Google’s clicks, as a share of the clicks.",
-          "cost": "No cost."
-        },
         "consoleCurvePositions": {
           "label": "Positions the usual click rate is worked out for",
           "description": "Click rate by position, and Low click rate, work out the website’s own usual click rate at each position from 1 to this.",
@@ -15528,11 +15523,9 @@
       "updates": "Google updates",
       "lowCtr": "Low click rate",
       "competing": "Keyword cannibalisation",
-      "types": "By page classification",
       "brand": "Brand and non-brand",
       "ctrCurve": "Click rate by position",
       "appearance": "Rich results",
-      "estimates": "Real against estimated",
       "trackedKeywords": "Tracked keywords",
       "trackedPages": "Tracked pages",
       "volatility": "Volatility",
@@ -15819,8 +15812,6 @@
       "band": "Band",
       "brand": "Brand",
       "dates": "Dates",
-      "difference": "Difference",
-      "estimate": "Estimate",
       "expected": "Expected",
       "moved": "Moved",
       "nextPage": "Next page",
@@ -16006,13 +15997,6 @@
       "anyBrand": "Brand or not",
       "brandYes": "Brand",
       "brandNo": "Non-brand",
-      "verdict": "Estimate",
-      "anyVerdict": "Any estimate",
-      "verdicts": {
-        "high": "Too high",
-        "low": "Too low",
-        "close": "About right"
-      },
       "device": "Device",
       "anyDevice": "Any device",
       "way": "Up or down",
@@ -16168,30 +16152,6 @@
       "empty": "No Google update began in the days held.",
       "volatilityBefore": "Volatility before"
     },
-    "types": {
-      "title": "By page classification",
-      "description": "Your pages by classification, and your keywords by what the searcher wants: how much of each there is, and how many of the clicks each brings. Click a row to see its pages or keywords.",
-      "fromArticles": "Clicks from articles",
-      "fromServices": "Clicks from service pages",
-      "fromBrand": "Clicks from brand searches",
-      "fromCommercial": "Clicks from commercial searches",
-      "ofClicks": "{share} of clicks",
-      "pagesTitle": "Pages by classification",
-      "pagesHint": "All {count} pages Google showed, each sorted into a classification: its share of the pages, and of the clicks.",
-      "fromInformational": "Clicks from informational content",
-      "pagesTitleClassified": "Pages by classification",
-      "pagesHintClassified": "All {count} pages Google showed, each by your own classification: its share of the pages, and of the clicks.",
-      "keywordsTitle": "Keywords by what they want",
-      "keywordsHint": "All {count} keywords Google showed you for, each judged by what the searcher wants: its share of the keywords, and of the clicks.",
-      "pages": "Pages",
-      "keywords": "Keywords",
-      "clicks": "Clicks",
-      "kind": "Classification",
-      "count": "How many",
-      "pagesLine": "{count, plural, =1 {# page} other {{rows} pages}} ({share}) · {clicks} of clicks",
-      "keywordsLine": "{count, plural, =1 {# keyword} other {{rows} keywords}} ({share}) · {clicks} of clicks",
-      "readoutShare": "{what} ({share} of all)"
-    },
     "brand": {
       "title": "Brand and non-brand",
       "description": "Clicks from searches that use your name, against those that don't.",
@@ -16231,19 +16191,6 @@
         "AMP_BLUE_LINK": "AMP",
         "RECIPE_FEATURE": "Recipe"
       }
-    },
-    "estimates": {
-      "title": "Real against estimated",
-      "description": "Clicks are what Google counted; Estimate is the visits Visibility estimated for the same dates. Where they differ a lot, trust Google's.",
-      "sites": "Visibility's estimate",
-      "visitsIn": "Visits, {period}",
-      "google": "Google's clicks",
-      "high": "Pages estimated too high",
-      "low": "Pages estimated too low",
-      "byAQuarter": "By more than {percent}%",
-      "aboutRight": "About right",
-      "tooHigh": "{count} too high",
-      "tooLow": "{count} too low"
     },
     "country": {
       "label": "Country",
@@ -16439,10 +16386,6 @@
         "splitsClicks": "Google shares the impressions between them, so neither page does as well as one would.",
         "pickOne": "The Keyword cannibalisation specialist gives each keyword one page, and says what to do with each of the others."
       },
-      "estimates": {
-        "estimatesClose": "The estimated visits are close to Google’s clicks for your pages.",
-        "estimatesOff": "{count, plural, one {One page’s} other {# pages’}} estimated visits are far from Google’s clicks: {b} too high and {c} too low."
-      },
       "brand": {
         "noBrandClicks": "There are no clicks to split into brand and non-brand in these dates.",
         "brandShare": "{a}% of your clicks come from searches using your brand's name.",
@@ -16479,10 +16422,6 @@
         "keywordsNewLost": "Google started showing you for {count, plural, one {one keyword} other {# keywords}} {period, select, thisWeek {this week} lastWeek {last week} thisMonth {this month} lastMonth {last month} last3Months {in the last 3 months} last6Months {in the last 6 months} other {in the last 12 months}}, and stopped for {countB, plural, one {one} other {#}}.",
         "pagesNewLost": "{count, plural, one {One page} other {# pages}} appeared in Google for the first time, and {countB, plural, one {one} other {#}} dropped out.",
         "checkGoogle": "See whether Google moved, or your pages did."
-      },
-      "types": {
-        "noTypes": "There are no clicks to split by classification in these dates.",
-        "topType": "{text} bring the most clicks: {a}% of them."
       },
       "places": {
         "noPlaces": "There are no clicks to split by country in these dates.",
@@ -16530,9 +16469,6 @@
         "reasonClicked": "{a} of them still got clicks.",
         "reasonNone": "Google hasn't given {text} for any page checked so far."
       }
-    },
-    "everyCountry": {
-      "pages": "Pages count clicks from every country, not just your home country. Google only includes the searches it keeps private when no country is chosen."
     },
     "services": {
       "title": "Classifications",

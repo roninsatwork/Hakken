@@ -35,22 +35,22 @@ export const bandOf = (position: number): Band =>
  * - `lowCtr` — pages clicked less than the website's own click rate at their position (Shown but not clicked);
  * - `competing` — Keyword cannibalisation (Pages competing until 20 November 2026): keywords two or more of the website's
  *   pages each took 1 in 10 of the impressions of, the home page and searches for its name left out (`cannibalisationRule.ts`);
- * - `estimates` — pages with Sites' estimated visits beside Google's clicks (Real against estimated);
  * - `volatility` — keywords counted on Volatility's day and the day before, 10 or more impressions each (Volatility; its own ready-made day, `VOLATILITY_PERIOD`).
  */
 // No `moves`: Wins and losses was dropped on 2026-11-19 (Anthony: "Yes, drop it"), as Keywords sorted by Up or down
 // lists the same keywords and the same change. No `almost`: Almost there was taken out of the menu on 2026-11-20 (Anthony:
 // "lets remove almost there from the menu"), as Position bands lists the same keywords at 4–10 and 11–20. No `missed`:
 // Missed demand was taken out the same day (Anthony: "Yes, take it out"), as its second list is Keywords' Tracked: Not
-// tracked, and its first was Visibility's monthly searches, not Google's, which Keyword research shows.
-export const VIEWS = ["all", "tracked", "lowCtr", "competing", "estimates", "volatility"] as const;
+// tracked, and its first was Visibility's monthly searches, not Google's, which Keyword research shows. No `estimates`:
+// Real against estimated was taken out the same day (Anthony: "lets take out thi spage too please"), and with it the
+// estimate each page carried, Visibility's visits beside Google's clicks (2026-11-20: "Yes, remove it").
+export const VIEWS = ["all", "tracked", "lowCtr", "competing", "volatility"] as const;
 export type View = (typeof VIEWS)[number];
 
 /** The list a view reads, whatever the page asked. */
 export const VIEW_LIST: Partial<Record<View, "query" | "page">> = {
   lowCtr: "page",
   competing: "query",
-  estimates: "page",
   volatility: "query",
 };
 
@@ -65,11 +65,7 @@ export type ViewRules = {
   barelyShown: number;
   /** Missed demand: "searched a lot" is at least this many searches a month, from Sites. */
   searchedALot: number;
-  /** Real against estimated: an estimate this far from Google's clicks, either way, as a share of them, is too high or too low. */
-  estimateOff: number;
 };
-
-export type Verdict = "high" | "low" | "close";
 
 export type ListRow = {
   key: string;
@@ -104,8 +100,6 @@ export type ListRow = {
   kind: string | null;
   /** A keyword's searches a month, from Sites. */
   volume: number | null;
-  /** A page's estimated visits a month, from Sites. */
-  estimate: number | null;
   /** A keyword using one of the website's brand words; null for a page. */
   brand: boolean | null;
   /** Shown but not clicked: the website's own click rate at its position, and the clicks it would have had at it. */
@@ -115,9 +109,7 @@ export type ListRow = {
   topShare: number | null;
   next: string | null;
   nextShare: number | null;
-  /** Real against estimated: the estimate against Google's clicks. */
-  verdict: Verdict | null;
-  /** Estimate less clicks: above nothing, too high. */
+  /** Low click rate: the clicks short of what the website usually gets at the row's position. */
   gap: number | null;
   /** Keyword cannibalisation: days Google swapped the page it showed most; null for a period not counted day by day. */
   swaps?: number | null;
@@ -133,7 +125,6 @@ export type SourceRow = {
   top?: string;
   kind?: string;
   volume?: number;
-  estimate?: number;
   /** A keyword using the website's brand words, judged when its list was built (core-data plan, N5). */
   brand?: boolean;
 };
@@ -211,14 +202,12 @@ export function shapeRows(
       tracked: context.tracked.has(row.key),
       kind: row.kind ?? null,
       volume: known(row.volume),
-      estimate: known(row.estimate),
       brand: context.brandWords ? (row.brand ?? isBrand(row.key, context.brandWords)) : null,
       usualCtr: null,
       expected: null,
       topShare: null,
       next: null,
       nextShare: null,
-      verdict: null,
       gap: null,
     };
   });
@@ -278,15 +267,14 @@ export function pageWithoutSection(url: string): string {
 }
 
 /** The views that compare or count pages, where a section link is part of its page rather than a page of its own. */
-export const VIEWS_BY_WHOLE_PAGE: ReadonlySet<View> = new Set(["lowCtr", "estimates"]);
+export const VIEWS_BY_WHOLE_PAGE: ReadonlySet<View> = new Set(["lowCtr"]);
 
 /**
  * A list of pages with each link to a section folded into its page — clicks
- * and impressions added up, position weighted by impressions — so Shown but
- * not clicked and Real against estimated weigh a page once: Sites' estimate is
- * the whole page's, and was set against each section link on its own
- * (2026-10-04: one page read "1,018 too high" seven times). What Sites knows
- * of the page — its estimate, type and tracking — is the page's own row's.
+ * and impressions added up, position weighted by impressions — so Low click
+ * rate weighs a page once (2026-10-04: Real against estimated, since taken out,
+ * read one page "1,018 too high" seven times, once a section link). What Sites
+ * knows of the page — its type and tracking — is the page's own row's.
  */
 export function withSectionsInPages(rows: readonly ListRow[]): ListRow[] {
   const byPage = new Map<string, ListRow[]>();
@@ -318,14 +306,9 @@ export function withSectionsInPages(rows: readonly ListRow[]): ListRow[] {
   });
 }
 
-/** Days in an average month: Sites' estimated visits are a month's, read against the days chosen. */
-const DAYS_A_MONTH = 30.44;
-
 export type ViewContext = {
   /** The rules the website's limits set. */
   rules: ViewRules;
-  /** The days the list covers: Real against estimated scales Sites' monthly estimate to them. */
-  days?: number;
   /** The company's tracked keywords. */
   tracked?: ReadonlySet<string>;
   curve?: readonly CurvePoint[];
@@ -349,7 +332,7 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext): Li
         const usual = curve.get(Math.round(row.position));
         if (usual === undefined) return [];
         const expected = Math.round(row.impressions * usual);
-        // The clicks it's short by (`gap`, as Real against estimated's): the table lists the most short first (Way 2,
+        // The clicks it's short by (`gap`): the table lists the most short first (Way 2,
         // search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
         return row.clicks < expected ? [{ ...row, usualCtr: usual, expected, gap: expected - row.clicks }] : [];
       });
@@ -374,15 +357,6 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext): Li
       });
     case "volatility":
       return rows.filter((row) => row.positionChange !== null);
-    case "estimates":
-      return rows.flatMap((row) => {
-        if (row.estimate === null) return [];
-        // Sites estimates a month's visits: the same span as the clicks it is read against.
-        const estimate = Math.round((row.estimate * (context.days ?? DAYS_A_MONTH)) / DAYS_A_MONTH);
-        const gap = estimate - row.clicks;
-        const verdict: Verdict = Math.abs(gap) > context.rules.estimateOff * row.clicks ? (gap > 0 ? "high" : "low") : "close";
-        return [{ ...row, estimate, gap: verdict === "close" ? 0 : gap, verdict }];
-      });
     default:
       return rows;
   }
@@ -392,8 +366,8 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext): Li
 export function emptyRow(key: string): ListRow {
   return {
     key, clicks: 0, impressions: 0, ctr: 0, position: 0, band: "51+", previousClicks: null, change: null, previousPosition: null,
-    positionChange: null, share: 0, count: null, top: null, tracked: false, kind: null, volume: null, estimate: null, brand: null,
-    usualCtr: null, expected: null, topShare: null, next: null, nextShare: null, verdict: null, gap: null,
+    positionChange: null, share: 0, count: null, top: null, tracked: false, kind: null, volume: null, brand: null,
+    usualCtr: null, expected: null, topShare: null, next: null, nextShare: null, gap: null,
   };
 }
 
@@ -406,7 +380,6 @@ export type Filters = {
   brand?: "yes" | "no";
   /** Volatility: keywords whose position rose, or fell. */
   way?: "up" | "down";
-  verdict?: Verdict;
 };
 
 /** The rows the filters chosen keep; `textOf` a row's keyword as text where rows carry a token (§5.1). */
@@ -419,8 +392,7 @@ export function filterRows(rows: readonly ListRow[], filters: Filters, textOf?: 
     // A row Sites has not judged reads as "Not judged yet", as the Types bars count it.
     && (!filters.kind || (row.kind ?? "UNJUDGED") === filters.kind)
     && (!filters.brand || (filters.brand === "yes") === (row.brand === true))
-    && (!filters.way || (filters.way === "up" ? (row.positionChange ?? 0) > 0 : (row.positionChange ?? 0) < 0))
-    && (!filters.verdict || row.verdict === filters.verdict));
+    && (!filters.way || (filters.way === "up" ? (row.positionChange ?? 0) > 0 : (row.positionChange ?? 0) < 0)));
 }
 
 
@@ -452,14 +424,10 @@ export type Summary = {
   losing: number;
   gained: number;
   lost: number;
-  /** Sums of what Sites knows: searches a month behind the rows, and estimated visits. */
+  /** Sums of what Sites knows: searches a month behind the rows. */
   volume: number;
-  estimate: number;
   /** Shown but not clicked: the clicks the rows would have had at the website's usual click rate. */
   expected: number;
-  /** Real against estimated. */
-  high: number;
-  low: number;
   /** Pages competing: the pages any listed keyword was shown with, of every page any keyword was. */
   pagesInvolved: number | null;
   pagesShown: number | null;
@@ -801,7 +769,7 @@ export function summarise(
   const pagesOfKind = new Map<string, Set<string>>();
   const summary: Summary = {
     rows: listed.length, of: all.length, ...figuresOf(listed, before !== null), tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0,
-    volume: 0, estimate: 0, expected: 0, high: 0, low: 0, pagesInvolved: null, pagesShown: null, bands, bandsBefore: null, brand: null, kinds: [], types: [],
+    volume: 0, expected: 0, pagesInvolved: null, pagesShown: null, bands, bandsBefore: null, brand: null, kinds: [], types: [],
   };
   for (const row of listed) {
     if (row.tracked) summary.tracked += 1;
@@ -814,10 +782,7 @@ export function summarise(
       summary.lost -= change;
     }
     summary.volume += row.volume ?? 0;
-    summary.estimate += row.estimate ?? 0;
     summary.expected += row.expected ?? 0;
-    if (row.verdict === "high") summary.high += 1;
-    if (row.verdict === "low") summary.low += 1;
     if (row.impressions > 0) bands[row.band] += 1;
     const kind = row.kind ?? "UNJUDGED";
     const entry = kinds.get(kind) ?? { kind, rows: 0, clicks: 0, impressions: 0, previousClicks: before ? 0 : null };

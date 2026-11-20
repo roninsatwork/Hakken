@@ -57,11 +57,9 @@ export const SEARCH_CONSOLE_PAGES = [
   { id: "updates", segment: "google-updates", group: "changes" },
   { id: "lowCtr", segment: "shown-but-not-clicked", group: "opportunities" },
   { id: "competing", segment: "pages-competing", group: "opportunities" },
-  { id: "types", segment: "types", group: "breakdowns" },
   { id: "brand", segment: "brand-and-non-brand", group: "breakdowns" },
   { id: "ctrCurve", segment: "click-rate-by-position", group: "breakdowns" },
   { id: "appearance", segment: "rich-results", group: "breakdowns" },
-  { id: "estimates", segment: "real-against-estimated", group: "breakdowns" },
   { id: "connection", segment: "connection", group: "settings" },
 ] as const satisfies readonly { id: string; segment: string; group: SearchConsoleGroup }[];
 export type SearchConsolePageId = (typeof SEARCH_CONSOLE_PAGES)[number]["id"];

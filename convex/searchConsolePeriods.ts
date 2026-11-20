@@ -16,7 +16,7 @@ import {
   type SearchType,
 } from "./searchConsoleSchema";
 import { historyLimitDay, shiftDay } from "./searchConsoleDays";
-import { UNKNOWN, factsFor, type Facts } from "./searchConsoleFacts";
+import { UNKNOWN, factsFor, type Facts, type FactsWanted } from "./searchConsoleFacts";
 import { countryScope, stillKeptReady } from "./searchConsoleCountries";
 import { askLive, countryFilters } from "./searchConsoleReads";
 import { consoleLimitsOf } from "./searchConsoleLimits";
@@ -52,6 +52,9 @@ import { chartPeriods, chartReach, daysBetween, daysFrom, lastDayOf, type ChartG
 import { CALENDAR_PERIODS, periodSpan as calendarSpan, spanBefore as calendarBefore, ukDay } from "./utils/calendarPeriods";
 
 export { chartReach, daysBetween } from "./utils/searchConsoleChartDays";
+
+/** What the nightly build looks up for a page: its type, never its estimated visits (2026-11-20). */
+const PAGE_TYPE_ONLY: FactsWanted = { kind: true, number: false };
 
 /**
  * The ready-made periods every Search Console list reads
@@ -491,7 +494,6 @@ export type PartToWrite = Packed & {
   tops?: string[];
   kinds?: string[];
   volumes?: number[];
-  estimates?: number[];
   firstKey?: string;
   shown?: number;
 };
@@ -686,9 +688,7 @@ export async function buildSitePeriods(
       // own pages carry their page type both sides, as Demand by Classification adds each side up by it without classifications.
       ...(facts && list === "countryPage" ? { kinds: packed.keys.map((key) => facts.get(key)?.kind ?? "UNJUDGED") } : facts && slot.which === "NOW" ? {
         kinds: packed.keys.map((key) => facts.get(key)?.kind ?? "UNJUDGED"),
-        ...(list === "query"
-          ? { volumes: packed.keys.map((key) => facts.get(key)?.number ?? UNKNOWN) }
-          : { estimates: packed.keys.map((key) => facts.get(key)?.number ?? UNKNOWN) }),
+        ...(list === "query" ? { volumes: packed.keys.map((key) => facts.get(key)?.number ?? UNKNOWN) } : {}),
       } : {}),
     })));
   };
@@ -736,12 +736,13 @@ export async function buildSitePeriods(
   };
   const keysAsked = (asked: Map<string, Row[]> | null, side: "key" | "page") =>
     [...(asked?.values() ?? [])].flatMap((rows) => rows.map((row) => (side === "key" ? row.key : row.page ?? "")));
-  // Sites' facts for each keyword and page, looked up once for every kind of result.
+  // Sites' facts for each keyword and page, looked up once for every kind of result. A page's type alone: its estimated
+  // visits went with Real against estimated (2026-11-20, "Yes, remove it"), and were the only reason to read its ranks.
   const known: Record<"query" | "page", Facts> = { query: new Map(), page: new Map() };
   const factsOf = async (kind: "query" | "page", keys: Iterable<string>): Promise<Facts | undefined> => {
     if (!target) return undefined;
     const missing = [...keys].filter((key) => !known[kind].has(key));
-    for (const [key, fact] of await factsFor(ctx, target, kind, missing)) known[kind].set(key, fact);
+    for (const [key, fact] of await factsFor(ctx, target, kind, missing, kind === "page" ? PAGE_TYPE_ONLY : undefined)) known[kind].set(key, fact);
     return known[kind];
   };
   for (const searchType of types) {
@@ -969,7 +970,6 @@ export const writePeriodPart = internalMutation({
     tops: v.optional(v.union(v.array(v.string()), v.string())),
     kinds: v.optional(v.array(v.string())),
     volumes: v.optional(v.array(v.number())),
-    estimates: v.optional(v.array(v.number())),
     firstKey: v.optional(v.string()),
     shown: v.optional(v.number()),
     builtAt: v.number(),

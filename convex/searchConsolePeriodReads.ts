@@ -177,7 +177,7 @@ async function sameDaysInstead(
  * A row of a ready-made period: its figures, and — where kept — its count and top, Sites' facts
  * (UNKNOWN for none), and whether a keyword uses the website's brand words (judged at build).
  */
-export type PeriodRow = Row & { count?: number; top?: string; kind?: string; volume?: number; estimate?: number; brand?: boolean };
+export type PeriodRow = Row & { count?: number; top?: string; kind?: string; volume?: number; brand?: boolean };
 
 /** A ready-made period's list — all countries', or one country's kept ready — its parts put back together; null when nothing is built for it. */
 export async function readPeriod(
@@ -245,7 +245,7 @@ export async function periodFromParts(
   return { from: parts[0].from, to: parts[0].to, builtAt: parts[0].builtAt, shown: parts[0].shown ?? null, rows, book };
 }
 
-type ReadPart = Unpacked<Pick<Doc<"searchConsolePeriods">, "clicks" | "impressions" | "positionSums" | "counts" | "tops" | "kinds" | "volumes" | "estimates">>
+type ReadPart = Unpacked<Pick<Doc<"searchConsolePeriods">, "clicks" | "impressions" | "positionSums" | "counts" | "tops" | "kinds" | "volumes">>
   & { keys: string[]; pages?: string[]; brands?: string };
 
 /**
@@ -255,7 +255,7 @@ type ReadPart = Unpacked<Pick<Doc<"searchConsolePeriods">, "clicks" | "impressio
  */
 export function rowsOfPart(part: ReadPart, rows: PeriodRow[]): void {
   const brands = part.brands ? unpackNumbers(part.brands) : null;
-  const { keys, pages, counts, tops, kinds, volumes, estimates } = part;
+  const { keys, pages, counts, tops, kinds, volumes } = part;
   const clicks = unpackNumbers(part.clicks);
   const impressions = unpackNumbers(part.impressions);
   const positionSums = unpackNumbers(part.positionSums);
@@ -267,7 +267,6 @@ export function rowsOfPart(part: ReadPart, rows: PeriodRow[]): void {
     if (tops) row.top = tops[index] ?? "";
     if (kinds) row.kind = kinds[index] ?? "UNJUDGED";
     if (volumes) row.volume = volumes[index] ?? UNKNOWN;
-    if (estimates) row.estimate = estimates[index] ?? UNKNOWN;
     rows.push(row);
   }
 }

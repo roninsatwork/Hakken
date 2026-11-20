@@ -206,7 +206,6 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
     ],
     never: SEARCH_CONSOLE_NEVER,
   },
-  "searchConsole.estimates": { about: "Google's real clicks against Visibility's estimate for the same searches" },
   "searchConsole.appearance": { writer: "INSIGHTS_TECHNICAL", about: "rich results: how the website's listings appear in Google" },
   // Shown but not clicked as Anthony chose it on 20 November 2026 (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
   "searchConsole.lowCtr": {
@@ -253,7 +252,6 @@ export const SEARCH_CONSOLE_SCREENS: Readonly<Record<string, Partial<SeesScreen>
       "any country but the one chosen in the menu: every figure on the page is that country's, its pages too",
     ],
   },
-  "searchConsole.types": { about: "clicks from Google's web, image, video and news results" },
   "searchConsole.volatility": {
     about: "Volatility: how much the website's places on Google moved each day, out of 10, against its own usual — is it Google, or is it the website?",
     parts: [

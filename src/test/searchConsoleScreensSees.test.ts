@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
-  appearanceSees, bandsSees, brandSees, competingSees, curveSees, estimatesSees, keywordsSees, lowCtrSees,
-  newLostSees, pagesSees, performanceSees, placesSees, recordSees, trackedSees, typesSees, websitesSees, type ListFigures,
+  appearanceSees, bandsSees, brandSees, competingSees, curveSees, keywordsSees, lowCtrSees,
+  newLostSees, pagesSees, performanceSees, placesSees, recordSees, trackedSees, websitesSees, type ListFigures,
 } from "@/convex/utils/sees/searchConsoleScreens";
 import { expectWords } from "./seenWords";
 
@@ -14,7 +14,7 @@ import { expectWords } from "./seenWords";
 
 const LIST: ListFigures = {
   rows: 152, clicks: 70, impressions: 9_800, previousClicks: 89, position: 18.2, gaining: 12, losing: 20, gained: 30, lost: -49,
-  volume: 3_400, expected: 140, high: 4, low: 9, pagesInvolved: 11,
+  volume: 3_400, expected: 140, pagesInvolved: 11,
   bands: { "1-3": 9, "4-10": 31, "11-20": 40, "21-50": 50, "51+": 22 }, bandsBefore: { "1-3": 11, "4-10": 30, "11-20": 38, "21-50": 50, "51+": 22 },
   brand: { now: { brandClicks: 40, nonBrandClicks: 30 }, before: { brandClicks: 42, nonBrandClicks: 47 } },
 };
@@ -38,8 +38,8 @@ describe("What Hakken sees on Search Console's other screens", () => {
     expect(codes(bandsSees(LIST, "lastMonth"))).toEqual({ says: ["bands", "topFewer"], steps: [] });
   });
 
-  test("Low click rate, Keyword cannibalisation, Real against estimated", () => {
-    for (const [screen, rule] of [["lowCtr", lowCtrSees], ["competing", competingSees], ["estimates", estimatesSees]] as const) {
+  test("Low click rate, Keyword cannibalisation", () => {
+    for (const [screen, rule] of [["lowCtr", lowCtrSees], ["competing", competingSees]] as const) {
       expectWords(screen, rule(LIST), "searchConsole.seen");
       expectWords(screen, rule(EMPTY), "searchConsole.seen");
     }
@@ -62,15 +62,13 @@ describe("What Hakken sees on Search Console's other screens", () => {
     }
   });
 
-  test("Performance, New and lost, By page classification, Countries and devices, Rich results, Click rate by position", () => {
+  test("Performance, New and lost, Countries and devices, Rich results, Click rate by position", () => {
     const performance = performanceSees({ clicks: 70, impressions: 9_800, position: 18.24 }, { clicks: 89, position: 17.1 }, "lastMonth");
     expect(codes(performance)).toEqual({ says: ["performance", "clicksDown", "position"], steps: ["checkGoogle"] });
     for (const [screen, box] of [
       ["performance", performance],
       ["performance", performanceSees(null, null, "lastMonth")],
       ["newLost", newLostSees({ newKeywords: 14, lostKeywords: 21, newPages: 2, lostPages: 1 }, "lastMonth")],
-      ["types", typesSees({ name: "Service pages", clicks: 40 }, 70)],
-      ["types", typesSees(null, 0)],
       ["places", placesSees({ name: "United Kingdom", clicks: 61 }, 70, 22)],
       ["places", placesSees(null, 0, null)],
       ["appearance", appearanceSees(2, { name: "FAQ" })],

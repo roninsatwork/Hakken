@@ -154,7 +154,7 @@ describe("a list of keywords read as columns", () => {
   test("every page's rule, searched and filtered every way: the same rows, figures and hero boxes", async () => {
     const filters: Filters[] = [
       {}, { q: "door" }, { q: "acme lev" }, { tracked: "yes" }, { tracked: "no" }, { band: "4-10" }, { kind: "BUYING" }, { kind: "UNJUDGED" },
-      { brand: "yes" }, { brand: "no" }, { way: "up" }, { way: "down" }, { verdict: "high" },
+      { brand: "yes" }, { brand: "no" }, { way: "up" }, { way: "down" },
     ];
     const results = await bothWays(VIEWS.flatMap((view) => filters.map((filter) => ({ ...view, ...filter }))));
     for (const result of results) {
