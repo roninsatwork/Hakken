@@ -285,6 +285,20 @@ describe('test time limits', () => {
     ).toEqual([])
   })
 
+  // Pages competing for the last 12 months held 24.8 MB alone and read 33.7 MB once in a full run, past its line (20 November
+  // 2026): other work alive in the worker counts with the answer. Memory is measured only through `heldBy`, which keeps the
+  // least of several measures, and never beside a metered read of the same call.
+  test("memory is measured only through heldBy, which keeps the least of several", () => {
+    const meter = readFileSync(join(repoRoot, 'src/test/heapMeter.ts'), 'utf8')
+    expect(meter).toMatch(/export const HELD_MEASURES = [3-9];/)
+    expect(meter).toContain('if (least === null || bytes < least.bytes)')
+    // Called, not mocked: a test of a step's own memory figure stands in for the runtime (`convex/utils/stepMemory.test.ts`).
+    const measuring = files.filter((file) => /process\.memoryUsage\(\)/.test(readFileSync(join(repoRoot, file), 'utf8')))
+    expect(measuring, 'Measure memory with heldBy (src/test/heapMeter.ts).').toEqual([])
+    const meteredInside = files.filter((file) => /heldBy\(async \(\) => [^\n]*meter\.db/.test(readFileSync(join(repoRoot, file), 'utf8')))
+    expect(meteredInside, 'heldBy asks its function several times: count what it reads in a call of its own.').toEqual([])
+  })
+
   // Written with the folder's real name, `(dashboard)`, it matched nothing: brackets are pattern syntax, so Arcade's tests
   // went on running on every push, and nothing failed to say so (CI #54, 2026-11-04).
   // CI #55, 2026-11-06: 9,080 tests passed and the run failed, as a log was still on its way when a file closed.

@@ -94,7 +94,10 @@ describe.skipIf(ON_GITHUB)("Clarity at five times morehandles.co.uk", () => {
     for (const kind of [undefined, "SOURCES", "BROWSERS"] as const) {
       const read = await t.run(async (ctx) => {
         const meter = metered(ctx.db);
-        const held = await heldBy(async () => await handler({ ...ctx, db: meter.db }, { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: "last12Months", from: "2026-01-01", to: NEWEST }));
+        const args = { holdId, span: "PERIOD", ...(kind ? { kind } : {}), key: "last12Months", from: "2026-01-01", to: NEWEST };
+        // What it reads, counted in a call of its own: `heldBy` asks several times and keeps the least it holds.
+        await handler({ ...ctx, db: meter.db }, args);
+        const held = await heldBy(async () => await handler(ctx, args));
         return { bytes: meter.bytes(), holds: held.bytes };
       });
       expect(read.bytes, kind ?? "own figures").toBeLessThan(HALF_READ);

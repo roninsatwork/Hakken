@@ -380,6 +380,11 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   line sent in that same millisecond sorts before it: `convex/chat.test.ts`
   failed two full runs in three on it. Assert the row is there, and count
   what must not be, instead of `.at(-1)`.
+- **Memory is measured only through `heldBy`** (2026-11-20, `src/test/heapMeter.ts`). Other work alive in the same
+  worker counts with the answer: Pages competing for the last 12 months held 24.8 MB alone and read 33.7 MB once in a
+  full run, past its 33.5 MB line. `heldBy` measures three times and keeps the least, so its function may only read; a
+  test that also counts what it reads (`metered`) counts it in a call of its own. `src/test-time-limits-drift.test.ts`
+  fails any other way of measuring.
 - **When one still fails in a full run and passes alone**: find its shape, fix
   every test with that shape through the helpers, extend the guard so it
   cannot be written again, and add the rule here — in the same piece of work.
