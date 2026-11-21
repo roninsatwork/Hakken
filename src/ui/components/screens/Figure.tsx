@@ -18,7 +18,7 @@ import { cn } from "@/src/ui/lib/utils";
  * figure the eye should land on first. `mark` goes before the label when the
  * figure is about one website — its `SiteMark` — as the competitor cards are.
  */
-export function Figure({ label, value, detail, href, arrow = true, framed = true, emphasis = false, named = false, mark }: {
+export function Figure({ label, value, detail, href, arrow = true, framed = true, emphasis = false, named = false, mark, foot }: {
   label: string;
   value: ReactNode;
   detail?: ReactNode;
@@ -30,6 +30,12 @@ export function Figure({ label, value, detail, href, arrow = true, framed = true
   /** The value is a name, not a number: smaller, so "Organic Search" doesn't fill the box over two lines (Anthony, 2026-11-06). */
   named?: boolean;
   mark?: ReactNode;
+  /**
+   * Something drawn at the figure's foot, such as a `Sparkline` of its days (the Dashboard's four numbers,
+   * dashboard-way-1-plan-2026-11-21.md). It sits at the bottom of the box, so in a row of figures the feet always line up
+   * however many lines the words above take (Anthony, 21 November 2026: "the graphs on the hero boxes always line up").
+   */
+  foot?: ReactNode;
 }) {
   const title = href && arrow ? `${label} →` : label;
   const body = (
@@ -45,11 +51,13 @@ export function Figure({ label, value, detail, href, arrow = true, framed = true
       )}
       <div className={cn("mt-1 font-semibold text-foreground", named ? "text-[16px]" : "text-[24px] tabular-nums")}>{value}</div>
       {detail !== undefined ? <div className="mt-1 text-[12px]">{detail}</div> : null}
+      {foot !== undefined ? <div data-part="figure-foot" className="mt-auto pt-3">{foot}</div> : null}
     </>
   );
-  const frame = framed
-    ? cn("rounded-2xl border px-5 py-4", emphasis ? "border-brand/40 bg-brand/5" : "border-border-dim bg-card/40")
-    : "rounded-lg";
+  const frame = cn(
+    framed ? cn("rounded-2xl border px-5 py-4", emphasis ? "border-brand/40 bg-brand/5" : "border-border-dim bg-card/40") : "rounded-lg",
+    foot !== undefined && "flex flex-col",
+  );
   if (!href) return <div data-part="figure" className={frame}>{body}</div>;
   return (
     <Link

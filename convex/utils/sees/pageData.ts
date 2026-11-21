@@ -142,6 +142,8 @@ export const CODE_FIRST_SECTIONS: ReadonlySet<string> = new Set<string>([
   // 7 November, on its hand-written test figures, as no website on dev has Bing connected: Keywords 9.7 cents to 6.6, Performance
   // 3.6, the same main points. Its first real press, once a website connects Bing, is checked by hand.
   "bing",
+  // 21 November: the client Dashboard joined with its own rules (dashboard-way-1-plan-2026-11-21.md), its four numbers found in code.
+  "dashboard",
 ]);
 /** Pages on the brief ahead of their section. */
 export const CODE_FIRST_PAGES: ReadonlySet<string> = new Set(["googleAnalytics.services"]);

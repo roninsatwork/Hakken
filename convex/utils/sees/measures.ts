@@ -213,6 +213,8 @@ const COUNTS: Record<string, Measure> = {
   boughtLost: { words: "purchases lost", kind: "count", lessIsBetter: true },
   eventsLost: { words: "events lost", kind: "count", lessIsBetter: true },
   events: { words: "events", kind: "count" },
+  // The client Dashboard's Bought box, counted as the redone Overview counts it: "100 sales" (own/dashboard.ts).
+  sales: { words: "sales", kind: "count" },
   // Overview's own (own/googleAnalyticsOverview.ts): how many times a thing was done, and how many of every 100 visits added to a basket.
   timesDone: { words: "times", kind: "count" },
   addedPerHundred: { words: "visits that added to a basket, for every 100 visits", kind: "score" },
@@ -245,6 +247,10 @@ const SCORES: Record<string, Measure> = {
   volatility: { words: "how much the results moved", kind: "score" },
   // Insights' (own/insights.ts): how many it takes for one enquiry, a visit counted for each Google click, a league's strength.
   visitsPerEnquiry: { words: "visits for one enquiry", kind: "score", lessIsBetter: true },
+  // The client Dashboard's own (own/dashboard.ts), by its boxes' names: the visits it took for one sale (Bought), or for one
+  // event where there's no shop (Events), as the redone Overview says "100 sales" and "events for every 100 visits".
+  visitsPerSale: { words: "visits for one sale", kind: "score", lessIsBetter: true },
+  visitsPerEvent: { words: "visits for one event", kind: "score", lessIsBetter: true },
   visitorsPerEnquiry: { words: "visitors for one enquiry", kind: "score", lessIsBetter: true },
   googleClicksPerEnquiry: { words: "Google clicks for one enquiry", kind: "score", lessIsBetter: true },
   peoplePerConversion: { words: "people for one conversion", kind: "score", lessIsBetter: true },

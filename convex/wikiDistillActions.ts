@@ -12,8 +12,10 @@ import {
   buildRewriteUserContent,
   linkKeyFor,
   parseDocumentTopicSuggestions,
+  splitDocumentIntoSections,
   validateRewrittenPage,
 } from "./wikiRewriteService";
+import { WIKI_SOURCE_NOTE_MAX_CHARS } from "./wikiPages";
 
 /**
  * The distiller (wiki-replaces-knowledge plan, stage one): a document in,
@@ -32,44 +34,45 @@ function errorSummary(error: unknown): string {
   return message.replace(/\s+/g, " ").trim().slice(0, 200) || "no detail given";
 }
 
-async function distilOne(
+/** What a person sees on a page's receipts: the address for a website
+ * page, the title for a file or pasted text. */
+function sourceLabelFor(args: { title: string; sourceUrl: string | null }): string {
+  return args.sourceUrl
+    ? `Website · ${args.sourceUrl.replace(/^https?:\/\//, "").slice(0, 80)}`
+    : `Document · ${args.title.slice(0, 80)}`;
+}
+
+/**
+ * One section of a document read into topic pages: the model names what the
+ * section establishes, each topic page is rewritten from that section's own
+ * words, and the topics are linked to each other and to the source note.
+ */
+async function distilSection(
   ctx: ActionCtx,
   args: {
-    /** A company's brain, or (undefined) the global shelf. */
     companyId: Id<"companies"> | undefined;
     documentId: string;
     title: string;
     sourceUrl: string | null;
-    text: string;
+    section: string;
+    sectionIndex: number;
+    sectionCount: number;
   }
 ): Promise<DistilResult> {
-  // FULL IMPORT FIRST (the playbook's mandatory order, wiki-agents plan
-  // phase 3): the document becomes its own wiki note, substantially
-  // intact, before any synthesis happens. Linking and synthesis follow.
-  const fullSourceLabel = args.sourceUrl
-    ? `Website · ${args.sourceUrl.replace(/^https?:\/\//, "").slice(0, 80)}`
-    : `Document · ${args.title.slice(0, 80)}`;
-  await ctx.runMutation(internal.wikiPages.upsertSourceNoteInternal, {
-    companyId: args.companyId,
-    documentId: args.documentId,
-    title: args.title,
-    text: args.text,
-    sourceLabel: fullSourceLabel,
-  });
-
   const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
     useCase: "fast-chat",
   });
-  const suggestionPrompt = `Document: ${args.title}\n\n${args.text}`;
+  const part = args.sectionCount > 1 ? ` (part ${args.sectionIndex + 1} of ${args.sectionCount})` : "";
+  const suggestionPrompt = `Document: ${args.title}${part}\n\n${args.section}`;
   const suggestionResponse = await generateTextWithResolvedModel({
     model,
-    systemInstruction: buildDocumentTopicInstruction(),
+    systemInstruction: buildDocumentTopicInstruction({ index: args.sectionIndex, count: args.sectionCount }),
     contents: [{ type: "text", text: suggestionPrompt }],
   });
   await ctx.runMutation(internal.wikiStaff.recordStaffModelCallInternal, {
     systemKey: "WIKI_DISTILLER",
     companyId: args.companyId,
-    actionContext: "Wiki Distilling: choosing topics",
+    actionContext: `Wiki Distilling: choosing topics${part}`,
     modelId: model.modelId,
     providerKey: model.providerKey,
     providerModelId: model.providerModelId,
@@ -78,12 +81,15 @@ async function distilOne(
     promptContent: suggestionPrompt,
     responseContent: suggestionResponse.text ?? "",
   });
-  const topics = parseDocumentTopicSuggestions(suggestionResponse.text ?? "");
-  // What a person sees on the page's receipts: the address for a website
-  // page, the title for a file or pasted text.
-  const sourceLabel = args.sourceUrl
-    ? `Website · ${args.sourceUrl.replace(/^https?:\/\//, "").slice(0, 80)}`
-    : `Document · ${args.title.slice(0, 80)}`;
+  // One page per subject, even when the model names it twice in a section.
+  const seen = new Set<string>();
+  const topics = parseDocumentTopicSuggestions(suggestionResponse.text ?? "").filter((topic) => {
+    const key = linkKeyFor(topic.kind, topic.slug);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const sourceLabel = sourceLabelFor(args);
   // The names the writing may [[reference]], for Obsidian-style density.
   const linkableNames = (
     await ctx.runQuery(internal.wikiPages.getWikiIndexInternal, {
@@ -95,7 +101,11 @@ async function distilOne(
     .filter((name) => !name.endsWith("-index"));
 
   const result: DistilResult = { pagesWritten: 0, pagesImproved: 0 };
+  const stillFiled = () =>
+    ctx.runQuery(internal.wikiDistill.isDocumentStillFiledInternal, { documentId: args.documentId });
   for (const topic of topics) {
+    // Deleted part-way through: nothing more is written for it.
+    if (!(await stillFiled())) return result;
     const page = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
       companyId: args.companyId,
       kind: topic.kind,
@@ -106,7 +116,9 @@ async function distilOne(
       currentContent: page?.content ?? "",
       pinnedCorrections: page?.pinnedCorrections ?? [],
       eventLabel: "company document",
-      eventText: `${topic.learned}\n\nFrom the document "${args.title}":\n${args.text.slice(0, 4000)}`,
+      // The section the topic came from, not the document's opening: a
+      // client named on page twelve is written from page twelve.
+      eventText: `${topic.learned}\n\nFrom the document "${args.title}"${part}:\n${args.section}`,
       otherPages: linkableNames,
     });
     const rewriteResponse = await generateTextWithResolvedModel({
@@ -141,7 +153,8 @@ async function distilOne(
     else result.pagesWritten += 1;
   }
 
-  // Topics established by the same document are related; both ends
+  if (!(await stillFiled())) return result;
+  // Topics established by the same section are related; both ends
   // recorded — and every topic links down to the source note it stands on,
   // the note up to each topic it taught (linking second, per the order).
   const sourceNoteKey = linkKeyFor("SOURCE", args.documentId);
@@ -168,6 +181,155 @@ async function distilOne(
   }
   return result;
 }
+
+/**
+ * A document in, topic pages out. The full source note is filed first, then
+ * the first section is read here and every later section in its own
+ * scheduled step (`distilDocumentSection`), one after another — so a sixty-
+ * page file is read to the end without any one step running long, and two
+ * sections never rewrite the same page at once.
+ */
+async function distilOne(
+  ctx: ActionCtx,
+  args: {
+    /** A company's brain, or (undefined) the global shelf. */
+    companyId: Id<"companies"> | undefined;
+    documentId: string;
+    title: string;
+    sourceUrl: string | null;
+    text: string;
+  }
+): Promise<DistilResult & { sectionCount: number }> {
+  // FULL IMPORT FIRST (the playbook's mandatory order, wiki-agents plan
+  // phase 3): the document becomes its own wiki note, substantially
+  // intact, before any synthesis happens. Linking and synthesis follow.
+  if (!(await ctx.runQuery(internal.wikiDistill.isDocumentStillFiledInternal, { documentId: args.documentId }))) {
+    return { pagesWritten: 0, pagesImproved: 0, sectionCount: 0 };
+  }
+  await ctx.runMutation(internal.wikiPages.upsertSourceNoteInternal, {
+    companyId: args.companyId,
+    documentId: args.documentId,
+    title: args.title,
+    text: args.text,
+    sourceLabel: sourceLabelFor(args),
+  });
+
+  const sections = splitDocumentIntoSections(args.text);
+  if (sections.length === 0) return { pagesWritten: 0, pagesImproved: 0, sectionCount: 0 };
+  const result = await distilSection(ctx, {
+    companyId: args.companyId,
+    documentId: args.documentId,
+    title: args.title,
+    sourceUrl: args.sourceUrl,
+    section: sections[0],
+    sectionIndex: 0,
+    sectionCount: sections.length,
+  });
+  if (sections.length > 1) {
+    await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilDocumentSection, {
+      documentId: args.documentId as Id<"knowledgeDocuments">,
+      sectionIndex: 1,
+      startedAt: Date.now(),
+    });
+  } else {
+    // The list pages follow at once, not at the nightly check-up: a client
+    // just learned is on the clients list the same minute. Mechanical.
+    await ctx.runMutation(internal.wikiPages.refreshHubPagesInternal, { companyId: args.companyId });
+    // What it now disagrees with is settled the same minute (wikiSettleOnArrival.ts).
+    await ctx.scheduler.runAfter(0, internal.wikiSettleOnArrival.settleDocumentPagesInternal, {
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      documentId: args.documentId,
+    });
+  }
+  // Deleted while it was being read: what was written after the delete goes.
+  await ctx.runMutation(internal.wikiDistill.forgetIfDeletedInternal, {
+    companyId: args.companyId,
+    documentId: args.documentId,
+    title: args.title,
+  });
+  return { ...result, sectionCount: sections.length };
+}
+
+/**
+ * A later section of a long document (client-work pages, 2026-11-12). Reads
+ * its own section, counts what it wrote on the progress panel, then hands on
+ * to the next. A section that fails is recorded and skipped rather than
+ * stopping the rest of the document; the last section records the run.
+ */
+export const distilDocumentSection = internalAction({
+  args: {
+    documentId: v.id("knowledgeDocuments"),
+    sectionIndex: v.number(),
+    /** When the later sections began, for the run the last one records. */
+    startedAt: v.number(),
+  },
+  handler: async (ctx, args): Promise<void> => {
+    if (!(await ctx.runQuery(internal.wikiStaff.isStaffActiveInternal, { systemKey: "WIKI_DISTILLER" }))) {
+      return;
+    }
+    const found = await ctx.runQuery(internal.wikiDistill.getDocumentSectionInternal, {
+      documentId: args.documentId,
+      sectionIndex: args.sectionIndex,
+    });
+    if (!found) return;
+    const companyId = found.companyId ?? undefined;
+    let result: DistilResult = { pagesWritten: 0, pagesImproved: 0 };
+    let failure: string | null = null;
+    try {
+      result = await distilSection(ctx, {
+        companyId,
+        documentId: args.documentId,
+        title: found.title,
+        sourceUrl: found.sourceUrl,
+        section: found.section,
+        sectionIndex: args.sectionIndex,
+        sectionCount: found.sectionCount,
+      });
+    } catch (error) {
+      console.error("The wiki could not read one part of a document; moving on to the next", error);
+      failure = errorSummary(error);
+    }
+    await ctx.runMutation(internal.wikiDistill.forgetIfDeletedInternal, {
+      companyId,
+      documentId: args.documentId,
+      title: found.title,
+    });
+    await ctx.runMutation(internal.wikiDistill.recordDistillProgressInternal, {
+      companyId,
+      documentsRead: 0,
+      pagesWritten: result.pagesWritten,
+      pagesImproved: result.pagesImproved,
+      lastDocumentTitle: found.title,
+    });
+    const isLast = args.sectionIndex + 1 >= found.sectionCount;
+    if (isLast) {
+      await ctx.runMutation(internal.wikiPages.refreshHubPagesInternal, { companyId });
+      // The whole document read: what it now disagrees with is settled (wikiSettleOnArrival.ts).
+      await ctx.scheduler.runAfter(0, internal.wikiSettleOnArrival.settleDocumentPagesInternal, {
+        ...(companyId ? { companyId } : {}),
+        documentId: args.documentId,
+      });
+    } else {
+      await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilDocumentSection, {
+        documentId: args.documentId,
+        sectionIndex: args.sectionIndex + 1,
+        startedAt: args.startedAt,
+      });
+    }
+    if (failure || isLast) {
+      await ctx.runMutation(internal.wikiStaff.recordStaffRunInternal, {
+        systemKey: "WIKI_DISTILLER",
+        companyId,
+        trigger: "EVENT",
+        objective: `Reading the rest of a long document: ${found.title.slice(0, 120)}`,
+        summary: failure
+          ? `Part ${args.sectionIndex + 1} of ${found.sectionCount} failed — ${failure}. The other parts are still read.`
+          : `Finished all ${found.sectionCount} parts.`,
+        startedAt: args.startedAt,
+      });
+    }
+  },
+});
 
 /**
  * The one-time catch-up for phase 3: documents distilled before the
@@ -217,6 +379,15 @@ export const refreshSourceNote = internalAction({
       documentId: args.documentId,
     });
     if (!document) return;
+    // The words before the refresh, so the pages this document taught can be
+    // brought in line with what changed (wiki-daily-checkup-plan.md, "a file
+    // changed"). Synthesis is no longer read-once: a changed source changes
+    // the topic pages it fed, the same night.
+    const before = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
+      companyId: document.companyId ?? undefined,
+      kind: "SOURCE",
+      subjectKey: args.documentId,
+    });
     await ctx.runMutation(internal.wikiPages.upsertSourceNoteInternal, {
       companyId: document.companyId ?? undefined,
       documentId: args.documentId,
@@ -230,6 +401,27 @@ export const refreshSourceNote = internalAction({
       companyId: document.companyId ?? undefined,
       documentId: args.documentId,
     });
+    const after = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
+      companyId: document.companyId ?? undefined,
+      kind: "SOURCE",
+      subjectKey: args.documentId,
+    });
+    // Longer than the note holds: what changed past it is reached by
+    // reading the whole document again (2026-11-12).
+    const changed = !before || !after || before.content.trim() !== after.content.trim();
+    if (changed && document.text.length > WIKI_SOURCE_NOTE_MAX_CHARS) {
+      await ctx.runMutation(internal.wikiDistill.rereadChangedDocumentInternal, { documentId: args.documentId });
+    }
+    if (before && after && before.content.trim() !== after.content.trim()) {
+      await ctx.runMutation(internal.wikiCheckupPages.recordSourceChangeInternal, {
+        companyId: document.companyId ?? undefined,
+        documentId: args.documentId,
+        kind: "CHANGED",
+        title: document.title,
+        oldContent: before.content,
+        newContent: after.content,
+      });
+    }
   },
 });
 
@@ -248,7 +440,7 @@ export const distilNewDocument = internalAction({
       documentId: args.documentId,
     });
     if (!document) return;
-    let result: DistilResult = { pagesWritten: 0, pagesImproved: 0 };
+    let result: DistilResult & { sectionCount: number } = { pagesWritten: 0, pagesImproved: 0, sectionCount: 0 };
     try {
       result = await distilOne(ctx, {
         companyId: document.companyId ?? undefined,
@@ -292,7 +484,10 @@ export const distilNewDocument = internalAction({
       companyId: document.companyId ?? undefined,
       trigger: "EVENT",
       objective: `A document finished importing: ${document.title.slice(0, 120)}`,
-      summary: `Wrote ${result.pagesWritten} pages, improved ${result.pagesImproved}, plus the full source note.`,
+      summary:
+        result.sectionCount > 1
+          ? `Read part 1 of ${result.sectionCount}: wrote ${result.pagesWritten} pages, improved ${result.pagesImproved}, plus the full source note. The other parts follow.`
+          : `Wrote ${result.pagesWritten} pages, improved ${result.pagesImproved}, plus the full source note.`,
       startedAt: hookStartedAt,
     });
   },

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { WIKI_PICK_TIME_LIMIT_MS, WIKI_SHORTLIST_SIZE } from "./wikiActions";
+import { WIKI_PAGES_PER_ANSWER, WIKI_PICK_TIME_LIMIT_MS, WIKI_SHORTLIST_SIZE } from "./wikiActions";
 
 /**
  * The wiki's reading and writing roads (wiki-replaces-knowledge, stage two;
@@ -34,7 +34,7 @@ async function seedPage(
   t: ReturnType<typeof convexTest>,
   args: {
     companyId?: Id<"companies">;
-    kind: "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE";
+    kind: "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE";
     subjectKey: string;
     content: string;
   }
@@ -238,6 +238,33 @@ describe("choosing pages for a question", () => {
   });
 });
 
+describe("how much one answer reads (2026-11-12)", () => {
+  // Four pages covered a question about one client; "what healthcare work
+  // has he done" needs the detail of more than four.
+  test("a typed answer opens up to eight chosen pages whole, and no more", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const names = Array.from({ length: 10 }, (_, i) => `health-client-${i}`);
+    for (const name of names) {
+      await seedPage(t, { companyId, kind: "CLIENT", subjectKey: name, content: `${"Health app work. ".repeat(200)}${name} ended.` });
+    }
+    generateTextWithResolvedModelMock.mockResolvedValue({
+      text: JSON.stringify({ pages: names.map((name) => `CLIENT:${name}`) }),
+    });
+
+    const result = await t.action(internal.wikiActions.selectWikiContextForQuery, {
+      companyId,
+      query: "what healthcare work has he done",
+      includeCustomerPages: false,
+    });
+
+    expect(WIKI_PAGES_PER_ANSWER).toBe(8);
+    expect(result.pageKeys).toEqual(names.slice(0, 8).map((name) => `CLIENT:${name}`));
+    // Every one of the eight is opened whole, not cut short by the budget.
+    for (const name of names.slice(0, 8)) expect(result.context).toContain(`${name} ended.`);
+  });
+});
+
 describe("the shortlist the chooser reads", () => {
   // Elsewhere on this code a whole index (~250 entries) took the Fast Chat model
   // 50–104 seconds to read, whatever its thinking setting; a short one takes seconds.
@@ -290,6 +317,52 @@ describe("the shortlist the chooser reads", () => {
     });
 
     expect(indexLinesShown()).toHaveLength(WIKI_SHORTLIST_SIZE);
+  });
+
+  test("the company's list pages always make the shortlist, so 'who have we worked with' can find every client", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    await seedShelf(t, companyId);
+    await seedPage(t, { companyId, kind: "CLIENT", subjectKey: "papa-johns", content: "An ordering app for Papa Johns." });
+    await t.mutation(internal.wikiPages.refreshHubPagesInternal, { companyId });
+
+    generateTextWithResolvedModelMock.mockResolvedValue({ text: JSON.stringify({ pages: [] }) });
+
+    await t.action(internal.wikiActions.selectWikiContextForQuery, {
+      companyId,
+      query: "zzz qqq",
+      includeCustomerPages: false,
+    });
+
+    const lines = indexLinesShown();
+    expect(lines).toHaveLength(WIKI_SHORTLIST_SIZE);
+    expect(lines.some((line) => line.startsWith("CLIENT:clients-index"))).toBe(true);
+    expect(lines.some((line) => line.startsWith("POLICY:policies-index"))).toBe(true);
+  });
+
+  test("a follow-up that names nothing still reaches the pages the earlier question was about", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    // A shelf whose every page answers to the follow-up's own words.
+    for (let i = 0; i < WIKI_SHORTLIST_SIZE + 10; i++) {
+      await seedPage(t, { companyId, kind: "POLICY", subjectKey: `routine-${i}`, content: `What did we do for them, routine ${i}.` });
+    }
+    await seedPage(t, { companyId, kind: "CLIENT", subjectKey: "papa-johns", content: "Papa Johns: an ordering app rebuilt from scratch." });
+
+    generateTextWithResolvedModelMock.mockResolvedValue({ text: JSON.stringify({ pages: ["CLIENT:papa-johns"] }) });
+
+    const result = await t.action(internal.wikiActions.selectWikiContextForQuery, {
+      companyId,
+      query: "what did we do for them",
+      earlierQuestion: "tell me about papa johns",
+      includeCustomerPages: false,
+    });
+
+    const prompt = generateTextWithResolvedModelMock.mock.calls[0][0].contents[0].text as string;
+    expect(prompt).toContain("Earlier question in this conversation");
+    expect(prompt).toContain("tell me about papa johns");
+    expect(indexLinesShown().some((line) => line.startsWith("CLIENT:papa-johns"))).toBe(true);
+    expect(result.context).toContain("rebuilt from scratch");
   });
 
   test("when the chooser is late, the search's best matches are opened", async () => {

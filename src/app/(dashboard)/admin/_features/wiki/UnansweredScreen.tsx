@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { MessageCircleQuestion } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -11,10 +11,10 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { CountFilters, type CountFilter } from "@/src/ui/components/screens/CountFilters";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 
 type ScopeFilter = "ALL" | "PLATFORM" | "COMPANIES";
 
@@ -38,12 +38,10 @@ type Row = {
 export function UnansweredScreen({
   companyId,
   feedWikiHref,
-  showWorkspaceNav,
 }: {
   companyId?: Id<"companies">;
   /** Where "Feed the wiki" sends the reader in company mode. */
   feedWikiHref?: string;
-  showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiUnanswered");
   const action = useAdminAction({ scope: "admin-wiki-unanswered" });
@@ -69,10 +67,15 @@ export function UnansweredScreen({
 
   const isLoading = rows.isLoading;
 
-  const scopeOptions: Array<{ value: ScopeFilter; label: string }> = [
-    { value: "ALL", label: t("filter.all") },
-    { value: "PLATFORM", label: t("filter.platform") },
-    { value: "COMPANIES", label: t("filter.companies") },
+  // How many open gaps each choice holds, so the choices are counts you can press (Sonae `ee280513`;
+  // wiki-sonae-catch-up-plan-2026-11-21.md, S7). Counted to a cap: past it a count reads "1,000+".
+  const counts = useQuery(api.wikiFeedback.countAllUnanswered, companyId ? "skip" : {});
+  const counted = (value: number | undefined) =>
+    value === undefined ? "–" : `${value.toLocaleString("en-GB")}${counts?.capped ? "+" : ""}`;
+  const scopeOptions: Array<CountFilter<ScopeFilter>> = [
+    { key: "ALL", label: t("filter.all"), count: counted(counts?.all) },
+    { key: "PLATFORM", label: t("filter.platform"), count: counted(counts?.platform) },
+    { key: "COMPANIES", label: t("filter.companies"), count: counted(counts?.companies) },
   ];
 
   const dismiss = (row: Row) =>
@@ -93,10 +96,7 @@ export function UnansweredScreen({
         icon={<MessageCircleQuestion className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={companyId ? t("subtitleCompany") : t("subtitle")}
-        divider
       />
-
-      {showWorkspaceNav && <AiWorkspaceNav />}
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">
         {companyId ? t("hintCompany") : t("hint")}
@@ -109,23 +109,7 @@ export function UnansweredScreen({
         filters={
           <>
           {!companyId && (
-            <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">
-              {scopeOptions.map((option) => (
-                /* Raw: segmented filter — the active option swaps its colours; no kit variant is stateful. */
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setScope(option.value)}
-                  className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
-                    scope === option.value
-                      ? "bg-brand text-on-brand"
-                      : "text-secondary hover:text-foreground"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <CountFilters label={t("filter.label")} items={scopeOptions} value={scope} onChange={setScope} />
           )}
           </>
         }
@@ -198,13 +182,14 @@ export function UnansweredScreen({
             className: "whitespace-nowrap",
             cell: (row) => (
               <>
+                {/* Feeding the wiki is its Add to the wiki page (wiki-sonae-catch-up-plan-2026-11-21.md, S6). */}
                 <Link
                   href={
                     companyId
-                      ? (feedWikiHref ?? "../pages")
+                      ? (feedWikiHref ?? "../pages/add")
                       : row.companyId
-                        ? `/admin/companies/${row.companyId}/ai/pages`
-                        : "/admin/ai/knowledge"
+                        ? `/admin/companies/${row.companyId}/ai/pages/add`
+                        : "/admin/ai/knowledge/add"
                   }
                   className="px-3 py-1 rounded-[8px] bg-brand text-on-brand text-[12px] font-medium hover:opacity-90 transition-opacity mr-2"
                 >

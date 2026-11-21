@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useSiteIdOnPage } from "@/src/hooks/useSiteIdOnPage";
 import { useLocale, useTranslations } from "next-intl";
-import { useParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -14,8 +14,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 export function useEventName(): (eventName: string) => string {
   const t = useTranslations("googleAnalytics.events");
   const language = useLocale();
-  const params = useParams<{ siteId?: string }>();
-  const siteId = params?.siteId as Id<"companyWebsites"> | undefined;
+  const siteId = useSiteIdOnPage() as Id<"companyWebsites"> | undefined;
   const plain = useQuery(api.googleAnalyticsEventNames.analyticsEventNames, siteId ? { siteId, language } : "skip");
   return (eventName) => plain?.[eventName] ?? (t.has(eventName) ? t(eventName) : wordsOf(eventName));
 }

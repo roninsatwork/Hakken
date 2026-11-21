@@ -96,3 +96,22 @@ export const PRINT_PALETTE = {
   bad: "#EF4444",
   watch: "#F59E0B",
 } as const;
+
+/**
+ * The wiki map's kinds of page (WikiConstellation.tsx), each page drawn as a cloud of dots in its kind's colour. The
+ * upstream framework's colours, with two changed for Anthony's red/green colour blindness on 2026-11-21
+ * (wiki-sonae-catch-up-plan-2026-11-21.md, "The map's look"): Products gold, as amber read as the same brown as Issues,
+ * and Policies raspberry, as violet turned into the same blue as Customers. Every pair stays at least 15 apart
+ * (CIEDE2000) in normal, red-blind and green-blind sight, held by `constellationColours.test.ts`, and the key names every
+ * kind in words, so colour never carries the meaning alone.
+ */
+export const WIKI_KIND_RGB: Record<string, readonly [number, number, number]> = {
+  CUSTOMER: [57, 135, 229],
+  CLIENT: [29, 84, 156],
+  PRODUCT: [255, 170, 0],
+  POLICY: [226, 54, 112],
+  ISSUE: [217, 89, 38],
+  GOAL: [158, 197, 244],
+  SOURCE: [142, 142, 147],
+};
+

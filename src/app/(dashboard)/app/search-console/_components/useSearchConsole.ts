@@ -1,6 +1,7 @@
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useSiteIdOnPage } from "@/src/hooks/useSiteIdOnPage";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -100,8 +101,8 @@ export function useSearchConsoleHref(siteId: string): (segment: string, extra?: 
 }
 
 export function useSearchConsoleSiteId(): Id<"companyWebsites"> {
-  const params = useParams<{ siteId: string }>();
-  return params.siteId as Id<"companyWebsites">;
+  // The address's website, or the one the Dashboard hands its sections (useSiteIdOnPage).
+  return useSiteIdOnPage() as Id<"companyWebsites">;
 }
 
 /** The site's connection as its pages show it: the same subscription the layout reads. */

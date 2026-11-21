@@ -13,9 +13,12 @@ import { OUTBOX_QUEUE_AGENT, OUTBOX_SCHEDULE, OUTBOX_STUCK_MS, OUTBOX_STUCK_REMI
  * email is queued: emails wait for its next run (Anthony, 2026-10-07).
  *
  * An hourly watch keeps it there and tells the super admins in their bell when
- * emails have waited more than two hours — switched off, its schedule
- * stopped, or broken — at most once a day while it lasts. The bell does not
- * go through the Outbox, so it gets through.
+ * emails have waited more than two hours while the agent and its schedule are
+ * both on, so something is broken, at most once a day while it lasts. Switched
+ * off or stopped, it says nothing: a person did that on purpose, and the
+ * Outbox screen shows what waits (Anthony, 21 November 2026: "the
+ * functionality is turned off why is it still referencing it"). The bell does
+ * not go through the Outbox, so it gets through.
  */
 
 /** Idempotent: the agent, made once and kept in step, and its hourly schedule made with it. Never overwrites its switch or a changed schedule. */
@@ -59,12 +62,17 @@ export const ensureOutboxAgentInternal = internalMutation({
   },
 });
 
-/** The super admins told when emails have waited too long — once a day at most, while it lasts. */
+/** The super admins told when emails have waited too long with the Outbox on, once a day at most, while it lasts. */
 export const tellIfStuckInternal = internalMutation({
   args: {},
   returns: v.object({ waiting: v.number(), told: v.number() }),
   handler: async (ctx) => {
     const now = Date.now();
+    // Switched off, or its schedule stopped, on purpose: emails wait by choice, and nobody is told.
+    const agent = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", OUTBOX_QUEUE_AGENT.systemKey)).first();
+    if (agent?.isActive === false) return { waiting: 0, told: 0 };
+    const schedules = agent ? await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", agent._id)).take(20) : [];
+    if (schedules.length > 0 && schedules.every((schedule) => schedule.isActive === false)) return { waiting: 0, told: 0 };
     const oldest = await ctx.db
       .query("outboxMessages")
       .withIndex("by_status_due", (q) => q.eq("status", "WAITING").lte("dueAt", now - OUTBOX_STUCK_MS))
@@ -84,7 +92,7 @@ export const tellIfStuckInternal = internalMutation({
         userId: admin._id,
         kind: "OUTBOX_STUCK",
         title: `${count} ${oldest.length === 1 ? "email has" : "emails have"} waited in the Outbox for more than 2 hours`,
-        body: `The oldest has waited since ${since} UTC. Check that the ${OUTBOX_QUEUE_AGENT.name} is switched on and its schedule is running.`,
+        body: `The oldest has waited since ${since} UTC. The ${OUTBOX_QUEUE_AGENT.name} and its schedule are both on, so look at its last runs to see what stopped them.`,
         href: "/admin/content/outbox",
         createdAt: now,
       });

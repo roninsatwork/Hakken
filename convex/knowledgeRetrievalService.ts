@@ -111,6 +111,7 @@ export function applyChunkPriors<IdType extends string>(
  */
 export type KnowledgeRetrievalScope =
   | { kind: "company"; companyId: string }
-  | { kind: "agent"; agentId: string }
+  // The asking company, or none for the platform's knowledge only (Sonae `20f34fa6`): never another company's.
+  | { kind: "agent"; agentId: string; companyId: string | undefined }
   | { kind: "thread"; threadId: string }
   | { kind: "global" };

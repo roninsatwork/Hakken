@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { Info, Scale } from "lucide-react";
@@ -55,11 +55,8 @@ const MODES: DecisionMode[] = ["OFF", "ASK_A_PERSON", "ACT"];
  */
 export function DecisionsScreen({
   companyId,
-  nav,
 }: {
   companyId?: Id<"companies">;
-  /** The platform screen's AI tab strip; the company screen sits inside a DetailLayout and has none. */
-  nav?: ReactNode;
 }) {
   const t = useTranslations("admin.decisions");
   const tDecisions = useTranslations("decisions");
@@ -140,14 +137,12 @@ export function DecisionsScreen({
 
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
+      {/* No rule: the platform screen sits in the AI section's frame and the company one in its DetailLayout, which each draw it. */}
       <PageHeader
-        divider={!companyId}
         icon={<Scale className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={companyId ? t("companySubtitle") : t("subtitle")}
       />
-
-      {nav}
 
       <div className="flex items-start gap-4 p-4 bg-warning/5 border border-warning/30 rounded-[12px]">
         <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-warning" />

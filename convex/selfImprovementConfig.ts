@@ -36,6 +36,12 @@ export type SelfImprovementConfig = {
    * audit row, and stay removable from the memory screens.
    */
   autonomousMemory: boolean;
+  /**
+   * Decided 2026-11-09 (wiki-daily-checkup-plan.md): the wiki settles
+   * disputed and out-of-date facts itself, by the plan's settling rules,
+   * with no person in the loop. Off: findings become open questions again.
+   */
+  autonomousWiki: boolean;
 };
 
 export const SELF_IMPROVEMENT_DEFAULTS: SelfImprovementConfig = {
@@ -44,6 +50,7 @@ export const SELF_IMPROVEMENT_DEFAULTS: SelfImprovementConfig = {
   endUserFeedback: true,
   retrievalPriors: true,
   autonomousMemory: true,
+  autonomousWiki: true,
 };
 
 /**
@@ -73,6 +80,7 @@ export function parseSelfImprovementConfig(value: string | undefined | null): Se
     endUserFeedback: pick("endUserFeedback"),
     retrievalPriors: pick("retrievalPriors"),
     autonomousMemory: pick("autonomousMemory"),
+    autonomousWiki: pick("autonomousWiki"),
   };
 }
 
@@ -100,25 +108,28 @@ export const updateConfig = superAdminMutation({
     endUserFeedback: v.boolean(),
     retrievalPriors: v.boolean(),
     autonomousMemory: v.boolean(),
+    // Optional so a screen from before the switch existed still saves; an
+    // absent value keeps whatever is stored.
+    autonomousWiki: v.optional(v.boolean()),
   },
   returns: tailShapes.selfImprovementConfigShape,
   handler: async (ctx, args) => {
     const { userId } = ctx;
     const now = Date.now();
+    const existing = await ctx.db
+      .query("systemConfig")
+      .withIndex("by_key", (q) => q.eq("key", SELF_IMPROVEMENT_CONFIG_KEY))
+      .first();
+    const previous = parseSelfImprovementConfig(existing?.value);
     const next: SelfImprovementConfig = {
       autoReflection: args.autoReflection,
       outcomeWeightedRanking: args.outcomeWeightedRanking,
       endUserFeedback: args.endUserFeedback,
       retrievalPriors: args.retrievalPriors,
       autonomousMemory: args.autonomousMemory,
+      autonomousWiki: args.autonomousWiki ?? previous.autonomousWiki,
     };
     const value = JSON.stringify(next);
-
-    const existing = await ctx.db
-      .query("systemConfig")
-      .withIndex("by_key", (q) => q.eq("key", SELF_IMPROVEMENT_CONFIG_KEY))
-      .first();
-    const previous = parseSelfImprovementConfig(existing?.value);
 
     if (existing) {
       await ctx.db.patch(existing._id, { value, updatedAt: now, updatedBy: userId });

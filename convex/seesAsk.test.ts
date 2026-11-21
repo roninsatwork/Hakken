@@ -9,6 +9,8 @@ import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
 import { stillStands } from "./seesAsk";
 import { ANALYTICS_READ } from "./utils/agentTools";
 import { SEES_MODEL_USE_CASE } from "./aiModelService";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { writeFeaturesOff } from "./utils/featureSwitchReads";
 
 /**
  * The eye asks the Insights team (sees-conversion-specialist-plan-2026-10-30.md):
@@ -479,6 +481,30 @@ describe("the eye on every page (sees-every-page-plan-2026-10-31.md, phase 1)", 
     const user = t.withIdentity({ subject: userId });
     await expect(user.mutation(api.seesAsk.askSees, { ...keywordsPage(siteId), screen: "insights.strategy", path: "/app/insights/strategy" })).rejects.toThrow("the team's own");
     await expect(user.mutation(api.seesAsk.askSees, { ...keywordsPage(siteId), screen: "somewhere.else" })).rejects.toThrow("no eye");
+  });
+
+  test("the client Dashboard's eye is pressed at /app, whatever sections are off, and only the app's own addresses are taken", async () => {
+    // dashboard-way-1-plan-2026-11-21.md, "The eye": the page is always on, so its eye answers to no section's switch.
+    const t = harness();
+    const { companyId, siteId, userId } = await seed(t);
+    await t.run(async (ctx) => {
+      await writeFeaturesOff(ctx, companyId, [MENU_FEATURES.googleAnalytics, MENU_FEATURES.searchConsole, MENU_FEATURES.insights]);
+      await ctx.db.insert("agents", { name: "INSIGHTS_ANALYST", systemKey: "INSIGHTS_ANALYST", modelId: "test", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 });
+    });
+    const user = t.withIdentity({ subject: userId });
+    const dashboard = (path: string) => ({
+      ...keywordsPage(siteId), screen: "dashboard.home", path, links: [],
+      data: { shop: true, websites: ["acme-shop.test"], analytics: { visits: { now: 900, before: 1000, days: [] }, done: { now: 30, before: 25, days: [] } }, searchConsole: null },
+    });
+    // Asked first: a saved answer for the same page and figures stands before the address is read.
+    await expect(user.mutation(api.seesAsk.askSees, dashboard("/apple"))).rejects.toThrow("not one of the app's");
+    await expect(user.mutation(api.seesAsk.askSees, dashboard("https://elsewhere.test/app"))).rejects.toThrow("not one of the app's");
+    const all = await user.mutation(api.seesAsk.askSees, dashboard("/app"));
+    expect(all.status).toBe("RESEARCHING");
+    // The website menu's choice keeps its own answer: every website's figures and one website's never share one.
+    const one = await user.mutation(api.seesAsk.askSees, dashboard(`/app?site=${siteId}`));
+    expect(one.key).not.toBe(all.key);
+    await finishScheduled(t);
   });
 });
 

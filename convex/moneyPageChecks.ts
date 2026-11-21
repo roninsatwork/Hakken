@@ -147,10 +147,11 @@ export async function readPage(ctx: ActionCtx, address: string): Promise<{ struc
   if (facts.words < THIN_PAGE && process.env.FIRECRAWL_API_KEY) {
     const rendered = await (async () => {
       try {
-        const renderedResponse = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        // Firecrawl's v2 (its v1 stops on 2026-12-10), read fresh rather than from its two-day copy.
+        const renderedResponse = await fetch("https://api.firecrawl.dev/v2/scrape", {
           method: "POST",
           headers: { Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ url: address, formats: ["markdown"], onlyMainContent: false }),
+          body: JSON.stringify({ url: address, formats: ["markdown"], onlyMainContent: false, maxAge: 0 }),
           signal: AbortSignal.timeout(15_000),
         });
         const bounded = await readBoundedBody(renderedResponse, FIRECRAWL_PAGE_MAX_RESPONSE_BYTES);

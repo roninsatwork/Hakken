@@ -68,13 +68,13 @@ export const recordAnswerOutcomeInternal = internalMutation({
         const separator = key.indexOf(":");
         if (separator <= 0) continue;
         const kind = key.slice(0, separator);
-        if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "SOURCE"].includes(kind)) continue;
+        if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "CLIENT", "SOURCE"].includes(kind)) continue;
         const page = await ctx.db
           .query("wikiPages")
           .withIndex("by_company_kind_subject", (q) =>
             q
               .eq("companyId", isGlobal ? undefined : args.companyId)
-              .eq("kind", kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE")
+              .eq("kind", kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE")
               .eq("subjectKey", key.slice(separator + 1))
           )
           .unique();
@@ -86,39 +86,28 @@ export const recordAnswerOutcomeInternal = internalMutation({
       }
 
       // An answered asking closes the gap a failed one opened (phase 1):
-      // the row resolves itself, no button pressed. An answer that stood
-      // on a platform page also closes the platform's matching row — the
-      // global brain evidently covers it now (Anthony's routing rule).
+      // the row resolves itself, no button pressed. Each side closes only
+      // its own rows: a company's asking never touches the platform's list
+      // (Anthony, 2026-11-12 — see logGap).
       const key = questionKey(args.question);
       if (key) {
-        const scopes: Array<Id<"companies"> | undefined> = [];
-        if (args.companyId) scopes.push(args.companyId);
-        if (!args.companyId || args.pageKeys.some((k) => k.startsWith("global/"))) {
-          scopes.push(undefined);
-        }
-        for (const scope of scopes) {
-          const open = await ctx.db
-            .query("wikiUnansweredQuestions")
-            .withIndex("by_company_key", (q) =>
-              q.eq("companyId", scope).eq("normalizedKey", key)
-            )
-            .unique();
-          if (open && open.status === "OPEN") {
-            await ctx.db.patch(open._id, { status: "RESOLVED", resolvedAt: now });
-          }
+        const open = await ctx.db
+          .query("wikiUnansweredQuestions")
+          .withIndex("by_company_key", (q) =>
+            q.eq("companyId", args.companyId).eq("normalizedKey", key)
+          )
+          .unique();
+        if (open && open.status === "OPEN") {
+          await ctx.db.patch(open._id, { status: "RESOLVED", resolvedAt: now });
         }
       }
       return;
     }
 
     // No pages under the answer: the gap is logged, once, and counted on
-    // repeats. WHOSE gap it is follows Anthony's routing rule
-    // (2026-08-17): a company with pages of its own owns its misses; a
-    // company whose wiki is empty was answering purely from the global
-    // brain, so the miss strengthens the global knowledge — one platform
-    // row, counting the companies that hit it, fixed once for everyone.
-    // The global AI's own conversations go straight to the platform row.
-    // Whether this is a real question is the greeting-list rule's call,
+    // repeats, always under the company that asked (see logGap). The
+    // global AI's own conversations go to the platform row. Whether this
+    // is a real question is the greeting-list rule's call,
     // and the Decision's (decisions-typesafe-plan.md, Phase F.4) once this
     // write is done: it judges after the fact and corrects the list when it
     // is sure the rule was wrong either way.
@@ -133,7 +122,17 @@ export const recordAnswerOutcomeInternal = internalMutation({
   },
 });
 
-/** The gap, logged once and counted on repeats, under the scope the routing rule says owns it. */
+/**
+ * The gap, logged once and counted on repeats, under the company that asked.
+ *
+ * A company's question is that company's data and never leaves it (Anthony,
+ * 2026-11-12). This replaces the 2026-08-17 routing rule, which sent the
+ * misses of a company with an empty wiki to the platform's list: the
+ * platform check-up then searched the web for one company's question and
+ * filed the result on the shared shelf, where every company's answers could
+ * read it. Do not restore it. Only the global AI's own conversations (no
+ * company) log to the platform's list.
+ */
 async function logGap(
   ctx: MutationCtx,
   args: { companyId?: Id<"companies">; question: string; now: number },
@@ -141,30 +140,12 @@ async function logGap(
     const now = args.now;
     const key = questionKey(args.question);
     if (!key) return;
-
-    let scope: Id<"companies"> | undefined = args.companyId;
-    if (args.companyId) {
-      const hasOwnPages = await ctx.db
-        .query("wikiPages")
-        .withIndex("by_company_updated", (q) => q.eq("companyId", args.companyId))
-        .first();
-      if (!hasOwnPages) scope = undefined;
-    }
+    const scope = args.companyId;
 
     const existing = await ctx.db
       .query("wikiUnansweredQuestions")
       .withIndex("by_company_key", (q) => q.eq("companyId", scope).eq("normalizedKey", key))
       .unique();
-
-    // Platform rows count distinct asking companies, capped, never shown
-    // by name on screen.
-    const mergeCompanies = (json: string | undefined): string | undefined => {
-      if (scope !== undefined || !args.companyId) return json;
-      const list: string[] = json ? (JSON.parse(json) as string[]) : [];
-      const id = args.companyId.toString();
-      if (!list.includes(id) && list.length < 100) list.push(id);
-      return JSON.stringify(list);
-    };
 
     if (!existing) {
       await ctx.db.insert("wikiUnansweredQuestions", {
@@ -172,9 +153,6 @@ async function logGap(
         question: displayQuestion(args.question),
         normalizedKey: key,
         askCount: 1,
-        ...(scope === undefined && args.companyId
-          ? { companiesJson: JSON.stringify([args.companyId.toString()]) }
-          : {}),
         status: "OPEN",
         firstAskedAt: now,
         lastAskedAt: now,
@@ -182,11 +160,7 @@ async function logGap(
       return;
     }
     if (existing.status === "DISMISSED") {
-      await ctx.db.patch(existing._id, {
-        askCount: existing.askCount + 1,
-        lastAskedAt: now,
-        ...(scope === undefined ? { companiesJson: mergeCompanies(existing.companiesJson) } : {}),
-      });
+      await ctx.db.patch(existing._id, { askCount: existing.askCount + 1, lastAskedAt: now });
       return;
     }
     await ctx.db.patch(existing._id, {
@@ -194,9 +168,64 @@ async function logGap(
       lastAskedAt: now,
       status: "OPEN",
       resolvedAt: undefined,
-      ...(scope === undefined ? { companiesJson: mergeCompanies(existing.companiesJson) } : {}),
     });
 }
+
+/**
+ * One-off clean-up (Anthony, 2026-11-12): send every company question the
+ * retired routing rule filed on the platform's list back to the company that
+ * asked it, merged into that company's own row, then take it off the
+ * platform's list. Run from the command line by the operator.
+ */
+export const returnCompanyQuestionsHomeInternal = internalMutation({
+  args: {},
+  handler: async (ctx): Promise<{ moved: number; checked: number }> => {
+    const platformRows = await ctx.db
+      .query("wikiUnansweredQuestions")
+      .withIndex("by_company_key", (q) => q.eq("companyId", undefined))
+      .take(500);
+    let moved = 0;
+    for (const row of platformRows) {
+      if (!row.companiesJson) continue;
+      const companyIds = (JSON.parse(row.companiesJson) as string[])
+        .map((id) => ctx.db.normalizeId("companies", id))
+        .filter((id): id is Id<"companies"> => id !== null);
+      for (const companyId of companyIds) {
+        const own = await ctx.db
+          .query("wikiUnansweredQuestions")
+          .withIndex("by_company_key", (q) => q.eq("companyId", companyId).eq("normalizedKey", row.normalizedKey))
+          .unique();
+        if (own) {
+          await ctx.db.patch(own._id, {
+            askCount: own.askCount + row.askCount,
+            lastAskedAt: Math.max(own.lastAskedAt, row.lastAskedAt),
+          });
+        } else {
+          await ctx.db.insert("wikiUnansweredQuestions", {
+            companyId,
+            question: row.question,
+            normalizedKey: row.normalizedKey,
+            askCount: row.askCount,
+            status: row.status,
+            firstAskedAt: row.firstAskedAt,
+            lastAskedAt: row.lastAskedAt,
+            ...(row.resolvedAt ? { resolvedAt: row.resolvedAt } : {}),
+          });
+        }
+      }
+      await ctx.db.delete(row._id);
+      await ctx.db.insert("auditLogs", {
+        actionType: "WIKI_UNANSWERED_RETURNED",
+        entityId: row._id.toString(),
+        entityType: "wikiUnansweredQuestions",
+        timestamp: Date.now(),
+        metadata: JSON.stringify({ companies: companyIds.length }),
+      });
+      moved += 1;
+    }
+    return { moved, checked: platformRows.length };
+  },
+});
 
 /**
  * The real-question Decision's correction, when it is sure the rule was
@@ -216,14 +245,14 @@ export const recordJudgedGapInternal = internalMutation({
     }
     const key = questionKey(args.question);
     if (!key) return;
-    for (const scope of [args.companyId, undefined]) {
-      const existing = await ctx.db
-        .query("wikiUnansweredQuestions")
-        .withIndex("by_company_key", (q) => q.eq("companyId", scope).eq("normalizedKey", key))
-        .unique();
-      if (existing && existing.status === "OPEN") {
-        await ctx.db.patch(existing._id, { status: "DISMISSED", resolvedAt: Date.now() });
-      }
+    // Only the asker's own list: a company's question never touches the
+    // platform's (see logGap).
+    const existing = await ctx.db
+      .query("wikiUnansweredQuestions")
+      .withIndex("by_company_key", (q) => q.eq("companyId", args.companyId).eq("normalizedKey", key))
+      .unique();
+    if (existing && existing.status === "OPEN") {
+      await ctx.db.patch(existing._id, { status: "DISMISSED", resolvedAt: Date.now() });
     }
   },
 });
@@ -331,6 +360,34 @@ export const listAllUnanswered = superAdminQuery({
       });
     }
     return { ...page, page: rows };
+  },
+});
+
+/**
+ * How many open gaps there are, all together and split by whose they are,
+ * for the counts over the platform's Unanswered table (the admin AI redesign,
+ * 2026-11-12: the All / Platform / Companies buttons became counts you can
+ * press). Counted up to a cap; past it the screen says "1,000+".
+ */
+const UNANSWERED_COUNT_CAP = 1000;
+
+export const countAllUnanswered = superAdminQuery({
+  args: {},
+  returns: platformShapes.unansweredCountsShape,
+  handler: async (ctx) => {
+    const rows = await ctx.db
+      .query("wikiUnansweredQuestions")
+      .withIndex("by_status_asked", (q) => q.eq("status", "OPEN"))
+      .take(UNANSWERED_COUNT_CAP + 1);
+    const capped = rows.length > UNANSWERED_COUNT_CAP;
+    const counted = capped ? rows.slice(0, UNANSWERED_COUNT_CAP) : rows;
+    const companies = counted.filter((row) => row.companyId).length;
+    return {
+      all: counted.length,
+      platform: counted.length - companies,
+      companies,
+      capped,
+    };
   },
 });
 

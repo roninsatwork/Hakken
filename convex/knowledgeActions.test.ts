@@ -80,25 +80,29 @@ describe("knowledge actions", () => {
     ).rejects.toThrow("SSRF Prevention");
   });
 
-  test("website mapping caps the links returned by the provider", async () => {
+  test("website mapping reads Firecrawl v2's page entries and caps them", async () => {
     process.env.FIRECRAWL_API_KEY = "test-key";
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const adminId = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Company", createdAt: Date.now() });
       return await ctx.db.insert("users", { email: "admin@example.com", role: "ADMIN", companyId });
     });
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+    // v2 lists each page as an object, not a bare address (wiki-sonae-catch-up-plan-2026-11-21.md, 0.1).
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({
       success: true,
       links: Array.from(
         { length: KNOWLEDGE_WEBSITE_URLS_PER_REQUEST + 20 },
-        (_, index) => `https://example.com/${index}`,
+        (_, index) => ({ url: `https://example.com/${index}`, title: `Page ${index}`, description: "" }),
       ),
-    }), { status: 200, headers: { "content-type": "application/json" } })));
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
 
     const links = await t.withIdentity({ subject: adminId }).action(api.knowledgeActions.mapWebsite, {
       url: "https://example.com",
     });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.firecrawl.dev/v2/map");
     expect(links).toHaveLength(KNOWLEDGE_WEBSITE_URLS_PER_REQUEST);
+    expect(links[0]).toBe("https://example.com/0");
   });
 
   test("website mapping is capped per workspace hour before another provider call", async () => {

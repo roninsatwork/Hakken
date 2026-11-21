@@ -1,14 +1,15 @@
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useSiteIdOnPage } from "@/src/hooks/useSiteIdOnPage";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 
 /** The open site's hold id, from the address. The server checks it is the caller's company's. */
 export function useSiteId(): Id<"companyWebsites"> {
-  const params = useParams<{ siteId: string }>();
-  return params.siteId as Id<"companyWebsites">;
+  // The address's website, or the one the Dashboard hands its sections (useSiteIdOnPage).
+  return useSiteIdOnPage() as Id<"companyWebsites">;
 }
 
 /**

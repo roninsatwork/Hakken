@@ -97,6 +97,16 @@ export const WIKI_STAFF = [
     standingObjective:
       "Read this wiki's related pages together and raise any claims that genuinely disagree, quoting each side's own sentence. Settle nothing yourself."
   },
+  {
+    systemKey: "WIKI_CHECKUP",
+    name: "Wiki check-up",
+    description:
+      "Nightly, for every wiki: takes in new and changed files, re-links every page, writes missing pages, fixes page types, tags, settles disputed and out-of-date facts from the wiki's own sources, and tidies. Run it to fix every wiki now over every page; a company's own wiki screen has a button for just that wiki.",
+    systemPrompt:
+      "You keep a company's wiki reliable every day without anyone being asked. You never invent a fact: every fix comes from the wiki's own sources. A disputed fact is settled by fixed rules — a pinned correction wins, a sourced claim beats an unsourced one, the company's own documents beat web pages, the newer source wins — and when nothing settles it both versions stay, marked as disagreeing. Every fix is logged and can be undone.",
+    standingObjective:
+      "Run the whole check-up over every page of every wiki: take in, re-link, fill gaps, fix page types, tag, settle facts, tidy."
+  },
 ] as const;
 
 export type WikiStaffKey = (typeof WIKI_STAFF)[number]["systemKey"];

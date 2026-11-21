@@ -265,6 +265,102 @@ describe("the on-ready hook", () => {
   });
 });
 
+describe("a long document is read to the end (2026-11-12)", () => {
+  // A credentials file naming forty clients used to teach the wiki its
+  // first 8,000 characters and three pages, so most clients could never be
+  // answered. Every section is now read, each in its own step, and each
+  // client the text names gets a Client page written from its own section.
+  test("every section is read in turn, and a client named late gets its own page from its own words", async () => {
+    vi.useFakeTimers();
+    try {
+      const t = makeTest();
+      const companyId = await seedCompany(t);
+      await seedModel(t);
+      const opening = "Papa Johns asked us to build an ordering app. ".repeat(220);
+      const closing = "Waterstones asked us to build a bookshop app with reader reviews. ".repeat(150);
+      const documentId = await seedDocument(t, companyId, {
+        title: "Clients and case studies",
+        textContent: `${opening.trim()}\n\n${closing.trim()}`,
+      });
+      generateMock.mockImplementation(async (request: { contents: Array<{ text: string }> }) => {
+        const prompt = request.contents[0].text;
+        if (prompt.startsWith("Document:")) {
+          const slug = prompt.includes("Waterstones") ? "waterstones" : "papa-johns";
+          return { text: JSON.stringify({ topics: [{ kind: "CLIENT", slug, learned: `Work for ${slug}.` }] }) };
+        }
+        return { text: prompt.includes("Waterstones") ? "A bookshop app for Waterstones." : "An ordering app for Papa Johns." };
+      });
+
+      await t.action(internal.wikiDistillActions.distilNewDocument, { documentId });
+      await finishScheduled(t);
+
+      const papaJohns = await wikiPageBySubject(t, "papa-johns");
+      const waterstones = await wikiPageBySubject(t, "waterstones");
+      expect(papaJohns?.kind).toBe("CLIENT");
+      expect(waterstones?.kind).toBe("CLIENT");
+      expect(waterstones?.content).toContain("Waterstones");
+      expect(waterstones?.links).toContain(`SOURCE:${documentId}`);
+      const sectionPrompts = generateMock.mock.calls
+        .map((call) => (call[0] as { contents: Array<{ text: string }> }).contents[0].text)
+        .filter((text) => text.startsWith("Document:"));
+      expect(sectionPrompts.length).toBeGreaterThan(1);
+      expect(sectionPrompts[0]).toContain("(part 1 of");
+      const runs = await staffRuns(t, "WIKI_DISTILLER");
+      expect(runs.some((run) => (run.finalOutput ?? "").startsWith("Finished all"))).toBe(true);
+      // The clients list is rebuilt the moment the document is finished,
+      // not at the nightly check-up.
+      const clientsList = await wikiPageBySubject(t, "clients-index");
+      expect(clientsList?.content).toContain("[[papa-johns]]");
+      expect(clientsList?.content).toContain("[[waterstones]]");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("a document deleted while it is being read (2026-11-12)", () => {
+  // Long documents take minutes to read now. On 2026-11-12 two duplicates
+  // deleted mid-read had their source notes written back after the delete.
+  test("the reader stops writing for it, and clears what it wrote after the delete", async () => {
+    const t = makeTest();
+    const companyId = await seedCompany(t);
+    await seedModel(t);
+    const documentId = await seedDocument(t, companyId, {
+      title: "A duplicate",
+      textContent: "Papa Johns asked us for an app. Waterstones asked us for a bookshop app.",
+    });
+    let rewrites = 0;
+    generateMock.mockImplementation(async (request: { contents: Array<{ text: string }> }) => {
+      const prompt = request.contents[0].text;
+      if (prompt.startsWith("Document:")) {
+        return {
+          text: JSON.stringify({
+            topics: [
+              { kind: "CLIENT", slug: "papa-johns", learned: "An app." },
+              { kind: "CLIENT", slug: "waterstones", learned: "A bookshop app." },
+            ],
+          }),
+        };
+      }
+      rewrites += 1;
+      // A person deletes the document, the way the Documents screen does,
+      // while the first page is being written.
+      await t.run(async (ctx) => {
+        const note = (await ctx.db.query("wikiPages").collect()).find((page) => page.subjectKey === documentId);
+        if (note) await ctx.db.delete(note._id);
+        if (await ctx.db.get(documentId)) await ctx.db.delete(documentId);
+      });
+      return { text: "An ordering app for Papa Johns." };
+    });
+
+    await t.action(internal.wikiDistillActions.distilNewDocument, { documentId });
+
+    expect(rewrites).toBe(1);
+    expect(await wikiPageBySubject(t, "waterstones")).toBeNull();
+    expect(await wikiPageBySubject(t, documentId)).toBeNull();
+  });
+});
+
 describe("the batch worker", () => {
   test("an empty backlog returns without recording a phantom run", async () => {
     const t = makeTest();

@@ -1,27 +1,46 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useAction, useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
-import { FileUp, Globe, Loader2, Type, FolderOpen } from "lucide-react";
+import { FileUp, FolderOpen, Globe, Loader2, Type } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { buttonClasses } from "@/src/ui/components/screens/Button";
+import { Checkbox } from "@/src/ui/components/screens/Checkbox";
+import { DetailTabs } from "@/src/ui/components/screens/DetailTabs";
+import { DropArea } from "@/src/ui/components/screens/DropArea";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
+const KINDS = ["website", "file", "text", "vault"] as const;
+type ImportKind = (typeof KINDS)[number];
+const KIND_ICONS = { website: Globe, file: FileUp, text: Type, vault: FolderOpen } as const;
+
 /**
- * The one import (wiki-replaces-knowledge plan, screen 1): a website, a
- * file or some text goes in here, and what comes back is wiki pages — the
- * distiller runs off the same ingestion this box triggers, so there is
- * nothing to run twice and no second button anywhere. Calls the exact
- * doors the Knowledge screen has always called; those screens retire in
- * stage three, this box is their successor.
+ * The one import (wiki-replaces-knowledge plan, screen 1): a website, a file,
+ * some text or a whole vault goes in here, and what comes back is wiki pages.
+ * The distiller runs off the same ingestion this box triggers, so there is
+ * nothing to run twice and no second button anywhere.
+ *
+ * It is the Add to the wiki page's body (wiki-sonae-catch-up-plan-2026-11-21.md,
+ * S6, from the upstream framework's `be63693c`). The four ways in are tabs with
+ * their own address (`?kind=file`), each keeping its own boxes, and the tick box
+ * to review first shows under all four. Files and vaults go in through the
+ * shared `DropArea` the moment they're dropped or chosen; a website and text go
+ * in with Read it, the page's one orange action.
  */
 export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const t = useTranslations("aiPages.import");
+  const tAdd = useTranslations("aiPages.addScreen");
   const { platformName } = useSystemSettings();
+  const pathname = usePathname() || "";
+  const picked = useSearchParams()?.get("kind");
+  const tab: ImportKind = (KINDS as readonly string[]).includes(picked ?? "") ? (picked as ImportKind) : "website";
+
   const mapWebsite = useAction(api.knowledgeActions.mapWebsite);
   const queueWebsiteUrls = useMutation(api.knowledge.queueWebsiteUrls);
   const saveManualText = useMutation(api.knowledge.saveManualText);
@@ -30,12 +49,12 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const startKnowledgeFileQueue = useMutation(api.knowledge.startKnowledgeFileQueue);
 
   const scopeArgs = companyId ? { companyId } : {};
-  const [tab, setTab] = useState<"website" | "file" | "text" | "vault">("website");
   // The Reviewer's checkpoint (wiki-agents plan, phase 4): tick it and the
   // wiki writes nothing from this import until you approve the claims.
-  // On the platform shelf the checkpoint starts ticked: anything imported
-  // there can reach every company's answers (global-wiki-plan.md, rule 2).
-  const [reviewFirst, setReviewFirst] = useState(!companyId);
+  // It starts unticked on every shelf, the platform one included: imports go
+  // straight into the wiki (Anthony, 2026-11-09, in Sonae; brought over on
+  // 2026-11-21, wiki-sonae-catch-up-plan-2026-11-21.md, 0.4).
+  const [reviewFirst, setReviewFirst] = useState(false);
   const [url, setUrl] = useState("");
   const [textTitle, setTextTitle] = useState("");
   const [textBody, setTextBody] = useState("");
@@ -43,8 +62,6 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
   const [feedback, setFeedback] = useState("");
   const action = useAdminAction({ scope: "admin-wiki-import" });
   const [error, setError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const vaultInputRef = useRef<HTMLInputElement>(null);
 
   const run = async (work: () => Promise<string>) => {
     setIsBusy(true);
@@ -79,7 +96,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
       return t("feedback.text", { platformName });
     });
 
-  const importFiles = (fileList: FileList | null) =>
+  const importFiles = (fileList: readonly File[]) =>
     run(async () => {
       const [{ resolveUploadContentType, validateUploadFile }, { buildUploadTitle, collectPickedFiles }] =
         await Promise.all([
@@ -111,18 +128,17 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
         });
       }
       if (collected.length > 1) await startKnowledgeFileQueue({});
-      if (fileInputRef.current) fileInputRef.current.value = "";
       return t("feedback.files", { count: collected.length, platformName });
     });
 
-  // The Obsidian round trip (living-wiki plan, phase 4): a vault's
-  // markdown files, each through the SAME import road as everything
-  // else — the Distiller learns them, review-first honoured, [[links]]
-  // riding along in the text. Bounded; junk skipped and said so.
+  // The Obsidian round trip (living-wiki plan, phase 4): a vault's markdown
+  // files, each through the SAME import road as everything else. The
+  // Distiller learns them, review-first honoured, [[links]] riding along in
+  // the text. At most 300 notes from one vault; anything that isn't markdown
+  // is skipped, and the feedback says how many.
   const VAULT_MAX_FILES = 300;
-  const importVault = (fileList: FileList | null) =>
+  const importVault = (picked: readonly File[]) =>
     run(async () => {
-      const picked = Array.from(fileList ?? []);
       if (picked.length === 0) throw new Error(t("errors.missingFile"));
       const markdownFiles: Array<{ name: string; text: string }> = [];
       let skipped = 0;
@@ -160,142 +176,111 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
           wikiReview: reviewFirst,
         });
       }
-      if (vaultInputRef.current) vaultInputRef.current.value = "";
       return skipped > 0
         ? t("feedback.vaultSkipped", { count: bounded.length, skipped })
         : t("feedback.vault", { count: bounded.length });
     });
 
-  const tabs = [
-    { key: "website" as const, icon: Globe, label: t("tabs.website") },
-    { key: "file" as const, icon: FileUp, label: t("tabs.file") },
-    { key: "text" as const, icon: Type, label: t("tabs.text") },
-    { key: "vault" as const, icon: FolderOpen, label: t("tabs.vault") },
-  ];
+  const tabs = KINDS.map((kind) => ({
+    label: t(`tabs.${kind}`),
+    icon: KIND_ICONS[kind],
+    href: kind === "website" ? pathname : `${pathname}?kind=${kind}`,
+    matches: () => tab === kind,
+  }));
+
+  const spinner = isBusy ? <Loader2 className="h-4 w-4 animate-spin text-secondary" aria-hidden="true" /> : null;
 
   return (
-    <div id="wiki-import" className="flex flex-col gap-4 rounded-[16px] border border-border-dim bg-card/40 p-5">
-      <div className="flex items-center gap-2">
-        {tabs.map(({ key, icon: Icon, label }) => (
-          /* Raw: stateful tab pill — the active tab swaps its colours; no kit variant is stateful. */
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-medium border transition-colors ${
-              tab === key
-                ? "bg-brand text-on-brand border-brand"
-                : "bg-background text-secondary border-border-dim hover:text-foreground"
-            }`}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
+    <div id="wiki-import" className="flex min-w-0 flex-col gap-5">
+      <DetailTabs tabs={tabs} rootHref={pathname} />
 
       {tab === "website" && (
-        <div className="flex items-center gap-2">
-          {/* The chosen tab already says what this box is for. */}
-          <div className="flex-1">
-            <Field
-              label={t("websitePlaceholder", { platformName })}
-              labelHidden
-              type="url"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder={t("websitePlaceholder", { platformName })}
-              disabled={isBusy}
-            />
-          </div>
-          <WriteButton
-            onClick={() => void importWebsite()}
-            disabled={isBusy || !url.trim()}
-            className="flex items-center gap-2 px-4 py-3 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity whitespace-nowrap"
-          >
-            {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {t("readIt")}
-          </WriteButton>
-        </div>
+        <Field
+          label={tAdd("websiteLabel")}
+          hint={tAdd("websiteHint")}
+          type="url"
+          value={url}
+          onChange={(event) => setUrl(event.target.value)}
+          placeholder={tAdd("websitePlaceholder")}
+          disabled={isBusy}
+        />
       )}
 
       {tab === "file" && (
-        <div className="flex items-center gap-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            disabled={isBusy}
-            onChange={(event) => void importFiles(event.target.files)}
-            className="text-[13px] text-secondary file:mr-3 file:px-4 file:py-2.5 file:rounded-[10px] file:border-0 file:bg-brand file:text-on-brand file:text-[12.5px] file:font-medium file:cursor-pointer"
-          />
-          {isBusy && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
-        </div>
+        <DropArea
+          layout="row"
+          title={tAdd("fileHint")}
+          chooseFilesLabel={tAdd("fileLabel")}
+          multiple
+          disabled={isBusy}
+          leading={spinner}
+          onFiles={(files) => void importFiles(files)}
+        />
       )}
 
       {tab === "text" && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4">
           <Field
-            label={t("textTitlePlaceholder")}
-            labelHidden
+            label={tAdd("textTitleLabel")}
             value={textTitle}
             onChange={(event) => setTextTitle(event.target.value)}
             placeholder={t("textTitlePlaceholder")}
             disabled={isBusy}
           />
           <TextAreaField
-            label={t("textBodyPlaceholder")}
-            labelHidden
+            label={tAdd("textBodyLabel")}
             value={textBody}
             onChange={(event) => setTextBody(event.target.value)}
             placeholder={t("textBodyPlaceholder")}
-            rows={4}
+            rows={6}
             disabled={isBusy}
-            className="min-h-[120px] resize-y"
+            className="min-h-[160px] resize-y"
           />
-          <WriteButton
-            onClick={() => void importText()}
-            disabled={isBusy || !textTitle.trim() || !textBody.trim()}
-            className="flex items-center gap-2 w-fit px-4 py-2.5 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity"
-          >
-            {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {t("readIt")}
-          </WriteButton>
         </div>
       )}
 
       {tab === "vault" && (
-        <div className="flex flex-col gap-2">
-          <p className="text-[12.5px] text-secondary">{t("vaultHint")}</p>
-          <input
-            ref={vaultInputRef}
-            type="file"
-            multiple
-            accept=".md,.zip"
-            disabled={isBusy}
-            onChange={(event) => void importVault(event.target.files)}
-            className="text-[13px] text-secondary file:mr-3 file:px-4 file:py-2.5 file:rounded-[10px] file:border-0 file:bg-brand file:text-on-brand file:text-[13px] file:font-medium file:cursor-pointer"
-          />
-          {isBusy && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
-        </div>
+        <DropArea
+          layout="row"
+          title={t("vaultHint")}
+          chooseFilesLabel={tAdd("vaultLabel")}
+          accept=".md,.zip"
+          multiple
+          disabled={isBusy}
+          leading={spinner}
+          onFiles={(files) => void importVault(files)}
+        />
       )}
 
-      <label className="flex items-center gap-2 text-[12.5px] text-secondary cursor-pointer w-fit">
-        <input
-          type="checkbox"
-          checked={reviewFirst}
-          onChange={(event) => setReviewFirst(event.target.checked)}
-          className="accent-[var(--brand,#ff5a1f)]"
-        />
-        {t("reviewFirst")}
-      </label>
+      <div className="flex flex-col gap-1">
+        <Checkbox label={t("reviewFirst")} checked={reviewFirst} onChange={setReviewFirst} disabled={isBusy} />
+        <p className="pl-5 text-[13px] leading-relaxed text-secondary">{tAdd("reviewFirstHint")}</p>
+      </div>
 
-      {feedback && <p className="text-[12.5px] text-secondary">{feedback}</p>}
-      {error && (
-        <p className="text-[12.5px] text-warning" role="alert">
+      {feedback ? (
+        <p className="text-[13px] text-secondary" aria-live="polite">
+          {feedback}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="text-[13px] text-warning" role="alert">
           {error}
         </p>
-      )}
+      ) : null}
+
+      {tab === "website" || tab === "text" ? (
+        <div className="flex border-t border-border-dim pt-4">
+          <WriteButton
+            type="button"
+            onClick={() => void (tab === "website" ? importWebsite() : importText())}
+            disabled={isBusy || (tab === "website" ? !url.trim() : !textTitle.trim() || !textBody.trim())}
+            className={buttonClasses("brand", "inline-flex w-fit items-center gap-2")}
+          >
+            {isBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            {t("readIt")}
+          </WriteButton>
+        </div>
+      ) : null}
     </div>
   );
 }

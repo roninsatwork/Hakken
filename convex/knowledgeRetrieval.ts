@@ -126,7 +126,7 @@ function keywordScopeArg(scope: KnowledgeRetrievalScope) {
     case "company":
       return { kind: "company" as const, companyId: scope.companyId as Id<"companies"> };
     case "agent":
-      return { kind: "agent" as const, agentId: scope.agentId as Id<"agents"> };
+      return { kind: "agent" as const, agentId: scope.agentId as Id<"agents">, companyId: scope.companyId as Id<"companies"> | undefined };
     case "thread":
       return { kind: "thread" as const, threadId: scope.threadId as Id<"threads"> };
     case "global":
@@ -157,7 +157,7 @@ export async function searchKnowledgeScope(
     priorCompanyId?: Id<"companies">;
   }
 ): Promise<FusedMatch<Id<"knowledgeChunks">>[]> {
-  const [vectorRanked, keywordRanked] = await Promise.all([
+  const [vectorCandidates, keywordRanked] = await Promise.all([
     runScopedVectorSearch(ctx, args.scope, args.queryVector, args.limit),
     ctx
       .runQuery(internal.knowledge.searchChunksByTextInternal, {
@@ -167,6 +167,18 @@ export async function searchKnowledgeScope(
       })
       .catch(() => [] as { _id: Id<"knowledgeChunks"> }[]),
   ]);
+
+  let vectorRanked = vectorCandidates;
+  if (args.scope.kind === "agent" && vectorCandidates.length > 0) {
+    // Convex's vector filters take one field or an OR, never "this agent and this company", so the candidates are checked
+    // against both before anything ranks or reads them. No company means the platform's knowledge only.
+    const allowed = new Set(await ctx.runQuery(internal.knowledgeAgentScope.filterAgentChunkIdsInternal, {
+      chunkIds: vectorCandidates.map((match) => match._id),
+      agentId: args.scope.agentId as Id<"agents">,
+      ...(args.scope.companyId ? { companyId: args.scope.companyId as Id<"companies"> } : {}),
+    }));
+    vectorRanked = vectorCandidates.filter((match) => allowed.has(match._id));
+  }
 
   const fused = fuseRetrievalRankings({ vectorRanked, keywordRanked });
   if (!args.priorCompanyId || fused.length === 0) return fused;

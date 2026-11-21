@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { isDueForRecheck, WIKI_UNCHANGED_RECHECK_DAYS } from "./wikiCheckupRules";
 import {
   WIKI_PAGE_MAX_CHARS,
   buildRewriteUserContent,
@@ -613,7 +614,9 @@ describe("the catch-up linker's list", () => {
         kind: "POLICY",
         subjectKey,
       });
-      if (page) await t.run(async (ctx) => ctx.db.patch(page._id, { lastTendedAt }));
+      // Never before the page's own write: the database's clock can run a
+      // millisecond ahead, and a page written after its visit has changed.
+      if (page) await t.run(async (ctx) => ctx.db.patch(page._id, { lastTendedAt: Math.max(lastTendedAt, page.updatedAt) }));
     }
   }
 
@@ -654,6 +657,23 @@ describe("the catch-up linker's list", () => {
       limit: 10,
     });
     expect(sparse.map((page) => page.subjectKey)).toEqual([]);
+  });
+});
+
+describe("only re-check what changed (2026-11-12)", () => {
+  test("an unchanged page rests past the old weekly visit; a changed one, or one 90 days on, comes back", () => {
+    const day = 24 * 60 * 60 * 1000;
+    const now = 1_000 * day;
+    const checked = now - 20 * day;
+    // Unchanged since its check, twenty days on: the old rota would have
+    // read it again; now it rests.
+    expect(isDueForRecheck({ updatedAt: checked - day }, checked, now)).toBe(false);
+    // Changed since its check: due.
+    expect(isDueForRecheck({ updatedAt: checked + day }, checked, now)).toBe(true);
+    // Never checked: due.
+    expect(isDueForRecheck({ updatedAt: checked }, undefined, now)).toBe(true);
+    // The slow safety pass.
+    expect(isDueForRecheck({ updatedAt: 0 }, now - WIKI_UNCHANGED_RECHECK_DAYS * day, now)).toBe(true);
   });
 });
 

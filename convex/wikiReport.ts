@@ -25,6 +25,10 @@ export type WeeklyReport = {
   staffRuns: number;
   waitingReviews: number;
   waitingQuestions: number;
+  /** Facts the daily check-up settled or corrected by itself this week. */
+  factsSettled: number;
+  /** Plain suggestions for what is worth adding — information only. */
+  suggestions: string[];
   quiet: boolean;
 };
 
@@ -43,6 +47,10 @@ async function buildReport(
   const pagesImproved = audit.filter(
     (row) => row.actionType === "WIKI_PAGE_REWRITE" || row.actionType === "WIKI_PAGE_HUMAN_EDIT"
   ).length;
+  // What the daily check-up settled by itself (wiki-daily-checkup-plan.md):
+  // a corrected claim, a fact settled by the rules, or a disagreement kept
+  // with both sources named.
+  const factsSettled = audit.filter((row) => row.actionType === "WIKI_CHECKUP_FIX").length;
 
   // Day tallies are company-kept; the platform's gap list is its own
   // (Anthony's routing rule, 2026-08-17): misses that belong to the
@@ -95,8 +103,30 @@ async function buildReport(
       .take(100)
   ).length;
 
+  // Suggestions (Karpathy's health check, wiki-daily-checkup-plan.md
+  // section 7): the questions asked most that the wiki still cannot answer,
+  // and its thinnest topic pages. Information only — nothing waits on them.
+  const suggestions: string[] = [];
+  for (const row of [...openUnansweredRows].sort((left, right) => right.askCount - left.askCount).slice(0, 3)) {
+    suggestions.push(`A document that answers "${row.question.replace(/\s+/g, " ").slice(0, 120)}"`);
+  }
+  const thin: Array<{ subjectKey: string; length: number }> = [];
+  for (const kind of ["PRODUCT", "POLICY", "ISSUE", "CLIENT"] as const) {
+    const pages = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_kind_subject", (q) => q.eq("companyId", companyId).eq("kind", kind))
+      .take(200);
+    for (const page of pages) {
+      if (page.subjectKey.endsWith("-index")) continue;
+      if (page.content.length < 280) thin.push({ subjectKey: page.subjectKey, length: page.content.length });
+    }
+  }
+  for (const page of thin.sort((left, right) => left.length - right.length).slice(0, 2)) {
+    suggestions.push(`More on "${page.subjectKey}" — its page is still very short`);
+  }
+
   const quiet =
-    pagesNew + pagesImproved + answered + unanswered + staffRuns === 0 &&
+    pagesNew + pagesImproved + answered + unanswered + staffRuns + factsSettled === 0 &&
     waitingReviews + waitingQuestions + openUnansweredRows.length === 0;
 
   return {
@@ -108,6 +138,8 @@ async function buildReport(
     staffRuns,
     waitingReviews,
     waitingQuestions,
+    factsSettled,
+    suggestions,
     quiet,
   };
 }
@@ -234,7 +266,11 @@ export const sendWeeklyReports = internalAction({
         (notesLearned > 0
           ? `${notesLearned} personal notes learned (visible only to their owners). `
           : ``) +
-        (waiting > 0 ? `${waiting} items waiting on a person.` : `Nothing waiting on anyone.`);
+        (report.factsSettled > 0
+          ? `The wiki settled ${report.factsSettled} ${report.factsSettled === 1 ? "fact" : "facts"} by itself from its own sources; each one can be undone from the page's history. `
+          : ``) +
+        (waiting > 0 ? `${waiting} items waiting on a person.` : `Nothing waiting on anyone.`) +
+        (report.suggestions.length > 0 ? ` Worth adding: ${report.suggestions.join("; ")}.` : ``);
       const told = await ctx.runMutation(internal.wikiReport.notifyCompanyAdminsInternal, {
         companyId: scope,
         title: "Your wiki's week",

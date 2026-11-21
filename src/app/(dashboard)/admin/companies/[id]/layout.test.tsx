@@ -80,6 +80,13 @@ describe("CompanyDashboardLayout navigation", () => {
       // The wiki replaced Knowledge in this menu (wiki-replaces-knowledge
       // plan, stage three): importing and reading both live on the Wiki.
       ["Wiki", "/admin/companies/company123/ai/pages"],
+      // The wiki's map, a line of its own (wiki-sonae-catch-up-plan-2026-11-21.md, S2).
+      ["Wiki map", "/admin/companies/company123/ai/pages/map"],
+      // The wiki's long page became five (S6), each its own line.
+      ["Add to the wiki", "/admin/companies/company123/ai/pages/add"],
+      ["Waiting on you", "/admin/companies/company123/ai/pages/waiting"],
+      ["Ask the wiki", "/admin/companies/company123/ai/pages/ask"],
+      ["Check-up", "/admin/companies/company123/ai/pages/checkup"],
       ["Unanswered", "/admin/companies/company123/ai/unanswered"],
       // Saved Answers and Memory folded into the Wiki (one-brain-plan.md,
       // phase 3); their addresses redirect there.
@@ -93,7 +100,8 @@ describe("CompanyDashboardLayout navigation", () => {
     ];
 
     for (const [label, href] of expectedItems) {
-      expect(within(menu).getByRole("menuitem", { name: new RegExp(label) })).toHaveAttribute("href", href);
+      // Whole names, so "Wiki" is never taken for "Wiki map"; the lit line also says it is selected.
+      expect(within(menu).getByRole("menuitem", { name: new RegExp(`^${label}(.*selected)?$`) })).toHaveAttribute("href", href);
     }
     expect(within(menu).queryByRole("menuitem", { name: /Saved Answers/ })).not.toBeInTheDocument();
     expect(within(menu).queryByRole("menuitem", { name: /Memory/ })).not.toBeInTheDocument();
@@ -101,6 +109,44 @@ describe("CompanyDashboardLayout navigation", () => {
     expect(within(menu).getByRole("menuitem", { name: /AI Models/ })).toHaveClass("bg-brand");
     expect(within(menu).getByLabelText("AI Models selected")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /AI section/i })).not.toBeInTheDocument();
+  });
+
+  it("lights Wiki map, not Wiki, on the wiki's map", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/companies/company123/ai/pages/map");
+
+    render(
+      <CompanyDashboardLayout>
+        <section>Company body</section>
+      </CompanyDashboardLayout>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "AI" }));
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: /^Wiki map/ })).toHaveClass("bg-brand");
+    expect(within(menu).getByRole("menuitem", { name: /^Wiki$/ })).not.toHaveClass("bg-brand");
+  });
+
+  it.each([
+    ["/admin/companies/company123/ai/pages/add", "Add to the wiki"],
+    ["/admin/companies/company123/ai/pages/waiting", "Waiting on you"],
+    ["/admin/companies/company123/ai/pages/ask", "Ask the wiki"],
+    ["/admin/companies/company123/ai/pages/checkup", "Check-up"],
+    ["/admin/companies/company123/ai/pages/new-goal", "Wiki"],
+    ["/admin/companies/company123/ai/pages/page123", "Wiki"],
+  ])("lights the wiki's own line on %s", (pathname, label) => {
+    vi.mocked(usePathname).mockReturnValue(pathname);
+
+    render(
+      <CompanyDashboardLayout>
+        <section>Company body</section>
+      </CompanyDashboardLayout>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "AI" }));
+    const menu = screen.getByRole("menu");
+    const lit = within(menu).getAllByRole("menuitem").filter((item) => item.classList.contains("bg-brand"));
+    expect(lit).toHaveLength(1);
+    expect(lit[0]).toHaveAccessibleName(new RegExp(`^${label}(.*selected)?$`));
   });
 
   it("opens Websites straight away: a link, its menu down the left of the section", () => {

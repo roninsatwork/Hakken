@@ -77,10 +77,10 @@ export async function askCore(
     const separator = key.indexOf(":");
     if (separator <= 0) continue;
     const kind = key.slice(0, separator);
-    if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "SOURCE"].includes(kind)) continue;
+    if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "CLIENT", "SOURCE"].includes(kind)) continue;
     const page = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
       ...(isPlatform ? {} : args.companyId ? { companyId: args.companyId } : {}),
-      kind: kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE",
+      kind: kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE",
       subjectKey: key.slice(separator + 1),
     });
     if (page) pages.push({ title: page.title, pageId: page._id.toString(), isPlatform });

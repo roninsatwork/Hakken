@@ -38,8 +38,11 @@ export const AI_SOURCE_VALUES: readonly string[] = [...new Set([
 /** Google's own channel for them, as `sessionDefaultChannelGroup` names it. */
 export const GOOGLE_AI_CHANNEL = "AI Assistant";
 
+/** Google's channel for unpaid search, as `sessionDefaultChannelGroup` names it: the client Dashboard's visits open on it. */
+export const ORGANIC_SEARCH_CHANNEL = "Organic Search";
+
 /** Google's channels whose sources a channel's screen describes in words of its own (google-analytics-plan.md GA22). */
-export const DESCRIBED_CHANNELS: readonly string[] = ["Referral", "Organic Search", "Organic Social", "Paid Search", "Email", "Direct"];
+export const DESCRIBED_CHANNELS: readonly string[] = ["Referral", ORGANIC_SEARCH_CHANNEL, "Organic Social", "Paid Search", "Email", "Direct"];
 
 /** The channel every assistant's visits are shown under. */
 export const AI_ASSISTANTS_CHANNEL = "AI assistants";

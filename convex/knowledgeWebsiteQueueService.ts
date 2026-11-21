@@ -134,7 +134,8 @@ export async function queueWebsiteUrlsCore(
       companyId: args.companyId,
       agentId: args.agentId,
     }));
-    if (args.wikiReview ?? (!args.companyId && !args.agentId)) {
+    // Straight in, as every other import is (wiki-sonae-catch-up-plan-2026-11-21.md, 0.4); Sonae left this one waiting.
+    if (args.wikiReview === true) {
       await ctx.db.patch(documentId, { wikiReviewRequested: true });
     }
     documentIds.push(documentId);

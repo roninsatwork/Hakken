@@ -21,7 +21,8 @@ type SwitchKey =
   | "outcomeWeightedRanking"
   | "endUserFeedback"
   | "retrievalPriors"
-  | "autonomousMemory";
+  | "autonomousMemory"
+  | "autonomousWiki";
 
 type SwitchState = Record<SwitchKey, boolean>;
 
@@ -104,6 +105,8 @@ export function SelfImprovementSection() {
     { key: "endUserFeedback", name: t("endUserFeedback"), description: t("endUserFeedbackSub") },
     { key: "retrievalPriors", name: t("retrievalPriors"), description: t("retrievalPriorsSub") },
     { key: "autonomousMemory", name: t("autonomousMemory"), description: t("autonomousMemorySub") },
+    // The nightly check-up settles facts itself while this is on (wiki-sonae-catch-up-plan-2026-11-21.md, phase 2).
+    { key: "autonomousWiki", name: t("autonomousWiki"), description: t("autonomousWikiSub") },
   ];
 
   const matching = rows.filter((row) =>

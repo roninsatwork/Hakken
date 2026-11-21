@@ -18,7 +18,7 @@ vi.mock("@/src/app/(dashboard)/admin/_features/wiki/UnansweredScreen", () => ({
 }));
 
 describe("CompanyUnansweredPage", () => {
-  it("forwards the route company id and unchanged wiki link", async () => {
+  it("forwards the route company id and the link to its Add to the wiki", async () => {
     render(
       await CompanyUnansweredPage({
         params: Promise.resolve({ id: "company_1" }),
@@ -26,7 +26,7 @@ describe("CompanyUnansweredPage", () => {
     );
 
     expect(screen.getByTestId("company-unanswered-screen")).toHaveTextContent(
-      "company_1|/admin/companies/company_1/ai/pages",
+      "company_1|/admin/companies/company_1/ai/pages/add",
     );
   });
 });

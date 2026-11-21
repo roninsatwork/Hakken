@@ -1,0 +1,4636 @@
+{
+  "channel": [
+    {
+      "_creationTime": 1791715198503.6443,
+      "_id": "mx86mvk111wfwm3kf3gca5esy18g3fj9",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "wyw"
+      ],
+      "day": "2026-10-01",
+      "device": "",
+      "engaged": "CAw",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618566,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "Organic Social\u001flinkedin.com"
+      ],
+      "length": "4sxmrxw",
+      "list": "channel",
+      "newPeople": "yAw",
+      "part": 0,
+      "people": "KAy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "qEmyw",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "exMw",
+      "visits": "KAy"
+    },
+    {
+      "_creationTime": 1791715198448.7417,
+      "_id": "mx85w6mcwye4zh07evqjhjesx98g20te",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-02",
+      "device": "",
+      "engaged": "CA",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618503,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "88xkx",
+      "list": "channel",
+      "newPeople": "AA",
+      "part": 0,
+      "people": "CA",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "2Bix",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "ME",
+      "visits": "GA"
+    },
+    {
+      "_creationTime": 1791715198387.038,
+      "_id": "mx8fw7v9xd51xz2xkc8sker2ws8g2rsm",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-03",
+      "device": "",
+      "engaged": "Cw",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618424,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "iYw",
+      "list": "channel",
+      "newPeople": "Cw",
+      "part": 0,
+      "people": "Cy",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "2Cw",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "8xw",
+      "visits": "Ey"
+    },
+    {
+      "_creationTime": 1791715197114.5242,
+      "_id": "mx83dvj8fv2j02wrrrp3775xe58g3an4",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-04",
+      "device": "",
+      "engaged": "GA",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618371,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "AI Assistant\u001fchatgpt.com"
+      ],
+      "length": "0jx6y",
+      "list": "channel",
+      "newPeople": "GA",
+      "part": 0,
+      "people": "GA",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "6exqx",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "ox0x",
+      "visits": "IA"
+    },
+    {
+      "_creationTime": 1791715197071.9443,
+      "_id": "mx80c6vhtsn89x06g9yjx0te7d8g3mgv",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "yw",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-05",
+      "device": "",
+      "engaged": "My",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618313,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "udzsT",
+      "list": "channel",
+      "newPeople": "Iy",
+      "part": 0,
+      "people": "My",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "qpxI",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "qzG",
+      "visits": "Oy"
+    },
+    {
+      "_creationTime": 1791715197017.5596,
+      "_id": "mx817cz4n5024j3m5dy8y3n57d8g3qk6",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "yw",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-06",
+      "device": "",
+      "engaged": "OA",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906617161,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "cU8fx",
+      "list": "channel",
+      "newPeople": "Iy",
+      "part": 0,
+      "people": "QA",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "aSU",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "azK",
+      "visits": "SA"
+    },
+    {
+      "_creationTime": 1791715196967.7969,
+      "_id": "mx81n3r6nffm6ybhvd5ppmfnp18g2dmx",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-07",
+      "device": "",
+      "engaged": "I",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906617088,
+      "keys": [
+        "Organic Search\u001fgoogle"
+      ],
+      "length": "4N",
+      "list": "channel",
+      "newPeople": "I",
+      "part": 0,
+      "people": "M",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "2F",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "0x",
+      "visits": "M"
+    },
+    {
+      "_creationTime": 1791715196904.2805,
+      "_id": "mx8av0hypap9818s8p6n1n2s558g2fqj",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "day": "2026-10-08",
+      "device": "",
+      "engaged": "Ayy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906617025,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "Referral\u001fsnnews.net"
+      ],
+      "length": "izoEkF",
+      "list": "channel",
+      "newPeople": "Ayy",
+      "part": 0,
+      "people": "Ayy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "mxkEiE",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "GCK",
+      "visits": "Ayy"
+    },
+    {
+      "_creationTime": 1791715196864.7837,
+      "_id": "mx8ah6j3ek3zq5vn5psazq396n8g266m",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "day": "2026-10-09",
+      "device": "",
+      "engaged": "Eyy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906616957,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "AI Assistant\u001fchatgpt.com",
+        "Direct\u001f(direct)"
+      ],
+      "length": "k8A4O8B",
+      "list": "channel",
+      "newPeople": "Eyy",
+      "part": 0,
+      "people": "Eyy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "iOSkA",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "mxAQ",
+      "visits": "Eyy"
+    },
+    {
+      "_creationTime": 1791715196813.6733,
+      "_id": "mx8e23mnsyt2hwjwtjekhnve058g3d9x",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-10",
+      "device": "",
+      "engaged": "G",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906616894,
+      "keys": [
+        "Organic Search\u001fgoogle"
+      ],
+      "length": "ghy",
+      "list": "channel",
+      "newPeople": "G",
+      "part": 0,
+      "people": "G",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "eO",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "6y",
+      "visits": "I"
+    },
+    {
+      "_creationTime": 1791774023430.3281,
+      "_id": "mx8afk69ynynvv4rjwhm85exnh8g4x8p",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-11",
+      "device": "",
+      "engaged": "Ew",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906616818,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "0FE",
+      "list": "channel",
+      "newPeople": "Cy",
+      "part": 0,
+      "people": "Gy",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "0EC",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "cxy",
+      "visits": "My"
+    },
+    {
+      "_creationTime": 1791860418716.8188,
+      "_id": "mx8ab9vn2av5xyas34kzfy474x8g6rcn",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "wyw"
+      ],
+      "day": "2026-10-12",
+      "device": "",
+      "engaged": "IAy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791946820295,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "Organic Search\u001fbing"
+      ],
+      "length": "skzeqxey",
+      "list": "channel",
+      "newPeople": "KAy",
+      "part": 0,
+      "people": "OAy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "o1x6xex",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "cxMQ",
+      "visits": "SAy"
+    },
+    {
+      "_creationTime": 1791946819967.3154,
+      "_id": "mx8bnstt7vap9xpabree4697898g8q6c",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-13",
+      "device": "",
+      "engaged": "Ay",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792022426083,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Referral\u001fkinbrookgroup.co.uk"
+      ],
+      "length": "iNQ",
+      "list": "channel",
+      "newPeople": "Ey",
+      "part": 0,
+      "people": "Gy",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "2GM",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "sxA",
+      "visits": "Iy"
+    },
+    {
+      "_creationTime": 1792022425812.1367,
+      "_id": "mx8a36m1qmm4kp5wwts73ebh7h8gaeja",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "day": "2026-10-14",
+      "device": "",
+      "engaged": "Ayw",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792022425808,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Organic Search\u001fbing",
+        "Referral\u001fuseripple.io"
+      ],
+      "length": "amxWw",
+      "list": "channel",
+      "newPeople": "Ayy",
+      "part": 0,
+      "people": "Cyy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "2MUw",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "Cyy",
+      "visits": "Cyy"
+    },
+    {
+      "_creationTime": 1792108947006.5605,
+      "_id": "mx872kk10qzpb2fgns9vfnb9598gcw26",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-15",
+      "device": "",
+      "engaged": "yy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792195346041,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "03yeN",
+      "list": "channel",
+      "newPeople": "Ay",
+      "part": 0,
+      "people": "Ay",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "O0D",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "Cy",
+      "visits": "Cy"
+    },
+    {
+      "_creationTime": 1792195345942.6755,
+      "_id": "mx83wfg3y028kjhmt2rs94bdss8geah0",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-16",
+      "device": "",
+      "engaged": "A",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792368026857,
+      "keys": [
+        "Organic Search\u001fgoogle"
+      ],
+      "length": "iD",
+      "list": "channel",
+      "newPeople": "I",
+      "part": 0,
+      "people": "K",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "sC",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "M",
+      "visits": "K"
+    },
+    {
+      "_creationTime": 1792368026746.742,
+      "_id": "mx8a2prem3t4x6tmdh3czs6xas8gkh6w",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "wy",
+        "ww",
+        "ww",
+        "ww",
+        "wy"
+      ],
+      "day": "2026-10-17",
+      "device": "",
+      "engaged": "Gy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792368026736,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "aMs6x",
+      "list": "channel",
+      "newPeople": "GA",
+      "part": 0,
+      "people": "MA",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "eLax",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "SA",
+      "visits": "MA"
+    },
+    {
+      "_creationTime": 1792368026602.9998,
+      "_id": "mx8cvdbsqhsrn9rg4fem2zzv5x8gk9jk",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-18",
+      "device": "",
+      "engaged": "yy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792454435745,
+      "keys": [
+        "Direct\u001f(direct)",
+        "Organic Search\u001fgoogle"
+      ],
+      "length": "afxsA",
+      "list": "channel",
+      "newPeople": "yy",
+      "part": 0,
+      "people": "AA",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "6Bux",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "EE",
+      "visits": "EA"
+    },
+    {
+      "_creationTime": 1792454435329.7773,
+      "_id": "mx817362bjc0dam4tv6h8n9ggh8gn6y8",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-19",
+      "device": "",
+      "engaged": "CA",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792540833627,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "kP8A",
+      "list": "channel",
+      "newPeople": "CA",
+      "part": 0,
+      "people": "EA",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "oCkz",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "GC",
+      "visits": "EA"
+    },
+    {
+      "_creationTime": 1792540833471.2505,
+      "_id": "mx898crz8fbayt2120v2e2ksdd8gp19j",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "day": "2026-10-20",
+      "device": "",
+      "engaged": "CCw",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792627235523,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "Organic Search\u001fecosia.org"
+      ],
+      "length": "aP8ryA",
+      "list": "channel",
+      "newPeople": "EAy",
+      "part": 0,
+      "people": "ICy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "eDczA",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "MGy",
+      "visits": "KGA"
+    },
+    {
+      "_creationTime": 1792627235348.5076,
+      "_id": "mx80aq8dnwdjwvqj38vntf7ar58gsc5t",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "day": "2026-10-21",
+      "device": "",
+      "engaged": "Cyy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792627235321,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "Organic Search\u001fduckduckgo"
+      ],
+      "length": "0RgKS",
+      "list": "channel",
+      "newPeople": "Ayy",
+      "part": 0,
+      "people": "Eyy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "6ycAQ",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "Cyy",
+      "visits": "Eyy"
+    },
+    {
+      "_creationTime": 1792713745678.4429,
+      "_id": "mx833dzte217g2rv7d1fmbtv5s8gvxq6",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "day": "2026-10-22",
+      "device": "",
+      "engaged": "KCy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792800145051,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "AI Assistant\u001fchatgpt.com"
+      ],
+      "length": "mhx41Aiy",
+      "list": "channel",
+      "newPeople": "QEy",
+      "part": 0,
+      "people": "UEy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "eK6nxgy",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "qx-y",
+      "visits": "4xGy"
+    },
+    {
+      "_creationTime": 1792800144921.8489,
+      "_id": "mx86emav2jwk97qcwak15t98ks8gwfar",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "day": "2026-10-23",
+      "device": "",
+      "engaged": "Ayy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792890145294,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "Organic Search\u001fbing"
+      ],
+      "length": "aMoC6L",
+      "list": "channel",
+      "newPeople": "Ayy",
+      "part": 0,
+      "people": "Ayy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "eLgCiB",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "AAy",
+      "visits": "Ayy"
+    },
+    {
+      "_creationTime": 1792890145184.3835,
+      "_id": "mx8c19yynvrvy6sjyzk1wp7qe18gy0bd",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-24",
+      "device": "",
+      "engaged": "Ay",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792976545289,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "cy2R",
+      "list": "channel",
+      "newPeople": "Ay",
+      "part": 0,
+      "people": "Ay",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "4ysQ",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "AA",
+      "visits": "Ay"
+    },
+    {
+      "_creationTime": 1792976545171.385,
+      "_id": "mx850txyd023w1agvrnsdxsv418h1gad",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-25",
+      "device": "",
+      "engaged": "A",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793062947787,
+      "keys": [
+        "Direct\u001f(direct)"
+      ],
+      "length": "g1G",
+      "list": "channel",
+      "newPeople": "E",
+      "part": 0,
+      "people": "E",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "cI",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "U",
+      "visits": "G"
+    },
+    {
+      "_creationTime": 1793062947650.9485,
+      "_id": "mx86kcvkjf2b6pg9a294x1zr998h2kqr",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwww",
+        "wwwy",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwwy"
+      ],
+      "day": "2026-10-26",
+      "device": "",
+      "engaged": "Eyyy",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793062947615,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "Organic Search\u001fbing",
+        "Referral\u001fkinbrookgroup.co.uk"
+      ],
+      "length": "64yox4B69y",
+      "list": "channel",
+      "newPeople": "CAyy",
+      "part": 0,
+      "people": "IAyy",
+      "purchases": "wwww",
+      "revenue": "wwww",
+      "seconds": "4H2xmAqK",
+      "values": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "views": "IACO",
+      "visits": "IAyy"
+    },
+    {
+      "_creationTime": 1793149345668.5469,
+      "_id": "mx88a8vy998vn65b69b1fmkhax8h4mes",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "day": "2026-10-27",
+      "device": "",
+      "engaged": "Cyw",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793149345649,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)",
+        "Organic Social\u001fl.instagram.com"
+      ],
+      "length": "gjxmxw",
+      "list": "channel",
+      "newPeople": "Eww",
+      "part": 0,
+      "people": "Gyy",
+      "purchases": "www",
+      "revenue": "www",
+      "seconds": "uOGw",
+      "values": [
+        "www",
+        "www",
+        "www",
+        "www",
+        "www",
+        "www"
+      ],
+      "views": "Syy",
+      "visits": "Myy"
+    },
+    {
+      "_creationTime": 1793235745661.3752,
+      "_id": "mx8a9rypncm19pvg9960xdhh1s8h70s1",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "yw",
+        "ww",
+        "ww",
+        "ww",
+        "yw"
+      ],
+      "day": "2026-10-28",
+      "device": "",
+      "engaged": "Aw",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793285619127,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Unassigned\u001f(not set)"
+      ],
+      "length": "oRw",
+      "list": "channel",
+      "newPeople": "Gw",
+      "part": 0,
+      "people": "Iy",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "cHw",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "Kw",
+      "visits": "My"
+    },
+    {
+      "_creationTime": 1793322147548.065,
+      "_id": "mx805sva1rctv2vsz6m7bc20818h9kc7",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-29",
+      "device": "",
+      "engaged": "Gy",
+      "eventTimes": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "eventVisits": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793408546715,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "kuxcR",
+      "list": "channel",
+      "newPeople": "CA",
+      "part": 0,
+      "people": "CA",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "0DaO",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "IA",
+      "visits": "IA"
+    },
+    {
+      "_creationTime": 1793408546554.9058,
+      "_id": "mx864df9xy1qkd9q5p6mn3gnhh8hbszp",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "day": "2026-10-30",
+      "device": "",
+      "engaged": "yy",
+      "eventTimes": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "eventVisits": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793408546513,
+      "keys": [
+        "Organic Search\u001fgoogle",
+        "Direct\u001f(direct)"
+      ],
+      "length": "exsG",
+      "list": "channel",
+      "newPeople": "Cy",
+      "part": 0,
+      "people": "Cy",
+      "purchases": "ww",
+      "revenue": "ww",
+      "seconds": "SiC",
+      "values": [
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww",
+        "ww"
+      ],
+      "views": "CE",
+      "visits": "Ey"
+    },
+    {
+      "_creationTime": 1793494946704.4585,
+      "_id": "mx87sc33rspfs60c8dkdn4ttq18hdszv",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-31",
+      "device": "",
+      "engaged": "y",
+      "eventTimes": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "eventVisits": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793494946619,
+      "keys": [
+        "Organic Search\u001fgoogle"
+      ],
+      "length": "0x",
+      "list": "channel",
+      "newPeople": "A",
+      "part": 0,
+      "people": "C",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "-",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "C",
+      "visits": "C"
+    }
+  ],
+  "event": [
+    {
+      "_creationTime": 1791968218622.1553,
+      "_id": "mx87ckt2z9ygtd6dky0948qzrh8g8vm1",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "day": "2026-10-01",
+      "device": "",
+      "engaged": "wwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968218620,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "session_start",
+        "first_visit",
+        "scroll",
+        "contact"
+      ],
+      "length": "wwwwww",
+      "list": "event",
+      "newPeople": "wwwwww",
+      "part": 0,
+      "people": "KKQCCy",
+      "purchases": "wwwwww",
+      "revenue": "wwwwww",
+      "seconds": "wwwwww",
+      "times": "uxYQCCy",
+      "values": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "views": "wwwwww",
+      "visits": "KKQCCy"
+    },
+    {
+      "_creationTime": 1791968218581.0059,
+      "_id": "mx8aad5nf59stv6q3nc4xjc3w18g8xa2",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-02",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968218579,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "GGGEy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "2xUMEy",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "IIKEy"
+    },
+    {
+      "_creationTime": 1791968218537.749,
+      "_id": "mx85b72hxhxq3gtcwvxav7y31d8g8vyq",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-03",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968218535,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "CEECy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "8xWGCy",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "CGGCy"
+    },
+    {
+      "_creationTime": 1791968218486.3918,
+      "_id": "mx846jphw8w7zfr8db7z2xxjq58g85pt",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-04",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968218484,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "KKKKA",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "oymxMKA",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "KMMKA"
+    },
+    {
+      "_creationTime": 1791968218439.5137,
+      "_id": "mx84vmm4mryk31ny1vw4g8f1798g9m8r",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww"
+      ],
+      "day": "2026-10-05",
+      "device": "",
+      "engaged": "wwwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968218437,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "session_start",
+        "scroll",
+        "first_visit",
+        "click",
+        "form_submission"
+      ],
+      "length": "wwwwwww",
+      "list": "event",
+      "newPeople": "wwwwwww",
+      "part": 0,
+      "people": "OOOIKyy",
+      "purchases": "wwwwwww",
+      "revenue": "wwwwwww",
+      "seconds": "wwwwwww",
+      "times": "4AmxQOKyy",
+      "values": [
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww"
+      ],
+      "views": "wwwwwww",
+      "visits": "OQQIKyy"
+    },
+    {
+      "_creationTime": 1791968218385.642,
+      "_id": "mx8d38ank0bjvk01ymd2fryar18g8qxm",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww"
+      ],
+      "day": "2026-10-06",
+      "device": "",
+      "engaged": "wwwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968218383,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "session_start",
+        "first_visit",
+        "scroll",
+        "click",
+        "form_submission"
+      ],
+      "length": "wwwwwww",
+      "list": "event",
+      "newPeople": "wwwwwww",
+      "part": 0,
+      "people": "QUUKGyy",
+      "purchases": "wwwwwww",
+      "revenue": "wwwwwww",
+      "seconds": "wwwwwww",
+      "times": "oz0yWKGyy",
+      "values": [
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww"
+      ],
+      "views": "wwwwwww",
+      "visits": "SUWKGyy"
+    },
+    {
+      "_creationTime": 1791968217873.7505,
+      "_id": "mx8b8n74wdczs5gsv49rwdj6458g8dp6",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-07",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968217872,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "KKMIy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "cx0xMIy",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "KKMIy"
+    },
+    {
+      "_creationTime": 1791968217813.9854,
+      "_id": "mx80hnnnz453syse2tm8m1wk1n8g8dpv",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-08",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968217812,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "first_visit",
+        "session_start",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "EEEEA",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "2x-EEA",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "EEEEA"
+    },
+    {
+      "_creationTime": 1791968217715.5396,
+      "_id": "mx897h3bk2bb2e666eccegyac18g9tnw",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-09",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968217712,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "first_visit",
+        "session_start",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "IIIIy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "eyexIIA",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "IIIIy"
+    },
+    {
+      "_creationTime": 1791968217638.5234,
+      "_id": "mx89tw6gx7qb66fhf289dv09q98g82nq",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-10",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968217636,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "GGGGy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "6y6xIGy",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "GIIGy"
+    },
+    {
+      "_creationTime": 1791968217571.3867,
+      "_id": "mx87hm7mf0165cascjv75336zh8g9t1v",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-11",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968217569,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "IGIEy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "ex2xOEE",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "KKOEA"
+    },
+    {
+      "_creationTime": 1791968217511.5693,
+      "_id": "mx8apgfmv5srebcmwetkes6dth8g955g",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww"
+      ],
+      "day": "2026-10-12",
+      "device": "",
+      "engaged": "wwwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968217509,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll",
+        "contact",
+        "file_download"
+      ],
+      "length": "wwwwwww",
+      "list": "event",
+      "newPeople": "wwwwwww",
+      "part": 0,
+      "people": "SUUQCyy",
+      "purchases": "wwwwwww",
+      "revenue": "wwwwwww",
+      "seconds": "wwwwwww",
+      "times": "kygyYQCyy",
+      "values": [
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww"
+      ],
+      "views": "wwwwwww",
+      "visits": "WUYQCyy"
+    },
+    {
+      "_creationTime": 1791968217449.1995,
+      "_id": "mx8fszhcmq5wm2wd53b3tjg3wx8g9cvf",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-13",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791968217447,
+      "keys": [
+        "page_view",
+        "user_engagement",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "GIIGy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "0y6xMGA",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "GKKGy"
+    },
+    {
+      "_creationTime": 1792022425812.1375,
+      "_id": "mx8fz61nfa9nt69r20ev6xha558gazb8",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-14",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792022425808,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "EGGEy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "UGGEy",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "EGGEy"
+    },
+    {
+      "_creationTime": 1792108947006.561,
+      "_id": "mx864wgzhv3qn7hehee42hqxg58gc25z",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "day": "2026-10-15",
+      "device": "",
+      "engaged": "wwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792195346041,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "click",
+        "scroll"
+      ],
+      "length": "wwwwww",
+      "list": "event",
+      "newPeople": "wwwwww",
+      "part": 0,
+      "people": "CCCCyy",
+      "purchases": "wwwwww",
+      "revenue": "wwwwww",
+      "seconds": "wwwwww",
+      "times": "UEECyy",
+      "values": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "views": "wwwwww",
+      "visits": "ECECyy"
+    },
+    {
+      "_creationTime": 1792195345942.6758,
+      "_id": "mx85aqhfrefj754cs3mvwg2nd18gegma",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-16",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792368026857,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "IKKIy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "exMKIy",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "IKKIy"
+    },
+    {
+      "_creationTime": 1792368026746.7427,
+      "_id": "mx8fsdcymn3mz4y0r0sk7v78nn8gkn9a",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww"
+      ],
+      "day": "2026-10-17",
+      "device": "",
+      "engaged": "wwwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792368026736,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll",
+        "contact",
+        "form_submission"
+      ],
+      "length": "wwwwwww",
+      "list": "event",
+      "newPeople": "wwwwwww",
+      "part": 0,
+      "people": "OQOKCyy",
+      "purchases": "wwwwwww",
+      "revenue": "wwwwwww",
+      "seconds": "wwwwwww",
+      "times": "0yWOKCyy",
+      "values": [
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww",
+        "wwwwwww"
+      ],
+      "views": "wwwwwww",
+      "visits": "OQOKCyy"
+    },
+    {
+      "_creationTime": 1792368026603.0002,
+      "_id": "mx8b811aham28gbskqsma2np8d8gj6xr",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-18",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792454435745,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "CEEAy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "YMIAy",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "GEIAy"
+    },
+    {
+      "_creationTime": 1792454435329.7776,
+      "_id": "mx8c80f5qzmd89ggmy114zfc7x8gn42t",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-19",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792540833627,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "GIIGC",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "8xMIGE",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "GIIGC"
+    },
+    {
+      "_creationTime": 1792540833471.251,
+      "_id": "mx855pasbry1xaptns2w6agqks8gqa4b",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-20",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792627235523,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "OQQKA",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "uxYYKA",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "UQYKA"
+    },
+    {
+      "_creationTime": 1792627235348.508,
+      "_id": "mx81qw1yc8zqhxyn3b28gw09vn8grfk0",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-21",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792627235321,
+      "keys": [
+        "user_engagement",
+        "session_start",
+        "page_view",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "IIGEy",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "-IGEy",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "IIGEy"
+    },
+    {
+      "_creationTime": 1792713745678.4436,
+      "_id": "mx8cswy4s79zeyta20zznw19c18gvwgs",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "day": "2026-10-22",
+      "device": "",
+      "engaged": "wwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792800145051,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll",
+        "click"
+      ],
+      "length": "wwwwww",
+      "list": "event",
+      "newPeople": "wwwwww",
+      "part": 0,
+      "people": "0x2x2x-IA",
+      "purchases": "wwwwww",
+      "revenue": "wwwwww",
+      "seconds": "wwwwww",
+      "times": "mAqygx-YA",
+      "values": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "views": "wwwwww",
+      "visits": "cx6xgx-IA"
+    },
+    {
+      "_creationTime": 1792800144921.8494,
+      "_id": "mx8dzjt41tzq2yz5xpzn35drn18gxn7k",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-23",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792890145294,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "first_visit",
+        "session_start",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "EEEEA",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "-GEEC",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "EEEEA"
+    },
+    {
+      "_creationTime": 1792890145184.384,
+      "_id": "mx86a0p5jdvztqcpq1k79xc6t58gyptv",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "day": "2026-10-24",
+      "device": "",
+      "engaged": "wwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792976545289,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "first_visit",
+        "session_start"
+      ],
+      "length": "wwww",
+      "list": "event",
+      "newPeople": "wwww",
+      "part": 0,
+      "people": "CCCC",
+      "purchases": "wwww",
+      "revenue": "wwww",
+      "seconds": "wwww",
+      "times": "UECC",
+      "values": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "views": "wwww",
+      "visits": "CCCC"
+    },
+    {
+      "_creationTime": 1792976545171.3855,
+      "_id": "mx8ffrt65g0cddkacwfvayxbw18h1jz7",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-25",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792976545155,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "CEECA",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "8xUGEC",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "EGGEC"
+    },
+    {
+      "_creationTime": 1793062947650.9492,
+      "_id": "mx81bk0gkgp9mfjqfn0a2ykb5n8h3cfx",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwwwww",
+        "wwwwwwww",
+        "wwwwwwww",
+        "wwwwwwww",
+        "wwwwwwww",
+        "wwwwwwww"
+      ],
+      "day": "2026-10-26",
+      "device": "",
+      "engaged": "wwwwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793062947615,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll",
+        "click",
+        "contact",
+        "form_submission"
+      ],
+      "length": "wwwwwwww",
+      "list": "event",
+      "newPeople": "wwwwwwww",
+      "part": 0,
+      "people": "OMOKEAyy",
+      "purchases": "wwwwwwww",
+      "revenue": "wwwwwwww",
+      "seconds": "wwwwwwww",
+      "times": "gy8xOKEAyy",
+      "values": [
+        "wwwwwwww",
+        "wwwwwwww",
+        "wwwwwwww",
+        "wwwwwwww",
+        "wwwwwwww",
+        "wwwwwwww"
+      ],
+      "views": "wwwwwwww",
+      "visits": "OMOKEAyy"
+    },
+    {
+      "_creationTime": 1793149345668.5476,
+      "_id": "mx87b3xrt0ns8zefdcqqebjw9x8h5pta",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "day": "2026-10-27",
+      "device": "",
+      "engaged": "wwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793149345649,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll"
+      ],
+      "length": "wwwww",
+      "list": "event",
+      "newPeople": "wwwww",
+      "part": 0,
+      "people": "IKKEA",
+      "purchases": "wwwww",
+      "revenue": "wwwww",
+      "seconds": "wwwww",
+      "times": "exWQEA",
+      "values": [
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww",
+        "wwwww"
+      ],
+      "views": "wwwww",
+      "visits": "OKQEA"
+    },
+    {
+      "_creationTime": 1793235745661.376,
+      "_id": "mx8d7q32bbkpd84c2s1ds30h6h8h6h39",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "day": "2026-10-28",
+      "device": "",
+      "engaged": "wwwwww",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793285619127,
+      "keys": [
+        "user_engagement",
+        "session_start",
+        "page_view",
+        "first_visit",
+        "contact",
+        "form_submission"
+      ],
+      "length": "wwwwww",
+      "list": "event",
+      "newPeople": "wwwwww",
+      "part": 0,
+      "people": "KIIGyy",
+      "purchases": "wwwwww",
+      "revenue": "wwwwww",
+      "seconds": "wwwwww",
+      "times": "axMKGyy",
+      "values": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "views": "wwwwww",
+      "visits": "MMKGyy"
+    },
+    {
+      "_creationTime": 1793322147548.0657,
+      "_id": "mx890c9fvvk59kzh7n74wzp0nd8h9sp3",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "day": "2026-10-29",
+      "device": "",
+      "engaged": "wwwwww",
+      "eventTimes": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "eventVisits": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793408546715,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit",
+        "scroll",
+        "click"
+      ],
+      "length": "wwwwww",
+      "list": "event",
+      "newPeople": "wwwwww",
+      "part": 0,
+      "people": "GGGGCy",
+      "purchases": "wwwwww",
+      "revenue": "wwwwww",
+      "seconds": "wwwwww",
+      "times": "axMMGEy",
+      "values": [
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww",
+        "wwwwww"
+      ],
+      "views": "wwwwww",
+      "visits": "KKMGEy"
+    },
+    {
+      "_creationTime": 1793408546554.9065,
+      "_id": "mx823110qs8z6xc9rqejg79yy18hadrk",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "day": "2026-10-30",
+      "device": "",
+      "engaged": "wwww",
+      "eventTimes": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "eventVisits": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793408546513,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit"
+      ],
+      "length": "wwww",
+      "list": "event",
+      "newPeople": "wwww",
+      "part": 0,
+      "people": "EEEE",
+      "purchases": "wwww",
+      "revenue": "wwww",
+      "seconds": "wwww",
+      "times": "4xKGE",
+      "values": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "views": "wwww",
+      "visits": "GEGE"
+    },
+    {
+      "_creationTime": 1793494946704.459,
+      "_id": "mx8dqb2xs3wq4jcg5h485vdrh58hcwp4",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "day": "2026-10-31",
+      "device": "",
+      "engaged": "wwww",
+      "eventTimes": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "eventVisits": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793494946619,
+      "keys": [
+        "user_engagement",
+        "page_view",
+        "session_start",
+        "first_visit"
+      ],
+      "length": "wwww",
+      "list": "event",
+      "newPeople": "wwww",
+      "part": 0,
+      "people": "ACCA",
+      "purchases": "wwww",
+      "revenue": "wwww",
+      "seconds": "wwww",
+      "times": "MCCA",
+      "values": [
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww",
+        "wwww"
+      ],
+      "views": "wwww",
+      "visits": "ACCA"
+    }
+  ],
+  "total": [
+    {
+      "_creationTime": 1791715198503.6438,
+      "_id": "mx83eg1vfevwq6psk4wmhz5nnd8g3r8m",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "y"
+      ],
+      "day": "2026-10-01",
+      "device": "",
+      "engaged": "G",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618566,
+      "keys": [
+        ""
+      ],
+      "length": "onz",
+      "list": "total",
+      "newPeople": "C",
+      "part": 0,
+      "people": "Q",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "gH",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "ux",
+      "visits": "Q"
+    },
+    {
+      "_creationTime": 1791715198448.7412,
+      "_id": "mx8aqngwkfjw1k6zr0gmqn1vtd8g3qtf",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-02",
+      "device": "",
+      "engaged": "G",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618503,
+      "keys": [
+        ""
+      ],
+      "length": "s9x",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "G",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "kC",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "U",
+      "visits": "K"
+    },
+    {
+      "_creationTime": 1791715198387.0374,
+      "_id": "mx82rvjtp1peaa82j1wt9vdpah8g23be",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-03",
+      "device": "",
+      "engaged": "C",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618424,
+      "keys": [
+        ""
+      ],
+      "length": "iY",
+      "list": "total",
+      "newPeople": "C",
+      "part": 0,
+      "people": "E",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "2C",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "8x",
+      "visits": "G"
+    },
+    {
+      "_creationTime": 1791715197114.5234,
+      "_id": "mx88y0dc9ewnn2zep0pb2n5p0x8g3yn8",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-04",
+      "device": "",
+      "engaged": "K",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618371,
+      "keys": [
+        ""
+      ],
+      "length": "6lx",
+      "list": "total",
+      "newPeople": "K",
+      "part": 0,
+      "people": "K",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "0gx",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "oy",
+      "visits": "M"
+    },
+    {
+      "_creationTime": 1791715197071.9438,
+      "_id": "mx87qzh0185rermwjzv1k8swb18g2pan",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "y",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-05",
+      "device": "",
+      "engaged": "O",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906618313,
+      "keys": [
+        ""
+      ],
+      "length": "q5A",
+      "list": "total",
+      "newPeople": "K",
+      "part": 0,
+      "people": "O",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "6qx",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "4A",
+      "visits": "Q"
+    },
+    {
+      "_creationTime": 1791715197017.5588,
+      "_id": "mx81y240zkq03ary1ry9c70dvs8g32y6",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "y",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-06",
+      "device": "",
+      "engaged": "S",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906617161,
+      "keys": [
+        ""
+      ],
+      "length": "k7y",
+      "list": "total",
+      "newPeople": "K",
+      "part": 0,
+      "people": "U",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "2T",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "oz",
+      "visits": "W"
+    },
+    {
+      "_creationTime": 1791715196967.7961,
+      "_id": "mx8f60ex34z1mz96f7br9bd5018g2n1z",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-07",
+      "device": "",
+      "engaged": "I",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906617088,
+      "keys": [
+        ""
+      ],
+      "length": "4N",
+      "list": "total",
+      "newPeople": "I",
+      "part": 0,
+      "people": "M",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "2F",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "0x",
+      "visits": "M"
+    },
+    {
+      "_creationTime": 1791715196904.2798,
+      "_id": "mx8bqbgrpt1shwctym81w9kvas8g2g0s",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-08",
+      "device": "",
+      "engaged": "E",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906617025,
+      "keys": [
+        ""
+      ],
+      "length": "uR",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "E",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "sO",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "-",
+      "visits": "E"
+    },
+    {
+      "_creationTime": 1791715196864.783,
+      "_id": "mx8770t5vj2911nd2bh7k56wqx8g2gtp",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-09",
+      "device": "",
+      "engaged": "I",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906616957,
+      "keys": [
+        ""
+      ],
+      "length": "00B",
+      "list": "total",
+      "newPeople": "I",
+      "part": 0,
+      "people": "I",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "sT",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "ey",
+      "visits": "I"
+    },
+    {
+      "_creationTime": 1791715196813.6726,
+      "_id": "mx8cnafxyj71vspe1hnr9n55818g3g3g",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-10",
+      "device": "",
+      "engaged": "G",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906616894,
+      "keys": [
+        ""
+      ],
+      "length": "ghy",
+      "list": "total",
+      "newPeople": "G",
+      "part": 0,
+      "people": "G",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "eO",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "6y",
+      "visits": "I"
+    },
+    {
+      "_creationTime": 1791774023430.3274,
+      "_id": "mx8fqhwgz3kz3qtcv42f1f4zdh8g4ar4",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-11",
+      "device": "",
+      "engaged": "E",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791906616818,
+      "keys": [
+        ""
+      ],
+      "length": "8F",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "I",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "6E",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "ex",
+      "visits": "O"
+    },
+    {
+      "_creationTime": 1791860418716.8184,
+      "_id": "mx8f4ecf54kbkzkw4ab5w6pspx8g6hvx",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "y"
+      ],
+      "day": "2026-10-12",
+      "device": "",
+      "engaged": "O",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1791946820295,
+      "keys": [
+        ""
+      ],
+      "length": "ohB",
+      "list": "total",
+      "newPeople": "Q",
+      "part": 0,
+      "people": "U",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "c4x",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "gy",
+      "visits": "Y"
+    },
+    {
+      "_creationTime": 1791946819967.3147,
+      "_id": "mx89ff1z5btxjwq0c8braqc1198g83n1",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-13",
+      "device": "",
+      "engaged": "C",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792022426083,
+      "keys": [
+        ""
+      ],
+      "length": "4O",
+      "list": "total",
+      "newPeople": "G",
+      "part": 0,
+      "people": "I",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "iG",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "0y",
+      "visits": "K"
+    },
+    {
+      "_creationTime": 1792022425812.136,
+      "_id": "mx86yhketbf68sb7t352pq2cx58gb9kh",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-14",
+      "device": "",
+      "engaged": "C",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792022425808,
+      "keys": [
+        ""
+      ],
+      "length": "6nx",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "G",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "qM",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "G",
+      "visits": "G"
+    },
+    {
+      "_creationTime": 1792108947006.56,
+      "_id": "mx8d36729d8xxn282gmmf2pqa58gcsb9",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-15",
+      "device": "",
+      "engaged": "A",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792195346041,
+      "keys": [
+        ""
+      ],
+      "length": "gky",
+      "list": "total",
+      "newPeople": "C",
+      "part": 0,
+      "people": "C",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "iD",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "E",
+      "visits": "E"
+    },
+    {
+      "_creationTime": 1792195345942.6753,
+      "_id": "mx83gnbpy2kkpmdyya3jnkt6md8gf3jm",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-16",
+      "device": "",
+      "engaged": "A",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792368026857,
+      "keys": [
+        ""
+      ],
+      "length": "iD",
+      "list": "total",
+      "newPeople": "I",
+      "part": 0,
+      "people": "K",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "sC",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "M",
+      "visits": "K"
+    },
+    {
+      "_creationTime": 1792368026746.7412,
+      "_id": "mx860z5t0nykgvffcd9t43ncm58gkc2s",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "y",
+        "w",
+        "w",
+        "w",
+        "y"
+      ],
+      "day": "2026-10-17",
+      "device": "",
+      "engaged": "I",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792368026736,
+      "keys": [
+        ""
+      ],
+      "length": "6nx",
+      "list": "total",
+      "newPeople": "K",
+      "part": 0,
+      "people": "Q",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "oM",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "W",
+      "visits": "Q"
+    },
+    {
+      "_creationTime": 1792368026602.9993,
+      "_id": "mx8c5fymfks25an0nts2snkn8d8gk6h1",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-18",
+      "device": "",
+      "engaged": "A",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792454435745,
+      "keys": [
+        ""
+      ],
+      "length": "6kx",
+      "list": "total",
+      "newPeople": "A",
+      "part": 0,
+      "people": "E",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "4D",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "M",
+      "visits": "I"
+    },
+    {
+      "_creationTime": 1792454435329.777,
+      "_id": "mx873qp825nymryx8j1zfssqmx8gn4h1",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-19",
+      "device": "",
+      "engaged": "G",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792540833627,
+      "keys": [
+        ""
+      ],
+      "length": "qT",
+      "list": "total",
+      "newPeople": "G",
+      "part": 0,
+      "people": "I",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "cG",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "M",
+      "visits": "I"
+    },
+    {
+      "_creationTime": 1792540833471.25,
+      "_id": "mx8fdevdsxses4qzvq7n5mgzbs8gpz6x",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-20",
+      "device": "",
+      "engaged": "I",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792627235523,
+      "keys": [
+        ""
+      ],
+      "length": "mez",
+      "list": "total",
+      "newPeople": "K",
+      "part": 0,
+      "people": "Q",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "uG",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "Y",
+      "visits": "Y"
+    },
+    {
+      "_creationTime": 1792627235348.507,
+      "_id": "mx84ep90bn8hd3x60r69x150998grasg",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-21",
+      "device": "",
+      "engaged": "G",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792627235321,
+      "keys": [
+        ""
+      ],
+      "length": "64x",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "I",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "6D",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "G",
+      "visits": "I"
+    },
+    {
+      "_creationTime": 1792713745678.4421,
+      "_id": "mx842zzbrkrmk71ya610tjhezx8gtbtc",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-22",
+      "device": "",
+      "engaged": "S",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792800145051,
+      "keys": [
+        ""
+      ],
+      "length": "clB",
+      "list": "total",
+      "newPeople": "-",
+      "part": 0,
+      "people": "2x",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "48y",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "qy",
+      "visits": "gx"
+    },
+    {
+      "_creationTime": 1792800144921.8484,
+      "_id": "mx8488jh96m9tgd87th6f6dhzx8gw55p",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-23",
+      "device": "",
+      "engaged": "E",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792890145294,
+      "keys": [
+        ""
+      ],
+      "length": "a6x",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "E",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "gX",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "G",
+      "visits": "E"
+    },
+    {
+      "_creationTime": 1792890145184.383,
+      "_id": "mx80xtes1nnvd88s6436z5b59x8gzzm4",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-24",
+      "device": "",
+      "engaged": "C",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1792976545289,
+      "keys": [
+        ""
+      ],
+      "length": "eT",
+      "list": "total",
+      "newPeople": "C",
+      "part": 0,
+      "people": "C",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "0T",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "E",
+      "visits": "C"
+    },
+    {
+      "_creationTime": 1792976545171.3845,
+      "_id": "mx885dk9hfhbx5jefpmpn86ten8h11wx",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-25",
+      "device": "",
+      "engaged": "A",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793062947787,
+      "keys": [
+        ""
+      ],
+      "length": "g1G",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "E",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "cI",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "U",
+      "visits": "G"
+    },
+    {
+      "_creationTime": 1793062947650.9478,
+      "_id": "mx844z60hygcrjqnznd5be0h0x8h33ft",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "y",
+        "w",
+        "w",
+        "w",
+        "y"
+      ],
+      "day": "2026-10-26",
+      "device": "",
+      "engaged": "K",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793062947615,
+      "keys": [
+        ""
+      ],
+      "length": "6kA",
+      "list": "total",
+      "newPeople": "K",
+      "part": 0,
+      "people": "Q",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "m_",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "8x",
+      "visits": "Q"
+    },
+    {
+      "_creationTime": 1793149345668.5461,
+      "_id": "mx89rcsb4ec4a54f9gnvj7b3rd8h4tpf",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-27",
+      "device": "",
+      "engaged": "E",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793149345649,
+      "keys": [
+        ""
+      ],
+      "length": "6lx",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "K",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "8P",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "W",
+      "visits": "Q"
+    },
+    {
+      "_creationTime": 1793235745661.3745,
+      "_id": "mx8f6hb2wy5pa129hz48fyaq4h8h6tv8",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "y",
+        "w",
+        "w",
+        "w",
+        "y"
+      ],
+      "day": "2026-10-28",
+      "device": "",
+      "engaged": "A",
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793285619127,
+      "keys": [
+        ""
+      ],
+      "length": "oR",
+      "list": "total",
+      "newPeople": "G",
+      "part": 0,
+      "people": "K",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "cH",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "K",
+      "visits": "O"
+    },
+    {
+      "_creationTime": 1793322147548.0642,
+      "_id": "mx8b38vj8wyw0n3sn6beanyqnx8h8d5s",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-29",
+      "device": "",
+      "engaged": "I",
+      "eventTimes": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "eventVisits": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793408546715,
+      "keys": [
+        ""
+      ],
+      "length": "0ky",
+      "list": "total",
+      "newPeople": "G",
+      "part": 0,
+      "people": "G",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "aV",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "M",
+      "visits": "M"
+    },
+    {
+      "_creationTime": 1793408546554.905,
+      "_id": "mx83d528yb1rddmc2z7p4k2ve58hak71",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-30",
+      "device": "",
+      "engaged": "A",
+      "eventTimes": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "eventVisits": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793408546513,
+      "keys": [
+        ""
+      ],
+      "length": "aI",
+      "list": "total",
+      "newPeople": "E",
+      "part": 0,
+      "people": "E",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "8D",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "K",
+      "visits": "G"
+    },
+    {
+      "_creationTime": 1793494946704.458,
+      "_id": "mx80yascq4qsv0nqqcr7p9rryd8hc6m4",
+      "companyWebsiteId": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+      "counts": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "day": "2026-10-31",
+      "device": "",
+      "engaged": "y",
+      "eventTimes": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "eventVisits": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "events": [
+        "purchase",
+        "form_submission",
+        "live_chat_event",
+        "phone_number_click",
+        "email_link_click",
+        "contact"
+      ],
+      "fetchedAt": 1793494946619,
+      "keys": [
+        ""
+      ],
+      "length": "0x",
+      "list": "total",
+      "newPeople": "A",
+      "part": 0,
+      "people": "C",
+      "purchases": "w",
+      "revenue": "w",
+      "seconds": "-",
+      "values": [
+        "w",
+        "w",
+        "w",
+        "w",
+        "w",
+        "w"
+      ],
+      "views": "C",
+      "visits": "C"
+    }
+  ]
+}

@@ -26,17 +26,20 @@ Read this before changing the Wiki routes, `convex/wiki*.ts`, wiki schema tables
 
 The routed surfaces are:
 
-- `src/app/(dashboard)/admin/ai/knowledge/page.tsx` for the platform Wiki.
+- `src/app/(dashboard)/admin/ai/knowledge/page.tsx` for the platform Wiki's pages.
+- `src/app/(dashboard)/admin/ai/knowledge/add/page.tsx`, `waiting/page.tsx`, `ask/page.tsx` and `checkup/page.tsx` for the platform Wiki's Add to the wiki, Waiting on you, Ask the wiki and Check-up, each a line in the AI menu (wiki-sonae-catch-up-plan-2026-11-21.md, S6).
+- `src/app/(dashboard)/admin/ai/knowledge/new-goal/page.tsx` for a new goal, a page opened from the list rather than a pop-up.
 - `src/app/(dashboard)/admin/ai/knowledge/[pageId]/page.tsx` for platform page detail.
 - `src/app/(dashboard)/admin/ai/knowledge/map/page.tsx` for the platform graph.
 - `src/app/(dashboard)/admin/ai/global-knowledge/page.tsx` as the old Global Knowledge redirect to `/admin/ai/knowledge`.
-- `src/app/(dashboard)/admin/companies/[id]/ai/pages/page.tsx` for a selected company's wiki.
+- `src/app/(dashboard)/admin/companies/[id]/ai/pages/page.tsx` for a selected company's wiki pages, with the same `add`, `waiting`, `ask`, `checkup` and `new-goal` pages beside it, each a line in the company's AI menu.
 - `src/app/(dashboard)/admin/companies/[id]/ai/pages/[pageId]/page.tsx` for selected company page detail.
 - `src/app/(dashboard)/admin/companies/[id]/ai/pages/map/page.tsx` for the selected company graph.
 
 The shared UI lives in `src/app/(dashboard)/admin/_features/wiki/`:
 
-- `WikiPagesListScreen.tsx` lists pages, renders import controls, shows distillation progress, pending reviews, open questions, and 15-row pagination.
+- `WikiPagesScreen.tsx` lists pages, 15 rows a page, filtered by kind and tag, with New goal, Download vault and (for a company) Clear wiki beside its title (`WikiPagesActions.tsx`).
+- `WikiAddScreen.tsx` holds the import box and the distillation progress (`WikiReadingProgress.tsx`); `WikiWaitingScreen.tsx` the pending reviews and open questions (`WikiWaitingList.tsx`); `WikiAskScreen.tsx` the Ask box; `WikiCheckupPage.tsx` the nightly check-up and This week; `WikiNewGoalScreen.tsx` the goal form.
 - `WikiPageDetailScreen.tsx` edits the body, pins/unpins human corrections, shows receipts, and shows revision history.
 - `WikiMapScreen.tsx` renders the deterministic graph from page links with pan, zoom, hover-neighbour highlighting, and page navigation.
 - `WikiImportBox.tsx` wraps website, file/folder, and manual-text imports and can mark an import for review before distillation.
@@ -170,7 +173,7 @@ Focused coverage currently includes:
 - `convex/wikiReviews.test.ts`
 - `convex/wikiStaff.test.ts`
 - `convex/wikiTending.test.ts`
-- `src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav.test.tsx`
+- `src/app/(dashboard)/admin/ai/_components/aiMenu.test.ts` and `AiFrame.test.tsx` (the AI section's menu down the left, with Wiki pages and Wiki map)
 - company-layout navigation characterization tests where Wiki replaces Knowledge in the menu
 
 When changing the wiki, run the focused wiki tests first, then the affected knowledge/chat/phone/email tests if the hook changes. For documentation-only updates, run `git diff --check` and the local docs link/index checks used by the documentation upkeep loop.

@@ -138,8 +138,8 @@ describe("counting the week", () => {
   test("the platform's unanswered count is its own open questions asked this week, not a company's", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const companyId = await seedCompany(t);
-    // A company WITH pages owns its own gap (the routing rule); the
-    // platform's count must hold only the platform's.
+    // A company always owns its own gap; the platform's count must hold
+    // only the platform's.
     await seedSilentPage(t, companyId);
     await t.mutation(internal.wikiFeedback.recordAnswerOutcomeInternal, {
       companyId,

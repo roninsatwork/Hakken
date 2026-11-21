@@ -3,7 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent } from "react";
 import { redirect, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
@@ -27,7 +27,7 @@ function formatCount(value: number | undefined) {
 }
 
 
-export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
+export function AgentSkillsCatalog() {
   const t = useTranslations("admin.agents.skillCenter");
   const previewSkillMarkdownImport = useMutation(api.agentSkills.previewSkillMarkdownImport);
   const importSkillMarkdown = useMutation(api.agentSkills.importSkillMarkdown);
@@ -219,10 +219,9 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
   return (
     <div className="flex flex-col gap-5 h-full pb-12">
       {/* The shared admin header, so this page's title sits where every other
-          title in this section sits. It had its own copy of the same markup,
-          which is how it ended up a different size with no dividing rule. */}
+          title in this section sits. No rule of its own: the AI section's
+          frame, whose menu sits beside it, has drawn it. */}
       <PageHeader
-        divider
         icon={<BrainCircuit className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("description")}
@@ -241,9 +240,6 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
           </Button>
         }
       />
-      {/* Below the title, as on every other page in this section. It used to be
-          rendered above it by the route that wraps this component. */}
-      {nav}
 
       {(feedback || error) && (
         <div className={`rounded-[8px] border p-3 text-[12px] ${

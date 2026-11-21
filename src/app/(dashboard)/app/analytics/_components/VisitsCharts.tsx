@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import type { FunctionReturnType } from "convex/server";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -11,6 +11,7 @@ import type { VisitorList } from "@/convex/googleAnalyticsLists";
 import { BarsCard } from "@/src/ui/components/screens/BarsCard";
 import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
+import { useSpanName } from "@/src/hooks/useSpanName";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import type { SiteSeries } from "../../sites/_components/SiteCharts";
 import { formatNumber } from "../../sites/_components/siteFormat";
@@ -31,19 +32,8 @@ type Point = Days["points"][number];
 /** The dates chosen and the span before in words (`useSpanWords`). */
 type SpanWords = { now: string; before: string; beforeNamed: string | undefined };
 
-/** A span's own name where it is one calendar month ("September", "October 2025"); null for any other dates. */
-export function useSpanName(): (span: Span) => string | null {
-  const locale = useLocale();
-  const months = useMemo(() => new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { month: "long", timeZone: "UTC" }), [locale]);
-  const year = new Date().getUTCFullYear();
-  return (span) => {
-    if (!span?.from || !span.to || !span.from.endsWith("-01")) return null;
-    const last = new Date(Date.UTC(Number(span.from.slice(0, 4)), Number(span.from.slice(5, 7)), 0)).toISOString().slice(0, 10);
-    if (span.to !== last) return null;
-    const name = months.format(new Date(`${span.from}T00:00:00Z`));
-    return Number(span.from.slice(0, 4)) === year ? name : `${name} ${span.from.slice(0, 4)}`;
-  };
-}
+/** A span's name where it has one (`src/hooks/useSpanName.ts`), kept here for the screens that import it from here. */
+export { useSpanName };
 
 /** The dates chosen and the span before, each by its name where it has one, else in the date menu's words. */
 export function useSpanWords(span: Span, spanBefore: Span): { now: string; before: string; beforeNamed: string | undefined } {

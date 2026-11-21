@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { useSiteIdOnPage } from "@/src/hooks/useSiteIdOnPage";
+import { usePathname, useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { ClarityPeriodArg } from "@/convex/clarity";
@@ -30,7 +31,8 @@ export const CLARITY_DEVICES = ["PC", "Mobile", "Tablet"] as const;
 export type ClarityDevice = (typeof CLARITY_DEVICES)[number];
 
 export function useClaritySiteId(): Id<"companyWebsites"> {
-  return useParams<{ siteId: string }>().siteId as Id<"companyWebsites">;
+  // The address's website, or the one the Dashboard hands its sections (useSiteIdOnPage).
+  return useSiteIdOnPage() as Id<"companyWebsites">;
 }
 
 export function useClarityStatus() {

@@ -472,7 +472,8 @@ export async function gatherReading(
         companyId && knowledgeMode === "chunks" ? search({ kind: "company", companyId }) : Promise.resolve([]),
         globalWikiServes ? Promise.resolve([]) : search({ kind: "global" }),
         thread ? search({ kind: "thread", threadId: thread._id }) : Promise.resolve([]),
-        args.agent ? search({ kind: "agent", agentId: args.agent.agentId }) : Promise.resolve([]),
+        // The agent's platform knowledge and this company's, never another company's (wiki-sonae-catch-up-plan, 0.2).
+        args.agent ? search({ kind: "agent", agentId: args.agent.agentId, companyId }) : Promise.resolve([]),
       ]);
 
       const ranked: RankedKnowledgeMatch<(typeof companyChunks)[number]>[] = [

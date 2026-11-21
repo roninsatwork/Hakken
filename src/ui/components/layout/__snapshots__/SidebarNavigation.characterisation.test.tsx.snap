@@ -95,6 +95,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
 {
   "links": [
     "Hakken -> /",
+    "ai -> /admin/ai",
     "aiRegister -> /admin/governance/register",
     "allUsers -> /admin/directory",
     "allWebsites -> /admin/websites",
@@ -117,7 +118,6 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "knowledge -> /admin/content/knowledge",
     "manageAgents -> /admin/agents",
     "manageCompanies -> /admin/companies",
-    "manageGlobalAi -> /admin/ai",
     "manageWorkflows -> /admin/workflows",
     "news -> /admin/content/news",
     "outbox -> /admin/content/outbox",
@@ -129,15 +129,13 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "seoCosts -> /admin/websites/costs",
     "systemAdmins -> /admin/super-admins",
     "systemSettings -> /admin/settings",
-    "toolServers -> /admin/ai/tool-servers",
-    "tools -> /admin/ai/tools",
     "topics -> /admin/content/topics",
     "whoToFollow -> /admin/content/who-to-follow",
+    "wikiCheckups -> /admin/health/wikis",
     "workflowRuns -> /admin/workflows/executions",
   ],
   "sections": [
     "agents",
-    "ai",
     "companies",
     "content",
     "governance",

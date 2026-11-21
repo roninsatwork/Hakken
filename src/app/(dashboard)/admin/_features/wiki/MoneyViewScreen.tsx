@@ -10,7 +10,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Button } from "@/src/ui/components/screens/Button";
-import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 
 /**
  * The money view (Anthony's pick, 2026-08-17): what the AI handled this
@@ -20,10 +19,8 @@ import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWor
  */
 export function MoneyViewScreen({
   companyId,
-  showWorkspaceNav,
 }: {
   companyId?: Id<"companies">;
-  showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiMoney");
   const action = useAdminAction({ scope: "admin-money-view" });
@@ -90,10 +87,7 @@ export function MoneyViewScreen({
         icon={<CircleDollarSign className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={companyId ? t("subtitleCompany") : t("subtitleGlobal")}
-        divider
       />
-
-      {showWorkspaceNav && <AiWorkspaceNav />}
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {tiles.map((tile) => (

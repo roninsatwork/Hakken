@@ -1,9 +1,17 @@
 import type { Doc, Id } from "./_generated/dataModel";
+import { appError } from "./utils/appError";
 import { getAssistantSafetyWarnings } from "./aiSafetyPolicy";
 import { summariseAuditValue } from "./auditLogService";
 
 export function isGlobalAgent(agent: Doc<"agents">) {
   return agent.isGlobal !== false;
+}
+
+/** A company can see a shared agent, or one of its own; anything else reads as not found (Sonae `2a05a33b`). */
+export function assertAgentVisibleToCompany(agent: Doc<"agents"> | null, companyId: Id<"companies"> | undefined): asserts agent is Doc<"agents"> {
+  if (!agent || !isGlobalAgent(agent) || (agent.companyId !== undefined && agent.companyId !== companyId)) {
+    throw appError("NOT_FOUND", "Agent not found.");
+  }
 }
 
 export function buildGlobalAgentRecord(args: {

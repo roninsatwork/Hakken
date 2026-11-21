@@ -158,7 +158,8 @@ export const mapWebsite = adminAction({
       companyId: getActiveCompanyId(ctx.user),
     });
 
-    const response = await fetch("https://api.firecrawl.dev/v1/map", {
+    // Firecrawl's v2: its v1 stops on 2026-12-10 (wiki-sonae-catch-up-plan-2026-11-21.md, 0.1).
+    const response = await fetch("https://api.firecrawl.dev/v2/map", {
        method: "POST",
        headers: {
            "Authorization": `Bearer ${firecrawlKey}`,
@@ -170,9 +171,11 @@ export const mapWebsite = adminAction({
 
     const data = await readFirecrawlJson(response, "mapping");
     if (!data.success) throw appError("UPSTREAM_FAILURE", "Firecrawl mapping unsuccesful");
+    // v2 lists each page as { url, title, description }; v1 gave bare addresses. Both are read, so neither is lost.
     return Array.isArray(data.links)
       ? (data.links as unknown[])
-        .filter((link: unknown): link is string => typeof link === "string")
+        .map((link: unknown) => (typeof link === "string" ? link : (link as { url?: unknown } | null)?.url))
+        .filter((url: unknown): url is string => typeof url === "string")
         .slice(0, KNOWLEDGE_WEBSITE_URLS_PER_REQUEST)
       : [];
   }
@@ -207,7 +210,7 @@ async function retrievalTestShelf(
     }
     const companyId = agent.companyId ?? viewerCompanyId;
     return {
-      scope: { kind: "agent", agentId: args.agentId },
+      scope: { kind: "agent", agentId: args.agentId, companyId },
       tier: "agent",
       ...(companyId ? { companyId } : {}),
       agent: { agentId: args.agentId, ...(companyId ? { companyId } : {}) },
@@ -311,13 +314,15 @@ export const processWebsiteQueue = internalAction({
        const firecrawlKey = process.env.FIRECRAWL_API_KEY;
        if (!firecrawlKey) throw appError("INVALID_INPUT", "Missing FIRECRAWL_API_KEY");
 
-       const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+       const response = await fetch("https://api.firecrawl.dev/v2/scrape", {
            method: "POST",
            headers: {
                "Authorization": `Bearer ${firecrawlKey}`,
                "Content-Type": "application/json"
            },
-           body: JSON.stringify({ url: nextDoc.sourceUrl, formats: ["markdown"] }),
+           // maxAge 0: v2 would otherwise return a copy up to two days old, and
+           // re-importing a site after editing it should pick up the edit.
+           body: JSON.stringify({ url: nextDoc.sourceUrl, formats: ["markdown"], maxAge: 0 }),
            signal: AbortSignal.timeout(KNOWLEDGE_WEBSITE_REQUEST_TIMEOUT_MS),
        });
 
@@ -443,6 +448,20 @@ async function embedAndStoreDoc(
           throw appError("INVALID_INPUT", "Knowledge embedding produced no searchable chunks.");
       }
 
+      // Every old piece goes first (2026-11-12). Clearing used to ride on the
+      // first batch and stopped at 500, so re-uploading a very long file kept
+      // its oldest pieces, read ahead of the new text. A call clears up to 500
+      // and inserts nothing; it is repeated until nothing is left.
+      for (let pass = 0; pass < 100; pass += 1) {
+          const { cleared } = await ctx.runMutation(internal.knowledge.saveChunksInternal, {
+             documentId,
+             chunks: [],
+             replaceExisting: true,
+             markReady: false,
+          });
+          if (cleared < 500) break;
+      }
+
       // Stagger insertions to avoid 16MB limit
       const chunkSize = 50;
       for (let i = 0; i < embeddedChunks.length; i += chunkSize) {
@@ -457,7 +476,7 @@ async function embedAndStoreDoc(
              embeddingProviderModelId: embeddingModel.providerModelId,
              embeddingDimensions: embeddingModel.embeddingDimensions,
              chunks: batch,
-             replaceExisting: i === 0,
+             replaceExisting: false,
              markReady: i + chunkSize >= embeddedChunks.length,
           });
       }

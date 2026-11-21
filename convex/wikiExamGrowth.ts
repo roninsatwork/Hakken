@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { adminMutation, adminQuery } from "./tenantFunctions";
+import { adminMutation, adminQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import * as tailShapes from "./utils/tailShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { questionKey } from "./wikiFeedbackService";
@@ -103,27 +103,40 @@ export const proposeExamCaseInternal = internalMutation({
   },
 });
 
+async function listDrafts(ctx: import("./_generated/server").QueryCtx, companyId: Id<"companies"> | undefined) {
+  const rows = await ctx.db
+    .query("companyEvalCases")
+    .withIndex("by_company_status_updated", (q) => q.eq("companyId", companyId).eq("status", "PROPOSED"))
+    .order("desc")
+    .take(50);
+  return rows.map((row) => ({
+    caseId: row._id,
+    name: row.name,
+    prompt: row.prompt,
+    expectedBehavior: row.expectedBehavior,
+    createdAt: row.createdAt,
+  }));
+}
+
 /** The Evals screen's drafts shelf. */
 export const listProposedCasesForCompany = adminQuery({
   args: { companyId: v.id("companies") },
   returns: tailShapes.wikiProposedCaseListShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
-    const rows = await ctx.db
-      .query("companyEvalCases")
-      .withIndex("by_company_status_updated", (q) =>
-        q.eq("companyId", args.companyId).eq("status", "PROPOSED")
-      )
-      .order("desc")
-      .take(50);
-    return rows.map((row) => ({
-      caseId: row._id,
-      name: row.name,
-      prompt: row.prompt,
-      expectedBehavior: row.expectedBehavior,
-      createdAt: row.createdAt,
-    }));
+    return await listDrafts(ctx, args.companyId);
   },
+});
+
+/**
+ * The platform's drafts, grown from the platform wiki's questions. They were
+ * written (with no company) but no screen showed them until the AI canvas
+ * drew the note on the platform's Evals page (2026-11-12).
+ */
+export const listProposedCasesForGlobal = superAdminQuery({
+  args: {},
+  returns: tailShapes.wikiProposedCaseListShape,
+  handler: async (ctx) => await listDrafts(ctx, undefined),
 });
 
 async function decideDraft(
@@ -168,5 +181,14 @@ export const decideProposedCaseForCompany = adminMutation({
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
     await decideDraft(ctx, { userId: ctx.userId, ...args });
+  },
+});
+
+export const decideProposedCaseForGlobal = superAdminMutation({
+  args: { caseId: v.id("companyEvalCases"), approve: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await decideDraft(ctx, { userId: ctx.userId, companyId: undefined, ...args });
+    return null;
   },
 });

@@ -1,0 +1,1314 @@
+[
+  {
+    "facts": [
+      [
+        "page.allServices.events",
+        "allServices · events",
+        1
+      ],
+      [
+        "page.allServices.eventsBefore",
+        "allServices · eventsBefore",
+        2
+      ],
+      [
+        "page.allServices.services",
+        "allServices · services",
+        6
+      ],
+      [
+        "page.allServices.visits",
+        "allServices · visits",
+        13
+      ],
+      [
+        "page.allServices.visitsBefore",
+        "allServices · visitsBefore",
+        27
+      ],
+      [
+        "page.allServices.visitsThatStartedOnAService",
+        "allServices · visitsThatStartedOnAService",
+        13
+      ],
+      [
+        "page.channels.Organic_Search.events",
+        "channels · Organic_Search · events",
+        0
+      ],
+      [
+        "page.channels.Organic_Search.eventsBefore",
+        "channels · Organic_Search · eventsBefore",
+        1
+      ],
+      [
+        "page.channels.Organic_Search.visits",
+        "channels · Organic_Search · visits",
+        9
+      ],
+      [
+        "page.channels.Organic_Search.visitsBefore",
+        "channels · Organic_Search · visitsBefore",
+        12
+      ],
+      [
+        "page.channels.Cross-network.events",
+        "channels · Cross-network · events",
+        0
+      ],
+      [
+        "page.channels.Cross-network.eventsBefore",
+        "channels · Cross-network · eventsBefore",
+        0
+      ],
+      [
+        "page.channels.Cross-network.visits",
+        "channels · Cross-network · visits",
+        2
+      ],
+      [
+        "page.channels.Cross-network.visitsBefore",
+        "channels · Cross-network · visitsBefore",
+        0
+      ],
+      [
+        "page.channels.AI_assistants.events",
+        "channels · AI_assistants · events",
+        1
+      ],
+      [
+        "page.channels.AI_assistants.eventsBefore",
+        "channels · AI_assistants · eventsBefore",
+        0
+      ],
+      [
+        "page.channels.AI_assistants.visits",
+        "channels · AI_assistants · visits",
+        1
+      ],
+      [
+        "page.channels.AI_assistants.visitsBefore",
+        "channels · AI_assistants · visitsBefore",
+        0
+      ],
+      [
+        "page.channels.Direct.events",
+        "channels · Direct · events",
+        0
+      ],
+      [
+        "page.channels.Direct.eventsBefore",
+        "channels · Direct · eventsBefore",
+        0
+      ],
+      [
+        "page.channels.Direct.visits",
+        "channels · Direct · visits",
+        1
+      ],
+      [
+        "page.channels.Direct.visitsBefore",
+        "channels · Direct · visitsBefore",
+        2
+      ],
+      [
+        "page.elsewhere.events",
+        "elsewhere · events",
+        1
+      ],
+      [
+        "page.elsewhere.eventsBefore",
+        "elsewhere · eventsBefore",
+        0
+      ],
+      [
+        "page.elsewhere.pageEvents",
+        "elsewhere · pageEvents",
+        1
+      ],
+      [
+        "page.groups.1_visit_or_more,_and_4.3_or_more_events_for_every_100.events",
+        "groups · 1_visit_or_more,_and_4.3_or_more_events_for_every_100 · events",
+        1
+      ],
+      [
+        "page.groups.1_visit_or_more,_and_4.3_or_more_events_for_every_100.services",
+        "groups · 1_visit_or_more,_and_4.3_or_more_events_for_every_100 · services",
+        1
+      ],
+      [
+        "page.groups.1_visit_or_more,_and_4.3_or_more_events_for_every_100.visits",
+        "groups · 1_visit_or_more,_and_4.3_or_more_events_for_every_100 · visits",
+        1
+      ],
+      [
+        "page.groups.1_visit_or_more,_and_under_4.3_events_for_every_100.events",
+        "groups · 1_visit_or_more,_and_under_4.3_events_for_every_100 · events",
+        0
+      ],
+      [
+        "page.groups.1_visit_or_more,_and_under_4.3_events_for_every_100.services",
+        "groups · 1_visit_or_more,_and_under_4.3_events_for_every_100 · services",
+        5
+      ],
+      [
+        "page.groups.1_visit_or_more,_and_under_4.3_events_for_every_100.visits",
+        "groups · 1_visit_or_more,_and_under_4.3_events_for_every_100 · visits",
+        12
+      ],
+      [
+        "page.groups.Under_1_visit,_and_4.3_or_more_events_for_every_100.events",
+        "groups · Under_1_visit,_and_4.3_or_more_events_for_every_100 · events",
+        0
+      ],
+      [
+        "page.groups.Under_1_visit,_and_4.3_or_more_events_for_every_100.services",
+        "groups · Under_1_visit,_and_4.3_or_more_events_for_every_100 · services",
+        0
+      ],
+      [
+        "page.groups.Under_1_visit,_and_4.3_or_more_events_for_every_100.visits",
+        "groups · Under_1_visit,_and_4.3_or_more_events_for_every_100 · visits",
+        0
+      ],
+      [
+        "page.groups.Under_1_visit,_and_under_4.3_events_for_every_100.events",
+        "groups · Under_1_visit,_and_under_4.3_events_for_every_100 · events",
+        0
+      ],
+      [
+        "page.groups.Under_1_visit,_and_under_4.3_events_for_every_100.services",
+        "groups · Under_1_visit,_and_under_4.3_events_for_every_100 · services",
+        0
+      ],
+      [
+        "page.groups.Under_1_visit,_and_under_4.3_events_for_every_100.visits",
+        "groups · Under_1_visit,_and_under_4.3_events_for_every_100 · visits",
+        0
+      ],
+      [
+        "page.noEvents.busiest.AI_Agency.visits",
+        "noEvents · busiest · AI_Agency · visits",
+        8
+      ],
+      [
+        "page.noEvents.busiest.Digital_Product_Agency.visits",
+        "noEvents · busiest · Digital_Product_Agency · visits",
+        1
+      ],
+      [
+        "page.noEvents.busiest.WordPress_Agency.visits",
+        "noEvents · busiest · WordPress_Agency · visits",
+        1
+      ]
+    ],
+    "path": "gs7g0b3vjns0phy66wh3stq0rs8evz8p/services",
+    "says": [
+      "Visits to your services fell to 13 this week, down from 27.",
+      "Even so, services made 50% of all events from 27.7% of your visits.",
+      "AI Agency had 0 events for every 100 visits, against 4.3 across the website.",
+      "5 services had no events, which is 83.3% of the services people visited.",
+      "Organic Search fell in visits and events, while AI Agency was the only service that grew.",
+      "With numbers this small over a single week, it is too early to tell if behaviour has changed."
+    ],
+    "screen": "googleAnalytics.services",
+    "steps": [
+      "Check the AI Agency page to make its contact form or phone number easier to use.",
+      "Look at Organic Search to see which service pages lost visitors this week.",
+      "See how visitors move between your service pages and the home page before they act."
+    ],
+    "week": "2026-11-02"
+  },
+  {
+    "facts": [
+      [
+        "page.channels.rows.Organic_Search.conversions",
+        "channels · rows · Organic_Search · conversions",
+        1
+      ],
+      [
+        "page.channels.rows.Organic_Search.conversionsBefore",
+        "channels · rows · Organic_Search · conversionsBefore",
+        1
+      ],
+      [
+        "page.channels.rows.Organic_Search.ofEvery100Done",
+        "channels · rows · Organic_Search · ofEvery100Done",
+        20
+      ],
+      [
+        "page.channels.rows.Organic_Search.ofEvery100Visits",
+        "channels · rows · Organic_Search · ofEvery100Visits",
+        77
+      ],
+      [
+        "page.channels.rows.Organic_Search.stayed",
+        "channels · rows · Organic_Search · stayed",
+        111
+      ],
+      [
+        "page.channels.rows.Organic_Search.views",
+        "channels · rows · Organic_Search · views",
+        481
+      ],
+      [
+        "page.channels.rows.Organic_Search.visits",
+        "channels · rows · Organic_Search · visits",
+        188
+      ],
+      [
+        "page.channels.rows.Organic_Search.visitsBefore",
+        "channels · rows · Organic_Search · visitsBefore",
+        180
+      ],
+      [
+        "page.channels.rows.Direct.conversions",
+        "channels · rows · Direct · conversions",
+        3
+      ],
+      [
+        "page.channels.rows.Direct.conversionsBefore",
+        "channels · rows · Direct · conversionsBefore",
+        1
+      ],
+      [
+        "page.channels.rows.Direct.ofEvery100Done",
+        "channels · rows · Direct · ofEvery100Done",
+        60
+      ],
+      [
+        "page.channels.rows.Direct.ofEvery100Visits",
+        "channels · rows · Direct · ofEvery100Visits",
+        19
+      ],
+      [
+        "page.channels.rows.Direct.stayed",
+        "channels · rows · Direct · stayed",
+        31
+      ],
+      [
+        "page.channels.rows.Direct.views",
+        "channels · rows · Direct · views",
+        102
+      ],
+      [
+        "page.channels.rows.Direct.visits",
+        "channels · rows · Direct · visits",
+        46
+      ],
+      [
+        "page.channels.rows.Direct.visitsBefore",
+        "channels · rows · Direct · visitsBefore",
+        44
+      ],
+      [
+        "page.channels.rows.AI_assistants.conversions",
+        "channels · rows · AI_assistants · conversions",
+        0
+      ],
+      [
+        "page.channels.rows.AI_assistants.conversionsBefore",
+        "channels · rows · AI_assistants · conversionsBefore",
+        0
+      ],
+      [
+        "page.channels.rows.AI_assistants.ofEvery100Done",
+        "channels · rows · AI_assistants · ofEvery100Done",
+        0
+      ],
+      [
+        "page.channels.rows.AI_assistants.ofEvery100Visits",
+        "channels · rows · AI_assistants · ofEvery100Visits",
+        2
+      ],
+      [
+        "page.channels.rows.AI_assistants.stayed",
+        "channels · rows · AI_assistants · stayed",
+        4
+      ],
+      [
+        "page.channels.rows.AI_assistants.views",
+        "channels · rows · AI_assistants · views",
+        19
+      ],
+      [
+        "page.channels.rows.AI_assistants.visits",
+        "channels · rows · AI_assistants · visits",
+        4
+      ],
+      [
+        "page.channels.rows.AI_assistants.visitsBefore",
+        "channels · rows · AI_assistants · visitsBefore",
+        6
+      ],
+      [
+        "page.channels.rows.Referral.conversions",
+        "channels · rows · Referral · conversions",
+        1
+      ],
+      [
+        "page.channels.rows.Referral.conversionsBefore",
+        "channels · rows · Referral · conversionsBefore",
+        0
+      ],
+      [
+        "page.channels.rows.Referral.ofEvery100Done",
+        "channels · rows · Referral · ofEvery100Done",
+        20
+      ],
+      [
+        "page.channels.rows.Referral.ofEvery100Visits",
+        "channels · rows · Referral · ofEvery100Visits",
+        1
+      ],
+      [
+        "page.channels.rows.Referral.stayed",
+        "channels · rows · Referral · stayed",
+        3
+      ],
+      [
+        "page.channels.rows.Referral.views",
+        "channels · rows · Referral · views",
+        19
+      ],
+      [
+        "page.channels.rows.Referral.visits",
+        "channels · rows · Referral · visits",
+        4
+      ],
+      [
+        "page.channels.rows.Referral.visitsBefore",
+        "channels · rows · Referral · visitsBefore",
+        6
+      ],
+      [
+        "page.channels.rows.Organic_Social.conversions",
+        "channels · rows · Organic_Social · conversions",
+        0
+      ],
+      [
+        "page.channels.rows.Organic_Social.conversionsBefore",
+        "channels · rows · Organic_Social · conversionsBefore",
+        0
+      ],
+      [
+        "page.channels.rows.Organic_Social.ofEvery100Done",
+        "channels · rows · Organic_Social · ofEvery100Done",
+        0
+      ],
+      [
+        "page.channels.rows.Organic_Social.ofEvery100Visits",
+        "channels · rows · Organic_Social · ofEvery100Visits",
+        1
+      ],
+      [
+        "page.channels.rows.Organic_Social.stayed",
+        "channels · rows · Organic_Social · stayed",
+        0
+      ],
+      [
+        "page.channels.rows.Organic_Social.views",
+        "channels · rows · Organic_Social · views",
+        1
+      ],
+      [
+        "page.channels.rows.Organic_Social.visits",
+        "channels · rows · Organic_Social · visits",
+        2
+      ],
+      [
+        "page.channels.rows.Organic_Social.visitsBefore",
+        "channels · rows · Organic_Social · visitsBefore",
+        5
+      ]
+    ],
+    "path": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+    "says": [
+      "The website had 245 visits, up from 240 in September.",
+      "However, 39.2% of people left straight away, up from 18.3% in September.",
+      "Also, 39 visits had no page recorded, which is 15.9% of all visits."
+    ],
+    "screen": "googleAnalytics.overview",
+    "steps": [
+      "Find out why visits with no page recorded are happening in Tracking health.",
+      "Check the Content hub pages to see why visitors leave without doing an event.",
+      "Review Organic Search to see why people leave straight away."
+    ],
+    "week": "2026-11-02"
+  },
+  {
+    "facts": [
+      [
+        "page.busiestPage.people",
+        "busiestPage · people",
+        1
+      ],
+      [
+        "page.busiestPage.times",
+        "busiestPage · times",
+        0
+      ],
+      [
+        "page.busiestPage.views",
+        "busiestPage · views",
+        1
+      ],
+      [
+        "page.conversions.count",
+        "conversions · count",
+        0
+      ],
+      [
+        "page.countries.PK.people",
+        "countries · PK · people",
+        1
+      ],
+      [
+        "page.countries.PK.times",
+        "countries · PK · times",
+        0
+      ],
+      [
+        "page.countries.PK.views",
+        "countries · PK · views",
+        0
+      ],
+      [
+        "page.kinds.Service.pages",
+        "kinds · Service · pages",
+        1
+      ],
+      [
+        "page.kinds.Service.views",
+        "kinds · Service · views",
+        1
+      ],
+      [
+        "page.minutes.0",
+        "minutes · 0",
+        0
+      ],
+      [
+        "page.minutes.1",
+        "minutes · 1",
+        0
+      ],
+      [
+        "page.minutes.2",
+        "minutes · 2",
+        0
+      ],
+      [
+        "page.minutes.3",
+        "minutes · 3",
+        0
+      ],
+      [
+        "page.minutes.4",
+        "minutes · 4",
+        0
+      ],
+      [
+        "page.minutes.5",
+        "minutes · 5",
+        0
+      ],
+      [
+        "page.minutes.6",
+        "minutes · 6",
+        0
+      ],
+      [
+        "page.minutes.7",
+        "minutes · 7",
+        0
+      ],
+      [
+        "page.minutes.8",
+        "minutes · 8",
+        0
+      ],
+      [
+        "page.minutes.9",
+        "minutes · 9",
+        0
+      ],
+      [
+        "page.minutes.10",
+        "minutes · 10",
+        0
+      ],
+      [
+        "page.minutes.11",
+        "minutes · 11",
+        0
+      ],
+      [
+        "page.minutes.12",
+        "minutes · 12",
+        0
+      ],
+      [
+        "page.minutes.13",
+        "minutes · 13",
+        0
+      ],
+      [
+        "page.minutes.14",
+        "minutes · 14",
+        0
+      ],
+      [
+        "page.minutes.15",
+        "minutes · 15",
+        0
+      ],
+      [
+        "page.minutes.16",
+        "minutes · 16",
+        0
+      ],
+      [
+        "page.minutes.17",
+        "minutes · 17",
+        0
+      ],
+      [
+        "page.minutes.18",
+        "minutes · 18",
+        0
+      ],
+      [
+        "page.minutes.19",
+        "minutes · 19",
+        0
+      ],
+      [
+        "page.minutes.20",
+        "minutes · 20",
+        0
+      ],
+      [
+        "page.minutes.21",
+        "minutes · 21",
+        0
+      ],
+      [
+        "page.minutes.22",
+        "minutes · 22",
+        0
+      ],
+      [
+        "page.minutes.23",
+        "minutes · 23",
+        0
+      ],
+      [
+        "page.minutes.24",
+        "minutes · 24",
+        1
+      ],
+      [
+        "page.minutesAllRows",
+        "minutesAllRows",
+        30
+      ],
+      [
+        "page.now",
+        "now",
+        0
+      ],
+      [
+        "page.pages.AI_Agency_|_Agent_Automation_Company_|_London_And_Surrey.people",
+        "pages · AI_Agency_|_Agent_Automation_Company_|_London_And_Surrey · people",
+        1
+      ],
+      [
+        "page.pages.AI_Agency_|_Agent_Automation_Company_|_London_And_Surrey.times",
+        "pages · AI_Agency_|_Agent_Automation_Company_|_London_And_Surrey · times",
+        0
+      ],
+      [
+        "page.pages.AI_Agency_|_Agent_Automation_Company_|_London_And_Surrey.views",
+        "pages · AI_Agency_|_Agent_Automation_Company_|_London_And_Surrey · views",
+        1
+      ],
+      [
+        "page.people",
+        "people",
+        1
+      ]
+    ],
+    "path": "gs7g0b3vjns0phy66wh3stq0rs8evz8p/live",
+    "says": [
+      "One visitor from Lahore viewed the AI Agency page, above a usual half hour's 0 people.",
+      "Service pages got that 1 view, and usually lead the website with 42.9% of views.",
+      "Over the last month, the AI Agency page dropped from 249 views to 71 views.",
+      "Only 14.3% of views there reach the bottom, against 24.2% across Service pages.",
+      "Across the month, 0 visits starting on the AI Agency page converted."
+    ],
+    "screen": "googleAnalytics.live",
+    "steps": [
+      "Check the AI Agency page on desktop to see why people reload it or stop scrolling.",
+      "Review which channels lost visits to the AI Agency page over the last month.",
+      "Compare how Brand pages and Service pages lead visitors to conversions."
+    ],
+    "week": "2026-11-02"
+  },
+  {
+    "facts": [
+      [
+        "page.campaignMap.campaigns.ReviveOldPost.bought",
+        "campaignMap · campaigns · ReviveOldPost · bought",
+        0
+      ],
+      [
+        "page.campaignMap.campaigns.ReviveOldPost.boughtBefore",
+        "campaignMap · campaigns · ReviveOldPost · boughtBefore",
+        0
+      ],
+      [
+        "page.campaignMap.campaigns.ReviveOldPost.conversions",
+        "campaignMap · campaigns · ReviveOldPost · conversions",
+        0
+      ],
+      [
+        "page.campaignMap.campaigns.ReviveOldPost.conversionsBefore",
+        "campaignMap · campaigns · ReviveOldPost · conversionsBefore",
+        0
+      ],
+      [
+        "page.campaignMap.campaigns.ReviveOldPost.visits",
+        "campaignMap · campaigns · ReviveOldPost · visits",
+        26
+      ],
+      [
+        "page.campaignMap.campaigns.ReviveOldPost.visitsBefore",
+        "campaignMap · campaigns · ReviveOldPost · visitsBefore",
+        17
+      ],
+      [
+        "page.campaignMap.campaigns.yell.bought",
+        "campaignMap · campaigns · yell · bought",
+        0
+      ],
+      [
+        "page.campaignMap.campaigns.yell.boughtBefore",
+        "campaignMap · campaigns · yell · boughtBefore",
+        0
+      ],
+      [
+        "page.campaignMap.campaigns.yell.conversions",
+        "campaignMap · campaigns · yell · conversions",
+        1
+      ],
+      [
+        "page.campaignMap.campaigns.yell.conversionsBefore",
+        "campaignMap · campaigns · yell · conversionsBefore",
+        0
+      ],
+      [
+        "page.campaignMap.campaigns.yell.visits",
+        "campaignMap · campaigns · yell · visits",
+        2
+      ],
+      [
+        "page.campaignMap.campaigns.yell.visitsBefore",
+        "campaignMap · campaigns · yell · visitsBefore",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.0.bought",
+        "campaignsByDay · days · 0 · bought",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.0.conversions",
+        "campaignsByDay · days · 0 · conversions",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.0.leftStraightAway",
+        "campaignsByDay · days · 0 · leftStraightAway",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.0.visits",
+        "campaignsByDay · days · 0 · visits",
+        1
+      ],
+      [
+        "page.campaignsByDay.days.1.bought",
+        "campaignsByDay · days · 1 · bought",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.1.conversions",
+        "campaignsByDay · days · 1 · conversions",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.1.leftStraightAway",
+        "campaignsByDay · days · 1 · leftStraightAway",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.1.visits",
+        "campaignsByDay · days · 1 · visits",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.2.bought",
+        "campaignsByDay · days · 2 · bought",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.2.conversions",
+        "campaignsByDay · days · 2 · conversions",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.2.leftStraightAway",
+        "campaignsByDay · days · 2 · leftStraightAway",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.2.visits",
+        "campaignsByDay · days · 2 · visits",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.3.bought",
+        "campaignsByDay · days · 3 · bought",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.3.conversions",
+        "campaignsByDay · days · 3 · conversions",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.3.leftStraightAway",
+        "campaignsByDay · days · 3 · leftStraightAway",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.3.visits",
+        "campaignsByDay · days · 3 · visits",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.4.bought",
+        "campaignsByDay · days · 4 · bought",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.4.conversions",
+        "campaignsByDay · days · 4 · conversions",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.4.leftStraightAway",
+        "campaignsByDay · days · 4 · leftStraightAway",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.4.visits",
+        "campaignsByDay · days · 4 · visits",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.5.bought",
+        "campaignsByDay · days · 5 · bought",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.5.conversions",
+        "campaignsByDay · days · 5 · conversions",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.5.leftStraightAway",
+        "campaignsByDay · days · 5 · leftStraightAway",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.5.visits",
+        "campaignsByDay · days · 5 · visits",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.6.bought",
+        "campaignsByDay · days · 6 · bought",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.6.conversions",
+        "campaignsByDay · days · 6 · conversions",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.6.leftStraightAway",
+        "campaignsByDay · days · 6 · leftStraightAway",
+        0
+      ],
+      [
+        "page.campaignsByDay.days.6.visits",
+        "campaignsByDay · days · 6 · visits",
+        0
+      ]
+    ],
+    "path": "gs7g0b3vjns0phy66wh3stq0rs8evz8p/campaigns",
+    "says": [
+      "Tagged links brought 28 visits over the last 12 months, up from 18.",
+      "Those campaign visits brought 1.4% of all conversions from 0.7% of all visits.",
+      "ReviveOldPost from linkedin brought 26 visits, up from 17.",
+      "Yet ReviveOldPost had 0 conversions, against 3.6 across all campaign visits."
+    ],
+    "screen": "googleAnalytics.campaigns",
+    "steps": [
+      "Check which pages your ReviveOldPost links on linkedin point to, and review how those pages perform on All pages.",
+      "Add campaign tags to your other social, email and directory links, and compare your traffic sources on Channels.",
+      "See how Contact conversions perform across the whole website on Conversions."
+    ],
+    "week": "2026-11-02"
+  },
+  {
+    "facts": [
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.activeSeconds",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · activeSeconds",
+        103
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.bots",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · bots",
+        3
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.dead",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · dead",
+        1
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.errorClicks",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · errorClicks",
+        0
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.errors",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · errors",
+        3
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.excessive",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · excessive",
+        0
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.pagesPerVisit",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · pagesPerVisit",
+        1.2
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.quickBack",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · quickBack",
+        0
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.rage",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · rage",
+        0
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.scroll",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · scroll",
+        34.7
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.shares.dead",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · shares · dead",
+        0.3
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.shares.errorClicks",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · shares · errorClicks",
+        0
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.shares.errors",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · shares · errors",
+        0.9
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.shares.excessive",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · shares · excessive",
+        0
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.shares.quickBack",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · shares · quickBack",
+        0
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.shares.rage",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · shares · rage",
+        0
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.users",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · users",
+        287
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.now.visits",
+        "busiest · /hub/kapferer-brand-identity-prism/ · now · visits",
+        320
+      ],
+      [
+        "page.busiest./hub/kapferer-brand-identity-prism/.visitsBefore",
+        "busiest · /hub/kapferer-brand-identity-prism/ · visitsBefore",
+        0
+      ],
+      [
+        "page.busiest./.now.activeSeconds",
+        "busiest · / · now · activeSeconds",
+        32
+      ],
+      [
+        "page.busiest./.now.bots",
+        "busiest · / · now · bots",
+        65
+      ],
+      [
+        "page.busiest./.now.dead",
+        "busiest · / · now · dead",
+        0
+      ],
+      [
+        "page.busiest./.now.errorClicks",
+        "busiest · / · now · errorClicks",
+        0
+      ],
+      [
+        "page.busiest./.now.errors",
+        "busiest · / · now · errors",
+        3
+      ],
+      [
+        "page.busiest./.now.excessive",
+        "busiest · / · now · excessive",
+        1
+      ],
+      [
+        "page.busiest./.now.pagesPerVisit",
+        "busiest · / · now · pagesPerVisit",
+        1.5
+      ],
+      [
+        "page.busiest./.now.quickBack",
+        "busiest · / · now · quickBack",
+        6
+      ],
+      [
+        "page.busiest./.now.rage",
+        "busiest · / · now · rage",
+        0
+      ],
+      [
+        "page.busiest./.now.scroll",
+        "busiest · / · now · scroll",
+        39.3
+      ],
+      [
+        "page.busiest./.now.shares.dead",
+        "busiest · / · now · shares · dead",
+        0
+      ],
+      [
+        "page.busiest./.now.shares.errorClicks",
+        "busiest · / · now · shares · errorClicks",
+        0
+      ],
+      [
+        "page.busiest./.now.shares.errors",
+        "busiest · / · now · shares · errors",
+        2.2
+      ],
+      [
+        "page.busiest./.now.shares.excessive",
+        "busiest · / · now · shares · excessive",
+        0.7
+      ],
+      [
+        "page.busiest./.now.shares.quickBack",
+        "busiest · / · now · shares · quickBack",
+        4.3
+      ],
+      [
+        "page.busiest./.now.shares.rage",
+        "busiest · / · now · shares · rage",
+        0
+      ],
+      [
+        "page.busiest./.now.users",
+        "busiest · / · now · users",
+        191
+      ],
+      [
+        "page.busiest./.now.visits",
+        "busiest · / · now · visits",
+        139
+      ],
+      [
+        "page.busiest./.visitsBefore",
+        "busiest · / · visitsBefore",
+        0
+      ],
+      [
+        "page.busiest./ai-agency/.now.activeSeconds",
+        "busiest · /ai-agency/ · now · activeSeconds",
+        38
+      ],
+      [
+        "page.busiest./ai-agency/.now.bots",
+        "busiest · /ai-agency/ · now · bots",
+        5
+      ]
+    ],
+    "path": "gs7g0b3vjns0phy66wh3stq0rs8evz8p/pages",
+    "says": [
+      "320 visits landed on /hub/kapferer-brand-identity-prism/, up from 0 visits in the span before.",
+      "43% of all visits went to this guide, yet people view just 1.2 pages per visit.",
+      "68.8% of /about-us/ is scrolled, far beating the 36.7% average across the list.",
+      "68.8% scroll depth shows visitors read deeply once they reach your brand story.",
+      "32% is all people scroll on /ai-agency/, leaving before seeing your full offer."
+    ],
+    "screen": "clarity.pages",
+    "steps": [
+      "Add clear links to your brand identity and about pages inside the /hub/kapferer-brand-identity-prism/ article.",
+      "Move your strongest proof and next steps higher up on the /ai-agency/ service page.",
+      "Add a clear route to your service pages near the bottom of /about-us/."
+    ],
+    "week": "2026-10-26"
+  },
+  {
+    "facts": [
+      [
+        "page.byDay.0.scroll",
+        "byDay · 0 · scroll",
+        25.2
+      ],
+      [
+        "page.byDay.0.visits",
+        "byDay · 0 · visits",
+        70
+      ],
+      [
+        "page.byDay.1.scroll",
+        "byDay · 1 · scroll",
+        27.6
+      ],
+      [
+        "page.byDay.1.visits",
+        "byDay · 1 · visits",
+        55
+      ],
+      [
+        "page.byDay.2.scroll",
+        "byDay · 2 · scroll",
+        29.4
+      ],
+      [
+        "page.byDay.2.visits",
+        "byDay · 2 · visits",
+        65
+      ],
+      [
+        "page.byDay.3.errorClicks",
+        "byDay · 3 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.3.errors",
+        "byDay · 3 · errors",
+        0
+      ],
+      [
+        "page.byDay.3.scroll",
+        "byDay · 3 · scroll",
+        31.9
+      ],
+      [
+        "page.byDay.3.visits",
+        "byDay · 3 · visits",
+        56
+      ],
+      [
+        "page.byDay.4.errorClicks",
+        "byDay · 4 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.4.errors",
+        "byDay · 4 · errors",
+        0
+      ],
+      [
+        "page.byDay.4.scroll",
+        "byDay · 4 · scroll",
+        30.2
+      ],
+      [
+        "page.byDay.4.visits",
+        "byDay · 4 · visits",
+        91
+      ],
+      [
+        "page.byDay.5.errorClicks",
+        "byDay · 5 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.5.errors",
+        "byDay · 5 · errors",
+        0
+      ],
+      [
+        "page.byDay.5.scroll",
+        "byDay · 5 · scroll",
+        39.6
+      ],
+      [
+        "page.byDay.5.visits",
+        "byDay · 5 · visits",
+        42
+      ],
+      [
+        "page.byDay.6.errorClicks",
+        "byDay · 6 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.6.errors",
+        "byDay · 6 · errors",
+        0
+      ],
+      [
+        "page.byDay.6.scroll",
+        "byDay · 6 · scroll",
+        39.9
+      ],
+      [
+        "page.byDay.6.visits",
+        "byDay · 6 · visits",
+        42
+      ],
+      [
+        "page.byDay.7.errorClicks",
+        "byDay · 7 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.7.errors",
+        "byDay · 7 · errors",
+        1
+      ],
+      [
+        "page.byDay.7.scroll",
+        "byDay · 7 · scroll",
+        40.7
+      ],
+      [
+        "page.byDay.7.visits",
+        "byDay · 7 · visits",
+        65
+      ],
+      [
+        "page.byDay.8.errorClicks",
+        "byDay · 8 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.8.errors",
+        "byDay · 8 · errors",
+        2
+      ],
+      [
+        "page.byDay.8.scroll",
+        "byDay · 8 · scroll",
+        38.4
+      ],
+      [
+        "page.byDay.8.visits",
+        "byDay · 8 · visits",
+        65
+      ],
+      [
+        "page.byDay.9.errorClicks",
+        "byDay · 9 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.9.errors",
+        "byDay · 9 · errors",
+        1
+      ],
+      [
+        "page.byDay.9.scroll",
+        "byDay · 9 · scroll",
+        37.9
+      ],
+      [
+        "page.byDay.9.visits",
+        "byDay · 9 · visits",
+        82
+      ],
+      [
+        "page.byDay.10.errorClicks",
+        "byDay · 10 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.10.errors",
+        "byDay · 10 · errors",
+        1
+      ],
+      [
+        "page.byDay.10.scroll",
+        "byDay · 10 · scroll",
+        32.1
+      ],
+      [
+        "page.byDay.10.visits",
+        "byDay · 10 · visits",
+        106
+      ],
+      [
+        "page.byDay.11.errorClicks",
+        "byDay · 11 · errorClicks",
+        0
+      ],
+      [
+        "page.byDay.11.errors",
+        "byDay · 11 · errors",
+        0
+      ]
+    ],
+    "path": "gs7g0b3vjns0phy66wh3stq0rs8evz8p",
+    "says": [
+      "9 quick backs in 325 Service visits show people leaving your sales pages straight away.",
+      "By contrast, 487 Content hub visits had 0 quick backs and held readers much longer.",
+      "6 quick backs in 139 home page visits show PC visitors turning back at the front door.",
+      "21% scroll depth across 57 Mobile visits sits well below your PC average.",
+      "Page errors and dead clicks happened only a handful of times, so it is too early to tell on those."
+    ],
+    "screen": "clarity.overview",
+    "steps": [
+      "Watch PC recordings of the home page to see what makes visitors turn back straight away.",
+      "Review your AI Agency and other Service pages on PC to make sure the opening matches what visitors came for.",
+      "Check the Kapferer brand identity prism page on Mobile Safari for layout issues stopping people scrolling."
+    ],
+    "week": "2026-10-26"
+  }
+]

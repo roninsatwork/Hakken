@@ -47,6 +47,21 @@ const FILE_SECTIONS: [RegExp, MenuFeature][] = [
   [/^insights?[A-Z]/, "insights"],
 ];
 
+/**
+ * The client Dashboard's sections (docs/plans/active/dashboard-way-1-plan-2026-11-21.md). The page stays open, but draws each
+ * source's section only while that source is switched on, so what a section's file shows is that section's, not the open
+ * page's. The last test here holds the page to drawing each one behind its switch, and its own test
+ * (`src/app/(dashboard)/app/frontPage.test.tsx`) shows it hides them.
+ */
+const DASHBOARD_PAGE = "src/app/(dashboard)/app/page.tsx";
+const SWITCHED_PARTS: Record<string, MenuFeature> = {
+  "src/app/(dashboard)/app/_dashboard/DashboardSearchConsole.tsx": "searchConsole",
+  "src/app/(dashboard)/app/_dashboard/DashboardGoogleAnalytics.tsx": "googleAnalytics",
+  "src/app/(dashboard)/app/_dashboard/DashboardVisibility.tsx": "visibility",
+  "src/app/(dashboard)/app/_dashboard/DashboardClarity.tsx": "clarity",
+  "src/app/(dashboard)/app/_dashboard/DashboardBing.tsx": "bingWebmaster",
+};
+
 const CLIENT_BUILDERS = /^(tenantQuery|tenantMutation|tenantAction|adminQuery|adminMutation|adminAction|moduleQuery|moduleMutation|moduleAction)$/;
 
 const files = [...walkRepoFiles(path.join(repoRoot, "src"), new Set([".ts", ".tsx"])), ...walkRepoFiles(path.join(repoRoot, "convex"), new Set([".ts"]))]
@@ -72,17 +87,21 @@ const importsOf = new Map(pageFiles.map((file) => [file, [...(text.get(file) ?? 
 /** For every file, the sections whose pages show it and the open pages that do. */
 const shownOn = new Map(pageFiles.map((file) => [file, { sections: new Set<MenuFeature>(), open: new Set<string>() }]));
 for (const page of pageFiles.filter((file) => /^src\/app\/(.*\/)?(page|layout)\.tsx?$/.test(file) && !file.startsWith("src/app/(dashboard)/admin/"))) {
-  const section = ROUTE_SECTIONS[page.match(/^src\/app\/\(dashboard\)\/app\/([^/]+)\//)?.[1] ?? ""];
-  const seen = new Set([page]);
-  const stack = [page];
-  for (let file = stack.pop(); file !== undefined; file = stack.pop()) {
+  const pageSection = ROUTE_SECTIONS[page.match(/^src\/app\/\(dashboard\)\/app\/([^/]+)\//)?.[1] ?? ""];
+  // Each file with the section it's shown on: the page's, or, past one of the Dashboard's switched parts, that part's.
+  const seen = new Set([`${page}|${pageSection ?? ""}`]);
+  const stack: Array<[string, MenuFeature | undefined]> = [[page, pageSection]];
+  for (let item = stack.pop(); item !== undefined; item = stack.pop()) {
+    const [file, section] = item;
     const where = shownOn.get(file);
     if (section) where?.sections.add(section);
     else where?.open.add(page);
     for (const next of importsOf.get(file) ?? []) {
-      if (!seen.has(next)) {
-        seen.add(next);
-        stack.push(next);
+      const nextSection = section ?? (page === DASHBOARD_PAGE ? SWITCHED_PARTS[next] : undefined);
+      const key = `${next}|${nextSection ?? ""}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        stack.push([next, nextSection]);
       }
     }
   }
@@ -156,8 +175,28 @@ describe("a switched-off section is refused on the server", () => {
     expect(faults, faults.join("\n")).toEqual([]);
   });
 
+  test("the Dashboard draws each source's section only behind that source's switch", () => {
+    const dashboard = readRepoFile(DASHBOARD_PAGE);
+    const faults = Object.entries(SWITCHED_PARTS).flatMap(([file, section]) => {
+      const from = `./_dashboard/${path.posix.basename(file).replace(/\.tsx$/, "")}`;
+      const imported = new RegExp(`import \\{([^}]+)\\} from "${from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}";`).exec(dashboard);
+      if (!imported) return [`${DASHBOARD_PAGE} no longer imports ${from}: take it out of SWITCHED_PARTS`];
+      const names = imported[1].split(",").map((name) => name.trim()).filter(Boolean);
+      // Every place a part is drawn sits inside `on(MENU_FEATURES.<section>) ? ( … ) : null`.
+      const switched = [...dashboard.matchAll(new RegExp(`on\\(MENU_FEATURES\\.${section}\\) \\? \\(([\\s\\S]*?)\\) : null`, "g"))].map((match) => match[1]).join("\n");
+      return names.flatMap((name) => {
+        const drawn = dashboard.split(`<${name}`).length - 1;
+        const behind = switched.split(`<${name}`).length - 1;
+        return drawn === 0 || drawn !== behind ? [`${DASHBOARD_PAGE}: <${name}> is drawn outside on(MENU_FEATURES.${section})`] : [];
+      });
+    });
+    expect(faults, faults.join("\n")).toEqual([]);
+  });
+
   test("the eye checks the section of the screen it was pressed on", () => {
     const eye = readRepoFile("convex/seesAsk.ts");
-    expect(eye.match(/requireSectionOn\(ctx, SEES_SECTION_FEATURE\[screen\.section\]\)/g)?.length ?? 0).toBe(2);
+    // Both the press and the answer read go through the one check, which skips only a section with no switch (the Dashboard's).
+    expect(eye.match(/requireEyeSectionOn\(ctx, screen\.section\)/g)?.length ?? 0).toBe(2);
+    expect(eye).toMatch(/const feature = SEES_SECTION_FEATURE\[section\];\s*if \(feature\) await requireSectionOn\(ctx, feature\);/);
   });
 });

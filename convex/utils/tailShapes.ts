@@ -164,6 +164,7 @@ export const selfImprovementConfigShape = v.object({
   endUserFeedback: v.boolean(),
   retrievalPriors: v.boolean(),
   autonomousMemory: v.boolean(),
+  autonomousWiki: v.boolean(),
 });
 
 export const serverToolListShape = v.array(v.object({
@@ -228,6 +229,8 @@ export const wikiWeeklyReportShape = v.object({
   staffRuns: v.number(),
   waitingReviews: v.number(),
   waitingQuestions: v.number(),
+  factsSettled: v.number(),
+  suggestions: v.array(v.string()),
   quiet: v.boolean(),
 });
 

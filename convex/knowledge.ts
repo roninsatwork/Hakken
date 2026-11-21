@@ -9,10 +9,13 @@ import { internal } from "./_generated/api";
 import { validateKnowledgeDocumentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { getActiveCompanyId, getCurrentUser, requireCurrentUser } from "./authz";
 import { appError } from "./utils/appError";
+import { removeDocumentFromWiki } from "./wikiCheckupPages";
 import * as knowledgeShapes from "./utils/knowledgeShapes";
 import { EMBEDDING_MODEL_USE_CASE, GOOGLE_VERTEX_EMBEDDING_DIMENSIONS, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { queueWebsiteUrlsCore, reserveKnowledgeImportQuota } from "./knowledgeWebsiteQueueService";
 import { adminMutation, tenantMutation, tenantQuery, softQuery } from "./tenantFunctions";
+import { getWritableKnowledgeScope, requireKnowledgeAgentAccess } from "./knowledgeAuthorizationService";
+import { searchAgentChunksByText } from "./knowledgeAgentScope";
 import {
   assertCanAccessKnowledgeScope,
   buildKnowledgeChunkRecords,
@@ -199,15 +202,6 @@ async function getActiveEmbeddingModelForCompany(
   return null;
 }
 
-function getWritableKnowledgeScope(user: Doc<"users">, args: { companyId?: Id<"companies">; agentId?: Id<"agents"> }) {
-  const companyId = args.companyId || (args.agentId && user.role === "ADMIN" ? getActiveCompanyId(user) : undefined);
-  assertCanAccessKnowledgeScope(user, companyId);
-  return {
-    companyId,
-    agentId: args.agentId,
-  };
-}
-
 async function getKnowledgeDocumentsForScope(
   ctx: QueryCtx,
   args: { companyId?: Id<"companies">; agentId?: Id<"agents"> },
@@ -216,9 +210,7 @@ async function getKnowledgeDocumentsForScope(
   const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
 
   if (args.agentId) {
-    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-      throw appError("UNAUTHORIZED", "Unauthorized");
-    }
+    await requireKnowledgeAgentAccess(ctx, user, args.agentId);
 
     if (user.role === "ADMIN") {
       const activeCompanyId = getActiveCompanyId(user);
@@ -271,7 +263,7 @@ async function getRepairableKnowledgeDocumentsForScope(
   const { user } = await requireCurrentUser(ctx, "Unauthenticated request");
 
   if (args.agentId) {
-    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized");
+    await requireKnowledgeAgentAccess(ctx, user, args.agentId);
 
     if (user.role === "ADMIN") {
       const activeCompanyId = getActiveCompanyId(user);
@@ -415,9 +407,7 @@ export const getDocuments = tenantQuery({
     
     // Agent-isolated Knowledge Scope (Highest Priority)
     if (args.agentId) {
-      if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-        throw appError("UNAUTHORIZED", "Unauthorized");
-      }
+      await requireKnowledgeAgentAccess(ctx, user, args.agentId);
 
       if (user.role === "ADMIN") {
         return await ctx.db
@@ -473,9 +463,7 @@ export const getPaginatedDocuments = tenantQuery({
     const { user } = ctx;
 
     if (args.agentId) {
-      if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-        throw appError("UNAUTHORIZED", "Unauthorized");
-      }
+      await requireKnowledgeAgentAccess(ctx, user, args.agentId);
 
       if (user.role === "ADMIN") {
         const activeCompanyId = getActiveCompanyId(user);
@@ -533,9 +521,7 @@ export const getWebsiteDocuments = tenantQuery({
     const { user } = ctx;
 
     if (args.agentId) {
-      if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-        throw appError("UNAUTHORIZED", "Unauthorized");
-      }
+      await requireKnowledgeAgentAccess(ctx, user, args.agentId);
 
       if (user.role === "ADMIN") {
         const activeCompanyId = getActiveCompanyId(user);
@@ -733,7 +719,8 @@ export const inspectDocument = tenantQuery({
         return {
           actionType: log.actionType,
           timestamp: log.timestamp,
-          actorEmail: actor?.email,
+          actorEmail: ctx.user.role === "SUPER_ADMIN" || actor?.companyId === document.companyId
+            ? actor?.email : undefined,
           metadata: parseAuditMetadata(log.metadata),
         };
       }));
@@ -817,7 +804,7 @@ export const saveDocument = tenantMutation({
   returns: v.id("knowledgeDocuments"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
-    const scope = getWritableKnowledgeScope(user, args);
+    const scope = await getWritableKnowledgeScope(ctx, user, args);
 
     await requireOwnedUpload(ctx, args.storageId, { userId, companyId: ctx.companyId }, ["knowledge"]);
     await validateStoredUpload(ctx, args.storageId, validateKnowledgeDocumentMetadata);
@@ -833,7 +820,9 @@ export const saveDocument = tenantMutation({
       companyId: scope.companyId,
       agentId: scope.agentId,
     }));
-    if (args.wikiReview ?? (!scope.companyId && !scope.agentId)) {
+    // Imports go straight into the wiki, the platform shelf included (Sonae `72e3182f`, Anthony 2026-11-09: "these need to go
+    // into the wiki automatically"; wiki-sonae-catch-up-plan-2026-11-21.md, 0.4). Review only when the importer ticks it.
+    if (args.wikiReview === true) {
       await ctx.db.patch(documentId, { wikiReviewRequested: true });
     }
 
@@ -899,6 +888,44 @@ export const saveChatDocument = tenantMutation({
   },
 });
 
+/**
+ * Take a file out of the knowledge base completely: its stored file, its
+ * searchable text, its wiki note and what it taught, then the record, with
+ * an audit line. Shared by the delete button and the one-off clean-ups.
+ */
+async function eraseDocument(
+  ctx: MutationCtx,
+  doc: Doc<"knowledgeDocuments">,
+  actorId: Id<"users"> | undefined,
+): Promise<void> {
+    if (doc.fileId) {
+       await ctx.storage.delete(doc.fileId);
+    }
+
+    // Eradicate associated memory chunks in an isolated transaction
+    await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: doc._id });
+
+    // The document's own wiki note goes with it. Deleting a file used to
+    // leave its source page standing in the wiki, describing a document
+    // that no longer existed — a workspace could never truly be cleared
+    // (Anthony, 2026-08-20). What it taught leaves the pages it fed
+    // (wiki-daily-checkup-plan.md, "a file removed").
+    if (!doc.threadId) {
+      await removeDocumentFromWiki(ctx, { companyId: doc.companyId, documentId: doc._id, title: doc.title, text: doc.textContent });
+    }
+
+    await ctx.db.delete(doc._id);
+
+    await ctx.db.insert("auditLogs", {
+      actionType: "DELETE_DOCUMENT",
+      ...(actorId ? { actorId } : {}),
+      entityType: "knowledgeDocuments",
+      entityId: doc._id,
+      timestamp: Date.now(),
+      metadata: getKnowledgeAuditMetadata({ title: doc.title, format: doc.format })
+    });
+}
+
 export const deleteDocument = tenantMutation({
   args: { documentId: v.id("knowledgeDocuments") },
   returns: v.boolean(),
@@ -911,7 +938,7 @@ export const deleteDocument = tenantMutation({
     // Allow users to delete their own thread-scoped documents
     if (doc.threadId) {
         const thread = await ctx.db.get(doc.threadId);
-        if (!thread || thread.userId !== userId) {
+        if (!thread || thread.userId !== userId || thread.companyId !== ctx.companyId) {
             throw appError("UNAUTHORIZED", "Unauthorized to delete this document");
         }
     } else if (!doc.companyId) {
@@ -924,50 +951,7 @@ export const deleteDocument = tenantMutation({
        }
     }
 
-    // Attempt to delete from convex storage
-    if (doc.fileId) {
-       await ctx.storage.delete(doc.fileId);
-    }
-
-    // Eradicate associated memory chunks in an isolated transaction
-    await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: doc._id });
-
-    // The document's own wiki note goes with it. Deleting a file used to
-    // leave its source page standing in the wiki, describing a document
-    // that no longer existed — a workspace could never truly be cleared
-    // (Anthony, 2026-08-20). Only the SOURCE note is swept: topic pages
-    // the document taught hold knowledge in their own right and keep
-    // their receipts trail for the freshness checker to judge.
-    if (!doc.threadId) {
-      const sourcePage = await ctx.db
-        .query("wikiPages")
-        .withIndex("by_company_kind_subject", (q) =>
-          q.eq("companyId", doc.companyId).eq("kind", "SOURCE").eq("subjectKey", args.documentId)
-        )
-        .first();
-      if (sourcePage) {
-        const receipts = await ctx.db
-          .query("wikiPageSources")
-          .withIndex("by_page", (q) => q.eq("pageId", sourcePage._id))
-          .take(500);
-        for (const receipt of receipts) {
-          await ctx.db.delete(receipt._id);
-        }
-        await ctx.db.delete(sourcePage._id);
-      }
-    }
-
-    // Delete base document record
-    await ctx.db.delete(args.documentId);
-
-    await ctx.db.insert("auditLogs", {
-      actionType: "DELETE_DOCUMENT",
-      actorId: userId,
-      entityType: "knowledgeDocuments",
-      entityId: args.documentId,
-      timestamp: Date.now(),
-      metadata: getKnowledgeAuditMetadata({ title: doc.title, format: doc.format })
-    });
+    await eraseDocument(ctx, doc, userId);
 
     return true;
   }
@@ -1267,7 +1251,7 @@ export const saveManualText = tenantMutation({
   returns: v.id("knowledgeDocuments"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
-    const scope = getWritableKnowledgeScope(user, args);
+    const scope = await getWritableKnowledgeScope(ctx, user, args);
 
     const documentId = await ctx.db.insert("knowledgeDocuments", buildKnowledgeDocumentRecord({
       title: args.title,
@@ -1280,7 +1264,9 @@ export const saveManualText = tenantMutation({
       companyId: scope.companyId,
       agentId: scope.agentId,
     }));
-    if (args.wikiReview ?? (!scope.companyId && !scope.agentId)) {
+    // Imports go straight into the wiki, the platform shelf included (Sonae `72e3182f`, Anthony 2026-11-09: "these need to go
+    // into the wiki automatically"; wiki-sonae-catch-up-plan-2026-11-21.md, 0.4). Review only when the importer ticks it.
+    if (args.wikiReview === true) {
       await ctx.db.patch(documentId, { wikiReviewRequested: true });
     }
 
@@ -1453,7 +1439,7 @@ export const queueWebsiteUrls = tenantMutation({
   returns: v.array(v.id("knowledgeDocuments")),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
-    const scope = getWritableKnowledgeScope(user, args);
+    const scope = await getWritableKnowledgeScope(ctx, user, args);
     const docIds = await queueWebsiteUrlsCore(ctx, {
       userId,
       urls: args.urls,
@@ -1480,7 +1466,7 @@ export const deleteWebsiteBulk = tenantMutation({
   returns: v.number(),
   handler: async (ctx, args) => {
     const { user } = ctx;
-    const scope = getWritableKnowledgeScope(user, args);
+    const scope = await getWritableKnowledgeScope(ctx, user, args);
 
     const docs = scope.agentId
         ? await ctx.db
@@ -1542,13 +1528,17 @@ export const searchChunksByTextInternal = internalQuery({
     limit: v.number(),
     scope: v.union(
       v.object({ kind: v.literal("company"), companyId: v.id("companies") }),
-      v.object({ kind: v.literal("agent"), agentId: v.id("agents") }),
+      v.object({ kind: v.literal("agent"), agentId: v.id("agents"), companyId: v.optional(v.id("companies")) }),
       v.object({ kind: v.literal("thread"), threadId: v.id("threads") }),
       v.object({ kind: v.literal("global") }),
     ),
   },
+  returns: v.array(v.object({ _id: v.id("knowledgeChunks") })),
   handler: async (ctx, args) => {
     const scope = args.scope;
+    const limit = Math.min(Math.max(args.limit, 1), 100);
+    // An agent's pieces: the platform's and this company's only (knowledgeAgentScope.ts).
+    if (scope.kind === "agent") return await searchAgentChunksByText(ctx, { query: args.query, limit, ...scope });
     const matches = await ctx.db
       .query("knowledgeChunks")
       .withSearchIndex("search_text", (q) => {
@@ -1556,15 +1546,13 @@ export const searchChunksByTextInternal = internalQuery({
         switch (scope.kind) {
           case "company":
             return search.eq("companyId", scope.companyId);
-          case "agent":
-            return search.eq("agentId", scope.agentId);
           case "thread":
             return search.eq("threadId", scope.threadId);
           case "global":
             return search.eq("isGlobal", true);
         }
       })
-      .take(Math.min(Math.max(args.limit, 1), 100));
+      .take(limit);
 
     return matches.map((chunk) => ({ _id: chunk._id }));
   },
@@ -1587,12 +1575,16 @@ export const saveChunksInternal = internalMutation({
       replaceExisting: v.optional(v.boolean()),
       markReady: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ cleared: number }> => {
+      // At most 500 old pieces go per call; the caller repeats an empty call
+      // until none are left, so a very long re-upload never keeps stale ones.
+      let cleared = 0;
       if (args.replaceExisting !== false) {
         const existingChunks = await ctx.db.query("knowledgeChunks").withIndex("by_document", q => q.eq("documentId", args.documentId)).take(500);
         for (const chunk of existingChunks) {
            await ctx.db.delete(chunk._id);
         }
+        cleared = existingChunks.length;
       }
 
       for (const chunk of buildKnowledgeChunkRecords({
@@ -1655,6 +1647,7 @@ export const saveChunksInternal = internalMutation({
           }
         }
       }
+      return { cleared };
   }
 });
 

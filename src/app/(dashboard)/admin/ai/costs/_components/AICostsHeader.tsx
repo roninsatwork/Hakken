@@ -29,7 +29,6 @@ export function AICostsHeader({
       icon={<Activity className="w-6 h-6 text-brand" />}
       title={title}
       description={subtitle}
-      divider
       action={
         <div className="flex flex-col items-end gap-3 z-20">
           <TimeframeDropdown

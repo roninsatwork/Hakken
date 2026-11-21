@@ -49,11 +49,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
     ctx.runAction(internal.companyMemorySuggestionActions.sweepDispatcher, {}),
   "user-memory-suggestion-sweep": (ctx) =>
     ctx.runAction(internal.userMemorySuggestionActions.sweepDispatcher, {}),
-  "wiki-tending-sweep": (ctx) => ctx.runAction(internal.wikiTendingActions.tendDispatcher, {}),
-  "wiki-distill-sweep": (ctx) => ctx.runAction(internal.wikiDistillActions.distilSweep, {}),
-  "wiki-contradiction-sweep": (ctx) =>
-    ctx.runAction(internal.wikiContradictionActions.contradictionSweep, {}),
-  "wiki-freshness-sweep": (ctx) => ctx.runAction(internal.wikiFreshnessActions.freshnessSweep, {}),
+  // One nightly check-up per wiki replaces the four wiki sweeps (wiki-sonae-catch-up-plan-2026-11-21.md, phase 2).
+  "wiki-daily-checkup": (ctx) => ctx.runAction(internal.wikiCheckupActions.dailyCheckupDispatcher, {}),
   "knowledge-evidence-sweep": (ctx) =>
     ctx.runMutation(internal.knowledgeEvidence.sweepEvidenceInternal, {}),
   "unified-data-purge-dispatcher": (ctx) => ctx.runMutation(internal.purges.dispatcher, {}),
@@ -110,7 +107,6 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "purge-stall-reaper": 10,
   "agent-approval-expiry": 15,
   "workflow-approval-expiry": 15,
-  "wiki-distill-sweep": 15,
   "connector-oauth-token-refresh": 60,
   "connection-probes": 60,
   "knowledge-evidence-sweep": 60,
@@ -123,9 +119,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "generate-daily-analytics-snapshots": 1440,
   "user-login-count-rollup": 1440,
   "dispatch-platform-alerts": 1440,
-  "wiki-tending-sweep": 1440,
-  "wiki-contradiction-sweep": 1440,
-  "wiki-freshness-sweep": 1440,
+  "wiki-daily-checkup": 1440,
   "wiki-weekly-report": 10080,
   "reset-billing-cycles": 44640,
   "stripe-billing-reconciliation": 5,

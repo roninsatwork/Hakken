@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { WIKI_PAGE_MAX_CHARS } from "./wikiRewriteService";
+import { findWikiScopes } from "./wikiCheckup";
 
 /**
  * The tending pass's default-runtime half (wiki plan, phase 4): what the
@@ -21,14 +22,12 @@ export const WIKI_TENDING_MIN_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 export const listCompaniesWithPagesInternal = internalQuery({
   args: {},
   handler: async (ctx): Promise<Array<Id<"companies"> | null>> => {
-    // Bounded: pages are created one conversation at a time; a scan of the
-    // newest few hundred names every brain with living pages. The global
-    // shelf rides the same rotas as one more round, as `null`
-    // (global-wiki-plan.md, phase 4) — an empty shelf costs nothing.
-    const pages = await ctx.db.query("wikiPages").order("desc").take(1000);
-    const scopes = new Set<Id<"companies"> | null>();
-    for (const page of pages) scopes.add(page.companyId ?? null);
-    return [...scopes];
+    // Every company is asked, one indexed read each (wiki-daily-checkup
+    // plan, 2026-11-09). This used to name the companies found among the
+    // newest thousand pages on the whole platform, so a wiki that had gone
+    // quiet dropped out of every round. The global shelf rides the same
+    // rotas as one more round, as `null` (global-wiki-plan.md, phase 4).
+    return await findWikiScopes(ctx);
   },
 });
 
@@ -41,6 +40,7 @@ export const getTendingCandidatesInternal = internalQuery({
     linkRepairs: Array<{ pageId: Id<"wikiPages">; links: string[] }>;
     overgrown: Array<{
       pageId: Id<"wikiPages">;
+      kind: "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE" | "GOAL";
       subjectKey: string;
       title: string;
       content: string;
@@ -87,7 +87,7 @@ export const getTendingCandidatesInternal = internalQuery({
           .withIndex("by_company_kind_subject", (q) =>
             q
               .eq("companyId", args.companyId)
-              .eq("kind", link.slice(0, separator) as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE" | "GOAL")
+              .eq("kind", link.slice(0, separator) as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE" | "GOAL")
               .eq("subjectKey", link.slice(separator + 1))
           )
           .unique();
@@ -118,6 +118,7 @@ export const getTendingCandidatesInternal = internalQuery({
       .slice(0, WIKI_TENDING_MODEL_PAGES_PER_SWEEP)
       .map((page) => ({
         pageId: page._id,
+        kind: page.kind,
         subjectKey: page.subjectKey,
         title: page.title,
         content: page.content,

@@ -4,15 +4,17 @@ import { describe, expect, it, vi } from "vitest";
 import PlatformMoneyPage from "./page";
 
 vi.mock("@/src/app/(dashboard)/admin/_features/wiki/MoneyViewScreen", () => ({
-  MoneyViewScreen: ({ showWorkspaceNav }: { showWorkspaceNav?: boolean }) => (
-    <div data-testid="money-view">{showWorkspaceNav ? "workspace-navigation" : "no-navigation"}</div>
+  MoneyViewScreen: ({ companyId }: { companyId?: string }) => (
+    <div data-testid="money-view">{companyId ? "company" : "platform"}</div>
   ),
 }));
 
 describe("PlatformMoneyPage", () => {
-  it("keeps the global money view and its workspace navigation", () => {
+  // The AI section's frame draws the menu down the left (wiki-sonae-catch-up-plan-2026-11-21.md, S0), so the screen
+  // is the platform's totals and nothing else.
+  it("shows the platform's money view", () => {
     render(<PlatformMoneyPage />);
 
-    expect(screen.getByTestId("money-view")).toHaveTextContent("workspace-navigation");
+    expect(screen.getByTestId("money-view")).toHaveTextContent("platform");
   });
 });

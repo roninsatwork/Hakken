@@ -141,23 +141,18 @@ export function AdminNavTree({
     </NavItem>
   )}
 
+  {/*
+    One item for every AI screen (wiki-sonae-catch-up-plan-2026-11-21.md,
+    S0). Tools and Tool servers moved with the rest into the menu down the
+    left of the AI pages, which admin/ai/_components/aiMenu.ts lists.
+  */}
   <NavItem
     icon={Bot}
     label={t('ai')}
-    isActive={activeItem === 'Artificial Intelligence' || pathname.startsWith('/admin/ai')}
+    href="/admin/ai"
+    isActive={pathname === '/admin/ai' || pathname.startsWith('/admin/ai/')}
     onClick={() => setActiveItem('Artificial Intelligence')}
-    hasChildren
-    isOpen={openSections.ai}
-    onToggle={() => toggleSection('ai')}
-  >
-    <SubNavItem label={t('manageGlobalAi')} href="/admin/ai" isActive={pathname === '/admin/ai' || (pathname.startsWith('/admin/ai') && !pathname.startsWith('/admin/ai/tools') && !pathname.startsWith('/admin/ai/tool-servers'))} onClick={() => setActiveItem('Artificial Intelligence')} />
-    {/* Nothing linked here. The tool catalogue was reachable
-        only by typing the URL, which is why the one screen
-        deciding what an agent can actually do had never been
-        opened. */}
-    <SubNavItem label={t('tools')} href="/admin/ai/tools" isActive={pathname === '/admin/ai/tools' || (pathname.startsWith('/admin/ai/tools/') && !pathname.startsWith('/admin/ai/tool-servers'))} onClick={() => setActiveItem('Tools')} />
-    <SubNavItem label={t('toolServers')} href="/admin/ai/tool-servers" isActive={pathname.startsWith('/admin/ai/tool-servers')} onClick={() => setActiveItem('Tool Servers')} />
-  </NavItem>
+  />
 
   {canSeeAdminSections && (
     <NavItem
@@ -264,7 +259,10 @@ export function AdminNavTree({
             the same question at two altitudes, answered twice in
             different words, both leading with counters that read
             zero on a healthy platform. */}
-        <SubNavItem label={t('health')} href="/admin/health" isActive={pathname.startsWith('/admin/health')} onClick={() => setActiveItem('Health')} />
+        <SubNavItem label={t('health')} href="/admin/health" isActive={pathname === '/admin/health'} onClick={() => setActiveItem('Health')} />
+        {/* Every wiki's last nightly check-up, and a row opens that
+            wiki's Check-up (wiki-sonae-catch-up-plan-2026-11-21.md, S8). */}
+        <SubNavItem label={t('wikiCheckups')} href="/admin/health/wikis" isActive={pathname.startsWith('/admin/health/wikis')} onClick={() => setActiveItem('Health')} />
         {/* Health reads the platform's own tables; this one
             asks the outside world whether it is still there
             (seven-gaps plan, phase 2). */}

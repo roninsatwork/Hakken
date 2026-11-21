@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
+import { Select } from "@/src/ui/components/screens/Select";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { formatDateTime } from "@/src/lib/dates";
@@ -47,12 +47,10 @@ const ACTION_KEY: Record<string, string> = {
 export function WikiDiaryScreen({
   companyId,
   pageBasePath,
-  showWorkspaceNav,
 }: {
   companyId?: Id<"companies">;
   /** Where an entry's page link points, without the trailing id. */
   pageBasePath: string;
-  showWorkspaceNav?: boolean;
 }) {
   const t = useTranslations("aiDiary");
   const [action, setAction] = useState<string>("ALL");
@@ -87,10 +85,7 @@ export function WikiDiaryScreen({
         icon={<NotebookPen className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={companyId ? t("subtitleCompany") : t("subtitle")}
-        divider
       />
-
-      {showWorkspaceNav && <AiWorkspaceNav />}
 
       <p className="text-[13px] leading-relaxed text-secondary max-w-2xl">
         {companyId ? t("hintCompany") : t("hint")}
@@ -101,20 +96,20 @@ export function WikiDiaryScreen({
         rowKey={(entry, ) => `${entry.at}-${entry.action}-${entry.pageId ?? ""}`}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
-          <div className="max-w-xs w-full">
-            <select
-              value={action}
-              onChange={(event) => setAction(event.target.value)}
-              className="w-full bg-background border border-border-dim rounded-[10px] px-3 py-2 text-[13px] text-foreground focus:outline-none focus:border-brand/50 transition-colors"
-            >
-              <option value="ALL">{t("filter.all")}</option>
-              {Object.entries(ACTION_KEY).map(([actionType, key]) => (
-                <option key={actionType} value={actionType}>
-                  {t(`entries.${key}`)}
-                </option>
-              ))}
-            </select>
-          </div>
+          // The kit's own menu, named by its job (Sonae `0e05da07`; wiki-sonae-catch-up-plan-2026-11-21.md, S4).
+          <Select
+            chip={{ label: t("filter.show"), choice: action === "ALL" ? t("filter.all") : t(`entries.${ACTION_KEY[action] ?? "pageRewrite"}`) }}
+            value={action}
+            onChange={setAction}
+            aria-label={t("filter.show")}
+          >
+            <option value="ALL">{t("filter.all")}</option>
+            {Object.entries(ACTION_KEY).map(([actionType, key]) => (
+              <option key={actionType} value={actionType}>
+                {t(`entries.${key}`)}
+              </option>
+            ))}
+          </Select>
         }
         empty={{
           icon: <NotebookPen className="w-5 h-5" />,

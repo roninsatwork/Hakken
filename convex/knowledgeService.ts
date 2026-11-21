@@ -120,8 +120,8 @@ export function buildKnowledgeChunkRecords(args: {
 }
 
 export function canReadThreadKnowledgeDocuments(thread: Doc<"threads">, current: { userId: Id<"users">; user: Doc<"users"> }) {
-  if (thread.userId === current.userId) return true;
   if (current.user.role === "SUPER_ADMIN") return true;
+  if (thread.userId === current.userId && thread.companyId === getActiveCompanyId(current.user)) return true;
   return current.user.role === "ADMIN" && thread.companyId === getActiveCompanyId(current.user);
 }
 

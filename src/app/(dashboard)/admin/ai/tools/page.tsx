@@ -128,7 +128,6 @@ export default function ToolsPage() {
         icon={<Wrench className="h-6 w-6 text-brand" />}
         title={t("headerTitle")}
         description={t("headerDescription")}
-        divider
         action={
           <Link
             href="/admin/ai/tools/new"

@@ -52,7 +52,7 @@ export const findContradictionsForCompany = internalAction({
       useCase: "fast-chat",
     });
     let raised = 0;
-    for (const kind of ["PRODUCT", "POLICY", "ISSUE"] as const) {
+    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "CLIENT"] as const) {
       const cluster = await ctx.runQuery(internal.wikiQuestions.getContradictionClusterInternal, {
         companyId: args.companyId,
         kind,

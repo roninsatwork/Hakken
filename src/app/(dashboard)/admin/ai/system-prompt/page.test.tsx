@@ -16,10 +16,6 @@ vi.mock("@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning", () => ({
   AiRuleSafetyWarningPanel: () => null,
 }));
 
-vi.mock("../_components/AiWorkspaceNav", () => ({
-  AiWorkspaceNav: () => null,
-}));
-
 const updatePrompt = vi.fn();
 
 function render(ui: React.ReactElement) {

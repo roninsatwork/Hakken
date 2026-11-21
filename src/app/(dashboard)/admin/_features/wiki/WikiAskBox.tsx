@@ -5,17 +5,21 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import Link from "next/link";
 import { useAction } from "convex/react";
 import { useTranslations } from "next-intl";
-import { Loader2, MessageCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { buttonClasses } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
+import { SectionLabel } from "@/src/ui/components/screens/SectionLabel";
+import { shortPageTitle } from "./wikiWords";
 
 /**
- * The Ask box (watch-it-think plan, phase 3): ask this brain a question
- * from inside its wiki and see the real answer with the pages it stood
- * on. Same card anatomy as the import box beside it; the ask is a real
- * model call, so the button is write-gated and pressed on purpose.
+ * Ask the wiki (watch-it-think plan, phase 3): ask a question and see the real
+ * answer with the pages it stood on. The Ask the wiki page's body
+ * (wiki-sonae-catch-up-plan-2026-11-21.md, S6), with no card round it. The ask
+ * is a real model call, so the button is write-gated and pressed on purpose,
+ * and it is the page's one orange action.
  */
 export function WikiAskBox({
   companyId,
@@ -25,6 +29,7 @@ export function WikiAskBox({
   basePath: string;
 }) {
   const t = useTranslations("aiPages.ask");
+  const tScreen = useTranslations("aiPages.askScreen");
   const askCompany = useAction(api.wikiAsk.askBrainForCompany);
   const askGlobal = useAction(api.wikiAsk.askBrainForGlobal);
 
@@ -44,11 +49,8 @@ export function WikiAskBox({
     setError("");
     setResult(null);
     const outcome = await action.run(
-      () =>
-        companyId
-          ? askCompany({ companyId, question: trimmed })
-          : askGlobal({ question: trimmed }),
-      { key: "wiki-ask", suppressErrorToast: true, fallbackMessage: t("error") }
+      () => (companyId ? askCompany({ companyId, question: trimmed }) : askGlobal({ question: trimmed })),
+      { key: "wiki-ask", suppressErrorToast: true, fallbackMessage: t("error") },
     );
     if (outcome.ok) setResult(outcome.data);
     else if (outcome.message) setError(outcome.message);
@@ -56,19 +58,11 @@ export function WikiAskBox({
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-5">
-      <h2 className="flex items-center gap-2 text-[14px] font-semibold text-foreground">
-        <MessageCircle className="w-4 h-4 text-brand" />
-        {t("title")}
-      </h2>
-      <p className="text-[12px] text-secondary">{t("hint")}</p>
-      <div className="flex items-center gap-2">
-        {/* The panel's heading and the sentence under it already name this box,
-            so the label is kept for anyone listening rather than said twice. */}
-        <div className="flex-1">
+    <div className="flex min-w-0 flex-col gap-5">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-0 flex-[1_1_320px]">
           <Field
-            label={t("title")}
-            labelHidden
+            label={tScreen("label")}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={(event) => {
@@ -79,49 +73,45 @@ export function WikiAskBox({
           />
         </div>
         <WriteButton
+          type="button"
           onClick={() => void ask()}
           disabled={isAsking || !question.trim()}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity"
+          className={buttonClasses("brand", "inline-flex items-center gap-2 whitespace-nowrap")}
         >
-          {isAsking ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          {isAsking ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
           {isAsking ? t("asking") : t("askButton")}
         </WriteButton>
       </div>
-      {error && <p className="text-[13px] text-destructive">{error}</p>}
-      {result && (
-        <div className="flex flex-col gap-3 rounded-[12px] border border-border-dim/60 bg-background px-4 py-3">
-          <p className="text-[13.5px] leading-relaxed text-foreground/90 whitespace-pre-wrap">
-            {result.answer}
-          </p>
+
+      {error ? (
+        <p className="text-[13px] text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      {result ? (
+        <section aria-live="polite" className="flex flex-col gap-3 border-t border-border-dim pt-5">
+          <SectionLabel>{tScreen("answer")}</SectionLabel>
+          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground">{result.answer}</p>
           {result.pages.length > 0 ? (
-            <div className="flex flex-col gap-2 pt-2 border-t border-border-dim/60">
-              <p className="text-[11px] uppercase tracking-[0.1em] text-muted font-medium">
-                {t("stoodOn")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {result.pages.map((page) => (
-                  <Link
-                    key={page.pageId}
-                    href={
-                      page.isPlatform && companyId
-                        ? `/admin/ai/knowledge/${page.pageId}`
-                        : `${basePath}/${page.pageId}`
-                    }
-                    className="px-3 py-1.5 rounded-full border border-brand/35 bg-brand/10 text-brand text-[12.5px] hover:bg-brand/20 transition-colors"
-                  >
-                    {page.title.replace(/^https?:\/\//, "").slice(0, 42)}
-                    {page.isPlatform && <span className="ml-1 text-muted">{t("platform")}</span>}
-                  </Link>
-                ))}
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[13px] text-secondary">{t("stoodOn")}</p>
+              {result.pages.map((page) => (
+                <Link
+                  key={page.pageId}
+                  href={page.isPlatform && companyId ? `/admin/ai/knowledge/${page.pageId}` : `${basePath}/${page.pageId}`}
+                  className="w-fit max-w-full break-words text-[13px] text-foreground underline underline-offset-[3px] hover:text-secondary"
+                >
+                  {shortPageTitle(page.title)}
+                  {page.isPlatform ? <span className="ml-1 text-secondary">{t("platform")}</span> : null}
+                </Link>
+              ))}
             </div>
           ) : (
-            <p className="text-[12px] text-muted pt-2 border-t border-border-dim/60">
-              {t("noPages")}
-            </p>
+            <p className="text-[13px] text-secondary">{t("noPages")}</p>
           )}
-        </div>
-      )}
+        </section>
+      ) : null}
     </div>
   );
 }

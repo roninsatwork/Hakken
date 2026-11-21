@@ -49,7 +49,7 @@ Core components live under `src/ui/components/screens/`:
 - `src/ui/components/screens/CompactList.tsx`: compact table-semantic row lists that live inside a panel that already introduced itself.
 - `src/ui/components/screens/ModalForm.tsx`: modal form field, error, action, input, and textarea helpers.
 - `src/ui/components/screens/DetailLayout.tsx`: detail-page header, actions, tabs, and content shell.
-- `src/ui/components/screens/DetailTabs.tsx`: horizontal icon tabs with root-route and nested-route active behavior.
+- `src/ui/components/screens/DetailTabs.tsx`: horizontal icon tabs with root-route and nested-route active behavior. A tab's `count` is a quiet number after its label ("History 12"), and a tab's `matches`, when given, alone decides whether it's open, for tabs that are views of one page and differ only by `?tab=` (a wiki page's own tabs, 2026-11-21).
 - `src/ui/components/screens/PageHeader.tsx`: list-page title/description/action header and primary action button.
 - `src/ui/components/screens/TitleSwitch.tsx`: a page title that opens the list of records of its kind — the name, a quiet arrow, the native select laid invisibly over it. Added 2026-10-15 for a website in Google Analytics (`ga-header-plan.md`); it goes in a `DetailHeader`'s `title`.
 - `src/ui/components/screens/Select.tsx`: styled select control; with `chip`, a compact filter that names itself ("Position", then "Position: 1–3" in grey behind a lighter border) and is as wide as its words. `changed` says whether the chip is drawn grey: a chart's toolbar of settings passes false (and so does its `TickSelect`), so every chip looks the same and the words say the choice.
@@ -77,6 +77,12 @@ Core components live under `src/ui/components/screens/`:
 - `src/ui/components/screens/SaveControls.tsx`: save button, inline error, animated success/error feedback, and the feedback label.
 - `src/ui/components/screens/StatusLabel.tsx`: a status as a small line icon in the status's colour, then plain words — the only way a status is drawn. See Status Labels below.
 - `src/ui/components/screens/TagLabel.tsx`: a kind rather than a status (a category, a count, a plan's name) as plain words in the quiet colour.
+- `src/ui/components/screens/CountFilters.tsx`: counts you can press to filter a table, each a plain word and its number, the one in force underlined, a count that asks for something in the warning colour. No box, fill or rounded ends. The platform's Unanswered list uses it (All, Platform, Companies). Brought over from Sonae on 2026-11-21.
+- `src/ui/components/screens/FactsList.tsx`: a few facts about one record, each label over its value, as a real description list, at 13px. For facts that are words or dates, such as a wiki page's kind and when it was last verified; a headline number is a `Figure`. `columns` sets how many go across on a wide screen. A wiki page's own screen shows its facts on it, in the side column. Brought over from Sonae on 2026-11-21 as a shared part, on Anthony's word (wiki-sonae-catch-up-plan-2026-11-21.md, S5).
+- `src/ui/components/screens/SectionLabel.tsx`: the small capitals heading over one part of a screen that has no card round it ("Pinned by staff", "Tags"), in a settings card's own title words, so a part keeps its heading once the card is gone. A real `h2`, or `h3` with `as`. A wiki page's own screen heads its parts with it. Brought over from Sonae on 2026-11-21 as a shared part, at Hakken's 13px rather than the upstream's 11px typewriter face (S5).
+- `src/ui/components/screens/StepProgress.tsx`: how far background work that moves in whole steps has got. One thin segment a step, the finished ones lit, the one under way lighter and pulsing, with the step's name on the left above it and what it has done on the right. Read out as a progress bar. Theme colours only, never orange. The wiki's Check-up shows its run on it. Brought over from Sonae on 2026-11-21 as a shared part, on Anthony's word (wiki-sonae-catch-up-plan-2026-11-21.md, S8). Not for a share of a whole, which is `Meter`.
+- `src/ui/components/screens/DropArea.tsx`: a place on the page to drop files, with a button to choose them instead, never an upload pop-up or a bare file input. `layout="row"` is one line (anything in `leading`, the button, then the words); `stack` is the larger area with its words above the button. A dashed outline that lightens while a file is dragged over it, theme colours only. The wiki's Add to the wiki takes files and vaults through it. Brought over from Sonae on 2026-11-21 as a shared part, on Anthony's word (wiki-sonae-catch-up-plan-2026-11-21.md, S6).
+- `src/ui/components/screens/FormSection.tsx`: one part of a page with no card round it: a `SectionLabel` heading, a rule above, an optional `hint` line under the heading and an `action` at its right, then what it holds in a grid (`columns` 1 to 3). The first part on a page drops its rule. Leave out `title` for a part with no heading. The wiki's Waiting on you heads its imports and its open questions with it. Brought over from Sonae on 2026-11-21 as a shared part, on Anthony's word (S6).
 - `src/ui/components/screens/DecisionLabel.tsx`: a Decision's name and certainty as a status label, opening to the spread of answers.
 - `src/ui/components/screens/TableControls.tsx`: table-search controls used where a page needs the kit's input styling without a full `DataTable`.
 - `src/ui/components/screens/CursorPagination.tsx`: cursor-based pagination helper for lists that page by cursor rather than count.
@@ -247,7 +253,7 @@ Use `DetailLayout` for detail pages such as companies and agents. It provides:
 - flexible content area
 - overridable wrapper/header/content classes for dense detail views
 
-Use `DetailTabs` for top-level detail tabs. The root tab is active only on the exact root href; nested tabs are active by path prefix.
+Use `DetailTabs` for top-level detail tabs. The root tab is active only on the exact root href; nested tabs are active by path prefix. Tabs that are views of one record on one address (a wiki page's Page, Sources, History and Links) each pass `matches` reading `?tab=`, which then decides alone.
 
 Use `PageHeader` and `PagePrimaryAction` for list pages. `PagePrimaryAction` defaults to `type="button"` and should receive an icon when a clear command exists.
 
@@ -262,6 +268,12 @@ phone. The section says only what its groups, pages, numbers and addresses
 are (`SiteMenu`, `LearnShell`); never draw a second side menu by hand. The
 grid around it is the Sites layout's: `lg:grid-cols-[240px_minmax(0,1fr)]`,
 the menu sticky at the top.
+
+Admin's Artificial Intelligence section has worn one since 2026-11-21
+(`admin/ai/_components/AiFrame.tsx`, its pages in `aiMenu.ts`): the
+section's `PageHeader` with `divider` above the grid, then each screen's own
+`PageHeader` with no `divider`. A page about one record (a rule, an eval, a
+wiki page) leaves the frame out and keeps its `DetailHeader`.
 
 ## Save And Feedback States
 

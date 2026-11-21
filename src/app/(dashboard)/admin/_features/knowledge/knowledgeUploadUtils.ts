@@ -147,7 +147,7 @@ export async function collectDroppedFiles(dataTransfer: DataTransfer): Promise<C
  * Files chosen through the picker. A folder picked with `webkitdirectory` sets
  * `webkitRelativePath`, which already carries the path we want.
  */
-export function collectPickedFiles(fileList: FileList | null): CollectedFile[] {
+export function collectPickedFiles(fileList: FileList | readonly File[] | null): CollectedFile[] {
   if (!fileList) return [];
 
   return Array.from(fileList)

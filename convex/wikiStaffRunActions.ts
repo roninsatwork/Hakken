@@ -74,6 +74,12 @@ const STAFF_JOBS: Record<string, StaffJob> = {
       return `Started the exam round across ${companies} ${companies === 1 ? "wiki" : "wikis"}.`;
     },
   },
+  WIKI_CHECKUP: {
+    run: async (ctx) => {
+      const { wikis } = await ctx.runAction(internal.wikiCheckupActions.checkupEveryWikiNow, {});
+      return `Started the full check-up across ${wikis} ${wikis === 1 ? "wiki" : "wikis"}. Each one's progress shows on its own wiki screen.`;
+    },
+  },
   WIKI_REVIEWER: EVENT_DRIVEN("at ingest, for material a person marks as sensitive"),
   WIKI_FILING_CLERK: EVENT_DRIVEN("after an answer that drew on more than one wiki page"),
 };

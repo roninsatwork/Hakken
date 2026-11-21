@@ -24,7 +24,6 @@ import { CompanyMemoryEvidence } from "@/src/app/(dashboard)/admin/_components/C
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatEstimatedChatCostUsd, getChatTokenTotal } from "@/src/lib/chatTelemetry";
 import { buildChatTranscript } from "@/src/lib/chatTranscript";
-import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { LAYER } from "@/src/ui/lib/layers";
 
@@ -98,10 +97,10 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
     selectedThreadId ? { threadId: selectedThreadId } : "skip"
   );
 
-  // The company layout sizes itself to the height actually left below the
-  // company header instead of assuming a fixed chrome height.
+  // Both sit below a header of their own (the company's, or the AI section's
+  // frame), so each sizes itself to the height actually left below it instead
+  // of assuming a fixed chrome height.
   useEffect(() => {
-    if (scope.kind !== "company") return;
     const updateAvailableHeight = () => {
       if (!containerRef.current) return;
       const { top } = containerRef.current.getBoundingClientRect();
@@ -111,7 +110,7 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
     updateAvailableHeight();
     window.addEventListener("resize", updateAvailableHeight);
     return () => window.removeEventListener("resize", updateAvailableHeight);
-  }, [scope.kind]);
+  }, []);
 
   const labels = scope.kind === "company"
     ? {
@@ -203,20 +202,14 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
     <div
       ref={containerRef}
       data-testid={scope.kind === "company" ? "company-chat-logs-shell" : undefined}
-      className={`flex w-full flex-col overflow-hidden antialiased ${
-        scope.kind === "global" ? "h-[calc(100vh-140px)]" : ""
-      }`}
-      style={
-        scope.kind === "company" && availableHeight
-          ? { height: availableHeight, maxHeight: availableHeight }
-          : undefined
-      }
+      className="flex w-full flex-col overflow-hidden antialiased"
+      style={availableHeight ? { height: availableHeight, maxHeight: availableHeight } : undefined}
     >
       {/* Header Block */}
-      {/* The AI workspace's header anatomy is title, rule, tab strip; the
-          company variant sits inside the company's own tabs, where headers
-          carry no rule. */}
-      <header className={`flex items-start justify-between w-full mb-6 shrink-0 ${scope.kind === "global" ? "border-b border-border-dim pb-6" : ""}`}>
+      {/* No rule under it: the company variant sits inside the company's own
+          tabs and the global one inside the AI section's frame, which each
+          draw it. */}
+      <header className="flex items-start justify-between w-full mb-6 shrink-0">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <HeaderIcon className="w-6 h-6 text-brand" />
@@ -262,8 +255,6 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
           </div>
         )}
       </header>
-
-      {scope.kind === "global" && <AiWorkspaceNav />}
 
       {/* Split Pane Architecture */}
       <div className="flex flex-1 gap-6 min-h-0 relative">

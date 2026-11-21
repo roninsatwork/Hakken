@@ -140,3 +140,12 @@ export const unansweredPageShape = paginationResultValidator(v.object({
 }));
 
 export const unansweredListShape = v.array(v.object(unansweredRowFields));
+
+/** The counts over the platform's Unanswered table (Sonae `f4efb39b`; wiki-sonae-catch-up-plan-2026-11-21.md, S7). */
+export const unansweredCountsShape = v.object({
+  all: v.number(),
+  platform: v.number(),
+  companies: v.number(),
+  /** More open questions than were counted; the counts are "at least". */
+  capped: v.boolean(),
+});

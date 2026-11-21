@@ -1,6 +1,6 @@
-import { renderWithProviders as render } from "@/src/test/renderWithProviders";
+import { renderWithProviders as render, screen, fireEvent } from "@/src/test/renderWithProviders";
 import React from "react";
-import { beforeEach, describe, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePaginatedQuery } from "convex/react";
 import { itBehavesLikeAStandardTableScreen } from "@/src/test/standardTableScreen";
 import { UnansweredScreen } from "./UnansweredScreen";
@@ -16,6 +16,8 @@ import { UnansweredScreen } from "./UnansweredScreen";
 vi.mock("convex/react", () => ({
   usePaginatedQuery: vi.fn(),
   useMutation: vi.fn(() => vi.fn()),
+  // The counts over the platform's list (S7): two open gaps, one of them a company's.
+  useQuery: vi.fn(() => ({ all: 2, platform: 1, companies: 1, capped: false })),
 }));
 
 vi.mock("next-intl", () => ({
@@ -75,5 +77,20 @@ describe("UnansweredScreen", () => {
       emptyText: "aiUnanswered.emptyState",
       searchPlaceholder: "aiUnanswered.searchPlaceholder",
     });
+  });
+
+  // wiki-sonae-catch-up-plan-2026-11-21.md, S7: All, Platform and Companies are counts you can press.
+  it("shows each choice's count and asks the list for the one pressed", () => {
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: questions, status: "Exhausted", isLoading: false, loadMore: vi.fn(),
+    } as unknown as ReturnType<typeof usePaginatedQuery>);
+    render(<UnansweredScreen />);
+    const group = screen.getByRole("group", { name: "aiUnanswered.filter.label" });
+    expect(group).toHaveTextContent("aiUnanswered.filter.all 2");
+    expect(group).toHaveTextContent("aiUnanswered.filter.companies 1");
+    fireEvent.click(screen.getByRole("button", { name: /aiUnanswered\.filter\.companies/ }));
+    expect(screen.getByRole("button", { name: /aiUnanswered\.filter\.companies/ })).toHaveAttribute("aria-pressed", "true");
+    // The platform list's read (the company list's is skipped here) now asks for companies' gaps.
+    expect(vi.mocked(usePaginatedQuery).mock.calls.some((call) => (call[1] as { scope?: string } | string)?.toString() !== "skip" && (call[1] as { scope?: string }).scope === "COMPANIES")).toBe(true);
   });
 });

@@ -6,6 +6,14 @@ import * as tailShapes from "./utils/tailShapes";
 import { CORE_MODULES } from "./utils/coreModules";
 import { assertAdminCanAccessCompany } from "./authz";
 import { appError } from "./utils/appError";
+import { internal } from "./_generated/api";
+import { splitDocumentIntoSections } from "./wikiRewriteService";
+import { documentFullText as distillableText } from "./wikiDocumentText";
+export { stitchChunks } from "./wikiRewriteService";
+import { removeDocumentFromWiki } from "./wikiCheckupPages";
+
+/** One company's documents read at a time by the re-read and the intake count; past it a run notes it and stops. */
+export const WIKI_COMPANY_DOCUMENTS_READ = 1_000;
 
 /**
  * The distiller's default-runtime half (wiki-replaces-knowledge plan, stage
@@ -18,21 +26,20 @@ import { appError } from "./utils/appError";
 /** How many documents one catch-up tick may send to the model, per company. */
 export const WIKI_DISTILL_BATCH_SIZE = 5;
 
-/** More than any real document needs; keeps a scraped page from flooding a prompt. */
-export const WIKI_DISTILL_TEXT_MAX_CHARS = 8_000;
+export { WIKI_DISTILL_TEXT_MAX_CHARS } from "./wikiDocumentText";
 
-/** One document's distillable text: its own content, or its chunks joined. */
-async function distillableText(
-  ctx: { db: import("./_generated/server").QueryCtx["db"] },
-  document: Doc<"knowledgeDocuments">
-): Promise<string> {
-  if (document.textContent?.trim()) return document.textContent.slice(0, WIKI_DISTILL_TEXT_MAX_CHARS);
-  const chunks = await ctx.db
-    .query("knowledgeChunks")
-    .withIndex("by_document", (q) => q.eq("documentId", document._id))
-    .take(12);
-  return chunks.map((chunk) => chunk.text).join("\n\n").slice(0, WIKI_DISTILL_TEXT_MAX_CHARS);
-}
+/**
+ * The old reading length, kept for the one-time source-note backfill, which
+ * walks every document at once and must stay inside one query's reads.
+ */
+const WIKI_BACKFILL_TEXT_MAX_CHARS = 8_000;
+
+/**
+ * The most text one catch-up batch claims. A batch stops adding documents
+ * past this (always taking at least one), so five long files never pile
+ * into one read.
+ */
+const WIKI_DISTILL_BATCH_MAX_CHARS = 150_000;
 
 function isDistillable(document: Doc<"knowledgeDocuments">): boolean {
   return (
@@ -108,6 +115,136 @@ export const releaseDistillClaimInternal = internalMutation({
   },
 });
 
+/**
+ * One section of a document the wiki is reading, for the reader's later
+ * sections (client-work pages, 2026-11-12). Only a claimed document is read
+ * this way, so a section can never be read for a document the wiki has
+ * handed back or has not yet started.
+ */
+export const getDocumentSectionInternal = internalQuery({
+  args: { documentId: v.id("knowledgeDocuments"), sectionIndex: v.number() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    companyId: Id<"companies"> | null;
+    title: string;
+    sourceUrl: string | null;
+    section: string;
+    sectionCount: number;
+  } | null> => {
+    const document = await ctx.db.get(args.documentId);
+    if (
+      !document ||
+      document.status !== "ready" ||
+      document.threadId ||
+      (!document.companyId && document.agentId) ||
+      document.wikiDistilledAt === undefined
+    ) {
+      return null;
+    }
+    const sections = splitDocumentIntoSections(await distillableText(ctx, document));
+    const section = sections[args.sectionIndex];
+    if (!section) return null;
+    return {
+      companyId: document.companyId ?? null,
+      title: document.title,
+      sourceUrl: document.sourceUrl ?? null,
+      section,
+      sectionCount: sections.length,
+    };
+  },
+});
+
+/**
+ * Whether a document the wiki is reading is still filed (2026-11-12). A
+ * long document now takes minutes to read, and one deleted part-way through
+ * had its source note written back after the delete had removed it. The
+ * reader asks before each write and stops once the document is gone.
+ */
+export const isDocumentStillFiledInternal = internalQuery({
+  args: { documentId: v.string() },
+  handler: async (ctx, args): Promise<boolean> => {
+    const id = ctx.db.normalizeId("knowledgeDocuments", args.documentId);
+    return id !== null && (await ctx.db.get(id)) !== null;
+  },
+});
+
+/**
+ * The reader's last word on a document: if it was deleted while being read,
+ * whatever the reader wrote for it after the delete is cleared the same way
+ * the delete clears it. In one transaction, so nothing slips between.
+ */
+export const forgetIfDeletedInternal = internalMutation({
+  args: { companyId: v.optional(v.id("companies")), documentId: v.string(), title: v.string() },
+  handler: async (ctx, args): Promise<{ forgotten: boolean }> => {
+    const id = ctx.db.normalizeId("knowledgeDocuments", args.documentId);
+    if (id === null || (await ctx.db.get(id)) !== null) return { forgotten: false };
+    const note = await ctx.db
+      .query("wikiPages")
+      .withIndex("by_company_kind_subject", (q) =>
+        q.eq("companyId", args.companyId).eq("kind", "SOURCE").eq("subjectKey", args.documentId)
+      )
+      .first();
+    if (!note) return { forgotten: false };
+    await removeDocumentFromWiki(ctx, { companyId: args.companyId, documentId: id, title: args.title });
+    return { forgotten: true };
+  },
+});
+
+/**
+ * A changed document read again from the top (2026-11-12). The check-up
+ * follows a change by comparing the old and new source notes, which hold a
+ * document's first 24,000 characters; a longer document's later sections
+ * are brought in line by reading it again, section by section. Pages are
+ * improved, never duplicated — the wiki keeps one page per subject.
+ */
+export const rereadChangedDocumentInternal = internalMutation({
+  args: { documentId: v.id("knowledgeDocuments") },
+  handler: async (ctx, args): Promise<boolean> => {
+    const document = await ctx.db.get(args.documentId);
+    if (!document || document.status !== "ready" || document.threadId || document.wikiReviewRequested === true) return false;
+    await ctx.db.patch(document._id, { wikiDistilledAt: undefined, wikiDistillAttempts: 0 });
+    await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilNewDocument, { documentId: document._id });
+    return true;
+  },
+});
+
+/**
+ * Every document a company has filed, read again from the top
+ * (client-work pages, 2026-11-12): the claims are handed back and the
+ * catch-up batch started, so documents the wiki only read the opening of
+ * are read in full. Pages already written are improved, never duplicated —
+ * the wiki keeps one page per subject. Run by an operator for one named
+ * company; it spends model calls, so nothing runs it on a schedule.
+ */
+export const relearnCompanyDocumentsInternal = internalMutation({
+  args: { companyId: v.id("companies") },
+  handler: async (ctx, args): Promise<{ documents: number }> => {
+    const read = await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .take(WIKI_COMPANY_DOCUMENTS_READ + 1);
+    // Past the cap the rest wait for another run, and the log says so.
+    if (read.length > WIKI_COMPANY_DOCUMENTS_READ) console.error(`Re-reading stopped at ${WIKI_COMPANY_DOCUMENTS_READ} documents; run it again for the rest`);
+    const documents = read.slice(0, WIKI_COMPANY_DOCUMENTS_READ);
+    let requeued = 0;
+    for (const document of documents) {
+      if (document.status !== "ready" || document.threadId) continue;
+      if (document.wikiReviewRequested === true) continue;
+      if (document.wikiDistilledAt === undefined && (document.wikiDistillAttempts ?? 0) === 0) continue;
+      await ctx.db.patch(document._id, { wikiDistilledAt: undefined, wikiDistillAttempts: 0 });
+      requeued += 1;
+    }
+    if (requeued > 0) {
+      await ctx.scheduler.runAfter(0, internal.wikiDistillActions.distilCompanyBatch, {
+        companyId: args.companyId,
+      });
+    }
+    return { documents: requeued };
+  },
+});
+
 /** The catch-up sweep's shopping list: companies still holding documents the
  * wiki has not read. Bounded the way the tending sweep's list is. */
 export const listCompaniesWithUndistilledInternal = internalQuery({
@@ -121,6 +258,20 @@ export const listCompaniesWithUndistilledInternal = internalQuery({
       if (isDistillable(document) && document.companyId) companies.add(document.companyId);
     }
     return [...companies];
+  },
+});
+
+/** How many documents one wiki has waiting to be read (the daily
+ * check-up's intake count, wiki-daily-checkup-plan.md). */
+export const countUndistilledInternal = internalQuery({
+  args: { companyId: v.optional(v.id("companies")) },
+  handler: async (ctx, args): Promise<number> => {
+    // Read to the cap and one more: past it the count is "at least", which is all the intake step needs.
+    const documents = await ctx.db
+      .query("knowledgeDocuments")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .take(WIKI_COMPANY_DOCUMENTS_READ + 1);
+    return documents.filter((document) => isDistillable(document)).length;
   },
 });
 
@@ -151,11 +302,14 @@ export const claimNextDistillBatchInternal = internalMutation({
       .take(1000);
     const now = Date.now();
     const batch = [];
+    let claimedChars = 0;
     for (const document of documents) {
       if (batch.length >= WIKI_DISTILL_BATCH_SIZE) break;
+      if (batch.length > 0 && claimedChars >= WIKI_DISTILL_BATCH_MAX_CHARS) break;
       if (!isDistillable(document)) continue;
       await ctx.db.patch(document._id, { wikiDistilledAt: now });
       const text = await distillableText(ctx, document);
+      claimedChars += text.length;
       batch.push({
         documentId: document._id,
         title: document.title,
@@ -216,7 +370,7 @@ export const getDistilledDocumentsInternal = internalQuery({
       // Under the global scope the bare index also surfaces agent-scoped
       // documents; they belong to neither brain.
       if (!document.companyId && document.agentId) continue;
-      const text = await distillableText(ctx, document);
+      const text = await distillableText(ctx, document, WIKI_BACKFILL_TEXT_MAX_CHARS);
       if (!text.trim()) continue;
       result.push({
         documentId: document._id,

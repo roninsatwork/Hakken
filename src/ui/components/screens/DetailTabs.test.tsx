@@ -175,4 +175,29 @@ describe("DetailTabs", () => {
     expect(within(menu).getByLabelText("Integration selected")).toBeInTheDocument();
     expect(within(menu).queryByLabelText("Appearance selected")).not.toBeInTheDocument();
   });
+
+  it("lights only the matching tab when views of one page share its address, each with its count", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/ai/knowledge/page-1");
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("tab=history") as never);
+    const tabOf = (search: URLSearchParams) => search.get("tab") ?? "page";
+
+    render(
+      <DetailTabs
+        rootHref="/admin/ai/knowledge/page-1"
+        tabs={[
+          { label: "Page", href: "/admin/ai/knowledge/page-1", icon: Activity, matches: (_path, search) => tabOf(search) === "page" },
+          {
+            label: "History",
+            href: "/admin/ai/knowledge/page-1?tab=history",
+            icon: Database,
+            count: 12,
+            matches: (_path, search) => tabOf(search) === "history",
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByRole("link", { name: "Page" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "History 12" })).toHaveAttribute("aria-current", "page");
+  });
 });

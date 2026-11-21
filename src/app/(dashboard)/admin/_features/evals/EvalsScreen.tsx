@@ -20,7 +20,6 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
@@ -208,10 +207,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
         icon={<ClipboardCheck className="h-6 w-6 text-brand" />}
         title={t("title")}
         description={companyId ? t("companyDescription") : t("globalDescription")}
-        divider
       />
-
-      {!companyId && <AiWorkspaceNav />}
 
       <header className="flex flex-col gap-4">
 

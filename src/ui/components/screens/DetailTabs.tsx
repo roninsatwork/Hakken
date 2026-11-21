@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { Check, ChevronDown } from "lucide-react";
 
 import { useTranslations } from "next-intl";
@@ -26,6 +26,16 @@ export type DetailTab = {
   href: string;
   icon: AdminDetailTabIcon;
   label: string;
+  /**
+   * A quiet number after the label, "History 12": how many rows the tab holds. Added for a wiki page's own tabs
+   * (wiki-sonae-catch-up-plan-2026-11-21.md, S5).
+   */
+  count?: ReactNode;
+  /**
+   * When given, this alone decides whether the tab is open. Tabs that are views of one page share its address and
+   * differ only by `?tab=`, so the address rule would light every one of them (a wiki page's tabs, S5). Every matcher
+   * written before this already covered its own address, so none of them changed.
+   */
   matches?: (pathname: string, searchParams: URLSearchParams) => boolean;
 };
 
@@ -154,7 +164,9 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const activeDropdownItem = tab.dropdownItems?.find((item) => isActiveDropdownItem(pathname, searchParams, item, tab.href));
-        const isActive = Boolean(tab.matches?.(pathname, searchParams) || activeDropdownItem || isActiveTab(pathname, tab.href, rootHref));
+        const isActive = tab.matches
+          ? Boolean(tab.matches(pathname, searchParams) || activeDropdownItem)
+          : Boolean(activeDropdownItem || isActiveTab(pathname, tab.href, rootHref));
 
         if (tab.dropdownItems) {
           const isOpen = openTabHref === tab.href;
@@ -233,6 +245,7 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
           <Link
             key={tab.href}
             href={tab.href}
+            aria-current={isActive ? "page" : undefined}
             className={`flex items-center gap-2 px-4 py-3 text-[13px] font-medium transition-all border-b-2 whitespace-nowrap ${
               isActive
                 ? "border-brand text-brand bg-brand/5"
@@ -241,6 +254,9 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
           >
             <Icon className="w-4 h-4" />
             {tab.label}
+            {/* The space is for whoever is listening: "History 12", not "History12". */}
+            {tab.count !== undefined ? " " : null}
+            {tab.count !== undefined ? <span className="font-mono text-[12px] font-normal tabular-nums text-muted">{tab.count}</span> : null}
           </Link>
         );
       })}

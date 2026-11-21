@@ -11,7 +11,6 @@ import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControl
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
-import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
@@ -176,11 +175,7 @@ export default function SpokenVoicePage() {
         icon={<AudioLines className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("subtitle", { platformName })}
-        divider
       />
-
-      <AiWorkspaceNav />
-
       <SaveFeedback
         status={saveStatus}
         successTitle={t("success.title")}

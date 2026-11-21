@@ -63,7 +63,8 @@ describe("Self-improvement config", () => {
     await asSuperAdmin.mutation(api.selfImprovementConfig.updateConfig, next);
 
     const after = await asSuperAdmin.query(api.selfImprovementConfig.getConfig, {});
-    expect(after).toEqual(next);
+    // A screen that does not send the wiki switch keeps what is stored.
+    expect(after).toEqual({ ...next, autonomousWiki: true });
 
     await t.run(async (ctx) => {
       const row = await ctx.db
@@ -71,7 +72,7 @@ describe("Self-improvement config", () => {
         .withIndex("by_key", (q) => q.eq("key", SELF_IMPROVEMENT_CONFIG_KEY))
         .first();
       expect(row).not.toBeNull();
-      expect(JSON.parse(row!.value)).toEqual(next);
+      expect(JSON.parse(row!.value)).toEqual({ ...next, autonomousWiki: true });
 
       const audits = await ctx.db.query("auditLogs").collect();
       const entry = audits.find((a) => a.entityId === SELF_IMPROVEMENT_CONFIG_KEY);

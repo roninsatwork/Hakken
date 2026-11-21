@@ -5,7 +5,6 @@
     "src/app/(dashboard)/admin/agents/[id]/logs/[logId]/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/observability/page.tsx",
     "src/app/(dashboard)/admin/agents/[id]/system-prompt/page.tsx",
-    "src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav.tsx",
     "src/app/(dashboard)/admin/ai/costs/_components/AICostTimelineChart.tsx",
     "src/app/(dashboard)/admin/ai/costs/_components/AICostsHeader.tsx",
     "src/app/(dashboard)/admin/ai/costs/_components/MetricBlock.tsx",

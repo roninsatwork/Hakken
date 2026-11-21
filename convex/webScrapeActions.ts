@@ -85,7 +85,8 @@ export async function fetchPage(args: {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SCRAPE_TIMEOUT_MS);
   try {
-    const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
+    // Firecrawl's v2: its v1 stops on 2026-12-10 (Sonae `9a0b02a1`, wiki-sonae-catch-up-plan-2026-11-21.md, 0.1).
+    const response = await fetch("https://api.firecrawl.dev/v2/scrape", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -95,6 +96,8 @@ export async function fetchPage(args: {
         url: target.toString(),
         formats: ["markdown", ...(args.withLinks ? ["links"] : []), ...(args.withStructuredData ? ["rawHtml"] : [])],
         onlyMainContent: args.mainContentOnly ?? true,
+        // v2 would otherwise return a copy up to two days old. A page asked for is read as it is now.
+        maxAge: 0,
       }),
       signal: controller.signal,
     });

@@ -49,7 +49,10 @@ export const getForMessage = tenantQuery({
     if (!thread) return null;
     // You may see the workings of answers you were given. Admins have the
     // observability screens for everybody else's.
-    if (thread.userId !== userId && user.role !== "SUPER_ADMIN") return null;
+    if (
+      user.role !== "SUPER_ADMIN" &&
+      (thread.userId !== userId || thread.companyId !== companyId)
+    ) return null;
 
     const runtime = parseEvidence<RuntimeEvidence>(message.companyRuntimeEvidenceJson);
     const memoryEvidence = parseEvidence<MemoryEvidence>(message.companyMemoryEvidenceJson);
@@ -87,13 +90,13 @@ export const getForMessage = tenantQuery({
       const separator = key.indexOf(":");
       if (separator <= 0) continue;
       const kind = key.slice(0, separator);
-      if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "SOURCE", "GOAL"].includes(kind)) continue;
+      if (!["CUSTOMER", "PRODUCT", "POLICY", "ISSUE", "CLIENT", "SOURCE", "GOAL"].includes(kind)) continue;
       const page = await ctx.db
         .query("wikiPages")
         .withIndex("by_company_kind_subject", (q) =>
           q
             .eq("companyId", isPlatform ? undefined : thread.companyId)
-            .eq("kind", kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE" | "GOAL")
+            .eq("kind", kind as "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE" | "GOAL")
             .eq("subjectKey", key.slice(separator + 1))
         )
         .unique()

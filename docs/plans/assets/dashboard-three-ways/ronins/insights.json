@@ -1,0 +1,1432 @@
+{
+  "findings": [
+    {
+      "action": "Give each search one page: keep /web-design-london/, /custom-web-design-agency/, /web-development-company/, /hub/what-is-bespoke-web-design/ and /hub/how-to-choose-a-web-design-agency/ for the searches each should own, each made clearly about its own; keep /hub/what-is-responsive-web-design/ and link from it to /web-design-london/.",
+      "headline": "Several of your pages compete for the same web design searches, diluting clicks that could otherwise become client enquiries.",
+      "sources": [
+        "searchConsole",
+        "analytics",
+        "market"
+      ],
+      "week": "2026-10-12"
+    },
+    {
+      "action": "Strengthen the page to win searches for London app developers by showcasing relevant case studies and client outcomes.",
+      "headline": "Clicks to /app-developers-london/ held at 5 compared to 5 while lingering on page two.",
+      "sources": [
+        "searchConsole"
+      ],
+      "week": "2026-10-12"
+    },
+    {
+      "action": "Give each search one page: keep /mobile-app-developers/, /app-developers-london/, /web-application-development/, /android-app-development/ and /ios-app-development/ for the searches each should own, each made clearly about its own; make /bespoke-software-development-company/ clearly about something different from /mobile-app-developers/.",
+      "headline": "With 6 pages competing for the same app development searches, Google is dividing its attention rather than sending visitors to one clear winner.",
+      "sources": [
+        "searchConsole",
+        "analytics",
+        "market"
+      ],
+      "week": "2026-10-12"
+    },
+    {
+      "action": "Add clear paths and contextual calls to action that guide brand framework readers toward relevant commercial design services.",
+      "headline": "/hub/kapferer-brand-identity-prism/ brought 593 visits but only 1 conversion from visits that started on it.",
+      "sources": [
+        "analytics",
+        "searchConsole"
+      ],
+      "week": "2026-10-12"
+    },
+    {
+      "action": "Make core service pages clearer for AI assistants to summarize, to attract more of these high-converting visits.",
+      "headline": "Visitors from AI assistants convert at 7.3%, well above search's 3.1%.",
+      "sources": [
+        "analytics"
+      ],
+      "week": "2026-10-12"
+    },
+    {
+      "action": "Give each search one page: keep /ai-software-development-company/, /ai-consultancy/, /ai-agency/, /seo-agency/ and /chatbot-agency/ for the searches each should own, each made clearly about its own; make /digital-product-agency/ clearly about something different from /ai-agency/.",
+      "headline": "6 of your pages split Google's searches for \"ai development services london\": shown 29,040 times in 90 days for 20 clicks.",
+      "sources": [
+        "searchConsole",
+        "market",
+        "analytics"
+      ],
+      "week": "2026-10-12"
+    }
+  ],
+  "sources": [
+    "searchConsole",
+    "analytics",
+    "market",
+    "ai",
+    "local",
+    "crawl"
+  ],
+  "summary": {
+    "checked": 2252,
+    "competing": {
+      "biggest": {
+        "clicks": 12,
+        "key": "/mobile-app-developers/",
+        "name": "app developers",
+        "pages": 6,
+        "shared": 641,
+        "shown": 114375
+      },
+      "clicks": 52,
+      "groups": 6,
+      "pages": 30,
+      "shared": 1395,
+      "shown": 254047
+    },
+    "enquiriesByMonth": [
+      {
+        "conversions": 12,
+        "month": "2025-10",
+        "people": 390,
+        "visits": 323
+      },
+      {
+        "conversions": 20,
+        "month": "2025-11",
+        "people": 274,
+        "visits": 382
+      },
+      {
+        "conversions": 7,
+        "month": "2025-12",
+        "people": 255,
+        "visits": 358
+      },
+      {
+        "conversions": 18,
+        "month": "2026-01",
+        "people": 279,
+        "visits": 390
+      },
+      {
+        "conversions": 15,
+        "month": "2026-02",
+        "people": 312,
+        "visits": 472
+      },
+      {
+        "conversions": 18,
+        "month": "2026-03",
+        "people": 352,
+        "visits": 575
+      },
+      {
+        "conversions": 21,
+        "month": "2026-04",
+        "people": 333,
+        "visits": 488
+      },
+      {
+        "conversions": 16,
+        "month": "2026-05",
+        "people": 300,
+        "visits": 397
+      },
+      {
+        "conversions": 12,
+        "month": "2026-06",
+        "people": 225,
+        "visits": 289
+      },
+      {
+        "conversions": 11,
+        "month": "2026-07",
+        "people": 216,
+        "visits": 322
+      },
+      {
+        "conversions": 7,
+        "month": "2026-08",
+        "people": 156,
+        "visits": 201
+      },
+      {
+        "conversions": 10,
+        "month": "2026-09",
+        "people": 175,
+        "visits": 241
+      },
+      {
+        "conversions": 2,
+        "month": "2026-10",
+        "people": 76,
+        "visits": 77
+      }
+    ],
+    "enquiryCheck": {
+      "ok": false,
+      "problems": [
+        {
+          "a": 160,
+          "b": 164,
+          "code": "leavesBefore",
+          "event": "click",
+          "other": null
+        }
+      ]
+    },
+    "paragraphs": [
+      "In the last 90 days, the website generated 26 enquiries from 505 visitors, down from 74 enquiries from 743 visitors during the same 90 days a year ago. It now takes 19 visitors to achieve one enquiry, compared to 10 last year. Over the last 30 days, visitors rose to 176 from 147 in the 30 days before, but enquiries slipped to 7 from 8, lifting visitor requirements to 25 people per conversion from 18.",
+      "This drop stems from audience intent shifting alongside internal search competition. Traffic has tilted toward informational content like your brand identity guide, which drew 593 visits but yielded only 1 conversion from visits that started on it, made anywhere on the website, over the last 12 months. Meanwhile, multiple service pages are competing against each other in Google searches—especially across web design and app development—splitting clicks and keeping valuable commercial pages on page two of search results.",
+      "Across the market, search demand contracted for all agencies over the year, but your underlying share is growing. While competitors saw estimated monthly search visits drop, including chilliapple falling from 6,616 to 2,637 and plugandplaydesign dropping from 4,387 to 596, your searches in Google's top three climbed from 16 to 57. To grow further against competitors like pixelfield.co.uk, who hold 1,469 linking websites and a strength in Google's eyes of 408 compared to your 503 websites and 291, the focus must be on resolving internal search overlap and turning existing traffic into enquiries."
+    ],
+    "rankings": {
+      "aiOf": 258,
+      "aiWith": 178,
+      "day": "2026-10-12",
+      "pageOne": 258,
+      "pageOneBefore": 306
+    },
+    "ruledOut": 17,
+    "scorecard": [
+      {
+        "before": 74,
+        "lowerIsBetter": false,
+        "measure": "enquiries",
+        "now": 26,
+        "place": null,
+        "places": null,
+        "status": "BEHIND",
+        "unit": "count"
+      },
+      {
+        "before": 743,
+        "lowerIsBetter": false,
+        "measure": "visitors",
+        "now": 505,
+        "place": null,
+        "places": null,
+        "status": "BEHIND",
+        "unit": "count"
+      },
+      {
+        "before": 10,
+        "lowerIsBetter": true,
+        "measure": "visitorsPerEnquiry",
+        "now": 19,
+        "place": null,
+        "places": null,
+        "status": "BEHIND",
+        "unit": "count"
+      },
+      {
+        "before": 797,
+        "lowerIsBetter": false,
+        "measure": "googleVisits",
+        "now": 538,
+        "place": 4,
+        "places": 5,
+        "status": "BEHIND",
+        "unit": "count"
+      },
+      {
+        "before": null,
+        "lowerIsBetter": true,
+        "measure": "googleClicksPerEnquiry",
+        "now": 76,
+        "place": null,
+        "places": null,
+        "status": "WATCH",
+        "unit": "count"
+      },
+      {
+        "before": 55,
+        "lowerIsBetter": false,
+        "measure": "googleEnquiries",
+        "now": 14,
+        "place": null,
+        "places": null,
+        "status": "BEHIND",
+        "unit": "count"
+      },
+      {
+        "before": 77,
+        "lowerIsBetter": false,
+        "measure": "aiVisits",
+        "now": 25,
+        "place": 1,
+        "places": 5,
+        "status": "BEHIND",
+        "unit": "count"
+      },
+      {
+        "before": 11.7,
+        "lowerIsBetter": false,
+        "measure": "marketShare",
+        "now": 13.9,
+        "place": 4,
+        "places": 5,
+        "status": "ON_TRACK",
+        "unit": "percent"
+      },
+      {
+        "before": null,
+        "lowerIsBetter": false,
+        "measure": "aiMentions",
+        "now": 222,
+        "place": 4,
+        "places": 5,
+        "status": "WATCH",
+        "unit": "count"
+      },
+      {
+        "before": 256,
+        "lowerIsBetter": false,
+        "measure": "strength",
+        "now": 291,
+        "place": 5,
+        "places": 5,
+        "status": "ON_TRACK",
+        "unit": "count"
+      },
+      {
+        "before": null,
+        "lowerIsBetter": false,
+        "measure": "reviews",
+        "now": 16,
+        "place": 3,
+        "places": 5,
+        "status": "WATCH",
+        "unit": "count"
+      }
+    ],
+    "services": [
+      {
+        "clicks": 65,
+        "clicksBefore": 110,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 44,
+        "enquiriesBefore": 72,
+        "impressions": 15352,
+        "impressionsBefore": 30156,
+        "kind": "HOME",
+        "page": "/",
+        "people": 584,
+        "signature": "2.rd6jmw",
+        "title": "Creative Digital Agency | Products | London And Surrey | Ronins",
+        "verdict": "STEADY",
+        "visits": 739,
+        "why": "The homepage remains the core entry point for brand traffic, but enquiries fell alongside broader conversion dips."
+      },
+      {
+        "clicks": 203,
+        "clicksBefore": 332,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 31,
+        "enquiriesBefore": 26,
+        "impressions": 42228,
+        "impressionsBefore": 47963,
+        "kind": "SERVICE",
+        "page": "/ai-agency/",
+        "people": 594,
+        "signature": "2.9cb4xm",
+        "title": "AI Agency | Agent Automation Company | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 699,
+        "why": "Enquiries grew year on year, maintaining solid performance even as search clicks eased."
+      },
+      {
+        "clicks": 114,
+        "clicksBefore": 152,
+        "decidedBy": "RULE",
+        "enquiries": 16,
+        "enquiriesBefore": 36,
+        "impressions": 200638,
+        "impressionsBefore": 151272,
+        "kind": "GUIDES",
+        "page": "guides",
+        "people": 999,
+        "signature": "2.1x0ca06",
+        "title": null,
+        "verdict": "READERS",
+        "visits": 1214
+      },
+      {
+        "clicks": 8,
+        "clicksBefore": 13,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 9,
+        "enquiriesBefore": 7,
+        "impressions": 1604,
+        "impressionsBefore": 1494,
+        "kind": "SERVICE",
+        "page": "/venture-studio/",
+        "people": 149,
+        "signature": "2.1i50kyx",
+        "title": "Venture Studio | Co-Founders For High-Growth | London And Surrey",
+        "verdict": "GROW",
+        "visits": 175,
+        "why": "Enquiries increased over the previous year, showing strong commercial potential that warrants expanding visibility."
+      },
+      {
+        "clicks": 13,
+        "clicksBefore": 23,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 6,
+        "enquiriesBefore": 0,
+        "impressions": 71283,
+        "impressionsBefore": 55774,
+        "kind": "SERVICE",
+        "page": "/ai-consultancy/",
+        "people": 72,
+        "signature": "2.1i50kyx",
+        "title": "AI Consultancy | AI Consultants | London And Surrey | Ronins",
+        "verdict": "GROW",
+        "visits": 84,
+        "why": "A new source of enquiries this year with strong momentum, ready for dedicated expansion."
+      },
+      {
+        "clicks": 6,
+        "clicksBefore": 6,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 4,
+        "enquiriesBefore": 6,
+        "impressions": 33543,
+        "impressionsBefore": 39693,
+        "kind": "SERVICE",
+        "page": "/web-design-surrey/",
+        "people": 21,
+        "signature": "2.9cb4xm",
+        "title": "Web Design Surrey | Creative Web Design Agency | Ronins",
+        "verdict": "STEADY",
+        "visits": 24,
+        "why": "Consistent local search interest and steady enquiries make this a dependable regional asset."
+      },
+      {
+        "clicks": 8,
+        "clicksBefore": 10,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 3,
+        "enquiriesBefore": 5,
+        "impressions": 16760,
+        "impressionsBefore": 34495,
+        "kind": "SERVICE",
+        "page": "/shopify-development-agency/",
+        "people": 39,
+        "signature": "2.9cb4xm",
+        "title": "Shopify Development Agency | Shopify Plus | UK | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 43,
+        "why": "Generates consistent commercial interest despite infrequent recrawling by search engines."
+      },
+      {
+        "clicks": 8,
+        "clicksBefore": 15,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 3,
+        "enquiriesBefore": 0,
+        "impressions": 4271,
+        "impressionsBefore": 18970,
+        "kind": "SERVICE",
+        "page": "/web-development-company/",
+        "people": 23,
+        "signature": "2.1i50kyx",
+        "title": "Web Development Company | Web Developers | London And Surrey",
+        "verdict": "GROW",
+        "visits": 26,
+        "why": "Delivered enquiries from a standing start last year, indicating clear opportunity to win more development searches."
+      },
+      {
+        "clicks": 6,
+        "clicksBefore": 3,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 3,
+        "enquiriesBefore": 0,
+        "impressions": 14439,
+        "impressionsBefore": 9661,
+        "kind": "SERVICE",
+        "page": "/ux-design-agency/",
+        "people": 12,
+        "signature": "2.1i50kyx",
+        "title": "UX Design Agency | UX UI Designers | London And Surrey",
+        "verdict": "GROW",
+        "visits": 13,
+        "why": "Secured enquiries despite long crawl delays, showing strong commercial intent once search visibility improves."
+      },
+      {
+        "clicks": 5,
+        "clicksBefore": 12,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 3,
+        "enquiriesBefore": 12,
+        "impressions": 12854,
+        "impressionsBefore": 14182,
+        "kind": "SERVICE",
+        "page": "/chatbot-agency/",
+        "people": 58,
+        "signature": "2.1itx9jg",
+        "title": "ChatBot Agency | AI Chatbot Designers And Developers | Ronins",
+        "verdict": "BUYERS_WORDS",
+        "visits": 62,
+        "why": "Enquiries dropped sharply over the year, requiring page copy aligned with what commercial buyers actively search for."
+      },
+      {
+        "clicks": 5,
+        "clicksBefore": 5,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 3,
+        "enquiriesBefore": 3,
+        "impressions": 55471,
+        "impressionsBefore": 67348,
+        "kind": "SERVICE",
+        "page": "/app-developers-london/",
+        "people": 25,
+        "signature": "2.9cb4xm",
+        "title": "App Developers London | App Development Company | Ronins",
+        "verdict": "STEADY",
+        "visits": 27,
+        "why": "Holds steady enquiries while sitting on page two, ready to convert higher once search rankings break onto page one."
+      },
+      {
+        "clicks": 2,
+        "clicksBefore": 4,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 3,
+        "enquiriesBefore": 2,
+        "impressions": 19587,
+        "impressionsBefore": 26187,
+        "kind": "SERVICE",
+        "page": "/ios-app-development/",
+        "people": 11,
+        "signature": "2.1i50kyx",
+        "title": "IOS App Development | Native And Hybrid | London And Surrey",
+        "verdict": "GROW",
+        "visits": 12,
+        "why": "Enquiries increased year on year, proving demand for dedicated Apple platform development."
+      },
+      {
+        "clicks": 6,
+        "clicksBefore": 20,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 2,
+        "enquiriesBefore": 1,
+        "impressions": 10049,
+        "impressionsBefore": 16683,
+        "kind": "SERVICE",
+        "page": "/webflow-agency/",
+        "people": 31,
+        "signature": "2.9cb4xm",
+        "title": "Webflow Agency | Design And Development | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 33,
+        "why": "Maintains modest enquiry levels despite search clicks declining from last year."
+      },
+      {
+        "clicks": 4,
+        "clicksBefore": 3,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 2,
+        "enquiriesBefore": 1,
+        "impressions": 8251,
+        "impressionsBefore": 9702,
+        "kind": "SERVICE",
+        "page": "/digital-product-agency/",
+        "people": 19,
+        "signature": "2.9cb4xm",
+        "title": "Digital Product Agency | Design And Development | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 19,
+        "why": "Produced steady enquiries year on year with stable search interest."
+      },
+      {
+        "clicks": 2,
+        "clicksBefore": 9,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 2,
+        "enquiriesBefore": 0,
+        "impressions": 3684,
+        "impressionsBefore": 10442,
+        "kind": "SERVICE",
+        "page": "/wordpress-website-development-company/",
+        "people": 7,
+        "signature": "2.9cb4xm",
+        "title": null,
+        "verdict": "STEADY",
+        "visits": 9,
+        "why": "Contributed enquiries this year and should be held distinct from Surrey and agency pages."
+      },
+      {
+        "clicks": 1,
+        "clicksBefore": 3,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 2,
+        "enquiriesBefore": 0,
+        "impressions": 24071,
+        "impressionsBefore": 32185,
+        "kind": "SERVICE",
+        "page": "/cro-agency/",
+        "people": 30,
+        "signature": "2.9cb4xm",
+        "title": "CRO Agency | Conversion Rate Optimisation Services | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 35,
+        "why": "Delivered new enquiries this year, demonstrating value as an agency service offering."
+      },
+      {
+        "clicks": 1,
+        "clicksBefore": 2,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 2,
+        "enquiriesBefore": 0,
+        "impressions": 5756,
+        "impressionsBefore": 7901,
+        "kind": "SERVICE",
+        "page": "/blockchain-development-company/",
+        "people": 27,
+        "signature": "2.9cb4xm",
+        "title": "Blockchain Development Company | London, Surrey | Custom DApps",
+        "verdict": "STEADY",
+        "visits": 32,
+        "why": "Won new enquiries from low traffic, showing niche demand that pays to maintain."
+      },
+      {
+        "clicks": 1,
+        "clicksBefore": 4,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 2,
+        "enquiriesBefore": 3,
+        "impressions": 7130,
+        "impressionsBefore": 10641,
+        "kind": "SERVICE",
+        "page": "/woocommerce-agency/",
+        "people": 17,
+        "signature": "2.9cb4xm",
+        "title": "WooCommerce Agency UK | Custom Stores | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 19,
+        "why": "Produced steady enquiries alongside Shopify as part of your ecommerce offering."
+      },
+      {
+        "clicks": 9,
+        "clicksBefore": 12,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 1,
+        "enquiriesBefore": 1,
+        "impressions": 52764,
+        "impressionsBefore": 56619,
+        "kind": "SERVICE",
+        "page": "/mobile-app-developers/",
+        "people": 32,
+        "signature": "2.9cb4xm",
+        "title": "Mobile App Developers | App Development | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 38,
+        "why": "Enquiries improved year on year, and clarifying overlap with platform pages will protect its position."
+      },
+      {
+        "clicks": 9,
+        "clicksBefore": 6,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 1,
+        "enquiriesBefore": 0,
+        "impressions": 35868,
+        "impressionsBefore": 41459,
+        "kind": "SERVICE",
+        "page": "/custom-web-design-agency/",
+        "people": 16,
+        "signature": "2.9cb4xm",
+        "title": "Custom Web Design Agency | Designers & Developers | Ronins",
+        "verdict": "STEADY",
+        "visits": 16,
+        "why": "Secured its first enquiry while gaining search clicks, warranting continued focus."
+      },
+      {
+        "clicks": 3,
+        "clicksBefore": 21,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 1,
+        "enquiriesBefore": 1,
+        "impressions": 95427,
+        "impressionsBefore": 180322,
+        "kind": "SERVICE",
+        "page": "/web-design-london/",
+        "people": 62,
+        "signature": "2.9cb4xm",
+        "title": "Web Design London | Website Design Agency | Ronins",
+        "verdict": "STEADY",
+        "visits": 67,
+        "why": "Remains a critical target page where resolving competing page overlap will unlock significant potential."
+      },
+      {
+        "clicks": 3,
+        "clicksBefore": 2,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 1,
+        "enquiriesBefore": 1,
+        "impressions": 7294,
+        "impressionsBefore": 6264,
+        "kind": "SERVICE",
+        "page": "/web3-agency/",
+        "people": 15,
+        "signature": "2.9cb4xm",
+        "title": "Web3 Agency | Marketing And Design | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 32,
+        "why": "Generated consistent enquiries across both years from modest search interest."
+      },
+      {
+        "clicks": 3,
+        "clicksBefore": 6,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 1,
+        "enquiriesBefore": 3,
+        "impressions": 18979,
+        "impressionsBefore": 23703,
+        "kind": "SERVICE",
+        "page": "/graphic-design-agency/",
+        "people": 20,
+        "signature": "2.1dk9nrc",
+        "title": "Graphic Design Agency | Creative Design In London, Surrey",
+        "verdict": "YOUR_CALL",
+        "visits": 21,
+        "why": "Enquiries dropped over the year, leaving you to decide whether general design remains a core commercial priority."
+      },
+      {
+        "clicks": 1,
+        "clicksBefore": 1,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 1,
+        "enquiriesBefore": 3,
+        "impressions": 12787,
+        "impressionsBefore": 20731,
+        "kind": "SERVICE",
+        "page": "/ux-consultancy/",
+        "people": 24,
+        "signature": "2.1dk9nrc",
+        "title": "UX Consultancy In London & Surrey | UX Design | UX Agency",
+        "verdict": "YOUR_CALL",
+        "visits": 26,
+        "why": "Enquiries fell while competing with the UX design agency page, so decide whether to retain consultancy as a standalone service."
+      },
+      {
+        "clicks": 0,
+        "clicksBefore": 0,
+        "decidedBy": "AGENT",
+        "decidedWeek": "2026-10-12",
+        "enquiries": 1,
+        "enquiriesBefore": 2,
+        "impressions": 2766,
+        "impressionsBefore": 5019,
+        "kind": "SERVICE",
+        "page": "/ecommerce-agency/",
+        "people": 8,
+        "signature": "2.1dk9nrc",
+        "title": "Ecommerce Agency | Shopify And Woocommerce | London And Surrey",
+        "verdict": "YOUR_CALL",
+        "visits": 9,
+        "why": "Brought minimal search clicks and few enquiries, so consider whether to keep this umbrella page or focus on Shopify and WooCommerce."
+      },
+      {
+        "clicks": 20,
+        "clicksBefore": 10,
+        "decidedBy": "RULE",
+        "enquiries": 0,
+        "enquiriesBefore": 3,
+        "impressions": 41969,
+        "impressionsBefore": 12298,
+        "kind": "SERVICE",
+        "page": "/wordpress-agency/",
+        "people": 13,
+        "signature": "2.1dk9nrc",
+        "title": "WordPress Agency | Design And Development | London And Surrey",
+        "verdict": "YOUR_CALL",
+        "visits": 14
+      },
+      {
+        "clicks": 6,
+        "clicksBefore": 13,
+        "decidedBy": "RULE",
+        "enquiries": 0,
+        "enquiriesBefore": 0,
+        "impressions": 7890,
+        "impressionsBefore": 7780,
+        "kind": "SERVICE",
+        "page": "/ai-software-development-company/",
+        "people": 30,
+        "signature": "2.9cb4xm",
+        "title": "AI Software Development Company | London And Surrey | Ronins",
+        "verdict": "STEADY",
+        "visits": 35
+      },
+      {
+        "clicks": 6,
+        "clicksBefore": 11,
+        "decidedBy": "RULE",
+        "enquiries": 0,
+        "enquiriesBefore": 0,
+        "impressions": 14422,
+        "impressionsBefore": 15909,
+        "kind": "SERVICE",
+        "page": "/logo-design-agency/",
+        "people": 0,
+        "signature": "2.9cb4xm",
+        "title": "Logo Design Agency | London And Surrey",
+        "verdict": "STEADY",
+        "visits": 0
+      },
+      {
+        "clicks": 5,
+        "clicksBefore": 8,
+        "decidedBy": "RULE",
+        "enquiries": 0,
+        "enquiriesBefore": 0,
+        "impressions": 58996,
+        "impressionsBefore": 77841,
+        "kind": "SERVICE",
+        "page": "/web-application-development/",
+        "people": 20,
+        "signature": "2.9cb4xm",
+        "title": "Web Application Development Company | London And Surrey | Ronins",
+        "verdict": "STEADY",
+        "visits": 21
+      },
+      {
+        "clicks": 4,
+        "clicksBefore": 7,
+        "decidedBy": "RULE",
+        "enquiries": 0,
+        "enquiriesBefore": 1,
+        "impressions": 12205,
+        "impressionsBefore": 22777,
+        "kind": "SERVICE",
+        "page": "/digital-marketing-agency/",
+        "people": 8,
+        "signature": "2.1dk9nrc",
+        "title": "Digital Marketing Agency | London And Surrey | Ronins",
+        "verdict": "YOUR_CALL",
+        "visits": 8
+      },
+      {
+        "clicks": 1,
+        "clicksBefore": 3,
+        "decidedBy": "RULE",
+        "enquiries": 0,
+        "enquiriesBefore": 0,
+        "impressions": 6235,
+        "impressionsBefore": 12622,
+        "kind": "SERVICE",
+        "page": "/android-app-development/",
+        "people": 6,
+        "signature": "2.9cb4xm",
+        "title": null,
+        "verdict": "STEADY",
+        "visits": 6
+      },
+      {
+        "clicks": 1,
+        "clicksBefore": 0,
+        "decidedBy": "RULE",
+        "enquiries": 0,
+        "enquiriesBefore": 1,
+        "impressions": 7440,
+        "impressionsBefore": 8222,
+        "kind": "SERVICE",
+        "page": "/seo-agency/",
+        "people": 3,
+        "signature": "2.1dk9nrc",
+        "title": "SEO Agency | London And Surrey | Enterprise SEO Experts | Ronins",
+        "verdict": "YOUR_CALL",
+        "visits": 3
+      },
+      {
+        "clicks": 0,
+        "clicksBefore": 2,
+        "decidedBy": "RULE",
+        "enquiries": 0,
+        "enquiriesBefore": 1,
+        "impressions": 5648,
+        "impressionsBefore": 8175,
+        "kind": "SERVICE",
+        "page": "/bespoke-software-development-company/",
+        "people": 10,
+        "signature": "2.1dk9nrc",
+        "title": "Bespoke Software Development | Custom Software | London And Surrey",
+        "verdict": "YOUR_CALL",
+        "visits": 16
+      }
+    ],
+    "shareByMonth": [
+      {
+        "month": "2024-12",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1664
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 4329
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 2242
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 7723
+          }
+        ],
+        "total": 16409,
+        "you": 451
+      },
+      {
+        "month": "2025-01",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1452
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 4030
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 2005
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 6619
+          }
+        ],
+        "total": 14558,
+        "you": 452
+      },
+      {
+        "month": "2025-02",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 802
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 3142
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 1617
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 4218
+          }
+        ],
+        "total": 10125,
+        "you": 346
+      },
+      {
+        "month": "2025-03",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1312
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 3499
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 1674
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 3849
+          }
+        ],
+        "total": 11775,
+        "you": 1441
+      },
+      {
+        "month": "2025-04",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1901
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 3949
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 1940
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 4018
+          }
+        ],
+        "total": 13349,
+        "you": 1541
+      },
+      {
+        "month": "2025-05",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2658
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 4222
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 2309
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 4532
+          }
+        ],
+        "total": 15301,
+        "you": 1580
+      },
+      {
+        "month": "2025-06",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2755
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 4639
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 2784
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 4632
+          }
+        ],
+        "total": 15506,
+        "you": 696
+      },
+      {
+        "month": "2025-07",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2648
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 4939
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3045
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 5205
+          }
+        ],
+        "total": 16375,
+        "you": 538
+      },
+      {
+        "month": "2025-08",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2028
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 6078
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3381
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 5390
+          }
+        ],
+        "total": 21152,
+        "you": 4275
+      },
+      {
+        "month": "2025-09",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2081
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 6588
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3243
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 5248
+          }
+        ],
+        "total": 19332,
+        "you": 2172
+      },
+      {
+        "month": "2025-10",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1927
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 6616
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3010
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 4387
+          }
+        ],
+        "total": 18060,
+        "you": 2120
+      },
+      {
+        "month": "2025-11",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1605
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 8066
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3323
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 4760
+          }
+        ],
+        "total": 18693,
+        "you": 939
+      },
+      {
+        "month": "2025-12",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1925
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 7659
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3214
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 4928
+          }
+        ],
+        "total": 18585,
+        "you": 859
+      },
+      {
+        "month": "2026-01",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1981
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 6964
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 2951
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 3178
+          }
+        ],
+        "total": 16492,
+        "you": 1418
+      },
+      {
+        "month": "2026-02",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2275
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 7491
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 2943
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 2521
+          }
+        ],
+        "total": 17293,
+        "you": 2063
+      },
+      {
+        "month": "2026-03",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 4050
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 7435
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 2969
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 1967
+          }
+        ],
+        "total": 18635,
+        "you": 2214
+      },
+      {
+        "month": "2026-04",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2207
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 7699
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3315
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 1896
+          }
+        ],
+        "total": 17931,
+        "you": 2814
+      },
+      {
+        "month": "2026-05",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2250
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 7464
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3006
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 1395
+          }
+        ],
+        "total": 16827,
+        "you": 2712
+      },
+      {
+        "month": "2026-06",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 3286
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 5791
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 3050
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 1068
+          }
+        ],
+        "total": 15511,
+        "you": 2316
+      },
+      {
+        "month": "2026-07",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 2517
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 4028
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 2250
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 702
+          }
+        ],
+        "total": 11123,
+        "you": 1626
+      },
+      {
+        "month": "2026-08",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1185
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 3550
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 1309
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 898
+          }
+        ],
+        "total": 7894,
+        "you": 952
+      },
+      {
+        "month": "2026-09",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1773
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 2790
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 987
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 582
+          }
+        ],
+        "total": 8028,
+        "you": 1896
+      },
+      {
+        "month": "2026-10",
+        "rivals": [
+          {
+            "host": "lightflows.co.uk",
+            "value": 1254
+          },
+          {
+            "host": "chilliapple.co.uk",
+            "value": 2637
+          },
+          {
+            "host": "pixelfield.co.uk",
+            "value": 1087
+          },
+          {
+            "host": "plugandplaydesign.co.uk",
+            "value": 596
+          }
+        ],
+        "total": 6473,
+        "you": 899
+      }
+    ],
+    "why": {
+      "compare": "YEAR_AGO",
+      "paragraph": "Enquiries fell by 16 to 10 in September compared to 26 in the same period a year before. The biggest part of this move was 8 enquiries lost because fewer visitors got in touch, led by service pages where the proportion of visits enquiring dropped from 8.6% to 4.3% even though Search Console clicks to those pages remained steady at 125 against 130. A drop in arrivals from other search engines and AI assistants cost a further 5 enquiries, while the remaining 3 enquiries were lost to tracking gaps, where Analytics captured only 46 visits for every hundred Search Console clicks compared to 59 a year earlier.",
+      "period": "2026-09"
+    }
+  },
+  "summaryKeys": [
+    "checked",
+    "competing",
+    "enquiriesByMonth",
+    "enquiryCheck",
+    "paragraphs",
+    "rankings",
+    "ruledOut",
+    "scorecard",
+    "services",
+    "shareByMonth",
+    "why"
+  ],
+  "verdict": "Website enquiries fell to 26 in the last 90 days compared with 74 in the same period last year, requiring 19 visitors for each enquiry instead of 10.",
+  "week": "2026-10-12",
+  "weeks": 2
+}

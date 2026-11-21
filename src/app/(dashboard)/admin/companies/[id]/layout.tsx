@@ -18,22 +18,27 @@ import {
   ClipboardCheck,
   Code2,
   Cpu,
+  FilePlus2,
   FileText,
   Gauge,
   Globe,
+  Inbox,
   LayoutDashboard,
   ListPlus,
   ListTodo,
   Loader2,
+  MessageCircle,
   MessageCircleQuestion,
   MessageSquareText,
   Monitor,
+  Network,
   NotebookPen,
   Palette,
   PhoneCall,
   Puzzle,
   Scale,
   ShieldCheck,
+  Stethoscope,
   TerminalSquare,
   UserCheck,
   UserPlus,
@@ -43,6 +48,9 @@ import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useTranslations } from "next-intl";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+
+/** The wiki's own pages under a company's wiki, each its own menu line; any other word there is one wiki page, or New goal. */
+const WIKI_OWN_PAGES = ["map", "add", "waiting", "ask", "checkup"] as const;
 
 function matchesCompanyRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -171,11 +179,25 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           href: `${aiHref}/pages`,
           icon: BookOpen,
           matches: (pathname: string) => (
-            matchesCompanyRoute(pathname, `${aiHref}/pages`)
+            (matchesCompanyRoute(pathname, `${aiHref}/pages`)
+              && !WIKI_OWN_PAGES.some((page) => matchesCompanyRoute(pathname, `${aiHref}/pages/${page}`)))
             || matchesCompanyRoute(pathname, `${aiHref}/knowledge`)
             || matchesCompanyRoute(pathname, `${companyHref}/knowledge`)
           ),
         },
+        {
+          // The wiki's map, a line of its own beside the Wiki (wiki-sonae-
+          // catch-up-plan-2026-11-21.md, S2), as in the AI section's menu.
+          label: t("tabs.wikiMap"),
+          href: `${aiHref}/pages/map`,
+          icon: Network,
+        },
+        // The wiki's long page became five (S6), each a line here as in the
+        // AI section's menu. New goal opens from the Wiki, so it keeps Wiki lit.
+        { label: t("tabs.wikiAdd"), href: `${aiHref}/pages/add`, icon: FilePlus2 },
+        { label: t("tabs.wikiWaiting"), href: `${aiHref}/pages/waiting`, icon: Inbox },
+        { label: t("tabs.wikiAsk"), href: `${aiHref}/pages/ask`, icon: MessageCircle },
+        { label: t("tabs.wikiCheckup"), href: `${aiHref}/pages/checkup`, icon: Stethoscope },
         {
           // Every brain's gaps get a dedicated screen (Anthony's ruling,
           // 2026-08-17) — this company's own, beside its Wiki.

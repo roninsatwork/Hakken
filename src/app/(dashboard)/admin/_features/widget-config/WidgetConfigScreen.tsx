@@ -27,7 +27,6 @@ import {
   parseAllowedDomains,
   WIDGET_CONFIG_TABS,
 } from "@/src/app/(dashboard)/admin/_features/widget-config/widgetConfigUtils";
-import { AiWorkspaceNav } from "@/src/app/(dashboard)/admin/ai/_components/AiWorkspaceNav";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 function getWidgetSectionSlug(tab: WidgetConfigTab) {
@@ -211,10 +210,10 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12">
-      {/* The AI workspace's header anatomy is title, rule, tab strip; the
-          company variant sits inside the company's own tabs, where headers
-          carry no rule. */}
-      <header className={`flex flex-col sm:flex-row sm:items-end justify-between gap-4 ${companyId ? "" : "border-b border-border-dim pb-6"}`}>
+      {/* No rule under it: the company variant sits inside the company's own
+          tabs and the global one inside the AI section's frame, which each
+          draw it. */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         {companyId ? (
           <div>
             <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
@@ -248,7 +247,6 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
         )}
       </header>
 
-      {!companyId && <AiWorkspaceNav />}
       <SaveError>{feedbackMessage}</SaveError>
 
       {widget === undefined ? (

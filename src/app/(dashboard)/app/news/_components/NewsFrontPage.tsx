@@ -56,15 +56,27 @@ function fromHelpful(article: Helpful): Story {
  * IH17, IH21).
  */
 export function NewsFrontPage() {
+  return <ReadingRoomFront />;
+}
+
+/** How far back the Dashboard's columns look for articles: a quiet week still shows the newest (dashboard-way-1-plan-2026-11-21.md). */
+export const DASHBOARD_ARTICLE_DAYS = 90;
+
+/**
+ * The Reading room's front page, shared (dashboard-way-1-plan-2026-11-21.md, "Shared from the Reading room"): News's own front
+ * page draws all of it, and the client Dashboard draws the lead story, the last three Google updates and three stories in
+ * columns, without the dateline or the earlier stories, its columns reaching back `articleDays` so its newest articles show.
+ */
+export function ReadingRoomFront({ dashboard = false, articleDays = 7 }: { dashboard?: boolean; articleDays?: number } = {}) {
   const t = useTranslations("news.front");
   const language = useLocale();
   const { platformName } = useSystemSettings();
   const today = localDay();
-  const weekFrom = Date.parse(`${addDays(today, -6)}T00:00:00`);
+  const articlesFrom = Date.parse(`${addDays(today, -(articleDays - 1))}T00:00:00`);
   const front = useQuery(api.news.getFrontPage, { language, today });
   const updates = useQuery(api.googleUpdates.listLatestGoogleUpdates, { language });
-  const articles = useQuery(api.knowledgeArticles.listPublishedSince, { language, since: weekFrom });
-  const helpful = useQuery(api.libraryArticles.listForReadersSince, { language, since: weekFrom });
+  const articles = useQuery(api.knowledgeArticles.listPublishedSince, { language, since: articlesFrom });
+  const helpful = useQuery(api.libraryArticles.listForReadersSince, { language, since: articlesFrom });
   const feed = usePaginatedQuery(api.news.listNewsItems, { language }, { initialNumItems: PAGE });
 
   if (front === undefined || feed.status === "LoadingFirstPage") {
@@ -86,7 +98,7 @@ export function NewsFrontPage() {
   return (
     <div className="flex flex-col">
       {/* The week's count is every story it shows: News's, Knowledge's new articles and Helpful content's. */}
-      <NewsDateline today={today} weekCount={front.weekCount + newArticles.length + newHelpful.length} />
+      {dashboard ? null : <NewsDateline today={today} weekCount={front.weekCount + newArticles.length + newHelpful.length} />}
 
       <section data-part="lead-story" aria-label={t("leadLabel")} className={LEAD_SECTION}>
         <LeadStory lead={lead} today={today} />
@@ -95,7 +107,7 @@ export function NewsFrontPage() {
 
       <StoryColumns stories={columns} label={t("moreLabel")} />
 
-      {wire.length > 0 ? (
+      {!dashboard && wire.length > 0 ? (
         <section data-part="earlier-stories" aria-labelledby="news-earlier" className="flex flex-col gap-2 pt-7">
           <h3 data-part-title id="news-earlier" className={LIST_HEADING}>{t("earlier")}</h3>
           <StoryList stories={wire} />

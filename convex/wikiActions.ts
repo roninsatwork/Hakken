@@ -14,6 +14,7 @@ import {
   linkKeyFor,
   parseTopicSuggestions,
   validateRewrittenPage,
+  WIKI_PAGES_PER_ANSWER,
 } from "./wikiRewriteService";
 
 /**
@@ -45,8 +46,19 @@ export const WIKI_PICK_TIME_LIMIT_MS = 5_000;
  */
 export const WIKI_SHORTLIST_SIZE = 15;
 
-/** How many of the search's best matches are opened when the chooser is late. */
-const WIKI_SEARCH_TOP_PICKS = 4;
+/** Seats on the shortlist kept for the earlier question's best matches. */
+const WIKI_EARLIER_QUESTION_SEATS = 4;
+
+/** How many pages one answer may open; the search's best matches open the
+ * same number when the chooser is late. Defined beside the page reader. */
+export { WIKI_PAGES_PER_ANSWER };
+
+/**
+ * How much page text one typed answer may read: room for its eight pages at
+ * the page cap (4,000 characters each). Spoken answers pass their own,
+ * smaller pile.
+ */
+export const WIKI_ANSWER_MAX_CHARS = 32_000;
 
 class WikiPickTimeLimitError extends Error {
   constructor(limitMs: number) {
@@ -78,6 +90,12 @@ export const selectWikiContextForQuery = internalAction({
   args: {
     companyId: v.optional(v.id("companies")),
     query: v.string(),
+    /**
+     * The asker's previous question in this conversation, so a follow-up
+     * ("what did he do for them?") is read with what "them" meant
+     * (2026-11-12). The question itself is still the one answered.
+     */
+    earlierQuestion: v.optional(v.string()),
     includeCustomerPages: v.boolean(),
     maxChars: v.optional(v.number()),
     /** The conversation this reading serves, so its Decision runs show in "Why this answer?". */
@@ -93,6 +111,9 @@ export const selectWikiContextForQuery = internalAction({
     ctx,
     args
   ): Promise<{ context: string; pageKeys: string[] }> => {
+    // The earlier question, as given, or read from the conversation (wikiEarlierQuestion.ts): a follow-up keeps its meaning.
+    const earlierQuestion = args.earlierQuestion
+      ?? (args.threadId ? (await ctx.runQuery(internal.wikiEarlierQuestion.earlierQuestionInternal, { threadId: args.threadId, question: args.query })) ?? undefined : undefined);
     // Synthesis first (the playbook's query order): the chooser picks from
     // the tended pages. Fine print arrives through the hop — chosen pages
     // link down to their source notes, and the reader follows. Offering all
@@ -132,7 +153,7 @@ export const selectWikiContextForQuery = internalAction({
       ];
     };
 
-    const budget = args.maxChars ?? 14_000;
+    const budget = args.maxChars ?? WIKI_ANSWER_MAX_CHARS;
     // Both shelves opened, the company's first and with first claim on the
     // budget; the global picks take what remains.
     const openBothShelves = async (keys: string[]): Promise<{ context: string; pageKeys: string[] }> => {
@@ -179,7 +200,8 @@ export const selectWikiContextForQuery = internalAction({
       searchTopKeys = [];
       if (index.length <= WIKI_SHORTLIST_SIZE) return index;
       const searchLimit = WIKI_SHORTLIST_SIZE * 3;
-      const [ownKeys, globalKeys] = await Promise.all([
+      const earlier = earlierQuestion?.trim().slice(0, 400) ?? "";
+      const [ownKeys, globalKeys, earlierKeys] = await Promise.all([
         args.companyId
           ? ctx.runQuery(internal.wikiSearch.searchWikiPageKeysInternal, {
               companyId: args.companyId,
@@ -191,6 +213,15 @@ export const selectWikiContextForQuery = internalAction({
           query: args.query,
           limit: searchLimit,
         }),
+        // The earlier question's own matches follow the question's, so a
+        // follow-up that names nothing still reaches the pages it is about.
+        earlier && args.companyId
+          ? ctx.runQuery(internal.wikiSearch.searchWikiPageKeysInternal, {
+              companyId: args.companyId,
+              query: earlier,
+              limit: WIKI_SHORTLIST_SIZE,
+            })
+          : Promise.resolve<string[]>([]),
       ]);
       // Intersected with the index, so the kinds this surface may not see
       // (and global pages the company's own shelf overrules) stay out.
@@ -198,8 +229,22 @@ export const selectWikiContextForQuery = internalAction({
       const ranked = [
         ...new Set([...ownKeys, ...globalKeys.map((key) => `${GLOBAL_KEY_PREFIX}${key}`)]),
       ].filter((key) => byKey.has(key));
-      searchTopKeys = ranked.slice(0, WIKI_SEARCH_TOP_PICKS);
-      const chosen = ranked.slice(0, WIKI_SHORTLIST_SIZE);
+      searchTopKeys = ranked.slice(0, WIKI_PAGES_PER_ANSWER);
+      // The earlier question's best matches hold a few seats of their own,
+      // so a follow-up's words ("them", "that one") cannot crowd them out.
+      const earlierTop = earlierKeys.filter((key) => byKey.has(key)).slice(0, WIKI_EARLIER_QUESTION_SEATS);
+      // The company's own list pages (products, clients, policies…) always
+      // make the shortlist (2026-11-12): "who have we worked with" names no
+      // client, so the word search alone could leave the one page that lists
+      // them all out of the reading.
+      const hubKeys = index
+        .filter((entry) => !entry.key.startsWith(GLOBAL_KEY_PREFIX) && entry.key.endsWith("-index"))
+        .map((entry) => entry.key);
+      const reserved = [...new Set([...earlierTop, ...hubKeys])];
+      const chosen = [
+        ...ranked.filter((key) => !reserved.includes(key)).slice(0, Math.max(0, WIKI_SHORTLIST_SIZE - reserved.length)),
+        ...reserved,
+      ];
       for (const entry of index) {
         if (chosen.length >= WIKI_SHORTLIST_SIZE) break;
         if (!chosen.includes(entry.key)) chosen.push(entry.key);
@@ -230,16 +275,20 @@ export const selectWikiContextForQuery = internalAction({
         const askedAt = Date.now();
         const response = await withinTimeLimit(generateTextWithResolvedModel({
           model,
-          // "Fast". Picking up to four keys from a list needs no deep thought,
+          // "Fast". Picking a few keys from a list needs no deep thought,
           // and left unset a model that thinks by default thinks at Medium.
           thinkingLevel: "NONE",
           systemInstruction:
-            'You are the index reader of a company wiki. Given a question and the index, name the pages that would answer it. Keys starting "global/" are the platform\'s shared pages — real answers, used when the company\'s own pages do not cover the question. Keys starting "SOURCE:" are whole documents the company has filed. Reply with strict JSON, nothing else: {"pages": [string]} — up to 4 page keys exactly as written in the index, best first. An empty list means the wiki does not cover it.',
+            `You are the index reader of a company wiki. Given a question and the index, name the pages that would answer it. Keys starting "global/" are the platform's shared pages — real answers, used when the company's own pages do not cover the question. Keys starting "SOURCE:" are whole documents the company has filed. Keys ending "-index" list every page of one kind — the right page for a question asking for all of something, such as every client or every product. Reply with strict JSON, nothing else: {"pages": [string]} — up to ${WIKI_PAGES_PER_ANSWER} page keys exactly as written in the index, best first; name only pages that help answer, and fewer is right for a narrow question. An empty list means the wiki does not cover it.`,
           contents: [
             {
               type: "text",
               text:
-                `Question: ${args.query.slice(0, 400)}\n\nIndex:\n` +
+                `Question: ${args.query.slice(0, 400)}\n\n` +
+                (earlierQuestion?.trim()
+                  ? `Earlier question in this conversation, for what the question refers to: ${earlierQuestion.trim().slice(0, 400)}\n\n`
+                  : "") +
+                `Index:\n` +
                 index.map((entry) => `${entry.key} — ${entry.hint}`).join("\n"),
             },
           ],
@@ -260,7 +309,7 @@ export const selectWikiContextForQuery = internalAction({
         const valid = new Set(index.map((entry) => entry.key));
         return (Array.isArray(parsed.pages) ? parsed.pages : [])
           .filter((key): key is string => typeof key === "string" && valid.has(key))
-          .slice(0, 4);
+          .slice(0, WIKI_PAGES_PER_ANSWER);
       };
 
       // Each pick is checked (decisions-typesafe-plan.md, Phase F.3): the
@@ -271,7 +320,7 @@ export const selectWikiContextForQuery = internalAction({
         index: Array<{ key: string; title: string; hint: string }>,
       ): Promise<string[]> => {
         if (keys.length === 0) return keys;
-        // One provider request for all the picks (at most four), each its
+        // One provider request for all the picks (at most eight), each its
         // own question; a call per page multiplied spend for nothing.
         const results = await runDecisions(ctx, {
           ...(args.companyId ? { companyId: args.companyId } : {}),

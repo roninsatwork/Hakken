@@ -101,10 +101,6 @@ const ALLOWED_BUILDER_STRING_MESSAGE_KEYS = new Set([
   "projectName",
   "landing.frameworkDescription",
   "landing.copyright",
-  "dashboard.layers.platform",
-  "dashboard.capabilities.items.0.body",
-  "dashboard.capabilities.items.2.body",
-  "dashboard.hosting.items.1.body",
 ]);
 
 /**

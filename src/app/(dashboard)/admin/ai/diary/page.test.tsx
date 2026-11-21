@@ -8,13 +8,11 @@ vi.mock("@/src/app/(dashboard)/admin/_features/wiki/WikiDiaryScreen", () => ({
 }));
 
 describe("GlobalDiaryPage", () => {
-  it("passes the global diary paths and navigation to the shared screen", () => {
+  // The menu is the AI section's frame now (wiki-sonae-catch-up-plan-2026-11-21.md, S0), not the screen's.
+  it("passes the global diary paths to the shared screen", () => {
     const page = GlobalDiaryPage();
 
     expect(page.type).toBe(WikiDiaryScreen);
-    expect(page.props).toMatchObject({
-      pageBasePath: "/admin/ai/knowledge",
-      showWorkspaceNav: true,
-    });
+    expect(page.props).toEqual({ pageBasePath: "/admin/ai/knowledge" });
   });
 });

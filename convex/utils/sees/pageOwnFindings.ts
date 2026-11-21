@@ -1,5 +1,6 @@
 import { BING_OWN } from "./own/bing";
 import { CLARITY_OWN } from "./own/clarity";
+import { DASHBOARD_OWN } from "./own/dashboard";
 import { GOOGLE_ANALYTICS_OWN } from "./own/googleAnalytics";
 import { INSIGHTS_OWN } from "./own/insights";
 import { SEARCH_CONSOLE_OWN } from "./own/searchConsole";
@@ -24,4 +25,5 @@ export const OWN_FINDINGS: Readonly<Record<string, { general: boolean; find: (da
   ...CLARITY_OWN,
   ...INSIGHTS_OWN,
   ...VISIBILITY_OWN,
+  ...DASHBOARD_OWN,
 };

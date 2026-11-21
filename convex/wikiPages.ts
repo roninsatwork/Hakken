@@ -11,6 +11,7 @@ import { appError } from "./utils/appError";
 import * as wikiShapes from "./utils/wikiShapes";
 import {
   WIKI_PAGE_MAX_CHARS,
+  WIKI_PAGES_PER_ANSWER,
   extractWikiLinkSlugs,
   linkKeyFor,
   normaliseTopicSlug,
@@ -18,17 +19,20 @@ import {
   renderPageForReading,
 } from "./wikiRewriteService";
 import { customerKeyForPhone, customerKeyForEmail } from "./customerIdentity";
+import { isDueForRecheck } from "./wikiCheckupRules";
+import { listPagesRows } from "./wikiPageList";
 
 const wikiKindValidator = v.union(
   v.literal("CUSTOMER"),
   v.literal("PRODUCT"),
   v.literal("POLICY"),
   v.literal("ISSUE"),
+  v.literal("CLIENT"),
   v.literal("SOURCE"),
   v.literal("GOAL")
 );
 
-type WikiKind = "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE" | "GOAL";
+type WikiKind = "CUSTOMER" | "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE" | "GOAL";
 
 /** A brain to read or write: a company's, or (absent) the global shelf. */
 type WikiScope = Id<"companies"> | undefined;
@@ -36,6 +40,15 @@ type WikiScope = Id<"companies"> | undefined;
 /** A source note keeps a document substantially intact — far above the
  * briefing-note cap, and never sent through a model. */
 export const WIKI_SOURCE_NOTE_MAX_CHARS = 24_000;
+
+/** The hubs: one index page per topic kind, the shelf's table of contents. */
+const WIKI_HUBS = [
+  { kind: "PRODUCT" as const, subjectKey: "products-index", intro: "Everything the company offers, one page per product or service" },
+  { kind: "POLICY" as const, subjectKey: "policies-index", intro: "How the company works, one page per policy" },
+  { kind: "ISSUE" as const, subjectKey: "issues-index", intro: "What keeps coming up, one page per recurring issue" },
+  { kind: "CLIENT" as const, subjectKey: "clients-index", intro: "Clients the company has worked with, one page per client or case study" },
+  { kind: "GOAL" as const, subjectKey: "goals-index", intro: "What the company is aiming at, one page per goal" },
+];
 
 async function getPage(
   ctx: QueryCtx,
@@ -362,12 +375,7 @@ export const getWikiIndexInternal = internalQuery({
       }
       // The hubs are the shelf's own table of contents; on a big wiki they
       // must never fall out of the index.
-      for (const hub of [
-        { kind: "PRODUCT" as const, subjectKey: "products-index" },
-        { kind: "POLICY" as const, subjectKey: "policies-index" },
-        { kind: "ISSUE" as const, subjectKey: "issues-index" },
-        { kind: "GOAL" as const, subjectKey: "goals-index" },
-      ]) {
+      for (const hub of WIKI_HUBS) {
         const page = await getPage(ctx, args.companyId, hub.kind, hub.subjectKey);
         if (page) chosen.set(page._id.toString(), page);
       }
@@ -499,7 +507,7 @@ export const getPagesByKeysInternal = internalQuery({
       chosenKeys.add(key);
       chosen.push(page);
     };
-    for (const key of args.keys.slice(0, 5)) await admit(key);
+    for (const key of args.keys.slice(0, WIKI_PAGES_PER_ANSWER)) await admit(key);
     if (chosen.length > 0) {
       // The hop, fine-print-first: the best page's own source note carries
       // the detail the synthesis dropped, so it gets the first seat; one
@@ -565,7 +573,7 @@ async function syncLinksFromContent(
   const slugs = extractWikiLinkSlugs(page.content);
   const additions: string[] = [];
   for (const slug of slugs.slice(0, 8)) {
-    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "GOAL"] as const) {
+    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "CLIENT", "GOAL"] as const) {
       const target = await getPage(ctx, page.companyId, kind, slug);
       if (!target) continue;
       const key = linkKeyFor(kind, slug);
@@ -775,7 +783,6 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
       .order("desc")
       .take(500);
     const now = Date.now();
-    const restMs = 7 * 24 * 60 * 60 * 1000;
     return pages
       .filter((page) => {
         if (page.kind === "CUSTOMER") return false;
@@ -796,9 +803,9 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
         // bridge between documents was ever built.
         const bridges = page.links.filter((link) => !link.startsWith("SOURCE:"));
         if (bridges.length >= 3) return false;
-        // Rested like the orphan notes: a page the model genuinely cannot
-        // place is not re-read every night for ever.
-        return now - (page.lastTendedAt ?? 0) >= restMs;
+        // Rested like the orphan notes: a page the model could not place is
+        // asked again only once it changes, or at the slow safety pass.
+        return isDueForRecheck(page, page.lastTendedAt, now);
       })
       .slice(0, args.limit)
       .map((page) => ({
@@ -814,8 +821,8 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
 /** Source documents with no connections at all — the Linker's orphan list
  * (Anthony's steer, 2026-08-16: "we should not have any orphans"). A
  * document that taught no topics floats alone on the map until the Linker
- * reads it against the index. Visited notes rest a week (`lastTendedAt`),
- * so a genuinely unrelatable page is not re-asked nightly forever. */
+ * reads it against the index. A visited note (`lastTendedAt`) rests until it
+ * changes, or the slow safety pass (`isDueForRecheck`). */
 export const listOrphanSourceNotesInternal = internalQuery({
   args: { companyId: v.optional(v.id("companies")), limit: v.number() },
   handler: async (
@@ -828,13 +835,12 @@ export const listOrphanSourceNotesInternal = internalQuery({
       .order("desc")
       .take(500);
     const now = Date.now();
-    const restMs = 7 * 24 * 60 * 60 * 1000;
     return pages
       .filter(
         (page) =>
           page.kind === "SOURCE" &&
           page.links.length === 0 &&
-          now - (page.lastTendedAt ?? 0) >= restMs
+          isDueForRecheck(page, page.lastTendedAt, now)
       )
       .slice(0, args.limit)
       .map((page) => ({
@@ -857,13 +863,7 @@ export const refreshHubPagesInternal = internalMutation({
   args: { companyId: v.optional(v.id("companies")) },
   handler: async (ctx, args): Promise<void> => {
     const now = Date.now();
-    const hubs = [
-      { kind: "PRODUCT" as const, subjectKey: "products-index", intro: "Everything the company offers, one page per product or service" },
-      { kind: "POLICY" as const, subjectKey: "policies-index", intro: "How the company works, one page per policy" },
-      { kind: "ISSUE" as const, subjectKey: "issues-index", intro: "What keeps coming up, one page per recurring issue" },
-      { kind: "GOAL" as const, subjectKey: "goals-index", intro: "What the company is aiming at, one page per goal" },
-    ];
-    for (const hub of hubs) {
+    for (const hub of WIKI_HUBS) {
       // Each hub reads its own kind off the kind index (wiki-scaling-note.md):
       // the old single 500-row window silently dropped members past it, and
       // read every source note along the way for nothing.
@@ -943,68 +943,6 @@ export const refreshHubPagesInternal = internalMutation({
 // machine rewrite does, and the pinned layer is theirs alone.
 // ---------------------------------------------------------------------------
 
-async function listPagesRows(
-  ctx: QueryCtx,
-  companyId: WikiScope,
-  paginationOpts: { numItems: number; cursor: string | null },
-  search?: string,
-  kind?: WikiKind
-) {
-  const needle = search?.trim();
-  // Searched, filtered and paged where the pages are. This used to take five
-  // hundred rows and sift them in the browser: a growing bill on every
-  // keystroke, and page five hundred and one simply did not exist.
-  //
-  // Three shapes, each fully served by an index: search (kind is a filter
-  // field on the search index), kind alone (the kind-subject index — sifting
-  // a kind out of already-cut pages returned near-empty pages for the rare
-  // kinds, which are exactly the ones worth filtering to), and the plain
-  // newest-first list.
-  const page = needle
-    ? await ctx.db
-      .query("wikiPages")
-      .withSearchIndex("search_text", (q) => {
-        const base = q.search("searchText", needle).eq("companyId", companyId);
-        return kind ? base.eq("kind", kind) : base;
-      })
-      .paginate(paginationOpts)
-    : kind
-      ? await ctx.db
-        .query("wikiPages")
-        .withIndex("by_company_kind_subject", (q) => q.eq("companyId", companyId).eq("kind", kind))
-        .paginate(paginationOpts)
-      : await ctx.db
-        .query("wikiPages")
-        .withIndex("by_company_updated", (q) => q.eq("companyId", companyId))
-        .order("desc")
-        .paginate(paginationOpts);
-
-  const rows = page.page;
-
-  return {
-    ...page,
-    page: rows.map((page) => ({
-      pageId: page._id,
-      kind: page.kind,
-      title: page.title,
-      subjectKey: page.subjectKey,
-      links: page.links,
-      preview: page.content.slice(0, 160),
-      rewriteCount: page.rewriteCount,
-      pinnedCount: page.pinnedCorrections.length,
-      // Denormalised in upsertSourceReceipt: counting per row here would be
-      // an N+1 across the whole wiki on every keystroke of the search box.
-      sourceCount: page.documentSourceCount ?? 0,
-      lastRewriteSource: page.lastRewriteSource,
-      updatedAt: page.updatedAt,
-      // The loop's marks (closing-the-loop plan, phase 2).
-      usageCount: page.usageCount ?? 0,
-      lastUsedAt: page.lastUsedAt ?? null,
-      createdAt: page.createdAt,
-    })),
-  };
-}
-
 async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wikiPages">) {
   const page = await ctx.db.get(pageId);
   if (!page || page.companyId !== companyId) return null;
@@ -1036,7 +974,7 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
   }
   const wantedKeys = new Set<string>(page.links);
   for (const slug of extractWikiLinkSlugs(page.content)) {
-    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "GOAL", "CUSTOMER", "SOURCE"] as const) {
+    for (const kind of ["PRODUCT", "POLICY", "ISSUE", "CLIENT", "GOAL", "CUSTOMER", "SOURCE"] as const) {
       const key = linkKeyFor(kind, slug);
       if (bySubject.has(key)) {
         wantedKeys.add(key);
@@ -1112,11 +1050,21 @@ async function pageDetailFor(ctx: QueryCtx, companyId: WikiScope, pageId: Id<"wi
     createdAt: page.createdAt,
     usageCount: page.usageCount ?? 0,
     lastUsedAt: page.lastUsedAt ?? null,
+    isKnowledgeArticle: isKnowledgeArticlePage(page),
     revisions: revisions.map((revision) => ({
+      revisionId: revision._id,
       content: revision.content,
       source: revision.source,
       createdAt: revision.createdAt,
     })),
+    tags: (
+      await ctx.db
+        .query("wikiPageTags")
+        .withIndex("by_page", (q) => q.eq("pageId", page._id))
+        .take(20)
+    )
+      .map((row) => ({ tag: row.tag, byHuman: row.byHuman }))
+      .sort((left, right) => left.tag.localeCompare(right.tag)),
   };
 }
 
@@ -1286,11 +1234,12 @@ export const listPagesForGlobal = adminQuery({
     paginationOpts: paginationOptsValidator,
     search: v.optional(v.string()),
     kind: v.optional(wikiKindValidator),
+    tag: v.optional(v.string()),
   },
   returns: wikiShapes.wikiPageListShape,
   handler: async (ctx, args) => {
     assertPlatformWikiRead(ctx.user);
-    return await listPagesRows(ctx, undefined, args.paginationOpts, args.search, args.kind);
+    return await listPagesRows(ctx, undefined, args.paginationOpts, args.search, args.kind, args.tag);
   },
 });
 
@@ -1327,7 +1276,7 @@ async function listPagesForMap(ctx: QueryCtx, companyId: WikiScope) {
     subjectKey: page.subjectKey,
     links: page.links,
     usageCount: page.usageCount ?? 0,
-    updatedAt: page.updatedAt,
+    updatedAt: page.updatedAt, learnedAt: page._creationTime, // Watch it grow replays pages in this order
   }));
 }
 
@@ -1355,11 +1304,12 @@ export const listPagesForCompany = adminQuery({
     paginationOpts: paginationOptsValidator,
     search: v.optional(v.string()),
     kind: v.optional(wikiKindValidator),
+    tag: v.optional(v.string()),
   },
   returns: wikiShapes.wikiPageListShape,
   handler: async (ctx, args) => {
     assertAdminCanAccessCompany(ctx.user, args.companyId, "Unauthorized Access");
-    return await listPagesRows(ctx, args.companyId, args.paginationOpts, args.search, args.kind);
+    return await listPagesRows(ctx, args.companyId, args.paginationOpts, args.search, args.kind, args.tag);
   },
 });
 
@@ -1499,6 +1449,13 @@ async function applyDelete(
     .take(500);
   for (const receipt of receipts) {
     await ctx.db.delete(receipt._id);
+  }
+  const tags = await ctx.db
+    .query("wikiPageTags")
+    .withIndex("by_page", (q) => q.eq("pageId", args.pageId))
+    .take(50);
+  for (const tag of tags) {
+    await ctx.db.delete(tag._id);
   }
   await ctx.db.delete(page._id);
   await ctx.db.insert("auditLogs", {

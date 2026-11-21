@@ -28,6 +28,7 @@ import { radarTables } from "./radarSchema";
 import { mentionTables } from "./mentionSchema";
 import { adviceTables } from "./adviceSchema";
 import { insightsTables } from "./insightsSchema";
+import { wikiTables } from "./wikiSchema";
 import { clarityTables } from "./claritySchema";
 import { collectionStepTables } from "./collectionStepsSchema";
 import { pageIndexTables } from "./pageIndexSchema";
@@ -51,6 +52,7 @@ export default defineSchema({
   ...authTables,
   ...billingTables,
   ...featureSwitchesTables,
+  ...wikiTables,
   ...uploadTables,
   ...siteTables,
   ...autoSetupTables,
@@ -4000,140 +4002,6 @@ export default defineSchema({
   })
     .index("by_subject_status", ["subjectUserId", "status"]),
 
-  // The wiki tables are base-module schema. They sat inside the salesData
-  // fence above until 2026-08-19, when the first real strip build showed a
-  // salesData-free template losing its entire wiki (24 files failing to
-  // compile). The fence closes here and reopens after wikiPageRevisions.
-  /**
-   * The self-improving wiki: whole pages Hakken writes and tends itself, one
-   * per subject, rewritten after conversations — never chunked, never
-   * embedded (self-improving-wiki-plan.md, decisions 1-3). The machine's
-   * text lives in `content`; pinned human corrections are a separate layer
-   * the machine cannot touch, appended in code wherever the page is read —
-   * survival by construction, not by prompt obedience.
-   */
-  wikiPages: defineTable({
-    // Absent means the global brain (global-wiki-plan.md): the platform's
-    // own shelf, readable by every company's answers, holding nothing
-    // company-specific — the same convention knowledgeDocuments uses.
-    companyId: v.optional(v.id("companies")),
-    // CUSTOMER pages are keyed by the salesDataCustomers accountNameKey and
-    // born from matched calls and emails. The topic kinds (phase 5) are
-    // named by the model as conversations touch them: what the company
-    // sells (PRODUCT), how it works (POLICY), what keeps coming up (ISSUE).
-    kind: v.union(
-      v.literal("CUSTOMER"),
-      v.literal("PRODUCT"),
-      v.literal("POLICY"),
-      v.literal("ISSUE"),
-      // Full-import-first (wiki-agents plan, phase 3): one full note per
-      // ingested document, substantially intact — the layer the synthesis
-      // pages stand on, mechanical and never model-shortened.
-      v.literal("SOURCE"),
-      // What the company is aiming at (personal-layer-and-goals-plan.md):
-      // human-authored intent, never distilled from documents and never
-      // model-tidied — the staff's only move on a stale goal is a question.
-      v.literal("GOAL")
-    ),
-    subjectKey: v.string(),
-    title: v.string(),
-    content: v.string(),
-    // Subject keys of pages this page mentions; the map is drawn from these.
-    links: v.array(v.string()),
-    // No user id on the pin itself: who pinned it lives in the audit trail
-    // (WIKI_PAGE_PIN, retained as oversight evidence), so a person's erasure
-    // never has to reach inside this array to be provably complete.
-    pinnedCorrections: v.array(
-      v.object({
-        text: v.string(),
-        pinnedAt: v.number(),
-      })
-    ),
-    rewriteCount: v.number(),
-    // How many DOCUMENT receipts this page holds (wikiPageSources is the
-    // truth; this is the list screen's cheap copy of it).
-    documentSourceCount: v.optional(v.number()),
-    // What last changed the page: "PHONE_CALL:<id>", "EMAIL:<gmail id>",
-    // "HUMAN:<user id>", "DOCUMENT:<id>", "TENDING".
-    lastRewriteSource: v.string(),
-    // When the nightly tending pass last considered this page, so a tidy
-    // page is not re-tidied for nothing (wiki plan, phase 4).
-    lastTendedAt: v.optional(v.number()),
-    // How many answers this page has stood under, and when it last did
-    // (closing-the-loop plan, phase 2). Denormalised at answer time the
-    // way receipts are — never a scan at read time.
-    usageCount: v.optional(v.number()),
-    lastUsedAt: v.optional(v.number()),
-    // When the Freshness Checker last verified this page against its kept
-    // sources (wiki-agents plan, phase 2). Absent means never checked.
-    lastVerifiedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-    // Title, subject key and body in one field, kept in step on every write.
-    // The list's search used to read five hundred pages into the browser and
-    // sift them there, which silently hid page five hundred and one.
-    searchText: v.optional(v.string()),
-    // A published Knowledge article's copy: a person's writing the wiki staff never change (utils/knowledgePageGuard.ts).
-    knowledgeArticleId: v.optional(v.id("knowledgeArticles")),
-  })
-    .index("by_company_kind_subject", ["companyId", "kind", "subjectKey"])
-    .index("by_company_updated", ["companyId", "updatedAt"])
-    .searchIndex("search_text", {
-      searchField: "searchText",
-      filterFields: ["companyId", "kind"],
-    }),
-
-  /**
-   * The receipts behind a page (wiki-replaces-knowledge plan, screen 3):
-   * which documents and conversations taught it. One row per page-and-source
-   * pair — a document that teaches the same page twice is still one receipt.
-   * Document rows point at `knowledgeDocuments`, which this plan keeps as
-   * stored originals precisely so these rows always have something to open.
-   */
-  wikiPageSources: defineTable({
-    pageId: v.id("wikiPages"),
-    companyId: v.optional(v.id("companies")),
-    kind: v.union(
-      v.literal("DOCUMENT"),
-      v.literal("PHONE_CALL"),
-      v.literal("EMAIL"),
-      v.literal("HUMAN"),
-      // A durable synthesis filed back from an answered question
-      // (wiki-agents plan, phase 5).
-      v.literal("CHAT")
-    ),
-    /** Document id, call id, mailbox message id, or user id — as text. */
-    ref: v.string(),
-    /** What a person sees on the page's source list. */
-    label: v.string(),
-    addedAt: v.number(),
-  })
-    .index("by_page", ["pageId", "addedAt"])
-    .index("by_page_ref", ["pageId", "kind", "ref"])
-    // Reverse lookup: which pages did this document teach — the source-note
-    // backfill's road from a document to its synthesis pages.
-    .index("by_company_ref", ["companyId", "kind", "ref"]),
-
-  /**
-   * One row per company: the distiller's progress, drawn on the Wiki
-   * screen while an import (or the one-time catch-up) is being read.
-   */
-  wikiDistillState: defineTable({
-    companyId: v.optional(v.id("companies")),
-    documentsRead: v.number(),
-    pagesWritten: v.number(),
-    pagesImproved: v.number(),
-    lastDocumentTitle: v.optional(v.string()),
-    updatedAt: v.number(),
-  }).index("by_company", ["companyId"]),
-
-  /**
-   * What the staff flag but never settle (wiki-agents plan, phases 1-2):
-   * two pages that disagree, or a claim a source no longer supports. Each
-   * row is a question for a person; the machine's ceiling is raising it.
-   * Deduplicated by key so the same disagreement is not raised nightly,
-   * and auto-resolved when the pages change so the claim no longer stands.
-   */
   /** One row per Decision run, by reference to its subject, never its text (docs/plans/active/decisions-typesafe-plan.md). */
   decisionRuns: defineTable({
     decisionKey: v.string(),
@@ -4183,112 +4051,4 @@ export default defineSchema({
   })
     .index("by_scope_key", ["scope", "decisionKey"])
     .index("by_company_key", ["companyId", "decisionKey"]),
-
-  wikiOpenQuestions: defineTable({
-    companyId: v.optional(v.id("companies")),
-    kind: v.union(
-      v.literal("CONTRADICTION"),
-      v.literal("FRESHNESS"),
-      // A person's typed correction from chat, routed here once their
-      // company's memories migrated (one-brain-plan.md, phase 3) — the
-      // queue that used to live on the Memory screen.
-      v.literal("CORRECTION"),
-      // Judged worth filing while the Decision's mode says a person decides.
-      v.literal("FILING")
-    ),
-    pageKeyA: v.string(),
-    claimA: v.string(),
-    pageKeyB: v.optional(v.string()),
-    claimB: v.optional(v.string()),
-    detail: v.optional(v.string()),
-    dedupeKey: v.string(),
-    status: v.union(v.literal("OPEN"), v.literal("RESOLVED"), v.literal("DISMISSED")),
-    decisionKey: v.optional(v.string()),
-    certainty: v.optional(decisionCertaintyValidator),
-    raisedAt: v.number(),
-    resolvedAt: v.optional(v.number()),
-    resolvedBy: v.optional(v.id("users")),
-  })
-    .index("by_company_status", ["companyId", "status", "raisedAt"])
-    .index("by_company_dedupe", ["companyId", "dedupeKey"]),
-
-  /**
-   * What the wiki could not answer (closing-the-loop plan, phase 1): a
-   * real question that ended with no pages under it, normalised and
-   * counted when it repeats. Every row is demand — a customer naming
-   * what to feed the brain next. Rows resolve themselves when a later
-   * identical asking gets answered with pages; dismissal is a person's
-   * call and attribution lives in the audit trail, as with pins.
-   */
-  wikiUnansweredQuestions: defineTable({
-    // Absent means the platform's own gap list (Anthony's SaaS ruling,
-    // 2026-08-17): when the global brain was in play and still had no
-    // answer, the miss also lands here — visible to super admins alone,
-    // who can already read every company's chat logs. Company rows name
-    // their company; platform rows count companies, never name them.
-    companyId: v.optional(v.id("companies")),
-    /** The first asking's own words, for the panel. */
-    question: v.string(),
-    normalizedKey: v.string(),
-    askCount: v.number(),
-    /** Platform rows only: distinct company ids that asked, capped. */
-    companiesJson: v.optional(v.string()),
-    status: v.union(v.literal("OPEN"), v.literal("DISMISSED"), v.literal("RESOLVED")),
-    firstAskedAt: v.number(),
-    lastAskedAt: v.number(),
-    resolvedAt: v.optional(v.number()),
-  })
-    .index("by_company_status_asked", ["companyId", "status", "lastAskedAt"])
-    .index("by_company_key", ["companyId", "normalizedKey"])
-    .index("by_status_asked", ["status", "lastAskedAt"])
-    .searchIndex("search_question", {
-      searchField: "question",
-      filterFields: ["status", "companyId"],
-    }),
-
-  /**
-   * One row per company per UTC day (closing-the-loop plan, phase 3):
-   * how many questions the wiki answered and how many it could not.
-   * Written by the same after-answer mutation that keeps the usage
-   * marks, so the weekly report counts real events, not estimates.
-   */
-  wikiAnswerTallies: defineTable({
-    companyId: v.id("companies"),
-    /** UTC day, "YYYY-MM-DD". */
-    dayKey: v.string(),
-    answered: v.number(),
-    unanswered: v.number(),
-  }).index("by_company_day", ["companyId", "dayKey"]),
-
-  /**
-   * A pre-ingest review (wiki-agents plan, phase 4): what a marked
-   * document claims and the pages the Reviewer proposes, held for a
-   * person's decision before the wiki learns anything from it.
-   */
-  wikiReviews: defineTable({
-    companyId: v.optional(v.id("companies")),
-    documentId: v.id("knowledgeDocuments"),
-    title: v.string(),
-    claimsJson: v.string(),
-    status: v.union(v.literal("PENDING"), v.literal("APPROVED"), v.literal("REJECTED")),
-    requestedAt: v.number(),
-    decidedAt: v.optional(v.number()),
-    decidedBy: v.optional(v.id("users")),
-  })
-    .index("by_company_status", ["companyId", "status", "requestedAt"])
-    .index("by_document", ["documentId"]),
-
-  /**
-   * The page's walkable history (wiki plan, acceptance 4): the text as it
-   * stood BEFORE each rewrite, and what caused the rewrite. Reading the
-   * revisions in order shows which conversation taught which change.
-   */
-  wikiPageRevisions: defineTable({
-    pageId: v.id("wikiPages"),
-    companyId: v.optional(v.id("companies")),
-    content: v.string(),
-    source: v.string(),
-    createdAt: v.number(),
-  }).index("by_page", ["pageId", "createdAt"]),
-
 });

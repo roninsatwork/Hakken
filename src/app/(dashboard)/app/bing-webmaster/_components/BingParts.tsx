@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useSiteIdOnPage } from "@/src/hooks/useSiteIdOnPage";
 import { useTranslations } from "next-intl";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
@@ -44,7 +44,7 @@ export function BingSees({ says, steps = [], screen, data, links }: {
   /** Where a press's "Do first" steps may send the reader beyond the menu's pages: a keyword's or a page's own screen. */
   links?: ReadonlyArray<{ label: string; href: string }>;
 }) {
-  const siteId = useParams<{ siteId?: string }>()?.siteId as Id<"companyWebsites"> | undefined;
+  const siteId = useSiteIdOnPage() as Id<"companyWebsites"> | undefined;
   const sentences = says.filter((line): line is string => Boolean(line));
   const page = screen && data !== undefined && data !== null
     ? { screen: `bing.${screen}`, ...(siteId ? { siteId } : {}), data, ...(links && links.length > 0 ? { links } : {}) }

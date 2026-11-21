@@ -1,6 +1,7 @@
 "use client";
 
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useSiteIdOnPage } from "@/src/hooks/useSiteIdOnPage";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
@@ -143,8 +144,8 @@ export function useAnalyticsHref(siteId: string): (segment: string, extra?: Reco
 }
 
 export function useAnalyticsSiteId(): Id<"companyWebsites"> {
-  const params = useParams<{ siteId: string }>();
-  return params.siteId as Id<"companyWebsites">;
+  // The address's website, or the one the Dashboard hands its sections (useSiteIdOnPage).
+  return useSiteIdOnPage() as Id<"companyWebsites">;
 }
 
 /** The website's connection as its pages show it: the same subscription the layout reads. */

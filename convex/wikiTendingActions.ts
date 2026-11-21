@@ -166,27 +166,27 @@ export const crossLinkSweep = internalAction({
           if (!target) continue;
           await ctx.runMutation(internal.wikiPages.addLinksInternal, {
             companyId: args.companyId,
-            kind: page.kind as "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE",
+            kind: page.kind as "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE",
             subjectKey: page.subjectKey,
             add: [target.key],
           });
           const targetKind = target.key.slice(0, target.key.indexOf(":"));
           await ctx.runMutation(internal.wikiPages.addLinksInternal, {
             companyId: args.companyId,
-            kind: targetKind as "PRODUCT" | "POLICY" | "ISSUE",
+            kind: targetKind as "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT",
             subjectKey: name,
             add: [`${page.kind}:${page.subjectKey}`],
           });
           linked += 1;
         }
-        // Visited, whatever the outcome: an unrelatable page rests a week
-        // instead of costing a model call every night for ever. Every kind
+        // Visited, whatever the outcome: an unrelatable page rests until it
+        // changes (`isDueForRecheck`) instead of costing a model call weekly. Every kind
         // rests, not only the orphan notes — topic pages are now re-read
         // until they have real bridges, and without a rest a page nothing
         // relates to would be asked about nightly for ever.
         const visited = await ctx.runQuery(internal.wikiPages.getPageOfKindInternal, {
           companyId: args.companyId,
-          kind: page.kind as "PRODUCT" | "POLICY" | "ISSUE" | "SOURCE",
+          kind: page.kind as "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "SOURCE",
           subjectKey: page.subjectKey,
         });
         if (visited) {
@@ -251,7 +251,7 @@ export const tendCompany = internalAction({
           useCase: "fast-chat",
         });
         const prompt =
-          `Customer: ${page.title}\n\n` +
+          `${page.kind === "CUSTOMER" ? "Customer" : "Page"}: ${page.title}\n\n` +
           (page.pinnedCorrections.length
             ? `Pinned corrections from staff (ground truth, do not contradict, do not repeat):\n${page.pinnedCorrections
                 .map((correction) => `- ${correction.text}`)
@@ -261,7 +261,7 @@ export const tendCompany = internalAction({
         const response = await generateTextWithResolvedModel({
           model,
           systemInstruction: [
-            "You tidy one page of a company's customer wiki. The page has grown; make it a better briefing note.",
+            "You tidy one page of a company's wiki. The page has grown; make it a better briefing note.",
             "- Keep every fact still worth keeping. Never invent anything.",
             "- Merge repetition; remove what is stale or no longer matters.",
             "- Never contradict a pinned correction; do not repeat them in the page.",
@@ -285,8 +285,13 @@ export const tendCompany = internalAction({
         const verdict = validateRewrittenPage(response.text ?? "");
         // A tidy that grew the page is not a tidy; the page stands.
         if (verdict.ok && verdict.content.length < page.content.length) {
+          // The page's own kind. Without it the landing assumed CUSTOMER, so
+          // tidying a product or policy page wrote the tidied text into a new
+          // customer page of the same name and left the overgrown page as it
+          // was (found 2026-11-09).
           await ctx.runMutation(internal.wikiPages.applyRewriteInternal, {
             companyId: args.companyId,
+            kind: page.kind,
             subjectKey: page.subjectKey,
             title: page.title,
             content: verdict.content,

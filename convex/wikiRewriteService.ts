@@ -12,6 +12,14 @@
 /** A page is a briefing note, not a document. */
 export const WIKI_PAGE_MAX_CHARS = 4_000;
 
+/**
+ * How many chosen pages one answer may open (2026-11-12, was four chosen and
+ * five opened). Four covered a question about one client; a question across
+ * a whole area — "what healthcare work has he done" — needs the detail of
+ * more than four clients.
+ */
+export const WIKI_PAGES_PER_ANSWER = 8;
+
 /** How much of a transcript or email exchange one rewrite may consider. */
 export const WIKI_EVENT_TEXT_MAX_CHARS = 8_000;
 
@@ -121,7 +129,7 @@ export function normaliseEmail(value: string | undefined | null): string | null 
 // these helpers keep the names honest and the count bounded.
 // ---------------------------------------------------------------------------
 
-export const WIKI_TOPIC_KINDS = ["PRODUCT", "POLICY", "ISSUE"] as const;
+export const WIKI_TOPIC_KINDS = ["PRODUCT", "POLICY", "ISSUE", "CLIENT"] as const;
 export type WikiTopicKind = (typeof WIKI_TOPIC_KINDS)[number];
 
 /** At most this many topic pages learn from one conversation. */
@@ -187,14 +195,153 @@ export function linkKeyFor(kind: string, subjectKey: string): string {
 // by the on-ready hook and the one-time catch-up alike, never by a button.
 // ---------------------------------------------------------------------------
 
-/** A document may establish more than a conversation; still bounded. */
-export const WIKI_TOPICS_PER_DOCUMENT = 3;
+/**
+ * How much of a document the model reads at once (client-work pages,
+ * 2026-11-12). A long document is read section by section, every section
+ * in turn, rather than only its opening: a credentials file naming forty
+ * clients used to teach the wiki the first handful and nothing else.
+ */
+export const WIKI_DISTILL_SECTION_CHARS = 8_000;
 
-export function buildDocumentTopicInstruction(): string {
+/**
+ * A section may name many clients or products; still bounded. A credentials
+ * list fits about twenty clients in one section, and eight left most of them
+ * without a page (2026-11-12). An ordinary section names far fewer — the
+ * model is told an empty list is right when nothing durable is there.
+ */
+export const WIKI_TOPICS_PER_SECTION = 20;
+
+/**
+ * A document cut into sections of at most `size` characters, split between
+ * paragraphs where it can be, then between sentences, then anywhere — so
+ * every word lands in exactly one section, in order.
+ */
+export function splitDocumentIntoSections(text: string, size = WIKI_DISTILL_SECTION_CHARS): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  if (trimmed.length <= size) return [trimmed];
+  const sections: string[] = [];
+  let rest = trimmed;
+  while (rest.length > size) {
+    const window = rest.slice(0, size);
+    // The latest clean break in the back half of the window, best kind first.
+    const floor = Math.floor(size / 2);
+    let cut = window.lastIndexOf("\n\n");
+    if (cut < floor) cut = window.lastIndexOf("\n");
+    if (cut < floor) cut = Math.max(window.lastIndexOf(". "), window.lastIndexOf("? "), window.lastIndexOf("! ")) + 1;
+    if (cut < floor) cut = window.lastIndexOf(" ");
+    if (cut < floor) cut = size;
+    sections.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) sections.push(rest);
+  return sections.filter(Boolean);
+}
+
+/**
+ * Consecutive stored chunks joined back into the document's own text: the
+ * words a chunk repeats from the one before (chunkKnowledgeText keeps ~200)
+ * are dropped rather than read twice.
+ */
+export function stitchChunks(texts: string[]): string {
+  let joined = "";
+  for (const text of texts) {
+    if (!joined) {
+      joined = text;
+      continue;
+    }
+    let overlap = 0;
+    for (let length = Math.min(300, text.length, joined.length); length >= 20; length -= 1) {
+      if (joined.endsWith(text.slice(0, length))) {
+        overlap = length;
+        break;
+      }
+    }
+    joined = overlap > 0 ? joined + text.slice(overlap) : `${joined}\n\n${text}`;
+  }
+  return joined;
+}
+
+const SUBJECT_STOP_WORDS = new Set(["the", "and", "for", "with", "index", "page", "ltd", "limited", "group", "company"]);
+
+/** The words that name a page's subject: "papa-johns" → papa, johns. */
+export function subjectWords(subjectKey: string, title = ""): string[] {
   return [
-    "You read one company knowledge document and name the durable topics it establishes about the company.",
-    "Three kinds count: PRODUCT (something the company sells or does), POLICY (how the company works — hours, delivery, returns, invoicing, guarantees), ISSUE (a problem or question the document exists to answer).",
-    `Reply with strict JSON, nothing else: {"topics": [{"kind": "PRODUCT"|"POLICY"|"ISSUE", "slug": string, "learned": string}]} — at most ${WIKI_TOPICS_PER_DOCUMENT} topics, and an empty list is right for pages that establish nothing durable (navigation, legal boilerplate, news).`,
+    ...new Set(
+      `${subjectKey} ${title}`
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((word) => word.length >= 3 && !SUBJECT_STOP_WORDS.has(word))
+    ),
+  ];
+}
+
+/**
+ * The parts of a document about one subject, in order, up to `maxChars`
+ * (2026-11-12). The check-up used to read a source's opening 2,500–6,000
+ * characters, so a page written from page twelve of a long file looked
+ * unsupported by its own source, and could lose true facts. Falls back to
+ * the opening when no part names the subject.
+ */
+export function relevantPassages(text: string, words: string[], maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const pieces = splitDocumentIntoSections(text, 1_500);
+  const lowered = words.map((word) => word.toLowerCase());
+  const matching = pieces.filter((piece) => {
+    const haystack = piece.toLowerCase();
+    return lowered.some((word) => haystack.includes(word));
+  });
+  if (matching.length === 0) return text.slice(0, maxChars);
+  let out = "";
+  for (const piece of matching) {
+    const next = out ? `${out}\n…\n${piece}` : piece;
+    if (next.length > maxChars) break;
+    out = next;
+  }
+  return out || matching[0].slice(0, maxChars);
+}
+
+/** A text as sentences, for comparing two versions of one document. */
+function sentencesOf(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 0);
+}
+
+/**
+ * What changed between two versions of a document, wherever in it the
+ * change is (2026-11-12): the sentences the new version dropped, and the
+ * ones it added. The check-up used to compare each version's first 5,000
+ * characters, so an edit further in never reached the pages.
+ */
+export function changedSentences(before: string, after: string, maxChars = 12_000): { removed: string; added: string } {
+  const oldSentences = sentencesOf(before);
+  const newSentences = sentencesOf(after);
+  const oldSet = new Set(oldSentences);
+  const newSet = new Set(newSentences);
+  const cap = (list: string[]) => {
+    let out = "";
+    for (const sentence of list) {
+      if (out.length + sentence.length + 1 > maxChars) break;
+      out += `${out ? "\n" : ""}${sentence}`;
+    }
+    return out;
+  };
+  return {
+    removed: cap(oldSentences.filter((sentence) => !newSet.has(sentence))),
+    added: cap(newSentences.filter((sentence) => !oldSet.has(sentence))),
+  };
+}
+
+export function buildDocumentTopicInstruction(section?: { index: number; count: number }): string {
+  return [
+    section && section.count > 1
+      ? `You read part ${section.index + 1} of ${section.count} of one company knowledge document and name the durable topics this part establishes about the company.`
+      : "You read one company knowledge document and name the durable topics it establishes about the company.",
+    "Four kinds count: PRODUCT (something the company sells or does), POLICY (how the company works — hours, delivery, returns, invoicing, guarantees), ISSUE (a problem or question the document exists to answer), CLIENT (a named client or organisation the company has done work for, or a case study of that work).",
+    "When the text describes work for several clients, give each client its own CLIENT topic, named after the client (e.g. \"papa-johns\"), so every client the text names can be found again.",
+    `Reply with strict JSON, nothing else: {"topics": [{"kind": "PRODUCT"|"POLICY"|"ISSUE"|"CLIENT", "slug": string, "learned": string}]} — at most ${WIKI_TOPICS_PER_SECTION} topics, and an empty list is right for pages that establish nothing durable (navigation, legal boilerplate, news).`,
     "slug is a short kebab-case name (e.g. \"sports-hall-flooring\"). Reuse the obvious name for the subject rather than inventing a new variant — the wiki keeps one page per subject.",
     "learned is two or three plain sentences stating what the document establishes about the topic — the facts a colleague would keep, not a summary of the writing.",
   ].join("\n");
@@ -213,7 +360,7 @@ export function parseDocumentTopicSuggestions(raw: string): TopicSuggestion[] {
   if (!Array.isArray(parsed.topics)) return [];
   const suggestions: TopicSuggestion[] = [];
   for (const entry of parsed.topics) {
-    if (suggestions.length >= WIKI_TOPICS_PER_DOCUMENT) break;
+    if (suggestions.length >= WIKI_TOPICS_PER_SECTION) break;
     if (!entry || typeof entry !== "object") continue;
     const candidate = entry as { kind?: unknown; slug?: unknown; learned?: unknown };
     if (!WIKI_TOPIC_KINDS.includes(candidate.kind as WikiTopicKind)) continue;

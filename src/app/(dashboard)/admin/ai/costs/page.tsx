@@ -12,7 +12,6 @@ import { AICostLeaderboards } from "./_components/AICostLeaderboards";
 import { AICostsHeader } from "./_components/AICostsHeader";
 import { AICostsMetricGrid } from "./_components/AICostsMetricGrid";
 import type { AICostsData, TimeframeOption } from "./_components/types";
-import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
 
 const AICostDistributionCharts = dynamic(() =>
@@ -55,8 +54,6 @@ export default function AICostsDashboard() {
         timeframe={timeframe}
         title={t("title")}
       />
-      <AiWorkspaceNav />
-
       {data === undefined ? (
         <div className="w-full h-[400px] flex items-center justify-center p-20">
           <Loader2 className="w-8 h-8 animate-spin text-brand opacity-80" />

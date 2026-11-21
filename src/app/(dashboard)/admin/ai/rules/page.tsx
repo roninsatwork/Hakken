@@ -16,7 +16,6 @@ import { AdminRulesTable } from "@/src/app/(dashboard)/admin/_components/AdminRu
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 
 const loadRuleDeleteDialog = () =>
@@ -68,7 +67,6 @@ export default function RulesDashboard() {
         icon={<BrainCircuit className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
-        divider
         action={
           <Link
             href="/admin/ai/rules/new"
@@ -79,9 +77,6 @@ export default function RulesDashboard() {
           </Link>
         }
       />
-
-      <AiWorkspaceNav />
-
       <SearchBar value={searchTerm} onChange={handleSearchChange} placeholder={t("searchPlaceholder")} />
 
       <AdminRulesTable

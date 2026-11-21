@@ -21,10 +21,6 @@ import { getFunctionName } from "convex/server";
 import { useSearchParams } from "next/navigation";
 import GlobalWidgetPage from "./page";
 
-vi.mock("../_components/AiWorkspaceNav", () => ({
-  AiWorkspaceNav: () => <nav aria-label="AI workspace">AI workspace nav</nav>,
-}));
-
 // The shared widget screen reads the configured platform name for the
 // default bot name, so copy is branded per deployment.
 vi.mock("@/src/context/SystemSettingsContext", () => ({

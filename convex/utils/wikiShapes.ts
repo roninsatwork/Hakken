@@ -25,6 +25,7 @@ export const wikiMapRowValidator = v.object({
   links: v.array(v.string()),
   usageCount: v.number(),
   updatedAt: v.number(),
+  learnedAt: v.number(),
 });
 
 /** The receipts a page's source list shows. */
@@ -60,8 +61,14 @@ export const wikiPageDetailValidator = v.object({
   pinnedCorrections: v.array(v.object({ text: v.string(), pinnedAt: v.number() })),
   sources: v.array(wikiPageSourceValidator),
   revisions: v.array(
-    v.object({ content: v.string(), source: v.string(), createdAt: v.number() })
+    v.object({
+      revisionId: v.id("wikiPageRevisions"),
+      content: v.string(),
+      source: v.string(),
+      createdAt: v.number(),
+    })
   ),
+  tags: v.array(v.object({ tag: v.string(), byHuman: v.boolean() })),
   resolvedLinks: v.array(
     v.object({
       key: v.string(),
@@ -87,6 +94,8 @@ export const wikiPageDetailValidator = v.object({
   createdAt: v.number(),
   usageCount: v.number(),
   lastUsedAt: v.union(v.number(), v.null()),
+  /** A Knowledge article's copy: its screen offers no edit, pin, tag or undo (utils/knowledgePageGuard.ts). */
+  isKnowledgeArticle: v.boolean(),
 });
 
 export const wikiSearchHitsShape = v.array(v.object({
@@ -122,6 +131,7 @@ export const wikiPageListShape = paginationResultValidator(v.object({
   usageCount: v.number(),
   lastUsedAt: v.union(v.number(), v.null()),
   createdAt: v.number(),
+  tags: v.array(v.string()),
 }));
 
 export const wikiMapShape = v.array(wikiMapRowValidator);

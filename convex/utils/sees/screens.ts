@@ -3,6 +3,7 @@ import { MENU_FEATURES, type MenuFeature } from "../coreModules";
 import type { FactSource } from "../insightFacts";
 import { BING_SCREENS } from "./screenEntries/bing";
 import { CLARITY_SCREENS } from "./screenEntries/clarity";
+import { DASHBOARD_SCREENS } from "./screenEntries/dashboard";
 import { GOOGLE_ANALYTICS_SCREENS } from "./screenEntries/googleAnalytics";
 import { INSIGHTS_SCREENS } from "./screenEntries/insights";
 import { SEARCH_CONSOLE_SCREENS } from "./screenEntries/searchConsole";
@@ -18,21 +19,23 @@ import { VISIBILITY_SCREENS } from "./screenEntries/visibility";
  * the eye with a few lines here and its own figures handed over, never new code. No database here.
  */
 
-export const SEES_SECTIONS = ["googleAnalytics", "searchConsole", "bing", "clarity", "visibility", "insights"] as const;
+export const SEES_SECTIONS = ["googleAnalytics", "searchConsole", "bing", "clarity", "visibility", "insights", "dashboard"] as const;
 export type SeesSection = (typeof SEES_SECTIONS)[number];
 
 /**
  * The menu feature each section's eye belongs to, so a press on a switched-off
  * section is refused as its screens are (features-switches-plan-2026-11-21.md,
- * phase 2).
+ * phase 2). The client Dashboard's eye belongs to none: the page is always on, and its figures come only from the
+ * sections switched on (`convex/dashboard.ts`), so a press there is never refused for a switch.
  */
-export const SEES_SECTION_FEATURE: Record<SeesSection, MenuFeature> = {
+export const SEES_SECTION_FEATURE: Record<SeesSection, MenuFeature | null> = {
   googleAnalytics: MENU_FEATURES.googleAnalytics,
   searchConsole: MENU_FEATURES.searchConsole,
   bing: MENU_FEATURES.bingWebmaster,
   clarity: MENU_FEATURES.clarity,
   visibility: MENU_FEATURES.visibility,
   insights: MENU_FEATURES.insights,
+  dashboard: null,
 };
 
 export type SeesScreen = {
@@ -59,6 +62,7 @@ const SECTION: Record<SeesSection, { writer: InsightsRole; source: FactSource; n
   clarity: { writer: "INSIGHTS_BEHAVIOUR", source: "analytics", name: "Microsoft Clarity" },
   visibility: { writer: "INSIGHTS_SEARCH", source: "market", name: "Visibility" },
   insights: { writer: "INSIGHTS_ANALYST", source: "analytics", name: "Insights" },
+  dashboard: { writer: "INSIGHTS_ANALYST", source: "analytics", name: "Dashboard" },
 };
 
 /**
@@ -74,6 +78,7 @@ export const SEES_SCREENS: Readonly<Record<string, Partial<SeesScreen> & { about
   ...CLARITY_SCREENS,
   ...VISIBILITY_SCREENS,
   ...INSIGHTS_SCREENS,
+  ...DASHBOARD_SCREENS,
 };
 
 /**

@@ -106,3 +106,13 @@ export function Button({ variant, type = "button", className, ref, ...buttonProp
     />
   );
 }
+
+/**
+ * A variant's look, for a link that only takes you somewhere but sits beside buttons and must look like one, such as the
+ * wiki map's "Open the page" beside its buttons (brought over from the upstream framework on 2026-11-21,
+ * wiki-sonae-catch-up-plan-2026-11-21.md, S3). A link stays a link, so it opens in a new tab and reads as a link to
+ * someone listening; only the look is shared.
+ */
+export function buttonClasses(variant: ButtonVariant, className?: string) {
+  return cn(VARIANT_CLASSES[variant], FOCUS_CLASSES, className);
+}

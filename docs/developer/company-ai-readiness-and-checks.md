@@ -85,7 +85,9 @@ The page sorts `NEEDS_ATTENTION` first, then `SET_HERE`, then
 `NOT_CONFIGURED`. The headline state is derived from the same area list that the
 table renders, so the summary and table should not disagree.
 
-Company AI pages use the shared `AiWorkspaceNav` for the company-scope AI menu.
+Company AI pages sit under the company's AI menu (the AI drop-down in
+`src/app/(dashboard)/admin/companies/[id]/layout.tsx`), Wiki map among them.
+The platform's own AI pages have their menu down the left (`AiFrame`).
 Routes such as diary, unanswered, saved answers, and money are not readiness
 inputs by themselves, but they explain why a company reads the way it does and
 where operators should inspect gaps after a failed answer or customer review.

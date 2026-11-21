@@ -1,0 +1,92 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-21T14:10:00Z"
+  },
+  "title": "Dashboard, three ways",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 8000,
+      "title": "The Dashboard today",
+      "expand": "fill"
+    },
+    "Way1.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 4360,
+      "title": "Way 1 · A chart for every source",
+      "expand": "fill"
+    },
+    "Way2.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 4552,
+      "title": "Way 2 · Found, visited, got in touch",
+      "expand": "fill"
+    },
+    "Way3.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 4673,
+      "title": "Way 3 · What moved, then why",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Way1.dc.html",
+    "Way2.dc.html",
+    "Way3.dc.html"
+  ],
+  "notes": {
+    "heading": {
+      "x": 0,
+      "y": -300,
+      "text": "A new Dashboard, three ways",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "everyone": {
+      "x": 6080,
+      "y": 0,
+      "w": 420,
+      "text": "These ways work for any company. They're drawn with Ronins Agency's figures for October. It's a business that wants enquiries, not a shop.\n\nEvery way uses all five sources and the Reading room. They're Visibility, Search Console, Bing Webmaster, Google Analytics and Microsoft Clarity.\n\nA shop sees Bought where Ronins sees Events, as Overview does.\n\nA company with more than one website sees them all added up. The Website menu shows one at a time.\n\nA source that isn't connected says so, like Bing Webmaster here. A section that's switched off stays off the Dashboard."
+    },
+    "ways": {
+      "x": 6080,
+      "y": 760,
+      "w": 420,
+      "text": "The first board is the Dashboard today. It talks about the platform, not about the company's websites. Its words go when the Dashboard is redone.\n\nEvery chart is full width, and there are no tables.\n\nWay 1 puts the Reading room straight after the four numbers. Then each source gets its own charts, starting with Search Console and Google Analytics.\n\nWay 2 follows people from being found to visiting to getting in touch. It starts with the eye's note.\n\nWay 3 starts with what went up and down since September. Then come the charts that help explain it.\n\nThe Reading room is on every way, as its own front page. Google's updates are also the G marks on Clicks from Google each week."
+    },
+    "figures": {
+      "x": 6080,
+      "y": 1660,
+      "w": 420,
+      "text": "Every figure is real, from ronins.co.uk's saved figures.\n\nThe charts show October. Clicks from Google each week shows the last 12 months. You and your rivals shows every check from 26 September to 2 November.\n\nNo company has Bing Webmaster connected yet, so it shows as not connected.\n\nThe Reading room's lead story, its last three updates and its three newest articles are the real ones. As stories come in from YouTube, X and websites, they take the lead and the columns, as they do on its own front page."
+    },
+    "parts": {
+      "x": 6080,
+      "y": 2200,
+      "w": 420,
+      "text": "Four parts are new, and each would be shared. Each figure has a small line of its month under it. Visits each day are columns split by where they came from. You and your rivals get a line each over every check. The busiest pages are page shapes, filled as far as people scroll.\n\nAI assistants use the same squares as Channels, one for each website and assistant.\n\nWay 2 also shows the eye's words on the page, not in the pop-up.\n\nEvery colour comes from the app's chart colours."
+    },
+    "kit": {
+      "x": 6080,
+      "y": 2700,
+      "w": 420,
+      "text": "Drawn from the drawing kit, kit.css 2a6389fe345e, look 149d9f4fb243, on 21 November 2026."
+    }
+  },
+  "designSystems": []
+}

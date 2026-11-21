@@ -20,7 +20,7 @@ const OLD_NAMES: Record<"en" | "it", RegExp> = {
   en: /\b(Discovery|Insights)\b/,
   it: /\b(Discovery|Scoperta|Insights)\b/,
 };
-const KEPT = new Set(["dashboard.hero.eyebrow"]);
+const KEPT = new Set<string>([]);
 /** A source's link to the analyst's own findings names the section it opens (insights-analyst-plan.md §4.4). */
 const LINKS_TO_INSIGHTS = /\.seeInsights(\.|$)/;
 /** The analyst's section, the one place "Insights" belongs (menu-names-plan.md phase 7). */

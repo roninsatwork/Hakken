@@ -107,6 +107,7 @@ const labels: Record<string, string> = {
   manageWorkflows: "Manage Workflows",
   models: "Models",
   health: "Health",
+  wikiCheckups: "Wiki check-ups",
   runningCosts: "Running Costs",
   rules: "Rules",
   schedules: "Schedules",
@@ -152,13 +153,21 @@ describe("SidebarNavigation AI guardrails", () => {
     ));
   });
 
-  it("renders Artificial Intelligence with one global AI child and keeps AI pages out of the sidebar", () => {
+  // One item for every AI screen: the pages, Tools and Tool servers among them, are in the AI section's own menu
+  // down the left (wiki-sonae-catch-up-plan-2026-11-21.md, S0).
+  it("renders Artificial Intelligence as one link and keeps AI pages out of the sidebar", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/ai/usage/costs");
 
     render(<SidebarNavigation />);
 
-    expect(screen.getByRole("button", { name: "Artificial Intelligence" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Manage Global AI" })).toHaveAttribute("href", "/admin/ai");
+    const ai = screen.getByRole("link", { name: "Artificial Intelligence" });
+    expect(ai).toHaveAttribute("href", "/admin/ai");
+    expect(ai.querySelector("div.absolute")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Artificial Intelligence" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Manage Global AI" })).not.toBeInTheDocument();
+    const hrefs = screen.getAllByRole("link").map((link) => link.getAttribute("href"));
+    expect(hrefs).not.toContain("/admin/ai/tools");
+    expect(hrefs).not.toContain("/admin/ai/tool-servers");
     expect(screen.queryByRole("link", { name: "Manage AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Chat Logs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Rules" })).not.toBeInTheDocument();
@@ -190,12 +199,25 @@ describe("SidebarNavigation AI guardrails", () => {
     expect(screen.queryByRole("link", { name: "Manage Agents" })).not.toBeInTheDocument();
   });
 
+  it("lists Wiki check-ups under Health in Maintenance, and lights only the page open", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/health/wikis");
+
+    render(<SidebarNavigation />);
+
+    const wikis = screen.getByRole("link", { name: "Wiki check-ups" });
+    expect(wikis).toHaveAttribute("href", "/admin/health/wikis");
+    // The lit background sits behind the open page's own line only.
+    expect(wikis.querySelector("div.absolute")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Health" }).querySelector("div.absolute")).toBeNull();
+  });
+
   it("does not reopen the global AI submenu while viewing company AI pages", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/companies/company123/ai/chat-logs");
 
     render(<SidebarNavigation />);
 
-    expect(screen.getByRole("button", { name: "Artificial Intelligence" })).toBeInTheDocument();
+    const ai = screen.getByRole("link", { name: "Artificial Intelligence" });
+    expect(ai.querySelector("div.absolute")).toBeNull();
     expect(screen.queryByRole("link", { name: "Manage Global AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Manage AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Running Costs" })).not.toBeInTheDocument();

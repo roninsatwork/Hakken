@@ -11,7 +11,6 @@ import {
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
-import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -72,7 +71,6 @@ export default function SystemPromptPage() {
         icon={<TerminalSquare className="w-6 h-6 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
-        divider
         action={
           <div className="flex items-center gap-3">
             {hasUnsavedChanges && (
@@ -104,9 +102,6 @@ export default function SystemPromptPage() {
           </div>
         }
       />
-
-      <AiWorkspaceNav />
-
       {saveStatus !== "idle" ? (
         <Suspense fallback={null}>
           <DeferredSaveFeedback

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChartReveal } from "./ChartReveal";
 import type { ReactNode } from "react";
 import { CHART_ENGAGEMENT_NONE, CHART_ENGAGEMENT_RAMP, CHART_RAMP_INK_ON_DARK, CHART_RAMP_INK_ON_LIGHT } from "@/src/ui/components/charts/chartPalette";
 import { Tooltip } from "./Tooltip";
@@ -64,6 +65,7 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, 
   // The name column gives way before the squares do, so eleven columns still fit a narrow card.
   const template = { gridTemplateColumns: `minmax(96px, 140px) repeat(${columns.length}, minmax(0, 1fr))` };
   return (
+    <ChartReveal replay={rows.map((row) => `${row.key}:${row.cells.map((cell) => cell.visits).join(",")}`).join("|")} motion="fade" figures="[data-channel-square]">
     <div data-part="channel-map" className="flex flex-col gap-1">
       <div className="grid gap-1 text-[11px] text-muted" style={template}>
         <span />
@@ -98,9 +100,9 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, 
               );
               const squareClass = "flex h-11 w-full min-w-0 flex-col items-center justify-center overflow-hidden rounded-md leading-tight";
               const square = cell.href && !empty ? (
-                <Link href={cell.href} title={cellTooltips ? undefined : cell.hover} aria-label={cell.hover} className={`${squareClass} hover:opacity-90`} style={style}>{inside}</Link>
+                <Link href={cell.href} title={cellTooltips ? undefined : cell.hover} aria-label={cell.hover} data-channel-square="" className={`${squareClass} hover:opacity-90`} style={style}>{inside}</Link>
               ) : (
-                <span tabIndex={cellTooltips && !empty ? 0 : undefined} title={cellTooltips ? undefined : cell.hover} aria-label={cell.hover} className={squareClass} style={style}>{inside}</span>
+                <span tabIndex={cellTooltips && !empty ? 0 : undefined} title={cellTooltips ? undefined : cell.hover} aria-label={cell.hover} data-channel-square="" className={squareClass} style={style}>{inside}</span>
               );
               return cellTooltips && !empty ? (
                 <Tooltip key={columns[index] ?? index} label={cell.hover} className="relative flex min-w-0">{square}</Tooltip>
@@ -124,5 +126,6 @@ export function ChannelMap({ columns, rows, rowVisits, conversionsWord, legend, 
         </span>
       </div>
     </div>
+    </ChartReveal>
   );
 }

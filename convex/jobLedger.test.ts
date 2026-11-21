@@ -15,13 +15,13 @@ describe("the job ledger", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     await t.mutation(internal.jobLedger.recordJobOutcomeInternal, {
-      job: "wiki-tending-sweep",
+      job: "wiki-daily-checkup",
       ok: false,
       durationMs: 12,
       error: "The sweep threw.",
     });
     await t.mutation(internal.jobLedger.recordJobOutcomeInternal, {
-      job: "wiki-tending-sweep",
+      job: "wiki-daily-checkup",
       ok: false,
       durationMs: 9,
       error: "The sweep threw again.",
@@ -33,7 +33,7 @@ describe("the job ledger", () => {
     const asSuper = t.withIdentity({ subject: superAdminId });
 
     const failing = (await asSuper.query(api.jobLedger.listJobRuns, {})).find(
-      (row) => row.job === "wiki-tending-sweep"
+      (row) => row.job === "wiki-daily-checkup"
     );
     expect(failing?.consecutiveFailures).toBe(2);
     expect(failing?.lastOk).toBe(false);
@@ -43,12 +43,12 @@ describe("the job ledger", () => {
     // A good run clears the error text — a row must never wear yesterday's
     // failure beside today's success.
     await t.mutation(internal.jobLedger.recordJobOutcomeInternal, {
-      job: "wiki-tending-sweep",
+      job: "wiki-daily-checkup",
       ok: true,
       durationMs: 40,
     });
     const healed = (await asSuper.query(api.jobLedger.listJobRuns, {})).find(
-      (row) => row.job === "wiki-tending-sweep"
+      (row) => row.job === "wiki-daily-checkup"
     );
     expect(healed?.consecutiveFailures).toBe(0);
     expect(healed?.lastError).toBeNull();

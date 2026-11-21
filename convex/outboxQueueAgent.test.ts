@@ -91,4 +91,27 @@ describe("emails that wait too long", () => {
       title: "1 email has waited in the Outbox for more than 2 hours",
     });
   });
+
+  test("nobody is told while the agent is switched off or its schedule is stopped: emails wait by choice", async () => {
+    // Anthony, 21 November 2026: "the functionality is turned off why is it still referencing it".
+    const t = harness();
+    const { reader } = await admins(t);
+    const agentId = await t.mutation(internal.outboxQueueAgent.ensureOutboxAgentInternal, {});
+    const rowId = await t.run((ctx) => queueOutboxMessage(ctx, {
+      messageType: "COLLECTION_NEEDS_YOU", userId: reader, email: "jo@example.co.uk", language: "en", payload: { reason: "x" }, idempotencyKey: "c:2",
+    }));
+    await t.run((ctx) => ctx.db.patch(rowId!, { dueAt: Date.now() - OUTBOX_STUCK_MS - 60_000 }));
+    const schedule = await t.run(async (ctx) => (await ctx.db.query("schedules").withIndex("by_agent", (q) => q.eq("agentId", agentId)).first())!);
+
+    await t.run((ctx) => ctx.db.patch(schedule._id, { isActive: false }));
+    expect(await t.mutation(internal.outboxQueueAgent.tellIfStuckInternal, {})).toEqual({ waiting: 0, told: 0 });
+    await t.run(async (ctx) => { await ctx.db.patch(schedule._id, { isActive: true }); await ctx.db.patch(agentId, { isActive: false }); });
+    expect(await t.mutation(internal.outboxQueueAgent.tellIfStuckInternal, {})).toEqual({ waiting: 0, told: 0 });
+    expect(await t.run((ctx) => ctx.db.query("notifications").collect())).toEqual([]);
+
+    // Both on and still stuck: something is broken, and the bell says so.
+    await t.run((ctx) => ctx.db.patch(agentId, { isActive: true }));
+    expect(await t.mutation(internal.outboxQueueAgent.tellIfStuckInternal, {})).toEqual({ waiting: 1, told: 1 });
+    expect((await t.run((ctx) => ctx.db.query("notifications").collect()))[0]?.body).toContain("are both on");
+  });
 });

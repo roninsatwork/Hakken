@@ -86,7 +86,9 @@ export const seesAskValidator = {
  * event's, a channel's, a search's or a tracking check's (`?key=`), the pages behind one square of the Conversions map
  * (`?event=…&by=…&key=…`), one AI question (`?question=`). Every other field is a filter or a view, never a record.
  */
-const RECORD_FIELDS = ["key", "event", "by", "question"] as const;
+// "site": the client Dashboard's website menu (dashboard-way-1-plan-2026-11-21.md), so every website's figures added up and one
+// website's keep apart, though both are filed under the first website.
+const RECORD_FIELDS = ["key", "event", "by", "question", "site"] as const;
 
 /**
  * The record a screen's address names, as `field=value` pairs (`key=~fu`), or "" for a screen about no one record

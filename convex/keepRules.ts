@@ -171,6 +171,10 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   wikiUnansweredQuestions: forever("each question asked and not answered, counted"),
   wikiAnswerTallies: forever("the weekly report's counts by day"),
   wikiPageRevisions: forever("each page's history"),
+  // The nightly check-up (wiki-sonae-catch-up-plan-2026-11-21.md, phase 2).
+  wikiPageTags: RECORD,
+  wikiCheckupRuns: forever("each wiki's check-ups, one a night: the Health screen's record and what the undo reads"),
+  wikiSourceChanges: forever("each changed or removed document the wiki followed, with the text it took out"),
 
   // ── Content, news and email ───────────────────────────────────────────────
   contentTranslations: RECORD,

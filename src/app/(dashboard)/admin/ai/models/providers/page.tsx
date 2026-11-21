@@ -13,7 +13,6 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import {
   describeProviderStatus,
@@ -150,12 +149,10 @@ export default function AIModelProvidersPage() {
   return (
     <div className="flex flex-col gap-6 w-full h-full pb-12">
       <PageHeader
-        divider
         icon={<Bot className="w-6 h-6 text-brand" />}
         title={t("headerTitle")}
         description={t("headerDescription")}
       />
-      <AiWorkspaceNav />
       <SaveError>{providerError}</SaveError>
 
       {/* The standard admin table, the same one the model catalogue uses, so the

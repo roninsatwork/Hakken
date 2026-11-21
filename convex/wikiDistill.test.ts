@@ -5,7 +5,17 @@ import schema from "./schema";
 import { WIKI_DISTILL_BATCH_SIZE, WIKI_DISTILL_MAX_ATTEMPTS } from "./wikiDistill";
 import { WIKI_STAFF } from "./wikiStaff";
 import { isWikiStaffKey } from "./wikiStaffRunActions";
-import { parseDocumentTopicSuggestions, parseSourceKey } from "./wikiRewriteService";
+import { stitchChunks } from "./wikiDistill";
+import {
+  parseDocumentTopicSuggestions,
+  parseSourceKey,
+  changedSentences,
+  relevantPassages,
+  splitDocumentIntoSections,
+  subjectWords,
+  WIKI_TOPICS_PER_SECTION,
+} from "./wikiRewriteService";
+import { chunkKnowledgeText } from "./utils/knowledgeActionsService";
 
 /**
  * Stage one's ground rules (wiki-replaces-knowledge plan): a document is
@@ -198,7 +208,7 @@ describe("receipts", () => {
 });
 
 describe("the document topic contract", () => {
-  test("bad kinds, bad slugs and excess are dropped; three at most", () => {
+  test("bad kinds and bad slugs are dropped; client work counts; a section names at most twenty", () => {
     const suggestions = parseDocumentTopicSuggestions(
       JSON.stringify({
         topics: [
@@ -206,15 +216,145 @@ describe("the document topic contract", () => {
           { kind: "POLICY", slug: "How We Work!", learned: "Paid discovery first." },
           { kind: "NAVIGATION", slug: "menu", learned: "Dropped." },
           { kind: "ISSUE", slug: "hosting-questions", learned: "Keeps coming up." },
-          { kind: "POLICY", slug: "over-the-cap", learned: "Fourth, dropped." },
+          { kind: "CLIENT", slug: "Papa Johns", learned: "An ordering app." },
+          ...Array.from({ length: 25 }, (_, i) => ({ kind: "CLIENT", slug: `client-${i}`, learned: "Work." })),
         ],
       })
     );
-    expect(suggestions.map((suggestion) => suggestion.slug)).toEqual([
+    expect(suggestions).toHaveLength(WIKI_TOPICS_PER_SECTION);
+    expect(suggestions.slice(0, 4).map((suggestion) => suggestion.slug)).toEqual([
       "web-development",
       "how-we-work",
       "hosting-questions",
+      "papa-johns",
     ]);
+    expect(suggestions[3].kind).toBe("CLIENT");
+  });
+
+  test("a document is cut into sections that keep every word, in order, none too long", () => {
+    expect(splitDocumentIntoSections("  Short note.  ")).toEqual(["Short note."]);
+    expect(splitDocumentIntoSections("   ")).toEqual([]);
+    const paragraphs = Array.from({ length: 60 }, (_, i) => `Client ${i} asked us for help. We built it in ${i} weeks.`);
+    const text = paragraphs.join("\n\n");
+    const sections = splitDocumentIntoSections(text, 500);
+    expect(sections.length).toBeGreaterThan(1);
+    for (const section of sections) expect(section.length).toBeLessThanOrEqual(500);
+    // Split between paragraphs, so no client is cut in half.
+    expect(sections.join("\n\n")).toBe(text);
+    // One endless line still splits, and still loses nothing.
+    const endless = "word ".repeat(400).trim();
+    const pieces = splitDocumentIntoSections(endless, 300);
+    expect(pieces.join(" ")).toBe(endless);
+  });
+
+  test("stored pieces are joined back into the document's own text, without the repeats", () => {
+    const original = Array.from({ length: 80 }, (_, i) => `Sentence number ${i} about a client project.`).join(" ");
+    expect(stitchChunks(chunkKnowledgeText(original))).toBe(original);
+  });
+});
+
+describe("finding what a long file says about one page (2026-11-12)", () => {
+  test("a page's subject words come from its name", () => {
+    expect(subjectWords("papa-johns", "papa-johns")).toEqual(["papa", "johns"]);
+    expect(subjectWords("clients-index")).toEqual(["clients"]);
+  });
+
+  test("the parts about the subject are found wherever they are, in order", () => {
+    const text = `${"Other client work. ".repeat(3000)}Waterstones asked us for a bookshop app. ${"More work. ".repeat(500)}`;
+    const passages = relevantPassages(text, ["waterstones"], 6_000);
+    expect(passages).toContain("Waterstones asked us for a bookshop app.");
+    expect(passages.length).toBeLessThanOrEqual(6_000);
+    // Nothing about the subject: the opening, as before.
+    expect(relevantPassages(text, ["nobody"], 100)).toBe(text.slice(0, 100));
+  });
+
+  test("only the sentences that changed are reported, however far in", () => {
+    const opening = "Opening sentence number one. ".repeat(400);
+    const before = `${opening}Papa Johns launched on Black Friday. The app rating rose to four stars.`;
+    const after = `${opening}Papa Johns launched on Black Friday. The app rating rose to five stars.`;
+    const { removed, added } = changedSentences(before, after);
+    expect(removed).toBe("The app rating rose to four stars.");
+    expect(added).toBe("The app rating rose to five stars.");
+    expect(changedSentences(before, before)).toEqual({ removed: "", added: "" });
+  });
+});
+
+describe("reading the whole document (2026-11-12)", () => {
+  async function seedChunks(
+    t: ReturnType<typeof convexTest>,
+    companyId: Awaited<ReturnType<typeof seedCompany>>,
+    text: string
+  ) {
+    return await t.run(async (ctx) => {
+      const documentId = await ctx.db.insert("knowledgeDocuments", {
+        companyId,
+        title: "Clients and case studies",
+        status: "ready",
+        format: "application/pdf",
+        createdAt: Date.now(),
+      });
+      for (const chunk of chunkKnowledgeText(text)) {
+        await ctx.db.insert("knowledgeChunks", {
+          documentId,
+          companyId,
+          isGlobal: false,
+          text: chunk,
+          embedding: [0],
+        });
+      }
+      return documentId;
+    });
+  }
+
+  test("a long uploaded file is read past its first twelve pieces, to the last client", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const text = Array.from({ length: 60 }, (_, i) => `Client number ${i} had an app built for them.`).join(" ") +
+      " The last client was Waterstones.";
+    const documentId = await seedChunks(t, companyId, text.repeat(4));
+    const claimed = await t.mutation(internal.wikiDistill.claimDocumentForDistillInternal, { documentId });
+    expect(claimed?.text.length).toBeGreaterThan(8_000);
+    expect(claimed?.text.endsWith("The last client was Waterstones.")).toBe(true);
+  });
+
+  test("a later section is only handed out for a document the wiki has claimed", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const long = "Papa Johns asked us for an app. ".repeat(600);
+    const documentId = await seedDocument(t, companyId, { textContent: long });
+
+    expect(await t.query(internal.wikiDistill.getDocumentSectionInternal, { documentId, sectionIndex: 1 })).toBeNull();
+    await t.mutation(internal.wikiDistill.claimDocumentForDistillInternal, { documentId });
+    const second = await t.query(internal.wikiDistill.getDocumentSectionInternal, { documentId, sectionIndex: 1 });
+    expect(second?.sectionCount).toBeGreaterThan(1);
+    expect(second?.section).toContain("Papa Johns");
+    expect(
+      await t.query(internal.wikiDistill.getDocumentSectionInternal, { documentId, sectionIndex: 99 })
+    ).toBeNull();
+  });
+
+  test("re-learning hands back one company's read documents and nobody else's", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await seedCompany(t);
+    const otherId = await seedCompany(t, "Other Corp");
+    const read = await seedDocument(t, companyId, { wikiDistilledAt: 123 });
+    const waiting = await seedDocument(t, companyId);
+    const pending = await seedDocument(t, companyId, { status: "pending", wikiDistilledAt: 123 });
+    const others = await seedDocument(t, otherId, { wikiDistilledAt: 123 });
+
+    const result = await t.mutation(internal.wikiDistill.relearnCompanyDocumentsInternal, { companyId });
+
+    expect(result.documents).toBe(1);
+    const after = await t.run(async (ctx) => ({
+      read: await ctx.db.get(read),
+      waiting: await ctx.db.get(waiting),
+      pending: await ctx.db.get(pending),
+      others: await ctx.db.get(others),
+    }));
+    expect(after.read?.wikiDistilledAt).toBeUndefined();
+    expect(after.waiting?.wikiDistilledAt).toBeUndefined();
+    expect(after.pending?.wikiDistilledAt).toBe(123);
+    expect(after.others?.wikiDistilledAt).toBe(123);
   });
 });
 

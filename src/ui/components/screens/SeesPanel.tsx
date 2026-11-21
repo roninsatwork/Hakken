@@ -213,10 +213,9 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
       case "trackingGap":
         return t.rich(p.tracking === "behaviour" ? "trackingBehaviour" : "trackingCheck", { ...rich, event: event(p.event), low: device(p.low), lowRate: percent(p.lowRate), high: device(p.high), highRate: percent(p.highRate) });
       case "wholeUp":
-      case "wholeDown": {
-        const named = measure(p.measure);
-        return t.rich(finding.kind, { ...rich, measure: named.charAt(0).toUpperCase() + named.slice(1), now: figure(p.measure, p.now), before: figure(p.measure, p.before) });
-      }
+      case "wholeDown":
+        // The measure sits mid-sentence ("Up to 191 sales, from 179 before"), so it keeps its own small letter.
+        return t.rich(finding.kind, { ...rich, measure: measure(p.measure), now: figure(p.measure, p.now), before: figure(p.measure, p.before) });
       case "rowUp":
       case "rowDown":
         return t.rich(finding.kind, { ...rich, name: String(p.name), measure: measure(p.measure), now: figure(p.measure, p.now), before: figure(p.measure, p.before) });

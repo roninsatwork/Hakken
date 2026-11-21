@@ -19,7 +19,6 @@ import useDebounce from "@/src/hooks/useDebounce";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { isModelCostMeasurable } from "@/convex/utils/modelPricing";
 import { cn } from "@/src/ui/lib/utils";
-import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import {
   buildDefaultJobsByModelId,
   formatModelTag,
@@ -121,12 +120,10 @@ export default function AIModelCataloguePage() {
   return (
     <div className="flex flex-col gap-5 w-full h-full pb-12">
       <PageHeader
-        divider
         icon={<List className="w-6 h-6 text-brand" />}
         title={tc("headerTitle")}
         description={tc("headerDescription")}
       />
-      <AiWorkspaceNav />
       <SaveError>{modelError}</SaveError>
 
       {/* Search and both filters on one line. The original crammed three

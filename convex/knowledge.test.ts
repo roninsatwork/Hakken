@@ -1521,3 +1521,37 @@ describe("hybrid retrieval: keyword search over knowledge chunks", () => {
     expect(results.map((r) => r._id)).toEqual([globalChunk]);
   });
 });
+
+describe("re-uploading a very long file (2026-11-12)", () => {
+  // Clearing used to ride on the first batch and stop at 500 old pieces, so
+  // a long file re-uploaded kept its oldest pieces, read ahead of the new
+  // text. An empty call now clears up to 500 and says how many it cleared;
+  // the reader repeats it until none are left.
+  test("an empty replacing call clears up to 500 old pieces and says how many", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const documentId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Long Files", createdAt: Date.now() });
+      const id = await ctx.db.insert("knowledgeDocuments", {
+        companyId,
+        title: "A very long file",
+        status: "ready",
+        format: "text/plain",
+        createdAt: Date.now(),
+      });
+      for (let i = 0; i < 620; i++) {
+        await ctx.db.insert("knowledgeChunks", { documentId: id, companyId, isGlobal: false, text: `old ${i}`, embedding: [0] });
+      }
+      return id;
+    });
+
+    const clear = () =>
+      t.mutation(internal.knowledge.saveChunksInternal, { documentId, chunks: [], replaceExisting: true, markReady: false });
+    expect((await clear()).cleared).toBe(500);
+    expect((await clear()).cleared).toBe(120);
+    expect((await clear()).cleared).toBe(0);
+    const left = await t.run(async (ctx) =>
+      ctx.db.query("knowledgeChunks").withIndex("by_document", (q) => q.eq("documentId", documentId)).collect()
+    );
+    expect(left).toHaveLength(0);
+  });
+});

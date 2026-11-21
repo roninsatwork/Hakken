@@ -83,7 +83,7 @@ export const autoResolveStaleQuestionsInternal = internalMutation({
           .withIndex("by_company_kind_subject", (q) =>
             q
               .eq("companyId", args.companyId)
-              .eq("kind", pageKey.slice(0, separator) as "PRODUCT" | "POLICY" | "ISSUE" | "GOAL" | "CUSTOMER" | "SOURCE")
+              .eq("kind", pageKey.slice(0, separator) as "PRODUCT" | "POLICY" | "ISSUE" | "CLIENT" | "GOAL" | "CUSTOMER" | "SOURCE")
               .eq("subjectKey", pageKey.slice(separator + 1))
           )
           .unique();
@@ -267,7 +267,7 @@ export const dismissOpenQuestionForCompany = adminMutation({
 export const getContradictionClusterInternal = internalQuery({
   args: {
     companyId: v.optional(v.id("companies")),
-    kind: v.union(v.literal("PRODUCT"), v.literal("POLICY"), v.literal("ISSUE")),
+    kind: v.union(v.literal("PRODUCT"), v.literal("POLICY"), v.literal("ISSUE"), v.literal("CLIENT")),
   },
   handler: async (
     ctx,

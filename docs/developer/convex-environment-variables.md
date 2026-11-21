@@ -151,7 +151,7 @@ Notes:
 
 | Variable | What it is for |
 | --- | --- |
-| `FIRECRAWL_API_KEY` | Firecrawl, used to scrape web pages into knowledge (`convex/webScrapeActions.ts`, `convex/knowledgeActions.ts`). |
+| `FIRECRAWL_API_KEY` | Firecrawl, used to read web pages for agents, the Library and the money page checks, and to import websites into knowledge (`convex/webScrapeActions.ts`, `convex/knowledgeActions.ts`, `convex/moneyPageChecks.ts`). Every call uses Firecrawl's v2 (v1 stops on 2026-12-10) and passes `maxAge: 0`, so each page is read fresh rather than from Firecrawl's two-day copy. `convex/webScrapeActions.test.ts` fails a v1 call. |
 | `APIFY_API_TOKEN` | Runs Apify actors for larger data-collection jobs (`convex/apify.ts`). |
 | `APIFY_WEBHOOK_SECRET` | Shared secret Apify must echo back (in the `X-Apify-Secret` header) when it calls the `/apify-webhook` endpoint to report a finished run. Without the matching header the callback is refused, so results cannot be spoofed. |
 

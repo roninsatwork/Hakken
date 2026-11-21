@@ -93,6 +93,10 @@ describe("Knowledge articles on the shared brain", () => {
       .rejects.toThrow(KNOWLEDGE_PAGE_REFUSAL);
     await expect(superAdmin.mutation(api.wikiPages.deletePageForGlobal, { pageId: page._id })).rejects.toThrow(KNOWLEDGE_PAGE_REFUSAL);
 
+    // Its own screen is told, so it offers none of those, nor tags or undo, and the tag door refuses it too.
+    expect((await superAdmin.query(api.wikiPages.getPageDetailForGlobal, { pageId: page._id }))?.isKnowledgeArticle).toBe(true);
+    await expect(superAdmin.mutation(api.wikiCheckupPages.addTagForGlobal, { pageId: page._id, tag: "traffic" })).rejects.toThrow();
+
     // Nor does the Linker offer it to a model.
     const sparse = await t.query(internal.wikiPages.listSparselyLinkedTopicsInternal, { limit: 10 });
     expect(sparse.map((entry) => entry.subjectKey)).not.toContain(knowledgeSubjectKey(articleId));

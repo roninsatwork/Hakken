@@ -12,7 +12,6 @@ import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { AiWorkspaceNav } from "../../_components/AiWorkspaceNav";
 import { canProviderServeUseCase, describeUseCaseProviderLimit } from "@/convex/aiModelService";
 import { cn } from "@/src/ui/lib/utils";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
@@ -128,12 +127,10 @@ export default function AIModelDefaultsPage() {
   return (
     <div className="flex flex-col gap-6 w-full h-full pb-12">
       <PageHeader
-        divider
         icon={<Cpu className="w-6 h-6 text-brand" />}
         title={t("headerTitle")}
         description={t("headerDescription")}
       />
-      <AiWorkspaceNav />
       <SaveError>{defaultsError}</SaveError>
 
       <p className="text-[13px] text-secondary">

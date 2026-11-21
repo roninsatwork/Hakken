@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type MouseEvent } from "react";
+import { ChartReveal } from "./ChartReveal";
 import { useElementWidth } from "@/src/hooks/useElementWidth";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
 import { LAYER } from "@/src/ui/lib/layers";
@@ -87,7 +88,8 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
   return (
     // Only leaving the whole part lets go: the pointer crossing the gap between two cells must not, or the chart flickers (Anthony, 2026-11-06).
     <div ref={watch} data-part="hundred-strips" className="relative flex flex-col gap-3" onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
-      <svg width={width} height={height} role="img" aria-label={`${topLabel}. ${bottomLabel}. ${segments.map((segment) => `${segment.name} ${segment.top} and ${segment.bottom}`).join(", ")}`}>
+      <ChartReveal replay={segments.map((segment) => `${segment.key}:${segment.top}:${segment.bottom}`).join("|")} motion="wipe" figures="[data-segment]">
+        <svg width={width} height={height} role="img" aria-label={`${topLabel}. ${bottomLabel}. ${segments.map((segment) => `${segment.name} ${segment.top} and ${segment.bottom}`).join(", ")}`}>
         <text x={0} y={12} fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{topLabel}</text>
         <text x={0} y={height - 2} fill="currentColor" className="text-secondary" style={{ fontSize: 12 }}>{bottomLabel}</text>
         {placed.map(({ segment, top, bottom }) => (
@@ -107,6 +109,7 @@ export function HundredStrips({ segments, topLabel, bottomLabel, lit, onLit }: {
           </g>
         ))}
       </svg>
+      </ChartReveal>
       <div className="grid gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
         {segments.map((segment) => (
           <div

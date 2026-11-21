@@ -207,47 +207,18 @@ crons.interval(
   { job: "user-memory-suggestion-sweep" }
 );
 
-// The wiki's nightly gardener (wiki plan, phase 4): mechanical link repair
-// costs nothing, and at most a few overgrown pages per company see a model.
-// A company with no wiki pages is never even visited.
-crons.interval(
-  "wiki-tending-sweep",
-  { hours: 24 },
+// The wiki's nightly check-up (wiki-sonae-catch-up-plan-2026-11-21.md, phase 2, from Sonae's
+// wiki-daily-checkup-plan.md): one round per wiki, every night: take in new and changed files,
+// re-link, write missing pages from the company's own documents, fix page types, tag, settle
+// facts from the wiki's own sources, tidy, each covering its share of a rota so every page is
+// seen within its cycle. It replaced the four wiki sweeps and the fifteen-minute catch-up
+// (Anthony, 2026-11-21: "Yes for the checks"); new documents are still read the moment they
+// arrive. A wiki with nothing due costs nothing.
+crons.daily(
+  "wiki-daily-checkup",
+  { hourUTC: 2, minuteUTC: 0 },
   internal.jobLedger.runJob,
-  { job: "wiki-tending-sweep" }
-);
-
-// The wiki's catch-up reader (wiki-replaces-knowledge plan, stage one):
-// documents imported before the wiki existed — or whose on-ready hook died —
-// get read a few at a time until nothing is left behind. A company with
-// nothing unread is never visited, and each visit claims before it spends.
-crons.interval(
-  "wiki-distill-sweep",
-  { minutes: 15 },
-  internal.jobLedger.runJob,
-  { job: "wiki-distill-sweep" }
-);
-
-// The Contradiction Finder's round (wiki-agents plan, phase 1): related
-// pages read together nightly, disagreements raised as open questions for
-// a person — never settled by the machine. Three bounded model calls per
-// company per night at most; a stood-down finder spends nothing.
-crons.interval(
-  "wiki-contradiction-sweep",
-  { hours: 24 },
-  internal.jobLedger.runJob,
-  { job: "wiki-contradiction-sweep" }
-);
-
-// The Freshness Checker's round (wiki-agents plan, phase 2): aging pages
-// re-checked against their kept sources, three per company per night at
-// most — pages younger than three weeks are never even considered, so a
-// fresh wiki costs nothing. Failures become open questions, not rewrites.
-crons.interval(
-  "wiki-freshness-sweep",
-  { hours: 24 },
-  internal.jobLedger.runJob,
-  { job: "wiki-freshness-sweep" }
+  { job: "wiki-daily-checkup" }
 );
 
 // The SEO collection watchdog. Hourly on purpose: the worker chains schedule
