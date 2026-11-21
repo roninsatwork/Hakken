@@ -841,6 +841,12 @@ completed work.
   the catalogue is left.**
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
+- [Ask Hakken from ChatGPT and Claude](./active/ask-hakken-chatgpt-claude-plan-2026-11-21.md).
+  Plan only, written 21 November 2026. Clients ask about their own websites in
+  ChatGPT or Claude through five tools that only read, with Hakken's findings
+  beside the figures and a chart in the chat, switched in Features for
+  everyone and for each company. About 17 developer days. Anthony answered its
+  four questions the same day, so it waits only for his go.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
   work left outside the platform hardening plan or deliberately stopped short of
   that plan.
