@@ -64,6 +64,22 @@ describe('Admin Boundary Drift', () => {
 
   const isAdminFile = (file: string) => file.startsWith(`${ADMIN_DIR}${path.sep}`);
 
+  /**
+   * A file's imports, read and resolved once for every route. Each route's walk starts fresh, as it must for a cycle to
+   * be followed from every side, but it used to read the whole graph from disk again: 40 seconds in a full run on a busy
+   * machine, against the five a test may take (2026-11-21). Only the reading is shared; the walk is unchanged.
+   */
+  const importsCache = new Map<string, string[]>();
+  const importsOf = (file: string): string[] => {
+    const known = importsCache.get(file);
+    if (known) return known;
+    const found = [...fs.readFileSync(file, 'utf8').matchAll(SPECIFIER)]
+      .map((match) => resolveImport(file, match[1]))
+      .filter((resolved): resolved is string => resolved !== null);
+    importsCache.set(file, found);
+    return found;
+  };
+
   /** The import chain from `file` into `admin/`, or null if there is none. */
   const chainIntoAdmin = (
     file: string,
@@ -85,10 +101,7 @@ describe('Admin Boundary Drift', () => {
 
     let leak: string[] | null = null;
 
-    for (const match of fs.readFileSync(file, 'utf8').matchAll(SPECIFIER)) {
-      const resolved = resolveImport(file, match[1]);
-      if (!resolved) continue;
-
+    for (const resolved of importsOf(file)) {
       const found = chainIntoAdmin(resolved, here, cache);
       if (found && !leak) leak = found;
     }
