@@ -55,10 +55,12 @@ describe("the days before collection began", () => {
     expect(weeks("2025-06-12", "2025-10-13", "2026-04-29")).toEqual(["2026-04-13", "2026-04-20"]);
   });
 
-  test("a month's bands and brand clicks read like the collected months: past the top 20 only when clicked", () => {
+  test("a month's bands and brand clicks read like the collected months: every search past the top 20 counts", () => {
+    // Every search Google showed, as every night's build counts it: until 21 November 2026 one past the top 20 counted
+    // only when clicked, as the keep rule that went on 18 November kept it only then.
     const row = (key: string, position: number, clicks: number) => ({ key, position, clicks, impressions: 50 });
     expect(periodFigures([row("acme shoes", 1.5, 30), row("red shoes", 7, 4), row("blue shoes", 15, 0), row("green shoes", 42, 0), row("odd shoes", 60, 1)], ["acme"]))
-      .toEqual({ top3: 1, top10: 1, top20: 1, rest: 1, brandClicks: 30, otherClicks: 5 });
+      .toEqual({ top3: 1, top10: 1, top20: 1, rest: 2, brandClicks: 30, otherClicks: 5 });
   });
 
   test("a week's or month's chart row is written where none is held, never over a collected one", async () => {

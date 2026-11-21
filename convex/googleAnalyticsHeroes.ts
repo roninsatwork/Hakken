@@ -6,7 +6,6 @@ import { requireMySite } from "./siteAccess";
 import { decodePages, isPageRef } from "./holdPageRefs";
 import { readPeriodUnnamed } from "./searchConsolePeriodReads";
 import { BookNames } from "./searchConsolePeriodBooks";
-import { curveRows, keywordFiguresOf } from "./searchConsoleKeywordList";
 import { daysOf } from "./searchConsoleReads";
 import { addUp } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
@@ -191,6 +190,11 @@ async function consolePages(
   return { pages, to: period.to };
 }
 
+/** Each page's clicks, times shown and Google's position, for the click rate at each position pages get. */
+function* pageCurveRows(rows: ReadonlyArray<{ clicks: number; impressions: number; positionSum: number }>): Generator<{ clicks: number; impressions: number; position: number }> {
+  for (const row of rows) if (row.impressions > 0) yield { clicks: row.clicks, impressions: row.impressions, position: row.positionSum / row.impressions };
+}
+
 /** Search Console and Analytics joined page by page: the one page in focus, or every page the rules could flag. */
 export async function journeyOf(ctx: Reader, holdId: Id<"companyWebsites">, host: string, focus: Focus = { page: null }): Promise<Journey> {
   const connection = await connectionOf(ctx, holdId);
@@ -268,9 +272,11 @@ export async function journeyOf(ctx: Reader, holdId: Id<"companyWebsites">, host
   }
   const website = visitFigures(channels.rows, counted);
   const google = visitFigures(channels.rows.filter((row) => fromGoogle(row.key)), counted);
-  // The click rate at each position from the website's searches, as Search Console's Click rate by position reads it.
-  const searches = consoleConnected ? await keywordFiguresOf(ctx, holdId, "web", CONSOLE_PERIOD, undefined) : null;
-  const rates = websiteRatesOf(website, curveRows(searches), totalValue);
+  // The click rate at each position from the website's own pages, as Shown but not clicked reads it: a page's clicks set
+  // against pages', never against searches', which Google counts once however many pages it showed (fix 2, 21 November
+  // 2026, search-console-and-analytics-data-plan-2026-11-21.md).
+  const pageList = consoleConnected ? await readPeriodUnnamed(ctx, holdId, "web", "page", CONSOLE_PERIOD, "NOW") : null;
+  const rates = websiteRatesOf(website, pageCurveRows(pageList?.rows ?? []), totalValue);
   return {
     state: "READY",
     currency: connection.currency ?? null,

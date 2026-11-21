@@ -138,7 +138,7 @@ export type CollectTarget = {
   pagesHeld: boolean;
   weeklyPeriodsAt: number | undefined;
   /** The finished periods fetched, each home country's (calendar-periods-plan.md, phase 6): which a run asks is worked out from them. */
-  periodsFetched: Array<{ key: string; from: string; settled: boolean }>;
+  periodsFetched: Array<{ key: string; from: string; settled: boolean; final?: boolean }>;
   /** The home country every ask is filtered to, by Google's two-letter `countryId`: the main one unless a job names another. */
   country: string;
   /** The website's other home countries, kept as ready-made lists (§18.6.1), by Search Console's code (`fra`). */

@@ -122,6 +122,16 @@ describe("the eye's ask", () => {
     // A step names the thing to fix in words; it need not carry a figure (2026-10-30: "to correct 28,623" read like a robot).
     expect(seesFrom({ says: ["[[conv.total.now]] conversions."], steps: [{ words: "Go through checkout on a phone and find where people stop.", link: 0 }] }, facts, links)).toMatchObject({ ok: true });
     expect(seesFrom({ says: ["Nothing much happened here."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("names no figure") });
+    // A guess at a reason the figures don't hold goes back in code, not only by the writer's rules (fix 4, 21 November 2026:
+    // Products' "likely from a trade order", Purchases' "shoppers likely hesitate over delivery costs").
+    for (const guess of [
+      "[[conv.total.now]] conversions came, likely from a trade order.",
+      "[[conv.total.now]] conversions came, which suggests shoppers hesitate over delivery costs.",
+      "[[conv.total.now]] conversions came, probably from the sale.",
+      "[[conv.total.now]] conversions came, and this may be because of the weather.",
+    ]) expect(seesFrom({ says: [guess], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("guessed at a reason") });
+    // Words that only sound alike stand.
+    expect(seesFrom({ says: ["[[conv.total.now]] conversions came, more than the likes of Paid Search."], steps: [] }, facts, links)).toMatchObject({ ok: true });
     expect(seesFrom({ says: [] }, facts, links)).toMatchObject({ ok: false });
   });
 

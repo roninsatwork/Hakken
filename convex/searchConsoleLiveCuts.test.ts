@@ -79,12 +79,17 @@ describe("a list Google cut at its most says so", () => {
     expect(whole).not.toHaveProperty("listCut");
   });
 
-  test("a list of keywords is its pairs: their cut, never the list's", async () => {
+  test("a list of keywords is Google's own list of them: its cut, and its pairs' beside it", async () => {
+    // Each search alone, as Google counts it (fix 1, 21 November 2026): the list is Google's own, and its pairs give each
+    // search's pages. Either cut at Google's most says so.
     const { reader, siteId } = await setup();
     fakeGoogle(4);
     const keywords = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...ASK, siteId, dimension: "query" });
-    expect(keywords).toMatchObject({ ok: true, pairsCut: 4 });
-    expect(keywords).not.toHaveProperty("listCut");
+    expect(keywords).toMatchObject({ ok: true, pairsCut: 4, listCut: 4 });
+    fakeGoogle(3);
+    const whole = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...ASK, siteId, dimension: "query" });
+    expect(whole).not.toHaveProperty("listCut");
+    expect(whole).not.toHaveProperty("pairsCut");
   });
 
   test("Demand by Classification's and Indexing's pages asked of Google say their cut too", async () => {

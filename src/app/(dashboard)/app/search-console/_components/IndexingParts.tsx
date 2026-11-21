@@ -181,7 +181,13 @@ const CHART_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_TEAL
  * last three months: a day's counts are kept from the day the checks began. It took the place of a chart of the day
  * Google last visited each page, which drew nothing on Last month, as every visit was in November.
  */
-export function IndexingDaysCard({ rows, days, host }: { rows: readonly IndexingRow[]; days: ReadonlyArray<{ day: string; reasons: ReadonlyArray<{ reason: string; pages: number }> }>; host: string }) {
+export function IndexingDaysCard({ rows, days, host, checks }: {
+  rows: readonly IndexingRow[];
+  days: ReadonlyArray<{ day: string; reasons: ReadonlyArray<{ reason: string; pages: number }> }>;
+  host: string;
+  /** How many of the website's pages are checked so far: while some aren't, the hint says the line rises as they are (fix 5). */
+  checks?: { checked: number; known: number } | null;
+}) {
   const t = useTranslations("searchConsole.indexing.chart");
   const longDay = useLongDay();
   // The table's reasons first, in its order, then any a day held that the newest checks no longer give.
@@ -214,7 +220,7 @@ export function IndexingDaysCard({ rows, days, host }: { rows: readonly Indexing
   return (
     <BarsCard
       title={t("title")}
-      hint={days.length > 0 ? t("hint", { day: longDay(days[0].day) }) : t("hintNone")}
+      hint={days.length > 0 ? t(checks && checks.checked < checks.known ? "hintChecking" : "hint", { day: longDay(days[0].day) }) : t("hintNone")}
       exportName={`${host}-indexing-each-day`}
       csvHeading={t("day")}
       host={host}

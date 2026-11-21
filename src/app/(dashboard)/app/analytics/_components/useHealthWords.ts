@@ -22,6 +22,7 @@ const AREAS: Record<string, HealthArea> = {
   TRACKING_STOPPED: "visits", SUDDEN_FALL: "visits", STRANGERS: "visits",
   TOO_MUCH_UNKNOWN: "came", SELF_REFERRAL: "came", PAYMENT_REFERRALS: "came",
   NOTHING_COUNTED: "events", NO_VALUE: "events", SOMETHING_ELSE: "events", COUNTED_TWICE: "events", ENQUIRY_UNCOUNTED: "events", NEVER_HAPPENS: "events", CONVERSIONS_ELSEWHERE: "events",
+  STEP_COUNTED: "events",
   COUNTED_AGAIN: "pages",
 };
 
@@ -35,7 +36,7 @@ export function healthArea(check: string): HealthArea {
 }
 
 /** The checks whose names (and, for two of them, others) are events, named in the reader's words. */
-const NAMES_EVENTS = new Set(["NO_VALUE", "SOMETHING_ELSE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS", "COUNTED_TWICE"]);
+const NAMES_EVENTS = new Set(["NO_VALUE", "SOMETHING_ELSE", "ENQUIRY_UNCOUNTED", "NEVER_HAPPENS", "COUNTED_TWICE", "STEP_COUNTED"]);
 
 /**
  * An uncounted enquiry listed on the Connection page, chosen there: every

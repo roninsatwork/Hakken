@@ -45,7 +45,7 @@ export async function askGoogle(
   ctx: ActionCtx,
   target: { connectionId: Id<"searchConsoleConnections">; property: string },
   searchType: SearchType,
-  list: "pair" | "page" | "country" | "device" | "appearance",
+  list: "pair" | "query" | "page" | "country" | "device" | "appearance",
   from: string,
   to: string,
   given: readonly Filter[] = [],
@@ -118,15 +118,29 @@ export async function liveRows(
   // A list of pages asks for its pages beside the pairs, at the same time: the pages of every country, their searches the
   // country's (`EVERY_COUNTRY_LISTS`), or both the country's (`inCountry`, Pages since 18 November 2026).
   const withPairs = dimension === "query" || how.pageKeywords;
-  const [pairs, pages] = await Promise.all([
+  // A list of keywords asks Google for each search alone beside the pairs (fix 1, 21 November 2026): a search's own figures
+  // as Google counts it, once however many pages it showed; the pairs give its pages and top page.
+  const [pairs, pages, searches] = await Promise.all([
     withPairs ? askGoogle(ctx, target, searchType, "pair", from, to, filters) : null,
     dimension === "page" ? askGoogle(ctx, target, searchType, "page", from, to, filters, { everyCountry: !inCountry }) : null,
+    dimension === "query" ? askGoogle(ctx, target, searchType, "query", from, to, filters) : null,
   ]);
   if (pairs && !pairs.ok) return pairs;
+  if (searches && !searches.ok) return searches;
   if (!pages) {
-    // A list of keywords: every keyword the pairs hold.
     if (!pairs) return { ok: true, rows: [], pairs: [], pairsCut: false, listCut: false };
-    return { ok: true, rows: [...bySide(pairs.rows, "query").values()].map((summed) => ({ ...summed })), pairs: pairs.rows, pairsCut: pairs.cut, listCut: false };
+    const side = bySide(pairs.rows, "query");
+    // A list of keywords: every keyword Google answered, its figures its own, its pages counted from the pairs.
+    if (searches) {
+      return {
+        ok: true,
+        rows: searches.rows.map((row) => ({ ...row, count: side.get(row.key)?.count ?? 0, top: side.get(row.key)?.top ?? "" })),
+        pairs: pairs.rows,
+        pairsCut: pairs.cut,
+        listCut: searches.cut,
+      };
+    }
+    return { ok: true, rows: [...side.values()].map((summed) => ({ ...summed })), pairs: pairs.rows, pairsCut: pairs.cut, listCut: false };
   }
   if (!pages.ok) return pages;
   if (!pairs) return { ok: true, rows: pages.rows, pairs: [], pairsCut: false, listCut: pages.cut };

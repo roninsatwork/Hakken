@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { ListChecks, Plug } from "lucide-react";
@@ -16,7 +16,7 @@ import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
 import { SiteViewSwitch } from "../../sites/_components/SiteViewSwitch";
 import { countryName } from "./countries";
 import { readerLanguage } from "./searchConsoleFormat";
-import { RESULT_KINDS, useResultKind, useSearchConsoleHref, useSearchConsoleStatus } from "./useSearchConsole";
+import { RESULT_KINDS, useResultKind, useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleStatus } from "./useSearchConsole";
 import { SearchConsoleCatchUp } from "./SearchConsoleCatchUp";
 
 export type SearchConsoleStatus = NonNullable<FunctionReturnType<typeof api.searchConsoleConnect.searchConsoleStatus>>;
@@ -118,6 +118,23 @@ export function ConnectionBanner({ status, siteId }: { status: SearchConsoleStat
   );
 }
 
+/** Days the dates may begin before the first day held without a word: a week, so a new website's first days say nothing. */
+const PART_HELD_GRACE_DAYS = 7;
+
+/**
+ * Dates that begin well before the first day Google holds for the website say so, on every screen (fix 5, 21 November
+ * 2026): More Handles' Last 12 months counted 211 days, as Google holds nothing for it from August 2025 to April 2026.
+ */
+function PartHeldNotice({ siteId, newestDay }: { siteId: Id<"companyWebsites">; newestDay: string | null }) {
+  const t = useTranslations("searchConsole.connection");
+  const range = useSearchConsoleRange(newestDay);
+  const held = useQuery(api.searchConsoleSpans.searchConsoleFirstDayHeld, newestDay && !range.waiting && range.days > 0 ? { siteId, from: range.from, to: range.to } : "skip");
+  if (!held) return null;
+  const graceEnds = new Date(Date.parse(`${range.from}T00:00:00Z`) + PART_HELD_GRACE_DAYS * 86_400_000).toISOString().slice(0, 10);
+  if (held.day <= graceEnds) return null;
+  return <Notice tone="info">{t("partHeld", { day: formatDay(held.day), days: formatNumber(held.days) })}</Notice>;
+}
+
 /**
  * What a page shows until the site has figures: the way to connect, or, with
  * a sign-in back from Google and several properties to choose from, the way
@@ -140,6 +157,7 @@ export function SearchConsoleGate({ status, siteId, children }: {
       <>
         <SearchConsoleCatchUp siteId={siteId} newestDay={status.connection?.newestDay} />
         {letGo ? <Notice tone="warning">{t("searchesLetGo", { count: formatNumber(letGo) })}</Notice> : null}
+        <PartHeldNotice siteId={siteId} newestDay={status.connection?.newestDay ?? null} />
         {children}
       </>
     );

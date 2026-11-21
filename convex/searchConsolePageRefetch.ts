@@ -12,6 +12,7 @@ import { keywordPlaces } from "./searchConsoleKeywordBooks";
 import { SEEN_CHUNK } from "./searchConsoleSync";
 import { planParts, startParts } from "./searchConsoleSettlePlan";
 import { settlingNow } from "./searchConsoleSettling";
+import { refillChartPeriods } from "./searchConsoleChartRefill";
 
 /**
  * Every connected website's kept page lists fetched again from Google, once,
@@ -47,6 +48,14 @@ import { settlingNow } from "./searchConsoleSettling";
  * (`queue`), `websiteGapMs` apart, then each website's periods are built
  * again whole, as for the pages. Its asks are in the run log
  * (`searchConsoleRuns`), as every collection's are.
+ *
+ * **Each search alone** (`refetchSearches`, 21 November 2026): a search's own figures are kept apart from its pairs now
+ * (search-console-and-analytics-data-plan-2026-11-21.md, fix 1), as Google counts them, once however many of the
+ * website's pages it showed. The nightly run asks for them with each new day; the days kept before then are asked here,
+ * the same way as the searches with their pages: one ask a day for each kind of result with searches shown that day, in the
+ * home country, for all countries and each country kept ready, then each website's periods built again whole. A build
+ * reads a search's own lines only once they cover every day its pairs do, so a website keeps its pairs' sums until its
+ * days are all in.
  */
 
 /** Days asked a step. */
@@ -64,14 +73,15 @@ const BUSY_WAIT_MS = 30 * 60 * 1000;
 /** Waits for Google before a website is left. */
 const MOST_BUSY_WAITS = 3;
 
-/** The lists this asks again: the pages (2026-11-17), or the searches with their pages (2026-11-18). */
-type RefetchList = "page" | "pair";
-const refetchListValidator = v.union(v.literal("page"), v.literal("pair"));
+/** The lists this asks again: the pages (2026-11-17), the searches with their pages (2026-11-18), or each search alone (2026-11-21). */
+type RefetchList = "page" | "pair" | "query";
+const refetchListValidator = v.union(v.literal("page"), v.literal("pair"), v.literal("query"));
 
 /** The kinds of result that keep each list: a page list, or search-and-page lines (Google Images keeps none). */
 const KINDS_OF: Record<RefetchList, readonly SearchType[]> = {
   page: COLLECTED_SEARCH_TYPES.filter((type) => LISTS_OF[type].includes("page")),
   pair: COLLECTED_SEARCH_TYPES.filter((type) => LISTS_OF[type].includes("pair")),
+  query: COLLECTED_SEARCH_TYPES.filter((type) => LISTS_OF[type].includes("query")),
 };
 
 /** Each day from `from` to `to` that a kind keeping the list was shown in, newest first, with those kinds. */
@@ -162,6 +172,8 @@ const stepArgs = {
   list: v.optional(refetchListValidator),
   /** Time between one website's last step and the next website's first, so websites' asks don't pile up; a minute when missing. */
   websiteGapMs: v.optional(v.number()),
+  /** Each search's own lines: the charts' older weeks and months already worked out again, so a wait to build doesn't ask twice. */
+  charted: v.optional(v.boolean()),
 };
 
 type StepArgs = {
@@ -172,9 +184,11 @@ type StepArgs = {
   waits?: number;
   list?: RefetchList;
   websiteGapMs?: number;
+  charted?: boolean;
 };
 
-const sayFor = (list: RefetchList) => (line: string) => console.log(`[${list === "pair" ? "every search kept" : "pages every country"}] ${line}`);
+const LOG_NAME: Record<RefetchList, string> = { page: "pages every country", pair: "every search kept", query: "each search alone" };
+const sayFor = (list: RefetchList) => (line: string) => console.log(`[${LOG_NAME[list]}] ${line}`);
 
 export const refetchPages = internalAction({
   args: stepArgs,
@@ -195,9 +209,22 @@ export const refetchPairs = internalAction({
   },
 });
 
-/** The same refetch's next step: the searches' own action for the searches, so the run log names what it asks. */
+/** Each search's own lines asked again for the days kept (21 November 2026), for the websites in `queue`, or every website holding figures. */
+export const refetchSearches = internalAction({
+  args: stepArgs,
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await refetchStep(ctx, { ...args, list: "query" });
+    return null;
+  },
+});
+
+/** The same refetch's next step: each list's own action, so the run log names what it asks. */
 async function handOn(ctx: ActionCtx, args: StepArgs, delayMs = STEP_GAP_MS) {
-  await ctx.scheduler.runAfter(delayMs, args.list === "pair" ? internal.searchConsolePageRefetch.refetchPairs : internal.searchConsolePageRefetch.refetchPages, args);
+  const step = args.list === "pair" ? internal.searchConsolePageRefetch.refetchPairs
+    : args.list === "query" ? internal.searchConsolePageRefetch.refetchSearches
+      : internal.searchConsolePageRefetch.refetchPages;
+  await ctx.scheduler.runAfter(delayMs, step, args);
 }
 
 /** The next website: this one's done, or left. */
@@ -209,7 +236,7 @@ async function nextWebsite(ctx: ActionCtx, args: StepArgs & { queue: Id<"searchC
 async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
   const list: RefetchList = args.list ?? "page";
   const say = sayFor(list);
-  const what = list === "pair" ? "searches" : "pages";
+  const what = list === "pair" ? "searches" : list === "query" ? "searches' own figures" : "pages";
   // What every step hands on with it: the list and the gap between websites.
   const keep = { ...(args.list ? { list: args.list } : {}), ...(args.websiteGapMs !== undefined ? { websiteGapMs: args.websiteGapMs } : {}) };
   if (args.queue === undefined) {
@@ -226,7 +253,7 @@ async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
   }
   const queued = { ...args, queue: args.queue };
   const state = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId });
-  if (!state || state.status !== "CONNECTED" || !state.property || state.clearing || state.switchedOff || !state.owned || !state.newestDay || (list === "pair" && !state.mainCountry)) {
+  if (!state || state.status !== "CONNECTED" || !state.property || state.clearing || state.switchedOff || !state.owned || !state.newestDay || (list !== "page" && !state.mainCountry)) {
     say(`${connectionId}: no longer collected, left.`);
     return await nextWebsite(ctx, queued);
   }
@@ -242,6 +269,13 @@ async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
 
   // Every day is in: the website's periods built again, every long period asked of Google again.
   if (args.build) {
+    // Each search's own lines in: the charts' weeks and months older than the days kept worked out again from Google's own
+    // keywords first, so the whole chart is counted one way (`searchConsoleChartRefill.ts`).
+    if (list === "query" && !args.charted) {
+      const charts = await refillChartPeriods(ctx, connectionId, state.countries);
+      say(`${connectionId}: ${charts.periods} chart weeks and months worked out again from ${charts.asks} asks${charts.problems.length > 0 ? `; Google would not answer for ${charts.problems.join(", ")}, left as they were` : ""}.`);
+      args = { ...args, charted: true };
+    }
     const plan = await planParts(ctx, connectionId);
     const started = plan ? await startParts(ctx, connectionId, plan, undefined, true, false, true) : "STARTED";
     if (started === "ALREADY_GOING") {
@@ -274,7 +308,7 @@ async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
   // The searches are asked in the home country, as collected: the one named, or the main one held without a country. The
   // pages are every country's (`EVERY_COUNTRY_LISTS`).
   const asked = country ?? state.mainCountry;
-  const filter = list === "pair" && asked ? { dimensionFilterGroups: [{ filters: [{ dimension: "country", operator: "equals", expression: asked }] }] } : {};
+  const filter = list !== "page" && asked ? { dimensionFilterGroups: [{ filters: [{ dimension: "country", operator: "equals", expression: asked }] }] } : {};
 
   const token = await accessTokenFor(ctx, connectionId);
   if (!token.ok) {
@@ -331,8 +365,8 @@ async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
     }
     const fetchedAt = Date.now();
     for (const [index, part] of pack(lines, list === "pair").entries()) {
-      // A search-and-page line's keyword as its place in the month's book, its page as a reference (as `runStep` writes them).
-      const keys = list === "pair" ? await keywordPlaces(ctx, state.companyWebsiteId, country, day, part.keys) : await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys);
+      // A search-and-page line's keyword — or a search's own — as its place in the month's book, a page as a reference (as `runStep` writes them).
+      const keys = list === "page" ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys) : await keywordPlaces(ctx, state.companyWebsiteId, country, day, part.keys);
       const linePages = part.pages ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.pages) : undefined;
       await ctx.runMutation(internal.searchConsoleSync.writeList, {
         connectionId, property, companyWebsiteId: state.companyWebsiteId, ...scope,
@@ -386,7 +420,9 @@ async function refetchStep(ctx: ActionCtx, args: StepArgs): Promise<void> {
     if (waits >= MOST_BUSY_WAITS) {
       say(list === "pair"
         ? `${connectionId}: Google stayed busy, left. Its searches from ${to} back keep only the lines kept until 18 November 2026.`
-        : `${connectionId}: Google stayed busy, left. Its pages from ${to} back keep their home country's figures until the next fetch.`);
+        : list === "query"
+          ? `${connectionId}: Google stayed busy, left. Its searches keep their pairs' sums until its days are all in.`
+          : `${connectionId}: Google stayed busy, left. Its pages from ${to} back keep their home country's figures until the next fetch.`);
       return await nextWebsite(ctx, queued);
     }
     // Busy: the same days once Google has room again, half an hour on.

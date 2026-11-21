@@ -221,6 +221,14 @@ export const CAUSE_TALK = /\b(?:th(?:ose|ese|is|at)|the|its|their|your)\s+(?:\w+
 /** The same said first, then a comma: cut off, and the sentence stands ("37.9% of returning visits left at once"). */
 const LEADING_PART = /^(in|on|from) the (table|chart|graph|treemap|boxes|box|panel|line),?\s+/i;
 
+/**
+ * Words that guess at a reason the figures don't hold (search-console-and-analytics-data-plan-2026-11-21.md, fix 4):
+ * "likely from a trade order", "shoppers likely hesitate over delivery costs" (Products and Purchases, 3 November 2026).
+ * The writer is told never to (`SEES_RULES`); since 21 November a sentence that does goes back in code too, as every
+ * other rule a machine can check does.
+ */
+const GUESSES = /\b(likely|unlikely|probably|perhaps|possibly|presumably|maybe)\b|\b(may|might|could) (well )?be (because|due|down to|from|caused)\b|\bsuggest(s|ing)? (that )?(shoppers|people|visitors|buyers|users|customers|they)\b/i;
+
 /** Words that advise on tracking or on what counts: the bubble's only when tracking health found a fault. */
 const TRACKING_TALK = /\b(double[- ]count\w*|duplicat\w* (tracking|tags?|events?|conversions?|goals?)|stop counting|(un)?count(ing)? [\w ]{1,30} as (a )?conversions?|remove [\w ]{1,30} (tracking|tags?|goals?)|tracking (set ?up|tags?)|as goals?)\b/i;
 
@@ -488,6 +496,10 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     lastLeftOff = true;
     if (typed(trimmed).length > 0) {
       fault(`A sentence typed a number: "${trimmed}".`);
+      continue;
+    }
+    if (GUESSES.test(trimmed)) {
+      fault(`A sentence guessed at a reason the figures don't show: "${trimmed}". Say only what they show, and make finding out why a step.`);
       continue;
     }
     if (namedFacts(trimmed).length === 0 && says.length === 0) {

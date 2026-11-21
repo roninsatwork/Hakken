@@ -15,7 +15,7 @@ import { checkedLongest } from "./searchConsoleLimits";
 import { connectionOf } from "./searchConsoleListSources";
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
 import { periodValidator, searchTypeValidator, type SearchType } from "./searchConsoleSchema";
-import { bySide, monthStart, pack, type Row } from "./utils/searchConsolePacks";
+import { monthStart, pack, type Row } from "./utils/searchConsolePacks";
 import { ctrCurve, type CurvePoint } from "./utils/searchConsoleViews";
 import { shiftDay } from "./searchConsoleDays";
 
@@ -38,15 +38,16 @@ type Google = { connectionId: Id<"searchConsoleConnections">; property: string }
 
 /**
  * A device's keywords asked of Google for a span, in the scope the build or the screen reads, as each position's figures, or
- * null when Google won't answer. Added up from Google's pairs of a keyword and a page, as every keyword list is (`bySide`),
- * so the devices' rates sit beside the whole website's: Google's keyword totals alone read 7.5% at position 1 on mobile,
- * where the website's list read 2.45% (20 November 2026). Google gives at most 50,000 pairs an ask: `cut` when it gave as
- * many, the keywords with fewest impressions left out.
+ * null when Google won't answer. Google's own keyword figures, each search once (fix 1, 21 November 2026), as the whole
+ * website's list now is: until then both were added up from Google's pairs of a keyword and a page, which counted a search
+ * once for each page shown — 2.45% at position 1 where Google's own keyword figures give 6.36% (October 2026, More
+ * Handles). Google gives at most 50,000 rows an ask: `cut` when it gave as many, the keywords with fewest impressions left
+ * out. `pairs` is the rows Google gave, as before.
  */
 async function askDeviceCurve(ctx: ActionCtx, google: Google, searchType: SearchType, span: { from: string; to: string }, country: string | undefined, device: string, positions: number): Promise<{ points: CurvePoint[]; pairs: number; cut: boolean } | null> {
-  const answer = await askGoogle(ctx, google, searchType, "pair", span.from, span.to, [{ dimension: "device", key: device }, ...(country === undefined ? [] : [{ dimension: "country" as const, key: country }])]);
+  const answer = await askGoogle(ctx, google, searchType, "query", span.from, span.to, [{ dimension: "device", key: device }, ...(country === undefined ? [] : [{ dimension: "country" as const, key: country }])]);
   if (!answer.ok) return null;
-  const keywords = [...bySide(answer.rows, "query").values()].map((summed) => ({ clicks: summed.clicks, impressions: summed.impressions, position: summed.impressions > 0 ? summed.positionSum / summed.impressions : 0 }));
+  const keywords = answer.rows.map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: row.impressions > 0 ? row.positionSum / row.impressions : 0 }));
   return { points: ctrCurve(keywords, positions), pairs: answer.rows.length, cut: answer.cut };
 }
 
@@ -62,10 +63,10 @@ const ASKS_AT_ONCE = 4;
 
 /**
  * Each span's positions on one device, as the build keeps them: a row a whole position ("1" to the website's limit) with
- * its clicks and impressions, and its keywords as the row's count. Nothing kept splits keywords by device, so Google's pairs
- * of a keyword and a page are asked on the device a week at a time, as every pair list is (`piecesOf`: Google gives at most
- * 50,000 rows an ask), each week once for every span it falls in, and added up keyword by keyword. Null when Google won't
- * answer for any week; `cut` when it gave its most for one.
+ * its clicks and impressions, and its keywords as the row's count. Nothing kept splits keywords by device, so Google's own
+ * keyword figures are asked on the device a week at a time (`piecesOf`: Google gives at most 50,000 rows an ask), each week
+ * once for every span it falls in, and added up keyword by keyword — exact, as a search's weeks add up to its period
+ * (fix 1, 21 November 2026). Null when Google won't answer for any week; `cut` when it gave its most for one.
  */
 export async function deviceCurvesOf(ctx: ActionCtx, google: Google, searchType: SearchType, spans: ReadonlyArray<{ from: string; to: string }>, country: string | undefined, device: string, positions: number): Promise<Map<string, DeviceCurve> | null> {
   type Sum = { clicks: number; impressions: number; positionSum: number };
@@ -74,7 +75,7 @@ export async function deviceCurvesOf(ctx: ActionCtx, google: Google, searchType:
   const filters = [{ dimension: "device" as const, key: device }, ...(country === undefined ? [] : [{ dimension: "country" as const, key: country }])];
   for (let at = 0; at < pieces.length; at += ASKS_AT_ONCE) {
     const chunk = pieces.slice(at, at + ASKS_AT_ONCE);
-    const answers = await Promise.all(chunk.map(async (piece) => ({ piece, answer: await askGoogle(ctx, google, searchType, "pair", piece.from, piece.to, filters) })));
+    const answers = await Promise.all(chunk.map(async (piece) => ({ piece, answer: await askGoogle(ctx, google, searchType, "query", piece.from, piece.to, filters) })));
     for (const { piece, answer } of answers) {
       if (!answer.ok) return null;
       for (const span of spans) {

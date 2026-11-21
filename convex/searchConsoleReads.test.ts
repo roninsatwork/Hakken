@@ -195,7 +195,7 @@ type PeriodRow = [string, number, number, number, number?, string?];
 async function period(
   t: Harness,
   siteId: Id<"companyWebsites">,
-  list: "query" | "page" | "country",
+  list: "query" | "page" | "country" | "countryPage",
   span: { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; from: string; to: string },
   rows: PeriodRow[],
 ) {
@@ -416,7 +416,7 @@ describe("the tables", () => {
     expect(split.comparable).toBe(false);
   });
 
-  test("other dates are asked of Google when chosen: searches added up from the pairs, against the days before", async () => {
+  test("other dates are asked of Google when chosen: each search as Google counts it, its pages from the pairs, against the days before", async () => {
     const { siteId, reader } = await withSearches();
     const twoDays = { ...range, from: "2026-09-25", to: "2026-09-26" };
     expect(await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...twoDays, ...page })).toMatchObject({ live: true, preparing: false, total: 0 });
@@ -425,28 +425,66 @@ describe("the tables", () => {
     vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const ask = JSON.parse(String(init?.body)) as { startDate: string; endDate: string; dimensions: string[]; startRow: number };
       asks.push(ask);
-      const pair = (query: string, page: string, clicks: number, impressions: number, position: number) =>
-        ({ keys: [query, page], clicks, impressions, ctr: clicks / impressions, position });
-      return Response.json({ rows: ask.startDate === "2026-09-25"
-        ? [pair("plumber leeds", "https://acme-shop.test/plumbers/", 5, 50, 2), pair("plumber leeds", "https://acme-shop.test/", 3, 50, 4), pair("boiler repair", "https://acme-shop.test/boilers/", 1, 10, 9)]
-        : [pair("plumber leeds", "https://acme-shop.test/plumbers/", 2, 20, 3)] });
+      const row = (keys: string[], clicks: number, impressions: number, position: number) => ({ keys, clicks, impressions, ctr: clicks / impressions, position });
+      const now = ask.startDate === "2026-09-25";
+      // Google showed two of the website's pages in the same 60 searches for "plumber leeds": each page counts them, the
+      // search once (fix 1, 21 November 2026). Added up from its pairs it read 100 times shown and 8 clicks.
+      if (ask.dimensions.join("+") === "query") {
+        return Response.json({ rows: now ? [row(["plumber leeds"], 7, 60, 2.2), row(["boiler repair"], 1, 10, 9)] : [row(["plumber leeds"], 2, 20, 3)] });
+      }
+      return Response.json({ rows: now
+        ? [row(["plumber leeds", "https://acme-shop.test/plumbers/"], 5, 50, 2), row(["plumber leeds", "https://acme-shop.test/"], 3, 50, 4), row(["boiler repair", "https://acme-shop.test/boilers/"], 1, 10, 9)]
+        : [row(["plumber leeds", "https://acme-shop.test/plumbers/"], 2, 20, 3)] });
     }));
     const live = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { siteId, ...twoDays });
     expect(live.ok).toBe(true);
     if (!live.ok) return;
-    expect(live).toMatchObject({ named: 9, comparable: true, cut: null });
-    expect(live.rows.flat().map((row) => [row.key, row.clicks, row.position, row.change, row.count, row.top])).toEqual([
-      ["plumber leeds", 8, 3, 6, 2, "https://acme-shop.test/plumbers/"],
-      ["boiler repair", 1, 9, 1, 1, "https://acme-shop.test/boilers/"],
+    expect(live).toMatchObject({ named: 8, comparable: true, cut: null });
+    expect(live.rows.flat().map((row) => [row.key, row.clicks, row.impressions, row.position, row.change, row.count, row.top])).toEqual([
+      ["plumber leeds", 7, 60, 2.2, 5, 2, "https://acme-shop.test/plumbers/"],
+      ["boiler repair", 1, 10, 9, 1, 1, "https://acme-shop.test/boilers/"],
     ]);
-    // Each span's pairs with Google's second page asked at the same time (speed fixes, 18 November 2026): a first page
-    // holding every row is the answer.
+    // Each span's searches, and its pairs with Google's second page asked at the same time (speed fixes, 18 November
+    // 2026): a first page holding every row is the answer.
     expect(asks.map((ask) => `${ask.startDate} ${ask.endDate} ${ask.dimensions.join("+")} ${ask.startRow}`).sort()).toEqual([
+      "2026-09-23 2026-09-24 query 0",
       "2026-09-23 2026-09-24 query+page 0",
       "2026-09-23 2026-09-24 query+page 25000",
+      "2026-09-25 2026-09-26 query 0",
       "2026-09-25 2026-09-26 query+page 0",
       "2026-09-25 2026-09-26 query+page 25000",
     ]);
+  });
+
+  test("Shown but not clicked sets each page against the click rate pages get at its place, never searches' (fix 2)", async () => {
+    const { t, siteId, reader } = await withSearches();
+    // A search at place 1 clicked half the time: Google counts a search once however many of the website's pages it
+    // showed, so a page set against it would always look short (search-console-and-analytics-data-plan-2026-11-21.md).
+    await period(t, siteId, "query", now, [["acme", 50, 100, 1]]);
+    // The pages at place 1 get 11 clicks in 2,000 showings between them: the rate a page there usually gets.
+    await period(t, siteId, "countryPage", now, [["https://acme-shop.test/a/", 10, 1_000, 1], ["https://acme-shop.test/b/", 1, 1_000, 1]]);
+    const low = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...range, dimension: "page", view: "lowCtr", inCountry: true, period: "thisWeek", ...page });
+    expect(low.rows.map((row) => [row.key, Math.round((row.usualCtr ?? 0) * 10_000) / 10_000, row.expected, row.gap])).toEqual([
+      ["https://acme-shop.test/b/", 0.0055, 6, 5],
+    ]);
+  });
+
+  test("the first day Google holds within some dates, and how many it holds, for the screens' part-held line (fix 5)", async () => {
+    const t = harness();
+    const companyId = await company(t, "Acme");
+    const siteId = await hold(t, companyId, "acme-shop.test");
+    // Google holds a day in June 2025 and none again until April 2026, as for morehandles.co.uk.
+    await connected(t, companyId, siteId, { oldestDay: "2026-04-23", newestDay: "2026-04-25" }, [
+      { day: "2025-06-11", clicks: 1, impressions: 10, position: 5 },
+      { day: "2026-04-23", clicks: 2, impressions: 20, position: 5 },
+      { day: "2026-04-24", clicks: 2, impressions: 20, position: 5 },
+      { day: "2026-04-25", clicks: 2, impressions: 20, position: 5 },
+    ]);
+    const reader = await person(t, companyId);
+    expect(await reader.query(api.searchConsoleSpans.searchConsoleFirstDayHeld, { siteId, from: "2025-11-20", to: "2026-04-25" })).toEqual({ day: "2026-04-23", days: 3 });
+    expect(await reader.query(api.searchConsoleSpans.searchConsoleFirstDayHeld, { siteId, from: "2025-07-01", to: "2025-07-31" })).toBeNull();
+    const stranger = await person(t, await company(t, "Rival"));
+    await expect(stranger.query(api.searchConsoleSpans.searchConsoleFirstDayHeld, { siteId, from: "2025-11-20", to: "2026-04-25" })).rejects.toThrow("not one your company holds");
   });
 
   test("another company can neither read a list nor have Google asked for one", async () => {

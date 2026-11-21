@@ -360,6 +360,8 @@ export const HEALTH_CHECKS = [
   "CONVERSIONS_ELSEWHERE",
   // Two counted events that match day for day, so one thing counts twice: a form under two names (Anthony, 2026-11-06).
   "COUNTED_TWICE",
+  // A shop's steps before a sale counted as conversions: a basket filled read as a sale (fix 7, 21 November 2026).
+  "STEP_COUNTED",
 ] as const;
 export type HealthCheck = (typeof HEALTH_CHECKS)[number];
 export const healthCheckValidator = v.union(...HEALTH_CHECKS.map((check) => v.literal(check)));
@@ -516,7 +518,8 @@ export const googleAnalyticsTables = {
      * one's bare): the first day of the one fetched, and whether it was asked again once Google's figures settled. A
      * finished period is asked once it ends, again two days later, then kept.
      */
-    periodsFetched: v.optional(v.array(v.object({ key: v.string(), from: v.string(), settled: v.boolean() }))),
+    /** Each finished period asked: settled once asked two days on, final once asked a week on (fix 3, 21 November 2026). */
+    periodsFetched: v.optional(v.array(v.object({ key: v.string(), from: v.string(), settled: v.boolean(), final: v.optional(v.boolean()) }))),
     /** When the website was last noted a shop: a run begun before it fetched the finished periods without products. */
     shopNotedAt: v.optional(v.number()),
     /** The run collecting it now, and the days it fetches, newest first from `top` back to `from`. */

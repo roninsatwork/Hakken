@@ -61,7 +61,7 @@ export default function SearchConsoleIndexingPage() {
           {boxes ? <IndexingBoxes boxes={boxes} loadingClicks={indexing.waiting} /> : <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />}
           {answer ? <IndexingProgress checks={answer.checks} on={answer.on} report={answer.report} /> : null}
           {indexing.problem ? <LiveProblem problem={indexing.problem} retry={indexing.retry} /> : null}
-          {answer && rows ? <IndexingDaysCard rows={rows} days={answer.days} host={host} /> : null}
+          {answer && rows ? <IndexingDaysCard rows={rows} days={answer.days} host={host} checks={answer.checks} /> : null}
           <ReasonsTable rows={rows} host={host} cut={indexing.cut} />
         </SearchConsoleGate>
       ) : null}

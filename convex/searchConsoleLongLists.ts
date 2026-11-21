@@ -382,6 +382,7 @@ export async function longListRows(
     held.asked = true;
     return out;
   }
+  if (scope.list === "query") return await searchesInPieces(ctx, google, scope, spans);
   for (const span of spans) {
     const whole = await asked(ctx, google, scope, span);
     if (whole === null) return null;
@@ -395,6 +396,31 @@ export async function longListRows(
     out.set(spanKey(span), rows);
   }
   return out;
+}
+
+/**
+ * Each search alone (`query`, fix 1, 21 November 2026) for the long periods: asked a week at a time, each week once and
+ * added into every period it falls in, as the pairs are — a busy website's 3, 6 and 12 months are each past Google's
+ * 50,000 rows an ask, and asked whole first and then in weeks period by period, More Handles' months-and-quarters stage
+ * ran 7 minutes 10 seconds of its 7. A week Google cuts too is asked a day at a time. A search's weeks add up to its
+ * period exactly (31,538 of 31,538 October searches, 2026-11-21). Null when Google won't answer.
+ */
+async function searchesInPieces(ctx: ActionCtx, google: Google, scope: Scope, spans: readonly Span[]): Promise<Map<string, Row[]> | null> {
+  const pieces = piecesOf(spans);
+  const sums = spans.map(() => new Map<string, Row>());
+  for (let at = 0; at < pieces.length; at += ASKS_AT_ONCE) {
+    const batch = pieces.slice(at, at + ASKS_AT_ONCE);
+    const answers = await Promise.all(batch.map((piece) => asked(ctx, google, scope, piece)));
+    for (const [index, answer] of answers.entries()) {
+      if (answer === null) return null;
+      const piece = batch[index];
+      const rows = answer.cut && piece.from !== piece.to ? await addedUpPieces(ctx, google, scope, daysOf(piece)) : answer.rows;
+      if (rows === null) return null;
+      // Pieces never cross a period's edge: each lies wholly inside a period, or outside it.
+      spans.forEach((span, which) => { if (piece.from >= span.from && piece.to <= span.to) addRowsInto(sums[which], rows); });
+    }
+  }
+  return new Map(spans.map((span, which) => [spanKey(span), [...sums[which].values()]]));
 }
 
 /** The rows asked for one period, from what `longListRows` gave. */

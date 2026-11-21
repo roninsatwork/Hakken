@@ -1228,7 +1228,7 @@ describe("What Hakken sees, from what each screen already reads (§14)", () => {
     expect(conversions.seen.says[0]).toEqual({ code: "topKind", text: "generate_lead", a: 60, b: 150 });
     expect(conversions.fired).toEqual([]);
     const [site] = await user.query(api.googleAnalyticsReads.analyticsSites, {});
-    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, conversions: 150, conversionsBefore: 60, counting: true, checks: 14 });
+    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, conversions: 150, conversionsBefore: 60, counting: true, checks: 15 });
     // Your websites shows no money (Anthony, 2026-11-03: "Take money off").
     expect(site).not.toHaveProperty("value");
     expect(site).not.toHaveProperty("currency");

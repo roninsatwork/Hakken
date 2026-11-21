@@ -43,11 +43,11 @@ type Harness = ReturnType<typeof harness>;
 /**
  * The finished periods already fetched and settled, on 9 October: for a test that reads none of them, so its runs ask
  * the periods still going alone (AGENTS.md: a test asks no more than its assertions read). Asking a finished period
- * once, again when settled, then not again, is `finishedDue`'s own test below.
+ * once, again when settled, once more a week on, then not again, is `finishedDue`'s own test below.
  */
 const FETCHED = [
   { key: "lastWeek", from: "2026-09-28", settled: true },
-  { key: "lastMonth", from: "2026-09-01", settled: true },
+  { key: "lastMonth", from: "2026-09-01", settled: true, final: true },
 ];
 
 async function connected(t: Harness, withAgent = true, fetched: boolean | typeof FETCHED = false) {
@@ -236,7 +236,7 @@ describe("which days and lists a run asks for", () => {
 
   test("the website's people and views by the hour: once for a website with none yet, then as last month ends and settles, and no other time", () => {
     // Last month already held and settled, on a website this list is new to: its next run asks this one list and nothing else of that month.
-    let fetched: Array<{ key: string; from: string; settled: boolean }> = [{ key: "lastMonth", from: "2026-09-01", settled: true }];
+    let fetched: Array<{ key: string; from: string; settled: boolean; final?: boolean }> = [{ key: "lastMonth", from: "2026-09-01", settled: true, final: true }];
     const night = (top: string) => {
       const due = finishedDue(fetched, top);
       fetched = fetchedAfter(fetched, due, top);
@@ -249,11 +249,13 @@ describe("which days and lists a run asks for", () => {
     expect(jobs.filter((job) => job.period === "lastMonth")).toHaveLength(1);
     expect(night("2026-10-09")).toContain(HOURS_DUE);
     expect(night("2026-10-10")).not.toContain(HOURS_DUE);
-    // A month ends: asked with it, then once more when its figures settle, then not again.
+    // A month ends: asked with it, again when its figures settle, once more a week on (fix 3), then not again.
     expect(night("2026-10-31")).toEqual(expect.arrayContaining(["lastMonth", HOURS_DUE]));
     expect(night("2026-11-01")).not.toContain(HOURS_DUE);
     expect(night("2026-11-02")).toEqual(expect.arrayContaining(["lastMonth", HOURS_DUE]));
     expect(night("2026-11-03")).not.toContain(HOURS_DUE);
+    expect(night("2026-11-07")).toEqual(expect.arrayContaining(["lastMonth", HOURS_DUE]));
+    expect(night("2026-11-08")).not.toContain(HOURS_DUE);
     // Never one for another home country: only the main one's usual reads it.
     expect(finishedDue([], "2026-10-09", ["fra"]).filter((key) => key.includes("hours"))).toEqual([HOURS_DUE]);
   });
@@ -261,10 +263,10 @@ describe("which days and lists a run asks for", () => {
   test("a finished period is asked once it ends, again once Google's figures settle two days later, then not again", () => {
     // Monday 12 October: Google's newest day is Sunday the 11th, so last week (5–11 October) has just ended. Last week
     // was held from the week before; last month and last quarter already held, settled.
-    let fetched: Array<{ key: string; from: string; settled: boolean }> = [
+    let fetched: Array<{ key: string; from: string; settled: boolean; final?: boolean }> = [
       { key: "lastWeek", from: "2026-09-28", settled: true },
-      { key: "lastMonth", from: "2026-09-01", settled: true },
-      { key: HOURS_DUE, from: "2026-09-01", settled: true },
+      { key: "lastMonth", from: "2026-09-01", settled: true, final: true },
+      { key: HOURS_DUE, from: "2026-09-01", settled: true, final: true },
       ];
     const night = (top: string) => {
       const due = finishedDue(fetched, top);
@@ -272,25 +274,25 @@ describe("which days and lists a run asks for", () => {
       return due;
     };
     expect(night("2026-10-11")).toEqual(["lastWeek"]);
-    expect(fetched).toContainEqual({ key: "lastWeek", from: "2026-10-05", settled: false });
+    expect(fetched).toContainEqual({ key: "lastWeek", from: "2026-10-05", settled: false, final: false });
     // The next night, Google's figures for its last days still settling: kept as fetched.
     expect(night("2026-10-12")).toEqual([]);
     // Two days after it ended, settled: asked once more, and marked so.
     expect(night("2026-10-13")).toEqual(["lastWeek"]);
-    expect(fetched).toContainEqual({ key: "lastWeek", from: "2026-10-05", settled: true });
-    // Then kept, night after night, until the next week ends.
+    expect(fetched).toContainEqual({ key: "lastWeek", from: "2026-10-05", settled: true, final: false });
+    // Then kept, night after night, until the next week ends: a week's last ask is as the next week's span before.
     for (const top of ["2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17"]) expect(night(top)).toEqual([]);
     expect(night("2026-10-18")).toEqual(["lastWeek"]);
     // The others untouched all the while.
     expect(fetched.filter((entry) => entry.key !== "lastWeek")).toEqual([
-      { key: "lastMonth", from: "2026-09-01", settled: true },
-      { key: HOURS_DUE, from: "2026-09-01", settled: true },
+      { key: "lastMonth", from: "2026-09-01", settled: true, final: true },
+      { key: HOURS_DUE, from: "2026-09-01", settled: true, final: true },
       ]);
 
     // A run that missed the settling night asks it on the next; one first fetching a period already settled, once only.
     expect(finishedDue([{ key: "lastWeek", from: "2026-10-05", settled: false }], "2026-10-15")).toContain("lastWeek");
     const late = fetchedAfter([], ["lastMonth"], "2026-10-15");
-    expect(late).toEqual([{ key: "lastMonth", from: "2026-09-01", settled: true }]);
+    expect(late).toEqual([{ key: "lastMonth", from: "2026-09-01", settled: true, final: true }]);
     expect(finishedDue(late, "2026-10-16")).not.toContain("lastMonth");
     // Each other home country keeps its own record: the main one's fetched leaves another's due.
     expect(finishedDue(late, "2026-10-16", ["fra"])).toContain("lastMonth|fra");

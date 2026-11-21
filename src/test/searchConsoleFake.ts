@@ -86,7 +86,9 @@ export function fakeGoogle(overrides: Partial<Google> = {}): Google {
         if (day < ask.startDate || day > ask.endDate) continue;
         const rows = ask.dimensions.length === 2
           ? (held.pair ?? (held.query ?? []).map((row) => ({ ...row, page: "https://acme-shop.test/" }))).map((pair) => ({ keys: [pair.key, pair.page], row: pair }))
-          : (held[ask.dimensions[0] as "query"] ?? []).map((row) => ({ keys: [row.key], row }));
+          // A day given only its pairs answers its searches as its pairs added up by search: a test that wants Google's own
+          // count of a search shown for two pages (fix 1, 21 November 2026) gives the day its `query` rows too.
+          : (held[ask.dimensions[0] as "query"] ?? (ask.dimensions[0] === "query" && held.pair ? searchesOfPairs(held.pair) : [])).map((row) => ({ keys: [row.key], row }));
         for (const { keys, row: one } of rows) {
           if (only.some((filter) => keys[ask.dimensions.indexOf(filter.dimension)] !== filter.expression)) continue;
           const { position } = figures(one);
@@ -109,3 +111,16 @@ export function fakeGoogle(overrides: Partial<Google> = {}): Google {
 }
 
 export const row = (key: string, clicks: number, impressions = clicks * 10): Row => ({ key, clicks, impressions });
+
+/** A day's pairs added up by search, each search's position weighted by its impressions. */
+function searchesOfPairs(pairs: readonly Pair[]): Row[] {
+  const sums = new Map<string, { clicks: number; impressions: number; positionSum: number }>();
+  for (const pair of pairs) {
+    const held = sums.get(pair.key) ?? { clicks: 0, impressions: 0, positionSum: 0 };
+    held.clicks += pair.clicks;
+    held.impressions += pair.impressions;
+    held.positionSum += (pair.position ?? 3.5) * pair.impressions;
+    sums.set(pair.key, held);
+  }
+  return [...sums].map(([key, held]) => ({ key, clicks: held.clicks, impressions: held.impressions, position: held.impressions > 0 ? held.positionSum / held.impressions : 3.5 }));
+}

@@ -24,7 +24,7 @@ import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, type Analytic
 type Check = HealthCheckRow;
 
 /** The checks whose names are events; those whose names are addresses; the one whose names are pages. */
-const NAMES_EVENTS = new Set(["NEVER_HAPPENS", "ENQUIRY_UNCOUNTED", "NO_VALUE", "SOMETHING_ELSE", "COUNTED_TWICE"]);
+const NAMES_EVENTS = new Set(["NEVER_HAPPENS", "ENQUIRY_UNCOUNTED", "NO_VALUE", "SOMETHING_ELSE", "COUNTED_TWICE", "STEP_COUNTED"]);
 const NAMES_ADDRESSES = new Set(["STRANGERS", "SELF_REFERRAL", "PAYMENT_REFERRALS", "CONVERSIONS_ELSEWHERE"]);
 const NAMES_PAGES = new Set(["COUNTED_AGAIN"]);
 const RESULT_TONE = { off: "warning", none: "neutral", good: "success" } as const;

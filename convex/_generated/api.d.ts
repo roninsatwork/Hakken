@@ -517,6 +517,7 @@ import type * as searchConsoleApi from "../searchConsoleApi.js";
 import type * as searchConsoleBreakdowns from "../searchConsoleBreakdowns.js";
 import type * as searchConsoleCannibalisation from "../searchConsoleCannibalisation.js";
 import type * as searchConsoleCatchUp from "../searchConsoleCatchUp.js";
+import type * as searchConsoleChartRefill from "../searchConsoleChartRefill.js";
 import type * as searchConsoleChanges from "../searchConsoleChanges.js";
 import type * as searchConsoleConnect from "../searchConsoleConnect.js";
 import type * as searchConsoleCountries from "../searchConsoleCountries.js";
@@ -1587,6 +1588,7 @@ declare const fullApi: ApiFromModules<{
   searchConsoleBreakdowns: typeof searchConsoleBreakdowns;
   searchConsoleCannibalisation: typeof searchConsoleCannibalisation;
   searchConsoleCatchUp: typeof searchConsoleCatchUp;
+  searchConsoleChartRefill: typeof searchConsoleChartRefill;
   searchConsoleChanges: typeof searchConsoleChanges;
   searchConsoleConnect: typeof searchConsoleConnect;
   searchConsoleCountries: typeof searchConsoleCountries;

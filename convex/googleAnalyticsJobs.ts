@@ -81,7 +81,7 @@ export function periodRange(period: AnalyticsPeriod, which: AnalyticsWhich, top:
 
 /** The periods still going, asked every run (Anthony, 2026-10-14: "I want everything once a day"). */
 const RUNNING: readonly CalendarPeriod[] = CALENDAR_PERIODS.filter(isRunning);
-/** The finished periods: asked once they end, again once Google's figures settle, then kept. */
+/** The finished periods: asked once they end, again once Google's figures settle, once more a week on, then kept. */
 export const FINISHED: readonly CalendarPeriod[] = CALENDAR_PERIODS.filter((period) => !isRunning(period));
 /** The spans each period is asked with: itself and its span before; the 12 months' span before is already the year before, so no period asks a third. */
 function whichOf(_period: CalendarPeriod): readonly AnalyticsWhich[] {
@@ -89,6 +89,17 @@ function whichOf(_period: CalendarPeriod): readonly AnalyticsWhich[] {
 }
 /** Days Google's figures take to settle after a period ends (§2.5): it is asked again once this many have passed. */
 const SETTLE_DAYS = 2;
+
+/**
+ * Days after a period ends when it is asked one last time (search-console-and-analytics-data-plan-2026-11-21.md, fix 3):
+ * Google goes on sorting adverts' visits into channels for some days after its figures first settle. October 2026, asked
+ * on 3 November and never again, had Channels up to 1% out three weeks later, and the eye said Cross-network lost 1,917
+ * visits where Google by then said 1,792.
+ */
+const FINAL_DAYS = 7;
+
+/** A finished period's record: asked settled (two days on), and asked the last time (a week on). */
+type Fetched = { key: string; from: string; settled: boolean; final?: boolean };
 
 /** A finished period's record on the connection: the main home country's bare, another's `lastMonth|fra`. */
 export function fetchedKey(period: CalendarPeriod, country?: string): string {
@@ -109,32 +120,31 @@ export const HOURS_DUE = `${HOURS_PERIOD}|hours`;
  * fetched since it ended, or fetched before Google's figures settled once they have. Worked out as the run's days
  * finish, and carried through its steps so every step asks the same lists.
  */
-export function finishedDue(fetched: ReadonlyArray<{ key: string; from: string; settled: boolean }>, top: string, others: readonly string[] = []): string[] {
+export function finishedDue(fetched: ReadonlyArray<Fetched>, top: string, others: readonly string[] = []): string[] {
   const due: string[] = [];
+  // Due when never asked since it ended, asked before Google's figures settled once they have, or not yet asked a week on.
+  const isDue = (held: Fetched | undefined, range: { from: string; to: string }) => !held || held.from !== range.from
+    || (!held.settled && top >= shiftDay(range.to, SETTLE_DAYS))
+    || (!held.final && top >= shiftDay(range.to, FINAL_DAYS));
   for (const country of [undefined, ...others]) {
     for (const period of FINISHED) {
       const range = periodRange(period, "NOW", top);
       if (!range) continue;
-      const held = fetched.find((entry) => entry.key === fetchedKey(period, country));
-      const settled = top >= shiftDay(range.to, SETTLE_DAYS);
-      if (!held || held.from !== range.from || (!held.settled && settled)) due.push(fetchedKey(period, country));
+      if (isDue(fetched.find((entry) => entry.key === fetchedKey(period, country)), range)) due.push(fetchedKey(period, country));
     }
   }
   const hours = periodRange(HOURS_PERIOD, "NOW", top);
-  if (hours) {
-    const held = fetched.find((entry) => entry.key === HOURS_DUE);
-    if (!held || held.from !== hours.from || (!held.settled && top >= shiftDay(hours.to, SETTLE_DAYS))) due.push(HOURS_DUE);
-  }
+  if (hours && isDue(fetched.find((entry) => entry.key === HOURS_DUE), hours)) due.push(HOURS_DUE);
   return due;
 }
 
 /** The finished periods' records once a whole run fetched those due: each marked settled when Google's figures were. */
-export function fetchedAfter(fetched: ReadonlyArray<{ key: string; from: string; settled: boolean }>, due: readonly string[], top: string): Array<{ key: string; from: string; settled: boolean }> {
+export function fetchedAfter(fetched: ReadonlyArray<Fetched>, due: readonly string[], top: string): Fetched[] {
   const out = fetched.filter((entry) => !due.includes(entry.key));
   for (const key of due) {
     const period = key.split("|")[0] as CalendarPeriod;
     const range = periodRange(period, "NOW", top);
-    if (range) out.push({ key, from: range.from, settled: top >= shiftDay(range.to, SETTLE_DAYS) });
+    if (range) out.push({ key, from: range.from, settled: top >= shiftDay(range.to, SETTLE_DAYS), final: top >= shiftDay(range.to, FINAL_DAYS) });
   }
   return out;
 }

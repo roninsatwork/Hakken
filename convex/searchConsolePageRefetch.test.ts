@@ -280,3 +280,63 @@ describe("asking the days kept again for every search (the keep rule went on 18 
     expect(lastWeek.keys).toEqual(["plumber leeds", "deep and lonely"]);
   });
 });
+
+describe("asking the days kept again for each search alone (fix 1, 21 November 2026)", () => {
+  test("each day kept is asked once for its searches as Google counts them, in the home country; then the periods count each search once", async () => {
+    const { t, siteId, connectionId } = await setup();
+    // The days as kept before: each search's pairs, "plumber leeds" shown on two pages on the 26th.
+    const kept: Array<[string, string[], string[], number[], number[], number[]]> = [
+      [NEWEST, ["plumber leeds", "plumber leeds"], [HOME, AI], [2, 1], [20, 20], [3, 5]],
+      [EARLIER, ["plumber leeds"], [HOME], [2], [30], [5]],
+    ];
+    for (const [day, keys, pages, clicks, impressions, places] of kept) {
+      await t.mutation(internal.searchConsoleSync.writeList, {
+        connectionId, property: PROPERTY, companyWebsiteId: siteId, searchType: "web", list: "pair", day, part: 0, fetchedAt: 1,
+        keys, pages, clicks, impressions, positionSums: places.map((place, at) => place * impressions[at]),
+      });
+    }
+    const asks: Ask[] = [];
+    const searches: Record<string, Array<[string, number, number, number]>> = {
+      // Google's own count: the two pages were shown in the same 25 searches.
+      [NEWEST]: [["plumber leeds", 3, 25, 2.8]],
+      [EARLIER]: [["plumber leeds", 2, 30, 5]],
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "ya29.renewed", expires_in: 3599 });
+      if (!/searchAnalytics\/query$/.test(url)) throw new Error(`Unexpected fetch in test: ${url}`);
+      const ask = JSON.parse(String(init?.body)) as Ask;
+      asks.push(ask);
+      if (ask.startRow > 0 || ask.type !== "web" || ask.dimensions.join("+") !== "query") return Response.json({});
+      const sums = new Map<string, { clicks: number; impressions: number; positionSum: number }>();
+      for (const [day, rows] of Object.entries(searches)) {
+        if (day < ask.startDate || day > ask.endDate) continue;
+        for (const [search, clicks, impressions, position] of rows) {
+          const one = sums.get(search) ?? { clicks: 0, impressions: 0, positionSum: 0 };
+          one.clicks += clicks;
+          one.impressions += impressions;
+          one.positionSum += position * impressions;
+          sums.set(search, one);
+        }
+      }
+      return Response.json({ rows: [...sums].map(([search, one]) => ({ keys: [search], clicks: one.clicks, impressions: one.impressions, ctr: one.clicks / one.impressions, position: one.positionSum / one.impressions })) });
+    }));
+
+    await t.action(internal.searchConsolePageRefetch.refetchSearches, { queue: [connectionId] });
+    await finishScheduled(t);
+
+    // First, one ask a day kept, for each search alone, in the United Kingdom.
+    expect(asks.slice(0, 2).map((ask) => `${ask.dimensions.join("+")} ${ask.startDate} ${ask.endDate} ${countryOf(ask)}`).sort())
+      .toEqual([`query ${EARLIER} ${EARLIER} gbr`, `query ${NEWEST} ${NEWEST} gbr`]);
+    const thisWeek = await t.run(async (ctx) => await ctx.db.query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "thisWeek").eq("which", "NOW"))
+      .first());
+    const part = await t.run(async (ctx) => await periodPartAsText(ctx, thisWeek!));
+    // This week, as far as it is held, the 26th: the search shown 25 times as Google counts it, not its pairs' 40; and its
+    // two pages counted from the pairs.
+    expect(part.keys).toEqual(["plumber leeds"]);
+    expect(part.impressions).toEqual([25]);
+    expect(part.clicks).toEqual([3]);
+    expect(part.counts).toEqual([2]);
+  });
+});

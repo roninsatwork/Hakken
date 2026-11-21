@@ -193,7 +193,9 @@ const COUNTS: Record<string, Measure> = {
    */
   cannibalisedKeywords: { words: "keywords two pages share", kind: "count" },
   keywordsShown: { words: "keywords Google showed", kind: "count" },
-  impressionSharePercent: { words: "share of its impressions", kind: "percent" },
+  // Keyword cannibalisation's shares leave the home page out, as its rule does (`cannibalisationRule.ts`): said so, as
+  // "handles" read 44% on one page while the home page took 88% of its impressions (fix 5, 21 November 2026).
+  impressionSharePercent: { words: "share of its impressions, the home page left out", kind: "percent" },
   swaps: { words: "days Google swapped pages", kind: "count", lessIsBetter: true },
   // Visibility's Backlinks and Keywords (own/visibility.ts, `linksAndKeywords`; ask-hakken-every-chart-page-plan-2026-11-03.md
   // section 10): links gained and lost, the servers links come from, the searches on Google's first page as each Keywords

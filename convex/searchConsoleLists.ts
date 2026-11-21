@@ -16,7 +16,7 @@ import { beforeOf, historyLimitDay, periodOf } from "./searchConsoleDays";
 export { periodOf } from "./searchConsoleDays";
 import { periodFromParts, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
 import { keySeriesAnswer, namedMovers, namedTracked, totalsOf } from "./searchConsoleSpans";
-import { curveRows, keywordFiguresOf, keywordListOf, namedCannibalisation, type KeywordParts } from "./searchConsoleKeywordList";
+import { keywordListOf, namedCannibalisation, type KeywordParts } from "./searchConsoleKeywordList";
 import type { ListRows } from "./searchConsoleKeywordTable";
 import { BookNames, BookShelf, keysAsText, namedRows, textsFrom } from "./searchConsolePeriodBooks";
 import { SORT_KEYS, sortRows, type SortKey } from "./searchConsoleSorts";
@@ -48,7 +48,7 @@ import {
 import { brandWordsOf, connectionOf, trackedOf } from "./searchConsoleListSources";
 import { GOOGLE_MOST_ROWS, LISTS_OF } from "./searchConsoleApi";
 import { EXPORT_FIELDS, exportFileName, exportValue } from "./utils/searchConsoleExport";
-import { bySide, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
+import { type Row as PackedRow } from "./utils/searchConsolePacks";
 import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds, type PageKindSetup } from "./utils/pageKinds";
 import { withTitles } from "./pageTitles";
 import { calendarPeriodValidator, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
@@ -362,8 +362,10 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   const shaped = withPageKinds(shapeRows(sourceRowsOf(view, now.rows, tracked), before?.rows ?? null, { tracked, brandWords }), pageKinds);
   const context: ViewContext = { rules: viewRulesOf(limits), tracked };
   if (view === "lowCtr") {
-    // The website's own click rate at each position, from its keywords a keyword at a time (step 4b).
-    context.curve = ctrCurve(curveRows(await keywordFiguresOf(ctx, companyWebsiteId, args.searchType, period, country)), limits.curvePositions);
+    // The click rate pages usually get at each position, from the pages listed themselves, each page once with its
+    // section links (fix 2, 21 November 2026): a page set against pages, never against searches, which Google counts once
+    // however many of the website's pages it showed (search-console-and-analytics-data-plan-2026-11-21.md).
+    context.curve = ctrCurve(withSectionsInPages(shaped).map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: row.position })), limits.curvePositions);
   }
   if (competing) {
     context.pages = pagesByKeyword(competing.rows);
@@ -720,8 +722,8 @@ export const searchConsoleLiveList = tenantAction({
     const shaped = withPageKinds(shapeRows(sourceRowsOf(view, rows, tracked), earlierRows, { tracked, brandWords: target.brandWords }), pageKinds);
     const context: ViewContext = { rules: viewRulesOf(limits), tracked };
     if (view === "lowCtr") {
-      const keywords = [...bySide(now.pairs, "query").values()];
-      context.curve = ctrCurve(keywords.map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })), limits.curvePositions);
+      // Pages set against pages, as the kept list does (fix 2).
+      context.curve = ctrCurve(withSectionsInPages(shaped).map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: row.position })), limits.curvePositions);
     }
     if (view === "competing") context.pages = pagesByKeyword(now.pairs);
     const weighed = dimension === "page" && VIEWS_BY_WHOLE_PAGE.has(view) ? withSectionsInPages(shaped) : shaped;

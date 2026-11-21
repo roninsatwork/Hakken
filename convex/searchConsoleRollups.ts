@@ -4,6 +4,7 @@ import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { LISTS_OF } from "./searchConsoleApi";
+import { shiftDay } from "./searchConsoleDays";
 import {
   COLLECTED_SEARCH_TYPES,
   listValidator,
@@ -218,6 +219,29 @@ export const typesHeld = internalQuery({
   args: { companyWebsiteId: v.id("companyWebsites"), ...countryArg },
   returns: v.array(searchTypeValidator),
   handler: async (ctx, args) => await kindsHeld(ctx, args.companyWebsiteId, args.country),
+});
+
+/**
+ * Whether each search's own lines (`query`) are kept for every day between two that its pairs are (fix 1, 21 November
+ * 2026): a day's first part of each, looked up by the index, a day at a time.
+ */
+export const searchLinesCover = internalQuery({
+  args: { companyWebsiteId: v.id("companyWebsites"), ...countryArg, searchType: searchTypeValidator, from: v.string(), to: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const firstPart = (list: "pair" | "query", day: string) => ctx.db
+      .query("searchConsoleLists")
+      .withIndex("by_hold_country_type_list_grain_start", (q) => q
+        .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType).eq("list", list).eq("grain", "DAY").eq("start", day).eq("part", 0))
+      .first();
+    let held = 0;
+    for (let day = args.from; day <= args.to; day = shiftDay(day, 1)) {
+      if (!(await firstPart("pair", day))) continue;
+      if (!(await firstPart("query", day))) return false;
+      held += 1;
+    }
+    return held > 0;
+  },
 });
 
 /** Whether any day's line of a list is kept for the scope: what a build of the long periods alone needs of them (searchConsolePeriods.ts). */

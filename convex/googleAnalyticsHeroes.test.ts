@@ -76,7 +76,9 @@ async function connected(t: Harness, withConsole = true) {
   await slot(t, ids.siteId, "channel", "NOW", [row(channelKey("Organic Search", "google"), 600, 330, 4), row(channelKey("Direct", "(direct)"), 400, 220, 6)]);
   if (withConsole) {
     // The guide is /guide/ to Search Console and /guide to Analytics: one page.
-    await consoleList(t, ids.siteId, "page", "NOW", [["https://www.acme.test/", 30, 4_000, 30], ["https://www.acme.test/guide/", 12, 2_000, 5], ["https://www.acme.test/service/", 5, 60_000, 14]]);
+    // The click rate a page gets at each position is pages' own (fix 2, 21 November 2026): the contact page sets the top
+    // three's, 70 clicks from 10,000 showings.
+    await consoleList(t, ids.siteId, "page", "NOW", [["https://www.acme.test/", 30, 4_000, 30], ["https://www.acme.test/guide/", 12, 2_000, 5], ["https://www.acme.test/service/", 5, 60_000, 14], ["https://www.acme.test/contact/", 70, 10_000, 2]]);
     await consoleList(t, ids.siteId, "page", "BEFORE", [["https://www.acme.test/service/", 4, 18_000, 15]]);
     // The website's searches: 0.7% clicked in the top three, 0.05% at 11 to 20.
     await consoleList(t, ids.siteId, "query", "NOW", [["acme", 70, 10_000, 2], ["acme services", 10, 20_000, 15]]);
@@ -114,8 +116,9 @@ describe("a landing page's four stages", () => {
     expect(pushed.state).toBe("READY");
     expect(pushed.found).toMatchObject({ page: "/service/", hero: false, marked: 0, google: { shown: 60_000 }, googleBefore: { shown: 18_000 } });
     expect(pushed.found?.problems.map((problem) => problem.kind)).toEqual(["push"]);
-    // Push to page one: 60,000 showings × (0.7% − 0.05%) × 1% × £20.
-    expect(pushed.found?.problems[0].worth).toBeCloseTo(60_000 * (0.007 - 0.0005) * 0.01 * 2_000, 0);
+    // Push to page one: 60,000 showings × (the top three's 0.7% − its own place's 5 in 60,000) × 1% × £20, both pages' own
+    // rates, never searches' (fix 2).
+    expect(pushed.found?.problems[0].worth).toBeCloseTo(60_000 * (0.007 - 5 / 60_000) * 0.01 * 2_000, 0);
     const hero = await user.query(api.googleAnalyticsHeroes.analyticsHeroPage, { siteId, page: "~0" });
     expect(hero.found).toMatchObject({ page: "/", hero: true, problems: [], marked: 3 });
     expect(hero.found?.website.value).toBe(20_000);

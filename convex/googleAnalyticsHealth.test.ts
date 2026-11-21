@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { DAY_JOIN, emptyRow } from "./googleAnalyticsLists";
-import { ELSEWHERE_FLOOR, conversionsElsewhere, copiesAmong, daysAlike, enquiriesUncounted, lookalikeOf, neverHappening, somethingElse, timesByDay } from "./googleAnalyticsHealth";
+import { ELSEWHERE_FLOOR, SHOP_STEP_EVENTS, conversionsElsewhere, copiesAmong, daysAlike, enquiriesUncounted, lookalikeOf, nearlyAlike, neverHappening, somethingElse, timesByDay } from "./googleAnalyticsHealth";
 
 /**
  * Tracking health's bell alerts (docs/plans/active/google-analytics-plan.md
@@ -172,6 +172,27 @@ describe("what each conversion really is", () => {
     expect(copiesAmong(["form_submission", "contact"], seriesOf({ [day(13)]: { contact: 1, form_submission: 1 } }))).toEqual([]);
   });
 
+  test("two events counting nearly the same every day are one thing counted twice, though a day or two sets them apart (fix 7)", () => {
+    // More Handles, October 2026: each sale as purchase and as checkout_complete, 1,205 and 1,218, a few apart most days.
+    // Matching day for day only, check 14 never said so.
+    const sales = seriesOf(Object.fromEntries(Array.from({ length: 20 }, (_, index) => [day(index + 1), {
+      purchase: 38 + (index % 5), checkout_complete: 38 + (index % 5) + (index % 4 === 0 ? 1 : 0), add_to_cart: 560 + index,
+    }])));
+    expect(nearlyAlike(sales.get("purchase")!, sales.get("checkout_complete")!)).toBe(true);
+    expect(copiesAmong(["purchase", "checkout_complete", "add_to_cart"], sales)).toEqual([{ eventName: "purchase", of: "checkout_complete" }]);
+    // Two events of a like size that move apart day by day aren't one thing.
+    const apart = seriesOf(Object.fromEntries(Array.from({ length: 20 }, (_, index) => [day(index + 1), { purchase: index % 2 === 0 ? 20 : 60, newsletter_sign_ups: index % 2 === 0 ? 60 : 20 }])));
+    expect(nearlyAlike(apart.get("purchase")!, apart.get("newsletter_sign_ups")!)).toBe(false);
+    // Too few to judge: a handful on a few days could match by chance.
+    const few = seriesOf({ [day(1)]: { a: 1, b: 1 }, [day(2)]: { a: 2, b: 2 }, [day(5)]: { a: 1, b: 2 } });
+    expect(nearlyAlike(few.get("a")!, few.get("b")!)).toBe(false);
+  });
+
+  test("a shop's steps before a sale are never conversions: adding to a basket or starting checkout (fix 7)", () => {
+    for (const step of ["add_to_cart", "begin_checkout", "view_cart", "view_item"]) expect(SHOP_STEP_EVENTS.has(step)).toBe(true);
+    for (const real of ["purchase", "generate_lead", "contact_us_submit", "newsletter_sign_ups"]) expect(SHOP_STEP_EVENTS.has(real)).toBe(false);
+  });
+
   test("a conversion silent for 90 days on a busy website never happens; a quiet one is judged on 12 months", () => {
     const quarter = new Map([["form_submission", 21]]);
     expect(neverHappening(COUNTED, { visits: 750, times: quarter }, null))
@@ -191,6 +212,8 @@ describe("Events counted twice", () => {
     const connection = await t.run((ctx) => ctx.db.get(connectionId));
     const check = connection?.health?.checks.find((one) => one.check === "COUNTED_TWICE");
     expect(check).toMatchObject({ check: "COUNTED_TWICE", passing: true, names: [], others: [] });
-    expect(connection?.health?.checks).toHaveLength(14);
+    // Fifteen since 21 November 2026: a shop's steps counted as conversions (fix 7), passing with none counted.
+    expect(connection?.health?.checks).toHaveLength(15);
+    expect(connection?.health?.checks.find((one) => one.check === "STEP_COUNTED")).toMatchObject({ passing: true, names: [] });
   });
 });

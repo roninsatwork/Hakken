@@ -454,6 +454,46 @@ describe("collecting", () => {
     expect(await lines()).toContain("16 months, United Kingdom (GBR)");
   });
 
+  test("a search Google showed two of the website's pages for counts once, as Google counts it, its pages from its pairs (fix 1)", async () => {
+    // Google showed /plumbers/ and the home page in the same 60 searches for "plumber leeds": each page counts them, the
+    // search once. Added up from its pairs it read 100 times shown and 8 clicks, at an average place of 3 (21 November 2026,
+    // search-console-and-analytics-data-plan-2026-11-21.md).
+    const { t, siteId, admin } = await setup();
+    const search = (key: string, clicks: number, impressions: number, position: number) => ({ key, clicks, impressions, position });
+    const onPage = (key: string, page: string, clicks: number, impressions: number, position: number) => ({ key, page, clicks, impressions, position });
+    fakeGoogle({ figures: { [property]: { web: { [NEWEST]: {
+      total: row("", 9, 200),
+      query: [search("plumber leeds", 7, 60, 2.2), search("boiler repair", 1, 10, 9)],
+      pair: [onPage("plumber leeds", "https://acme-shop.test/plumbers/", 5, 50, 2), onPage("plumber leeds", "https://acme-shop.test/", 3, 50, 4), onPage("boiler repair", "https://acme-shop.test/boilers/", 1, 10, 9)],
+      page: [row("https://acme-shop.test/plumbers/", 5), row("https://acme-shop.test/", 3), row("https://acme-shop.test/boilers/", 1)],
+      country: [row("gbr", 9)],
+      device: [row("MOBILE", 9)],
+    } } } } });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    const month = { siteId, searchType: "web" as const, from: "2026-09-01", to: NEWEST, period: "thisMonth" as const };
+    type Listed = { key: string; clicks: number; impressions: number; position: number; count: number | null; top: string | null };
+    const keywords = async () => (await admin.query(api.searchConsoleLists.searchConsoleListPage, { ...month, dimension: "query", sort: "impressions", direction: "desc", page: 1, rows: 25 }))
+      .rows.map((one: Listed) => [one.key, one.clicks, one.impressions, Math.round(one.position * 10) / 10, one.count, one.top]);
+    expect(await keywords()).toEqual([
+      ["plumber leeds", 7, 60, 2.2, 2, "https://acme-shop.test/plumbers/"],
+      ["boiler repair", 1, 10, 9, 1, "https://acme-shop.test/boilers/"],
+    ]);
+
+    // A website whose own search lines don't cover every day its pairs do — one being filled in — keeps its pairs' sums
+    // whole until they do, so no period counts some days one way and some the other.
+    await t.run(async (ctx) => {
+      for (const record of await ctx.db.query("searchConsoleLists").collect()) if (record.list === "query") await ctx.db.delete(record._id);
+    });
+    const connection = await connectionOf(t, siteId);
+    await t.action(internal.searchConsoleSettle.rebuildSitePeriods, { connectionId: connection!._id });
+    await finishScheduled(t);
+    expect(await keywords()).toEqual([
+      ["plumber leeds", 8, 100, 3, 2, "https://acme-shop.test/plumbers/"],
+      ["boiler repair", 1, 10, 9, 1, "https://acme-shop.test/boilers/"],
+    ]);
+  });
+
   test("a new website's first run brings its last 90 days, each day one record a list, then its days back to Google's line", async () => {
     const { t, siteId, admin } = await setup();
     fakeGoogle({ figures: figures() });
@@ -477,7 +517,8 @@ describe("collecting", () => {
     // Collection still began where it began: New and lost and Volatility count from there.
     expect(connection?.oldestDay).toBe("2026-06-29");
     expect((await connectionOf(t, siteId))?.daysFrom).toBe("2025-05-26");
-    // A search's clicks are added up from its pairs; the rest of the day's total Google hides.
+    // A search's clicks are Google's own for it, kept apart from its pairs (fix 1, 21 November 2026); the rest of the day's
+    // total Google hides.
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["emergency plumber", 3], ["plumber leeds", 5]]);
     expect(await rowsOf(t, siteId, "page", NEWEST)).toEqual([["https://acme-shop.test/", 8]]);
     expect(await rowsOf(t, siteId, "country", NEWEST)).toEqual([["gbr", 11], ["irl", 1]]);
@@ -489,7 +530,7 @@ describe("collecting", () => {
     // Numbers are stored packed as text (`packNumbers`): read back as the app reads them.
     const lists = (await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect())).map((record) => unpackedPart(record));
     expect(lists.filter((record) => record.start === NEWEST && record.searchType === "web").map((record) => record.list).sort())
-      .toEqual(["appearance", "country", "device", "page", "pair"]);
+      .toEqual(["appearance", "country", "device", "page", "pair", "query"]);
     expect(lists.every((record) => record.grain === "DAY" && record.part === 0)).toBe(true);
     const pair = lists.find((record) => record.list === "pair" && record.start === NEWEST)!;
     // Each page address kept once: the pair's lines point to it (`holdPageRefs.ts`).

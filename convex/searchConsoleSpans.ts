@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { internalQuery, type QueryCtx } from "./_generated/server";
+import { tenantQuery } from "./tenantFunctions";
+import { requireMySite } from "./siteAccess";
 import type { Id } from "./_generated/dataModel";
 import { titlesOf } from "./pageTitles";
 import type { BookNames } from "./searchConsolePeriodBooks";
@@ -31,6 +33,29 @@ export const googleHasDays = internalQuery({
     return await googleHasSpan(ctx, hold._id, args.from, args.to);
   },
 });
+
+/**
+ * The first day Google holds web figures for, within some dates, in the website's main home country, and how many days it
+ * holds in them; null with none (fix 5, 21 November 2026). Google keeps sixteen months, but some websites have none for
+ * stretches inside them: morehandles.co.uk holds nothing from 11 August 2025 to 22 April 2026, so its Last 12 months is
+ * seven months. Every Search Console screen says so when the dates begin well before the first day held.
+ */
+export const searchConsoleFirstDayHeld = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
+  returns: v.union(v.null(), v.object({ day: v.string(), days: v.number() })),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const days = await ctx.db
+      .query("searchConsoleDays")
+      .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", site.hold._id).eq("country", undefined).eq("searchType", "web").gte("day", args.from).lte("day", args.to))
+      // A year and a day at most: the date menu's longest period.
+      .take(MOST_DAYS_HELD);
+    return days.length > 0 ? { day: days[0].day, days: days.length } : null;
+  },
+});
+
+/** Days one look at what is held reads at most: the date menu's longest period, twelve months. */
+const MOST_DAYS_HELD = 367;
 
 /** The pages that moved most, named as the rows on screen are, each with its title where the website has one. */
 export async function namedMovers(

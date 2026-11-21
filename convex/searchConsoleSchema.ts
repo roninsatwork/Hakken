@@ -83,15 +83,23 @@ const figures = {
 
 /**
  * What a kept list is of (plan §14.3): each search with each page it brought
- * people to (`pair` — a search's own totals are added up from these, never
- * kept apart), each page, each country, each device, each kind of search
- * appearance. A page is kept apart from the pairs because Google folds the
- * rare searches it hides into a page's totals.
+ * people to (`pair`), each search alone as Google counts it (`query`), each
+ * page, each country, each device, each kind of search appearance. A page is
+ * kept apart from the pairs because Google folds the rare searches it hides
+ * into a page's totals.
+ *
+ * A search is kept apart from the pairs too since 21 November 2026
+ * (search-console-and-analytics-data-plan-2026-11-21.md, fix 1): added up from
+ * its pairs, one search Google showed several of the website's pages for was
+ * counted once a page — "more handles" in October 2026 read 8,426 times shown
+ * where Google gives 1,109. A search's own figures come from `query`; how many
+ * pages it brought people to, and its top page, still from the pairs.
  */
-export const SEARCH_CONSOLE_LISTS = ["pair", "page", "country", "device", "appearance"] as const;
+export const SEARCH_CONSOLE_LISTS = ["pair", "query", "page", "country", "device", "appearance"] as const;
 export type SearchConsoleList = (typeof SEARCH_CONSOLE_LISTS)[number];
 export const listValidator = v.union(
   v.literal("pair"),
+  v.literal("query"),
   v.literal("page"),
   v.literal("country"),
   v.literal("device"),

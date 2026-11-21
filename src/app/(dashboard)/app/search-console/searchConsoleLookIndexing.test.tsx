@@ -148,7 +148,9 @@ describe("Indexing, the summary", () => {
   it("the chart: the table's reasons day by day, since the checks began, whatever the dates chosen", async () => {
     render(<SearchConsoleIndexingPage />);
     expect(await screen.findByText("Pages not indexed each day")).toBeInTheDocument();
-    expect(screen.getByText("The reasons in the table below, day by day, since the checks began on 17 November.")).toBeInTheDocument();
+    // Pages are still being checked here, so the hint says the line rises as more are (fix 5, 21 November 2026): More
+    // Handles' line went from 4 to 195 in two days while 2,277 of 14,563 pages were checked.
+    expect(screen.getByText("The reasons in the table below, day by day, since the checks began on 17 November. The line rises as more of your pages are checked.")).toBeInTheDocument();
     expect(screen.getByText("Every reason")).toBeInTheDocument();
     expect(screen.queryByText("Nothing to show yet.")).not.toBeInTheDocument();
   });

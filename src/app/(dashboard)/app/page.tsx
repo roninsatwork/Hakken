@@ -1,10 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -280,18 +277,9 @@ function LedgerTag({ tag, tone }: Pick<LedgerRow, "tag" | "tone">) {
 
 export default function AppDashboardPage() {
   const t = useTranslations("dashboard");
+  // Everyone lands here, super admins too: they open Admin from the menu when they want it (Anthony, 21 November 2026:
+  // "remove the auto redirect of super admins to the admin section on first load").
   const router = useRouter();
-  const user = useQuery(api.users.getMe);
-
-  useEffect(() => {
-    if (user && user.role === "SUPER_ADMIN") {
-      const redirected = sessionStorage.getItem("admin_redirected");
-      if (!redirected) {
-        sessionStorage.setItem("admin_redirected", "true");
-        router.push("/admin");
-      }
-    }
-  }, [user, router]);
 
   const layerRows = t.raw("layers.rows") as Item[];
   const capabilities = t.raw("capabilities.items") as Capability[];

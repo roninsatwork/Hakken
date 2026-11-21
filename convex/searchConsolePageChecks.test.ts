@@ -258,6 +258,33 @@ describe("a day of page checks", () => {
     expect(asked).toHaveLength(4);
   });
 
+  test("a token running out mid-round is renewed once, and every page asked with the old one is asked again: the day goes on", async () => {
+    // Pages are asked four at once: when the hour's token runs out they all hear so together. Until 21 November 2026 only
+    // the first was asked again and the day stopped as a sign-in problem (More Handles, 19 and 20 November).
+    const { t, siteId } = await setup([{ page: "/1", clicks: 6 }, { page: "/2", clicks: 5 }, { page: "/3", clicks: 4 }, { page: "/4", clicks: 3 }, { page: "/5", clicks: 2 }, { page: "/6", clicks: 1 }]);
+    const asked: string[] = [];
+    let renewals = 0;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "https://oauth2.googleapis.com/token") {
+        renewals += 1;
+        return Response.json({ access_token: "ya29.renewed", expires_in: 3599 });
+      }
+      const body = JSON.parse(String(init?.body)) as { inspectionUrl: string };
+      asked.push(body.inspectionUrl);
+      // Only the renewed token is still good.
+      if (new Headers(init?.headers).get("Authorization") !== "Bearer ya29.renewed") return new Response("Request had invalid authentication credentials.", { status: 401 });
+      return Response.json({ inspectionResult: { indexStatusResult: { verdict: "PASS", coverageState: "Submitted and indexed" } } });
+    }));
+    await runChecks(t, siteId);
+    expect((await checksOf(t, siteId)).map((row) => row.page).sort()).toEqual(["/1", "/2", "/3", "/4", "/5", "/6"]);
+    expect(await dayOf(t, siteId)).toMatchObject({ indexed: 6, failed: 0 });
+    expect((await dayOf(t, siteId))?.stopped).toBeUndefined();
+    // One renewal for the round, and the four asked with the old token asked once more.
+    expect(renewals).toBe(1);
+    expect(asked).toHaveLength(10);
+  });
+
   test("a page Google fails on waits its turn with its last answer; a whole round failing stops the day", async () => {
     const { t, siteId } = await setup([{ page: "/1", clicks: 9 }, { page: "/2", clicks: 8 }, { page: "/3", clicks: 7 }, { page: "/4", clicks: 6 }, { page: "/5", clicks: 5 }]);
     const asked = fakeGoogle({ "/2": { status: 500 } });

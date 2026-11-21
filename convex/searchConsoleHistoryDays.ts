@@ -223,9 +223,11 @@ export const fetchChartPeriods = internalAction({
 /**
  * A week's or month's Position bands and Brand figures from Google's searches
  * in it (phase 9): each search by its place's band, and its clicks as brand
- * or the rest. Past the top 20 a search counts only when clicked, as the
- * collection keeps a search there only when clicked (or tracked), so the
- * months before collection read like the months after.
+ * or the rest. Every search Google showed counts, past the top 20 too, as
+ * every night's build counts it (`figureOf`, `searchConsoleKeptSums.ts`):
+ * until 21 November 2026 one past the top 20 counted only when clicked, as
+ * the keep rule kept it only then, and that rule went on 18 November
+ * (`searchConsoleKeep.ts`).
  */
 export function periodFigures(rows: ReadonlyArray<{ key: string; clicks: number; impressions: number; position: number }>, brandWords: readonly string[]) {
   const out = { top3: 0, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 0 };
@@ -235,7 +237,7 @@ export function periodFigures(rows: ReadonlyArray<{ key: string; clicks: number;
       if (band === "1-3") out.top3 += 1;
       else if (band === "4-10") out.top10 += 1;
       else if (band === "11-20") out.top20 += 1;
-      else if (row.clicks > 0) out.rest += 1;
+      else out.rest += 1;
     }
     if (isBrand(row.key, brandWords)) out.brandClicks += row.clicks;
     else out.otherClicks += row.clicks;

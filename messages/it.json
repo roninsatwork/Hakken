@@ -15935,6 +15935,7 @@
       "keptNone": "Non arriva niente di nuovo finché non viene ricollegato.",
       "disconnectTitle": "Scollegare Search Console?",
       "searchesLetGo": "Google ha mandato più ricerche di quante ne stiano insieme per gli ultimi 3, 6 o 12 mesi. Le {count} mostrate meno sono fuori da quegli elenchi, ma i tuoi totali le contano ancora.",
+      "partHeld": "Google conserva i dati di questo sito solo dal {day}, quindi queste date coprono {days} giorni.",
       "status": {
         "working": "Collegato e funzionante dal {day}",
         "notUpdating": "Collegato, ma non si aggiorna"
@@ -16058,7 +16059,7 @@
     },
     "competing": {
       "title": "Cannibalizzazione delle parole chiave",
-      "description": "Parole chiave per cui Google mostra due o più delle tue pagine. Una pagina forte di solito va meglio di due.",
+      "description": "Parole chiave per cui Google mostra due o più delle tue pagine. Una pagina forte di solito va meglio di due. Le ricerche del tuo nome e la tua home page sono escluse.",
       "boxes": {
         "keywords": "Parole chiave condivise da due pagine",
         "rule": "Ogni pagina ha avuto almeno 1 impressione su 10",
@@ -16589,6 +16590,7 @@
       "chart": {
         "title": "Pagine non indicizzate ogni giorno",
         "hint": "I motivi nella tabella qui sotto, giorno per giorno, da quando sono iniziati i controlli il {day}.",
+        "hintChecking": "I motivi nella tabella qui sotto, giorno per giorno, da quando sono iniziati i controlli il {day}. La linea sale man mano che vengono controllate altre tue pagine.",
         "hintNone": "I motivi nella tabella qui sotto, giorno per giorno, quando inizieranno i controlli.",
         "show": "Mostra",
         "every": "Ogni motivo",
@@ -19339,7 +19341,8 @@
             "NO_VALUE": "Senza valore",
             "ENQUIRY_UNCOUNTED": "Non contati",
             "SOMETHING_ELSE": "Uguali",
-            "COUNTED_TWICE": "Contati due volte"
+            "COUNTED_TWICE": "Contati due volte",
+            "STEP_COUNTED": "Passi del negozio"
           }
         },
         "addresses": {
@@ -19374,6 +19377,15 @@
           "why": "Se uno si è rotto, mancano le persone che dovrebbe contare. Se è vecchio, non importa.",
           "fix": "Prova ognuno tu stesso, poi cercalo in Google Analytics. Se non compare, è rotto. Se non ti serve più, puoi smettere di contarlo.",
           "about": "Controlla che ogni evento accada ancora.",
+          "affects": "Conversioni"
+        },
+        "STEP_COUNTED": {
+          "name": "Passi del negozio contati come conversioni",
+          "found": "{kinds, plural, =1 {{names} conta come conversione, ma è solo un passo verso una vendita.} other {{names} contano come conversioni, ma sono solo passi verso una vendita.}}",
+          "passing": "Nessun passo del negozio conta come conversione.",
+          "why": "Le tue conversioni sembrano più alte di quanto siano, e anche il tasso di conversione.",
+          "fix": "{kinds, plural, =1 {Smetti di contarlo nella pagina Connessione. Puoi ancora sceglierlo in Passaggi su Prodotti.} other {Smetti di contarli nella pagina Connessione. Puoi ancora sceglierli in Passaggi su Prodotti.}}",
+          "about": "Controlla che nessun passo del negozio, come aggiungere al carrello, conti come conversione.",
           "affects": "Conversioni"
         },
         "COUNTED_TWICE": {

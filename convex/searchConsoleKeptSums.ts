@@ -2,6 +2,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import { shiftDay } from "./searchConsoleDays";
+import { LISTS_OF } from "./searchConsoleApi";
 import type { SearchConsoleList, SearchType } from "./searchConsoleSchema";
 import { lineKeywords } from "./searchConsoleKeywordBooks";
 import { addressesOf, decodeWith, isPageRef } from "./holdPageRefs";
@@ -104,6 +105,12 @@ export type PairPlan = {
   /** The charts' days, weeks and months, when the build writes them. */
   chart: { chartWeeks: number; brandWords: readonly string[]; dayLine: string } | null;
   /**
+   * Each day's keywords worked out for the volatility day and the charts: left out (false) when a search's own lines are
+   * read for them (fix 1, `searchLinesCover`), so the pairs give only the periods' pairs and swaps, and the work is done
+   * once — More Handles' first stage took 440 seconds of its 420 with both (21 November 2026).
+   */
+  keywords?: boolean;
+  /**
    * Keyword cannibalisation's Swaps (20 November 2026): the periods whose every day is kept, in which each keyword's
    * days are counted where Google showed a different page most than on the last day it showed the keyword.
    */
@@ -153,19 +160,23 @@ export class PairStream {
     this.open = this.chartList.filter((period) => period.grain !== "DAY").map((period) => ({ ...period, end: lastDayOf(period.grain, period.start), sums: null }));
   }
 
+  /** Each day a part was read for: a build takes a search's own figures (`query`) only where they cover every day of the pairs. */
+  readonly daysRead = new Set<string>();
+
   /** One kept part of `day`, added into every period it belongs to. Days come oldest first, a day's parts together. */
   add(day: string, packed: Packed): void {
+    this.daysRead.add(day);
     if (day !== this.day) {
       this.closeDay();
       this.closePeriodsBefore(day);
       this.day = day;
-      this.dayKeywords = new KeywordSums(this.keys);
+      this.dayKeywords = this.plan.keywords === false ? null : new KeywordSums(this.keys);
     }
     const part = numbered(packed, this.keys, this.pages);
     if (this.swapCounts.size > 0 && part.pages) this.addDayPages(part.keys, part.pages, part.clicks, part.impressions);
     for (const span of this.plan.pairSpans) if (within(day, span)) addPart(this.pairs.get(spanKey(span))!, part);
     for (const span of this.plan.keywordSpans) if (within(day, span)) addKeywords(this.keywords.get(spanKey(span))!, part);
-    addKeywords(this.dayKeywords!, part);
+    if (this.dayKeywords) addKeywords(this.dayKeywords, part);
     for (const period of this.open) {
       if (day < period.start || day > period.end) continue;
       period.sums ??= new KeywordSums(this.keys);
@@ -257,9 +268,13 @@ export class PairStream {
   }
 
   private closeDay(): void {
-    if (this.day === null || this.dayKeywords === null) return;
+    if (this.day === null) return;
     const day = this.day;
     this.closeSwaps(day);
+    if (this.dayKeywords === null) {
+      this.day = null;
+      return;
+    }
     const standings = this.dayKeywords.standings();
     if (this.before && this.before.day === shiftDay(day, -1)) this.volatility.set(day, dayVolatility(standings, this.before.standings));
     this.before = { day, standings };
@@ -319,18 +334,36 @@ export class ListStream {
   }
 }
 
-/** The pairs' kept days read and added up in one pass (SL1). */
+/**
+ * The pairs' kept days read and added up in one pass (SL1). With `list` "query", each search's own kept lines instead
+ * (fix 1, 21 November 2026): the same stream, its keyword sums, charts and volatility then Google's own figures for a
+ * search, with no pages, so no pairs or swaps are asked of it.
+ */
 export async function streamPairs(
   ctx: ActionCtx,
   companyWebsiteId: Id<"companyWebsites">,
   country: string | undefined,
   searchType: SearchType,
   plan: PairPlan,
+  list: "pair" | "query" = "pair",
 ): Promise<PairStream> {
   const stream = new PairStream(plan);
-  await forEachKeptPart(ctx, companyWebsiteId, country, searchType, "pair", plan.newest, (part) => stream.add(part.start, part.packed));
+  await forEachKeptPart(ctx, companyWebsiteId, country, searchType, list, plan.newest, (part) => stream.add(part.start, part.packed));
   stream.finish();
   return stream;
+}
+
+/**
+ * Whether a build reads each search's own figures, its charts, the fan-out's days and the volatility day from the
+ * search's own kept lines (fix 1, 21 November 2026): only where they are kept for every day the pairs are, so a website
+ * still being filled in keeps its pairs' sums whole and no period mixes the two. Asked before either is read, so neither
+ * list's keywords are worked out twice.
+ */
+export async function searchLinesCover(ctx: ActionCtx, companyWebsiteId: Id<"companyWebsites">, country: string | undefined, searchType: SearchType, newest: string): Promise<boolean> {
+  if (!LISTS_OF[searchType].includes("query") || !LISTS_OF[searchType].includes("pair")) return false;
+  return await ctx.runQuery(internal.searchConsoleRollups.searchLinesCover, {
+    companyWebsiteId, ...(country === undefined ? {} : { country }), searchType, from: shiftDay(newest, 1 - LINES_READ_DAYS), to: newest,
+  });
 }
 
 /** One kept list read and added up into its periods in one pass (SL1). */
@@ -361,10 +394,12 @@ export async function keywordsOnDay(
   stream: PairStream,
   newest: string,
   day: string,
+  /** The lines the stream was read from: a search's own (`query`) or its pairs. */
+  list: "pair" | "query" = "pair",
 ): Promise<KeywordSums> {
   const held = stream.recentKeywords(day);
   if (held) return held;
   const sums = new KeywordSums(stream.keys);
-  await forEachKeptPart(ctx, companyWebsiteId, country, searchType, "pair", newest, (part) => addKeywords(sums, numbered(part.packed, stream.keys, stream.pages)), { from: day, to: day });
+  await forEachKeptPart(ctx, companyWebsiteId, country, searchType, list, newest, (part) => addKeywords(sums, numbered(part.packed, stream.keys, stream.pages)), { from: day, to: day });
   return sums;
 }

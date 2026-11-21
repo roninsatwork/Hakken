@@ -15935,6 +15935,7 @@
       "keptNone": "Nothing new comes in until it's connected again.",
       "disconnectTitle": "Disconnect Search Console?",
       "searchesLetGo": "Google sent more searches for the last 3, 6 or 12 months than fit at once. The {count} shown least are left out of those lists, but your totals still count them.",
+      "partHeld": "Google only holds this website's figures from {day}, so these dates cover {days} days.",
       "status": {
         "working": "Connected and working since {day}",
         "notUpdating": "Connected, but not updating"
@@ -16058,7 +16059,7 @@
     },
     "competing": {
       "title": "Keyword cannibalisation",
-      "description": "Keywords that Google shows two or more of your pages for. One strong page usually does better than two.",
+      "description": "Keywords that Google shows two or more of your pages for. One strong page usually does better than two. Searches for your own name and your home page are left out.",
       "boxes": {
         "keywords": "Keywords two pages share",
         "rule": "Each page got at least 1 in 10 impressions",
@@ -16589,6 +16590,7 @@
       "chart": {
         "title": "Pages not indexed each day",
         "hint": "The reasons in the table below, day by day, since the checks began on {day}.",
+        "hintChecking": "The reasons in the table below, day by day, since the checks began on {day}. The line rises as more of your pages are checked.",
         "hintNone": "The reasons in the table below, day by day, once the checks begin.",
         "show": "Show",
         "every": "Every reason",
@@ -19339,7 +19341,8 @@
             "NO_VALUE": "No value",
             "ENQUIRY_UNCOUNTED": "Not counted",
             "SOMETHING_ELSE": "Matching",
-            "COUNTED_TWICE": "Counted twice"
+            "COUNTED_TWICE": "Counted twice",
+            "STEP_COUNTED": "Shop steps"
           }
         },
         "addresses": {
@@ -19374,6 +19377,15 @@
           "why": "If one has broken, you're missing the people it should count. If it's an old one, it doesn't matter.",
           "fix": "Try each one yourself, then look for it in Google Analytics. If it doesn't show up, it's broken. If you don't need it any more, you can stop counting it.",
           "about": "Checks that each event still happens.",
+          "affects": "Conversions"
+        },
+        "STEP_COUNTED": {
+          "name": "Shop steps counted as conversions",
+          "found": "{kinds, plural, =1 {{names} counts as a conversion, but it's only a step on the way to a sale.} other {{names} count as conversions, but they're only steps on the way to a sale.}}",
+          "passing": "No shop step counts as a conversion.",
+          "why": "Your conversions look higher than they really are, and your conversion rate too.",
+          "fix": "{kinds, plural, =1 {Stop counting it on the Connection page. You can still pick it under Steps on Products.} other {Stop counting them on the Connection page. You can still pick them under Steps on Products.}}",
+          "about": "Checks that no shop step, like adding to a basket, counts as a conversion.",
           "affects": "Conversions"
         },
         "COUNTED_TWICE": {

@@ -47,7 +47,7 @@ import { inBook, termsOf, type StoredPart } from "./searchConsolePeriodTerms";
 
 export { inBook, termsOf, type StoredPart } from "./searchConsolePeriodTerms";
 import { requireMySite } from "./siteAccess";
-import { keywordsOnDay, spanKey, streamList, streamPairs } from "./searchConsoleKeptSums";
+import { keywordsOnDay, searchLinesCover, spanKey, streamList, streamPairs } from "./searchConsoleKeptSums";
 import { chartPeriods, chartReach, daysBetween, daysFrom, lastDayOf, type ChartGrain, type ChartPeriod } from "./utils/searchConsoleChartDays";
 import { CALENDAR_PERIODS, periodSpan as calendarSpan, spanBefore as calendarBefore, ukDay } from "./utils/calendarPeriods";
 
@@ -673,11 +673,12 @@ export async function buildSitePeriods(
     }));
   };
   let settled = new Set<string>();
-  const longSpansOf = () => uniqueSpans(slots.filter((slot) => isLong(slot) && slot.span !== null && !settled.has(slotKey(slot))).map((slot) => slot.span!));
+  const longSpansOf = (nowOnly = false) => uniqueSpans(slots.filter((slot) => isLong(slot) && slot.span !== null && !settled.has(slotKey(slot)) && (!nowOnly || slot.which === "NOW")).map((slot) => slot.span!));
   const tracked = google && slots.some((slot) => isLong(slot) && slot.span !== null) ? await ctx.runQuery(internal.searchConsoleKeep.trackedSearches, { holdId: companyWebsiteId }) : [];
   // `also`: settled slots asked once more for one list, whose span before it didn't keep then (`missingBefore`).
-  const askedOf = async (searchType: SearchType, list: SearchConsoleList, also: ReadonlySet<string> = new Set()) => {
-    const longSpans = uniqueSpans([...longSpansOf(), ...slots.filter((slot) => also.has(slotKey(slot)) && slot.span !== null).map((slot) => slot.span!)]);
+  // `nowOnly`: the periods, not the spans before them, whose pairs nothing reads once their searches are Google's own.
+  const askedOf = async (searchType: SearchType, list: SearchConsoleList, also: ReadonlySet<string> = new Set(), nowOnly = false) => {
+    const longSpans = uniqueSpans([...longSpansOf(nowOnly), ...slots.filter((slot) => also.has(slotKey(slot)) && slot.span !== null).map((slot) => slot.span!)]);
     return google && longSpans.length > 0 ? await longListRows(ctx, google, { searchType, list, country }, longSpans, tracked, options.stopAt, options.held, list === "pair" ? options.carry : undefined) : null;
   };
   // A finished long period's span before, settled before its countries' and devices' were kept (18 November 2026): those
@@ -706,24 +707,28 @@ export async function buildSitePeriods(
   for (const searchType of types) {
     const lists = LISTS_OF[searchType];
     settled = await settledOf(searchType);
-    // Each search added up from the pairs, and each page's searches counted from them.
     const pageCounts = new Map<string, Counts>();
-    // The days kept read once, a day at a time, into every period they count for (search-console-streamed-lists-plan.md,
-    // SL1): the 7 and 30 days, the fan-out's days, the charts, the volatility day. The long periods alone read none.
+    // Each search's own figures from its own lines where they cover the pairs' days; else from its pairs (`searchLinesCover`).
+    const fromSearches = !onlyLong && await searchLinesCover(ctx, companyWebsiteId, country, searchType, newest);
+    const fanOutSpans = searchType === "web" && country === undefined ? FAN_OUT_PERIODS.map((period) => daysSpan(period, newest, oldest)) : [];
+    const chart = { chartWeeks, brandWords: target?.brandWords ?? [], dayLine: firstDayKeptFor(searchType, newest) };
+    // The days kept read once, a day at a time, into every period they count for (SL1). The long periods alone read none.
     const streamed = lists.includes("pair") && !onlyLong ? await streamPairs(ctx, companyWebsiteId, country, searchType, {
-      newest,
-      oldest,
-      pairSpans: shortSpans,
-      keywordSpans: searchType === "web" && country === undefined ? FAN_OUT_PERIODS.map((period) => daysSpan(period, newest, oldest)) : [],
-      chart: { chartWeeks, brandWords: target?.brandWords ?? [], dayLine: firstDayKeptFor(searchType, newest) },
+      newest, oldest, pairSpans: shortSpans,
+      keywordSpans: fromSearches ? [] : fanOutSpans, chart: fromSearches ? null : chart, keywords: !fromSearches,
       // Keyword cannibalisation's Swaps, for the periods every day of which is kept (20 November 2026).
       swapSpans: uniqueSpans(slots.filter((slot) => slot.which === "NOW" && !isLong(slot) && !asNinety(slot) && slot.span).map((slot) => slot.span!)),
     }) : null;
+    const searchLines = fromSearches && streamed ? await streamPairs(ctx, companyWebsiteId, country, searchType, { newest, oldest, pairSpans: [], keywordSpans: uniqueSpans([...shortSpans, ...fanOutSpans]), chart }, "query") : null;
+    const keywordStream = searchLines ?? streamed;
+    const keywordList = searchLines ? "query" as const : "pair" as const;
     const anyPairs = streamed !== null || (lists.includes("pair") && onlyLong && await anyKeptOf(searchType, "pair"));
-    const pairsAsked = anyPairs ? await askedOf(searchType, "pair") : null;
-    const queryFacts = anyPairs ? await factsOf("query", [...(streamed?.keys.texts ?? []), ...keysAsked(pairsAsked, "key")]) : undefined;
+    // The long periods' searches asked of Google as Google counts them, a week at a time, before the pairs, which may pause.
+    const searchesAsked = anyPairs && lists.includes("query") ? await askedOf(searchType, "query") : null;
+    const pairsAsked = anyPairs ? await askedOf(searchType, "pair", undefined, searchesAsked !== null) : null;
+    const queryFacts = anyPairs ? await factsOf("query", [...(streamed?.keys.texts ?? []), ...(searchLines?.keys.texts ?? []), ...keysAsked(pairsAsked, "key"), ...keysAsked(searchesAsked, "key")]) : undefined;
     // The charts are written by the nightly build alone, never the long periods'.
-    const weeks = streamed ? streamed.weeks() : [];
+    const weeks = keywordStream ? keywordStream.weeks() : [];
     if (!onlyLong) await ctx.runMutation(internal.searchConsolePeriods.writeWeeks, {
       companyWebsiteId,
       ...scope,
@@ -751,7 +756,12 @@ export async function buildSitePeriods(
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, []);
         continue;
       }
-      const pairs = isLong(slot) ? rowsFor(pairsAsked, slot.span) : streamed?.pairs.get(spanKey(slot.span))?.rows() ?? [];
+      // A search's own figures: its own lines, or Google's own for a long period, else its pairs' sums. A long period Google
+      // didn't answer stays as built, never half and half; a long span before needs no pairs, its pages read for nothing (5.3).
+      const searchRows: Row[] | undefined = isLong(slot) ? (searchesAsked !== null ? rowsFor(searchesAsked, slot.span) : undefined)
+        : searchLines ? [...(searchLines.keywords.get(spanKey(slot.span))?.summed() ?? [])] : undefined;
+      if (isLong(slot) && searchesAsked !== null && searchRows === undefined) continue;
+      const pairs = isLong(slot) ? rowsFor(pairsAsked, slot.span) ?? (slot.which === "BEFORE" && searchRows ? [] : undefined) : streamed?.pairs.get(spanKey(slot.span))?.rows() ?? [];
       // Google not asked, or not answering: the long period built before stays.
       if (pairs === undefined) continue;
       const queries = bySide(pairs, "query");
@@ -780,7 +790,9 @@ export async function buildSitePeriods(
         searchType,
         "query",
         slot,
-        [...queries.values()].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum })),
+        searchRows
+          ? searchRows.map((row) => ({ key: row.key, clicks: row.clicks, impressions: row.impressions, positionSum: row.positionSum }))
+          : [...queries.values()].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum })),
         // Each search's page count and top page, on the period the screens list: a period before's are read for nothing (5.3).
         slot.which === "NOW" ? queryCounts : undefined,
         queryFacts,
@@ -791,8 +803,8 @@ export async function buildSitePeriods(
     if (searchType === "web" && country === undefined && !onlyLong) {
       for (const period of FAN_OUT_PERIODS) {
         const span = daysSpan(period, newest, oldest);
-        const rows = streamed
-          ? [...(streamed.keywords.get(spanKey(span))?.summed() ?? [])].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
+        const rows = keywordStream
+          ? [...(keywordStream.keywords.get(spanKey(span))?.summed() ?? [])].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
           : null;
         await write(searchType, "query", { period, which: "NOW", span, now: span, long: false }, rows);
       }
@@ -808,8 +820,8 @@ export async function buildSitePeriods(
       for (const which of ["NOW", "BEFORE"] as const) {
         const day = which === "NOW" ? judged : shiftDay(judged, -1);
         const span = { from: day, to: day };
-        const rows = streamed && day >= oldest
-          ? [...(await keywordsOnDay(ctx, companyWebsiteId, country, searchType, streamed, newest, day)).summed()]
+        const rows = keywordStream && day >= oldest
+          ? [...(await keywordsOnDay(ctx, companyWebsiteId, country, searchType, keywordStream, newest, day, keywordList)).summed()]
             .filter((summed) => summed.impressions >= VOLATILITY_IMPRESSIONS)
             .map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
           : null;

@@ -239,11 +239,54 @@ export function copiesAmong(listed: readonly string[], series: ReadonlyMap<strin
   const copies: Array<{ eventName: string; of: string }> = [];
   for (const [at, eventName] of listed.entries()) {
     for (const of of listed.slice(at + 1)) {
-      if (daysAlike(series.get(eventName) ?? NO_DAYS, series.get(of) ?? NO_DAYS) >= COPY_DAYS) copies.push({ eventName, of });
+      const first = series.get(eventName) ?? NO_DAYS;
+      const second = series.get(of) ?? NO_DAYS;
+      if (daysAlike(first, second) >= COPY_DAYS || nearlyAlike(first, second)) copies.push({ eventName, of });
     }
   }
   return copies;
 }
+
+/** Days either event happened on, at least, before two are judged nearly alike: fewer could match by chance. */
+export const NEAR_DAYS = 10;
+/** Times each must happen over those days: a handful could match by chance. */
+export const NEAR_FLOOR = 30;
+/** Days on which the two must be within a tenth of each other (one, at least). */
+export const NEAR_SHARE = 0.8;
+
+/**
+ * Two events that count nearly the same every day (fix 7, 21 November 2026): one thing counted twice under two names
+ * that a stray tag or a returning visitor now and then sets apart, so the days in a row `daysAlike` reads end at once.
+ * More Handles counts each sale as purchase and as checkout_complete: 1,205 and 1,218 in October 2026, a few apart most
+ * days, and check 14 never said so. Each must happen `NEAR_FLOOR` times on `NEAR_DAYS` days or more, their totals within
+ * a twentieth of each other, and on `NEAR_SHARE` of those days within a tenth of each other, or one.
+ */
+export function nearlyAlike(first: Days, second: Days): boolean {
+  const days = [...new Set([...first.keys(), ...second.keys()])].filter((day) => (first.get(day) ?? 0) > 0 || (second.get(day) ?? 0) > 0);
+  if (days.length < NEAR_DAYS) return false;
+  let firstTotal = 0;
+  let secondTotal = 0;
+  let close = 0;
+  for (const day of days) {
+    const a = first.get(day) ?? 0;
+    const b = second.get(day) ?? 0;
+    firstTotal += a;
+    secondTotal += b;
+    if (Math.abs(a - b) <= Math.max(1, Math.round(0.1 * Math.max(a, b)))) close += 1;
+  }
+  if (firstTotal < NEAR_FLOOR || secondTotal < NEAR_FLOOR) return false;
+  return Math.abs(firstTotal - secondTotal) <= 0.05 * Math.max(firstTotal, secondTotal) && close >= NEAR_SHARE * days.length;
+}
+
+/**
+ * A shop's steps before a sale (fix 7): counted as conversions, a basket filled is counted as if it were a sale or an
+ * enquiry. More Handles counted add_to_cart 17,469 times and begin_checkout 5,885 in October 2026, against 1,207 sales,
+ * and its home page read a 100% conversion rate. The shop screens show these as steps.
+ */
+export const SHOP_STEP_EVENTS: ReadonlySet<string> = new Set([
+  "view_item", "view_item_list", "select_item", "add_to_cart", "add_to_wishlist", "remove_from_cart", "view_cart",
+  "begin_checkout", "add_shipping_info", "add_payment_info",
+]);
 
 /** Conversions in 30 days on an address left out before it is named (check 13): one could be a test. */
 export const ELSEWHERE_FLOOR = 3;
@@ -265,7 +308,7 @@ export function conversionsElsewhere(
     .sort((left, right) => right.conversions - left.conversions);
 }
 
-/** The thirteen checks, worked out from what is kept. */
+/** The checks (`HEALTH_CHECKS`), worked out from what is kept. */
 export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalyticsConnections">): Promise<Result[]> {
   const website = await ctx.db.get(connection.websiteId);
   const site = bareHost(website?.host ?? "");
@@ -407,6 +450,10 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
     names: twice.map((pair) => pair.eventName),
     others: twice.map((pair) => pair.of),
   });
+
+  // 15. A shop's steps counted as conversions: a basket filled read as a sale or an enquiry (fix 7, 21 November 2026).
+  const steps = counted.map((event) => event.eventName).filter((name) => SHOP_STEP_EVENTS.has(name));
+  results.push({ check: "STEP_COUNTED", passing: steps.length === 0, names: steps });
 
   return HEALTH_CHECKS.map((check) => results.find((result) => result.check === check)!);
 }

@@ -126,6 +126,8 @@ export type AnalyticsRow = { keys: string[]; clicks: number; impressions: number
  */
 export const GOOGLE_DIMENSIONS: Record<SearchConsoleList, readonly string[]> = {
   pair: ["query", "page"],
+  // Each search once, as Google counts it: the search's own figures (fix 1, 21 November 2026).
+  query: ["query"],
   page: ["page"],
   country: ["country"],
   device: ["device"],
@@ -152,13 +154,14 @@ export const EVERY_COUNTRY_LISTS: ReadonlySet<SearchConsoleList> = new Set(["cou
  * searches — people did not type anything — so no pairs, and no search
  * appearance. Google Images keeps its totals and pages but not its searches
  * (finish-off plan, store less round two, A — agreed 2026-10-05): its
- * search-and-page lines were a fifth of a busy website's storage.
+ * search-and-page lines were a fifth of a busy website's storage. A kind
+ * with searches keeps each search alone as well (`query`, fix 1).
  */
 export const LISTS_OF: Record<SearchType, readonly SearchConsoleList[]> = {
-  web: ["pair", "page", "country", "device", "appearance"],
+  web: ["pair", "query", "page", "country", "device", "appearance"],
   image: ["page", "country", "device", "appearance"],
-  video: ["pair", "page", "country", "device", "appearance"],
-  news: ["pair", "page", "country", "device", "appearance"],
+  video: ["pair", "query", "page", "country", "device", "appearance"],
+  news: ["pair", "query", "page", "country", "device", "appearance"],
   discover: ["page", "country", "device"],
   googleNews: ["page", "country", "device"],
 };

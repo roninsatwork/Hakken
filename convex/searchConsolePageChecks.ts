@@ -436,16 +436,23 @@ export async function checkPagesStepHandler(ctx: ActionCtx, args: StepArgs): Pro
     await close();
     return null;
   }
-  let renewed = false;
+  // A token that ran out is renewed once a step, and every page asked with the old one asked again with the new. The
+  // pages are asked a few at once, so when the hour's token runs out they all hear so together: each waits for the one
+  // renewal rather than stop the day. Until 21 November 2026 only the first was asked again, and the rest stopped the
+  // day as a sign-in problem — More Handles' checks stopped so after 388 pages on 19 November and 1,545 on the 20th
+  // (search-console-and-analytics-data-plan-2026-11-21.md, fix 5).
+  let renewing: Promise<Awaited<ReturnType<typeof accessTokenFor>>> | null = null;
   const ask = async (address: string): Promise<Asked> => {
+    let retried = false;
     for (;;) {
       if (!token.ok) return { ok: false, refusal: "SIGN_IN" };
-      const answer = await callGoogle(INSPECT_URL, token.accessToken, { inspectionUrl: address, siteUrl: target.property, languageCode: "en-US" });
+      const used = token;
+      const answer = await callGoogle(INSPECT_URL, used.accessToken, { inspectionUrl: address, siteUrl: target.property, languageCode: "en-US" });
       if (answer.ok) return { ok: true, found: checkFrom(answer.json, ownHost) };
-      // A token that ran out is renewed once a step, and the page asked again.
-      if (answer.reason === "EXPIRED" && !renewed) {
-        renewed = true;
-        token = await accessTokenFor(ctx, args.connectionId, true);
+      if (answer.reason === "EXPIRED" && !retried) {
+        retried = true;
+        renewing ??= accessTokenFor(ctx, args.connectionId, true).then((fresh) => (token = fresh));
+        await renewing;
         continue;
       }
       return { ok: false, refusal: refusalOf(answer) };

@@ -514,8 +514,9 @@ export async function runStep(
       }
       for (const [index, part] of parts.entries()) {
         // Page addresses as references, from the website's page list read once a step (`holdPageRefs.ts`).
+        // A search alone (`query`) keeps its keyword as a place in the same month's book as the pairs.
         const keys = list === "page" ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys)
-          : list === "pair" ? await keywordPlaces(ctx, state.companyWebsiteId, args.country, day, part.keys) : part.keys;
+          : list === "pair" || list === "query" ? await keywordPlaces(ctx, state.companyWebsiteId, args.country, day, part.keys) : part.keys;
         const pages = part.pages ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.pages) : undefined;
         await ctx.runMutation(internal.searchConsoleSync.writeList, {
           ...where,

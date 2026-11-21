@@ -71,7 +71,10 @@ function fakeGoogle(figures: Figures) {
     for (const [, entry] of days) {
       const rows = ask.dimensions.length === 2
         ? (entry.pair ?? []).map((one) => ({ keys: [one.key, one.page], clicks: one.clicks, impressions: one.impressions }))
-        : (entry[ask.dimensions[0] as "page"] ?? []).map((one) => ({ keys: [one.key], clicks: one.clicks, impressions: one.impressions }));
+        // A search alone (fix 1, 21 November 2026): these days' searches each show one page, so their pairs added up by search.
+        : ask.dimensions[0] === "query"
+          ? (entry.pair ?? []).map((one) => ({ keys: [one.key], clicks: one.clicks, impressions: one.impressions }))
+          : (entry[ask.dimensions[0] as "page"] ?? []).map((one) => ({ keys: [one.key], clicks: one.clicks, impressions: one.impressions }));
       for (const one of rows) {
         const held = sums.get(one.keys.join("|"));
         if (held) {
