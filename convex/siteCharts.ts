@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { listHold, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { checkStarts, dayBefore, latestBands, latestFigures, linkingWebsitesOf, overlayListAi, pointValidator, searchTotalOf, seriesFor, stepValidator, type Step } from "./siteFigures";
 
@@ -28,7 +29,8 @@ const lineValidator = v.object({
 });
 
 /** The site's figures between two days, in steps — and its rivals', when asked for. */
-export const siteSeries = tenantQuery({
+export const siteSeries = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     from: v.string(),
@@ -101,7 +103,8 @@ const figuresValidator = v.object({
 });
 
 /** The site and each tracked rival, side by side, as each stood at its newest check. */
-export const siteAndRivals = tenantQuery({
+export const siteAndRivals = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(figuresValidator),
   handler: async (ctx, args) => await readSiteAndRivals(ctx, args),

@@ -40,7 +40,8 @@ import {
 } from "./utils/searchConsolePacks";
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { VOLATILITY_IMPRESSIONS, completeDays, dayVolatility, periodVolatility, type Volatility } from "./utils/searchConsoleVolatility";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { forgetListBuild, noteListBuild, writeBook } from "./searchConsolePeriodBooks";
 import { FIRST_PARTS_READ } from "./searchConsolePeriodReads";
 import { inBook, termsOf, type StoredPart } from "./searchConsolePeriodTerms";
@@ -304,7 +305,8 @@ const shownPeriodValidator = v.object({
  * `preparing`. A step not built yet — days and months, until the first
  * collection after 2026-10-04 — is `notBuilt`.
  */
-export const searchConsoleChartFigures = tenantQuery({
+export const searchConsoleChartFigures = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,

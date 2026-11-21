@@ -3,7 +3,8 @@ import { v } from "convex/values";
 import { keywordRecordSees } from "./utils/sees/organic";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { appError } from "./utils/appError";
 import { aiEngineValidator } from "./seoAiEngines";
 import { normaliseKeyword } from "./seoJudgments";
@@ -140,7 +141,8 @@ function rankOf(row: Doc<"siteKeywordRanks">, host: string) {
  * searches the site is measured on every day. The screen draws the position
  * history itself, from `searchPositions`.
  */
-export const keywordRecord = tenantQuery({
+export const keywordRecord = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), keyword: v.string() },
   returns: v.object({
     keyword: v.string(),
@@ -363,7 +365,8 @@ export const keywordRecord = tenantQuery({
  * the websites linking to it. Its keywords are the All keywords list narrowed
  * to it (`listKeywords` with `page`), which the screen pages itself.
  */
-export const pageRecord = tenantQuery({
+export const pageRecord = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), page: v.string() },
   returns: v.object({
     page: v.string(),
@@ -557,7 +560,8 @@ const FEATURE_SORTS: ListSorts<{ keyword: string; position: number | null; organ
   volume: { value: (row) => row.volume, first: "desc" },
 };
 
-export const featureKeywords = tenantQuery({
+export const featureKeywords = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     feature: keywordFeatureValidator,
@@ -635,7 +639,8 @@ const SHARED_SORTS: ListSorts<{ keyword: string; theirPosition: number; yourPosi
   theirVisits: { value: (row) => row.theirTraffic, first: "desc" },
 };
 
-export const sharedSearches = tenantQuery({
+export const sharedSearches = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     rivalId: v.id("companyWebsites"),

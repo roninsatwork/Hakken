@@ -1,7 +1,8 @@
 import { v, type Infer, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { slotKey } from "./googleAnalyticsCollect";
@@ -364,7 +365,8 @@ export const visitorMapValidator = v.union(v.null(), v.object({
  * started on that kind of page with their conversions; and each group's
  * classification most landed on, for the table's "Lands most on".
  */
-export const analyticsVisitorMap = tenantQuery({
+export const analyticsVisitorMap = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: visitorMapArgs,
   returns: visitorMapValidator,
   handler: async (ctx, args) => await readVisitorMap(ctx, args),

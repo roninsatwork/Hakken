@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { featureOffCheck } from "./utils/featureSwitchReads";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -105,7 +107,11 @@ export const careStepInternal = internalMutation({
       .withIndex("by_kind_state_next", (q) => q.eq("kind", args.kind).eq("state", "ON"))
       .paginate({ cursor: args.cursor, numItems: CARE_STEP });
     let paused = 0;
+    // A company with Hakken tasks switched off is passed over: its tasks aren't paused, and nobody is told
+    // (features-switches-plan-2026-11-21.md, FS8).
+    const tasksOff = await featureOffCheck(ctx, MENU_FEATURES.hakkenTasks);
     for (const task of page.page) {
+      if (await tasksOff(task.companyId)) continue;
       const reason = (await problemOf(ctx, task, now)) ?? ((await isDuplicate(ctx, task)) ? "DUPLICATE" : null);
       if (!reason) continue;
       await pauseForOwner(ctx, task, reason, now);

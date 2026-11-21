@@ -1,5 +1,6 @@
 import { v, type ObjectType } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { decodePages, isPageRef } from "./holdPageRefs";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -57,7 +58,8 @@ const boxesArgs = { siteId: v.id("companyWebsites"), page: v.string(), period: a
 const boxesValidator = v.union(v.null(), v.object({ product: v.union(v.null(), productValidator), sale: v.union(v.null(), saleValidator) }));
 export type PageBoxes = typeof boxesValidator.type;
 
-export const analyticsPageBoxes = tenantQuery({
+export const analyticsPageBoxes = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: boxesArgs,
   returns: boxesValidator,
   handler: async (ctx, args) => await readPageBoxes(ctx, args),

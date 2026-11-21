@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { companyHasFeature } from "./utils/featureSwitchReads";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -195,6 +197,9 @@ export const agentCollections = internalQuery({
 export async function collectionOf(ctx: { db: QueryCtx["db"] }, connection: Doc<"searchConsoleConnections">, now: number) {
   // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
   if (connection.status !== "CONNECTED" || !connection.property || connection.clearing || connection.switchedOff) return null;
+  // Search Console switched off for this company, for everyone or for it alone: nothing new is fetched, and the
+  // figures so far stay (features-switches-plan-2026-11-21.md, FS8). The daily run and a first collection both ask here.
+  if (!(await companyHasFeature(ctx, connection.companyId, MENU_FEATURES.searchConsole))) return null;
   const website = await ctx.db.get(connection.websiteId);
   const hold = await ctx.db.get(connection.companyWebsiteId);
   const kept = hold ? await countriesKeptReady(ctx, hold) : [];

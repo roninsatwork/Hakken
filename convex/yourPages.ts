@@ -6,7 +6,8 @@ import { readPageKinds } from "./pageKinds";
 import { requireMySite } from "./siteAccess";
 import { readListCopy } from "./siteListCopies";
 import { listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
-import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { inGap, type PageFilter } from "./utils/holdPagesJoin";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import type { SortValue } from "./utils/sortOrder";
@@ -222,7 +223,8 @@ export function yourPagesOrder(sort: Sort | undefined, direction: "asc" | "desc"
  * One page of Your pages: every page once, searched by its address (word
  * starts), narrowed to a figure or a gap and to a group, in a heading's order.
  */
-export const listYourPages = tenantQuery({
+export const listYourPages = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -270,7 +272,8 @@ export const listYourPages = tenantQuery({
  * The first visit to Your pages, before its list was ever built — a website
  * added since, or before the first collection: ask for it now.
  */
-export const ensureYourPages = tenantMutation({
+export const ensureYourPages = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args) => {

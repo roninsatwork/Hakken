@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { UNTAGGED, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
@@ -20,7 +21,8 @@ export const CAMPAIGN_ACTION_ROWS = 10;
 
 const actionsArgs = { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()), cameFrom: v.optional(v.string()) };
 
-export const analyticsCampaignActions = tenantQuery({
+export const analyticsCampaignActions = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: actionsArgs,
   returns: v.object({
     live: v.boolean(),

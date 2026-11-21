@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { listHold, requireMySite } from "./siteAccess";
 import { loadRivalHolds } from "./websiteSiteRows";
 import { askedQuestions } from "./siteFigures";
@@ -57,7 +58,8 @@ async function citedFor(ctx: Reader, websiteId: Id<"websites">, host: string, as
 }
 
 /** A rival's pages AI assistants cite, for the company's own questions: what the rival is building. */
-export const rivalCitedPages = tenantQuery({
+export const rivalCitedPages = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), rivalId: v.id("companyWebsites") },
   returns: v.array(citedRow),
   handler: async (ctx, args) => {
@@ -79,7 +81,8 @@ const COMMON = new Set(["agency", "agencies", "company", "companies", "services"
  * website's pages: the questions its own page is cited for, or, where it is
  * cited for none, those carrying a word of its address.
  */
-export const pageRivalCitedPages = tenantQuery({
+export const pageRivalCitedPages = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.id("companyWebsites"), page: v.string() },
   returns: v.array(citedRow),
   handler: async (ctx, args) => {

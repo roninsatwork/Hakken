@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
-import { tenantAction } from "./tenantFunctions";
+import { moduleAction } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { askRealtime, openSession } from "./googleAnalyticsCollect";
@@ -83,7 +84,8 @@ const answerValidator = v.union(
 /** Named, not worked out: an action that calls `internal` must say what it returns, or its type refers to itself. */
 type LiveAnswer = typeof answerValidator.type;
 
-export const askGoogleAnalyticsRealtime = tenantAction({
+export const askGoogleAnalyticsRealtime = moduleAction({
+  module: MENU_FEATURES.googleAnalytics,
   args: {
     siteId: v.id("companyWebsites"),
     device: v.string(),

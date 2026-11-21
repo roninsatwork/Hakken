@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { featureOffCheck } from "./utils/featureSwitchReads";
 
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -298,7 +300,10 @@ export const listCollectingCompanies = internalQuery({
   handler: async (ctx, args) => {
     const page = await ctx.db.query("companies").paginate({ cursor: args.cursor, numItems: COMPANIES_PER_READ });
     const companies: Array<{ companyId: Id<"companies">; name: string }> = [];
+    // Visibility switched off for a company leaves it out (features-switches-plan-2026-11-21.md, FS8).
+    const visibilityOff = await featureOffCheck(ctx, MENU_FEATURES.visibility);
     for (const company of page.page) {
+      if (await visibilityOff(company._id)) continue;
       const schedule = await companyCollectionSchedule(ctx, company._id);
       if (schedule?.isActive) companies.push({ companyId: company._id, name: company.name });
     }

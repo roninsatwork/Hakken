@@ -10,7 +10,8 @@ import type { Fact } from "./utils/insightFacts";
 import { briefFor } from "./utils/insightBriefs";
 import { BIG_GROUP_LIMIT_MS, COMPETING_ANSWER, agentInputOf, applyAnswer, atTheCap, carryOver, nextPiece, signatureOf, summaryOf, usableWords } from "./utils/insightCompetingAgent";
 import { ownerJudge, ownerTallyLine } from "./insightCompetingJudge";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { appError } from "./utils/appError";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { readPeriod, firstPartOf, holdingPeriod, type ReadPeriod } from "./searchConsolePeriodReads";
@@ -438,7 +439,8 @@ const keptOf = (row: Doc<"insightCompetingGroups">) => ({
 });
 
 /** Keyword cannibalisation: every group of competing pages, biggest first. */
-export const insightsCannibalisation = tenantQuery({
+export const insightsCannibalisation = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), v.object({ siteId: v.id("companyWebsites"), host: v.string(), groups: v.array(keptValidator) })),
   handler: async (ctx, args) => {
@@ -450,7 +452,8 @@ export const insightsCannibalisation = tenantQuery({
 });
 
 /** One group of competing pages, by its owner page. */
-export const insightsCompetingGroup = tenantQuery({
+export const insightsCompetingGroup = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")), key: v.string() },
   returns: v.union(v.null(), v.object({ siteId: v.id("companyWebsites"), host: v.string(), kept: v.union(v.null(), keptValidator), finding: v.union(v.null(), v.object({ headline: v.string(), action: v.string(), checkOn: v.union(v.string(), v.null()) })) })),
   handler: async (ctx, args) => {

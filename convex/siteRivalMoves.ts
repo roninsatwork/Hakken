@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { loadRivalHolds } from "./websiteSiteRows";
 import { latestFigures, seriesFor } from "./siteFigures";
@@ -21,7 +22,8 @@ const RANKINGS_READ = 400;
  * fell in the period, and `lastCheck` when the newest was. What the Market
  * specialist reads as "a rival rising" (§3), shown where the rivals are.
  */
-export const rivalMoves = tenantQuery({
+export const rivalMoves = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator },
   returns: v.array(v.object({
     siteId: v.id("companyWebsites"),

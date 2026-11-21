@@ -1,7 +1,8 @@
 import { v, type Infer } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { slotKey } from "./googleAnalyticsCollect";
@@ -355,7 +356,8 @@ const channelTopValidator = v.object({
  * the span before and the whole website, its visits by page group, the pages
  * behind the change, AI assistants by assistant, and What Hakken sees.
  */
-export const analyticsChannelTop = tenantQuery({
+export const analyticsChannelTop = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...argsOf, channel: v.string() },
   returns: channelTopValidator,
   handler: async (ctx, args) => await readChannelTop(ctx, args),
@@ -543,7 +545,8 @@ async function namedPages(ctx: Reader, holdId: HoldId, box: Seen): Promise<Seen>
  * conversion or not, how many now and before, and the pages those visits
  * landed on most. Never money (Anthony, 2026-11-03: "Take money off").
  */
-export const analyticsChannelEvents = tenantQuery({
+export const analyticsChannelEvents = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...argsOf, channel: v.string() },
   returns: v.object({
     rows: v.array(v.object({
@@ -617,7 +620,8 @@ type ChannelDay = Infer<typeof dayValidator>;
  * dates reach past what is held, the minutes before a new website's two
  * years are filled.
  */
-export const analyticsChannelDays = tenantQuery({
+export const analyticsChannelDays = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...argsOf, channel: v.string() },
   returns: v.object({
     /** The dates chosen, or the span before, still to be asked of Google. */

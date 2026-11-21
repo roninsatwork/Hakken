@@ -55,7 +55,7 @@ const CLIENT_BUILDERS = new Set([
   'superAdminQuery', 'superAdminMutation', 'superAdminAction',
   'publicQuery', 'publicMutation', 'publicAction',
   'softQuery', 'softMutation',
-  'moduleQuery', 'moduleMutation',
+  'moduleQuery', 'moduleMutation', 'moduleAction',
   'governanceQuery', 'governanceMutation', 'governanceAction',
 ]);
 
@@ -71,6 +71,7 @@ const CLIENT_BUILDERS = new Set([
  */
 const NOT_A_BUILDER = new Set([
   'assertTenantAccess',
+  'requireSectionOn',
   'requireTenant',
 ]);
 

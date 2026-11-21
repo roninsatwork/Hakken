@@ -6,7 +6,8 @@ import { accessTokenFor } from "./searchConsoleConnect";
 import { countOtherAsks, usedOrigin } from "./searchConsolePageChecks";
 import { INSPECT_URL, googleDay } from "./utils/pageIndexChecks";
 import { callGoogle } from "./googleApi";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { orphanPagesOf } from "./insightsReading";
 import { changeKindValidator, fingerprintChanges } from "./utils/insightTrack";
@@ -215,7 +216,8 @@ export const checkWebsite = internalAction({
  * the most clicks first; and the pages no other page links to, from the
  * newest crawl. Null for a rival's website, which Hakken doesn't check.
  */
-export const siteMoneyPages = tenantQuery({
+export const siteMoneyPages = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     checkedAt: v.union(v.number(), v.null()),

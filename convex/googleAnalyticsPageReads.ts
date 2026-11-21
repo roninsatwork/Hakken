@@ -1,5 +1,6 @@
 import { v, type Infer, type ObjectType } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { decodePages, isPageRef } from "./holdPageRefs";
 import { normalisePage } from "./utils/pageClassification";
@@ -62,7 +63,8 @@ const PAGE_READING: PartOnly = { events: new Set(["scroll"]), zeros: true };
  * and channels — from the page held over time and the landing pages kept by
  * channel (ga-stored-figures-plan.md SF5); `live` until they are held.
  */
-export const analyticsLandingPage = tenantQuery({
+export const analyticsLandingPage = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsLandingPageArgs,
   returns: v.union(v.null(), v.object({
     address: v.string(),
@@ -226,14 +228,16 @@ const pageMainValidator = v.object({
  * Convex's 1s on More Handles' knob, and the first load after new code went live could time out; each half now has the
  * second to itself.
  */
-export const analyticsPage = tenantQuery({
+export const analyticsPage = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsPageArgs,
   returns: v.union(v.null(), pageMainValidator),
   handler: async (ctx, args) => await readPageMain(ctx, args),
 });
 
 /** Its story (analytics-page-screen-plan.md §2) and What Hakken sees of it: the visits that started on it, who reads it. */
-export const analyticsPageStory = tenantQuery({
+export const analyticsPageStory = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsPageArgs,
   returns: v.union(v.null(), v.object({ story: storyValidator, seen: seenValidator })),
   handler: async (ctx, args) => await readPageStoryPart(ctx, args),
@@ -251,7 +255,8 @@ export const analyticsPageStory = tenantQuery({
  * doesn't know reads as a page with no views. Only the exact page, and null with none in these dates, which is true of it. The whole
  * list is read to find it, once, when the screen opens, so Live doesn't read it each minute for links nobody may press.
  */
-export const analyticsPageKey = tenantQuery({
+export const analyticsPageKey = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsPageArgs,
   returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
@@ -379,7 +384,8 @@ export async function readPageStoryPart(ctx: SiteReader, args: ObjectType<typeof
  * (ga-stored-figures-plan.md SF5); null until held. The website's own line is
  * Overview's (`analyticsChart`).
  */
-export const analyticsPagesDaily = tenantQuery({
+export const analyticsPagesDaily = moduleQuery({
+  module: [MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()), pages: v.array(v.string()) },
   returns: v.object({
     pages: v.array(v.object({

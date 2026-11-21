@@ -1,5 +1,6 @@
 import { v, type Infer } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { askedPlace, listHold, myRivals, requireMySite } from "./siteAccess";
@@ -63,7 +64,8 @@ const angleRowValidator = v.object({
   tracked: v.boolean(),
 });
 
-export const listAngles = tenantQuery({
+export const listAngles = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     rows: v.array(angleRowValidator),
@@ -266,7 +268,8 @@ const pageJudgmentValidator = v.object({
  * search asked for under two questions is one topic under each: they are read
  * together.
  */
-export const keywordAngle = tenantQuery({
+export const keywordAngle = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), keyword: v.string() },
   returns: v.union(v.null(), v.object({
     questions: v.array(v.string()),
@@ -351,7 +354,8 @@ const trackedFanOutRowValidator = v.object({
  * company's own hold. For a competitor these are the queries of the site it is
  * compared with, and nothing can be ticked or unticked.
  */
-export const listTrackedFanOut = tenantQuery({
+export const listTrackedFanOut = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     rows: v.array(trackedFanOutRowValidator),

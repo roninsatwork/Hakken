@@ -1,4 +1,6 @@
 import { v, type Infer } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { featureOffCheck } from "./utils/featureSwitchReads";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -104,6 +106,7 @@ export const teamSetup = internalQuery({
     const websites: Array<typeof websiteValidator.type> = [];
     const waiting: Array<typeof websiteValidator.type> = [];
     const notDue: string[] = [];
+    const insightsOff = await featureOffCheck(ctx, MENU_FEATURES.insights);
     for (const holdId of holdIds) {
       const hold = await ctx.db.get(holdId);
       if (!hold || isTrackedHold(hold)) continue;
@@ -114,6 +117,12 @@ export const teamSetup = internalQuery({
       const schedule = (await ctx.db.get(hold.companyId))?.insightsSchedule;
       if (schedule && !schedule.isActive) {
         notDue.push(`${host} (Insights switched off for its company)`);
+        continue;
+      }
+      // Insights switched off in Features, for everyone or for its company: no run and no quick check
+      // (features-switches-plan-2026-11-21.md, FS8).
+      if (await insightsOff(hold.companyId)) {
+        notDue.push(`${host} (Insights switched off in Features)`);
         continue;
       }
       if (scheduled) {

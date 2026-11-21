@@ -3,7 +3,8 @@ import { mentionsRivalsSees, webMentionsSees, whereListedSees } from "./utils/se
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { groupOwner, requireMySite, type SiteReader } from "./siteAccess";
 import { readFanOutLimits } from "./fanOutLimits";
 import { holdBrandNames } from "./holdProfiles";
@@ -87,7 +88,8 @@ const mentionRowValidator = v.object({
   kind: v.number(), tone: v.number(), strength: v.number(), linked: v.number(),
 });
 
-export const webMentions = tenantQuery({
+export const webMentions = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator },
   returns: v.object({
     names: v.array(v.string()),
@@ -111,7 +113,8 @@ export async function readWebMentions(ctx: SiteReader, args: { siteId: Id<"compa
   };
 }
 
-export const mentionsAgainstRivals = tenantQuery({
+export const mentionsAgainstRivals = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator, step: stepValidator },
   returns: v.object({
     period: calendarPeriodValidator,
@@ -157,7 +160,8 @@ export async function readMentionsAgainstRivals(ctx: SiteReader, args: { siteId:
 
 const placeKindValidator = v.union(v.literal("DIRECTORY"), v.literal("REVIEWS"), v.literal("NEWS"), v.literal("FORUM"), v.literal("VIDEO"), v.literal("REFERENCE"), v.literal("WEBSITE"));
 
-export const whereToGetListed = tenantQuery({
+export const whereToGetListed = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     rows: v.array(v.object({

@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { companyHolds, listHold, requireMySite, type SiteReader } from "./siteAccess";
 import { loadRivalHolds, loadSite, type Site } from "./websiteSiteRows";
 import { askedQuestions } from "./siteFigures";
@@ -256,7 +257,8 @@ async function siteFor(ctx: SiteReader, siteId: Id<"companyWebsites"> | undefine
 }
 
 /** AI search over time, for the website chosen. */
-export const insightsAiSearch = tenantQuery({
+export const insightsAiSearch = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), aiSearchValidator),
   handler: async (ctx, args) => {

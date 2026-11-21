@@ -4,7 +4,7 @@ import path from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_COMPANY_MODULE_KEYS } from "@/convex/utils/coreModules";
+import { DEFAULT_COMPANY_MODULE_KEYS, MENU_FEATURE_KEYS } from "@/convex/utils/coreModules";
 import SidebarNavigation from "./SidebarNavigation";
 
 /**
@@ -166,8 +166,10 @@ function renderFor(role: string, pathname: string) {
     // A workspace with everything, which is what the migration makes of every
     // company that existed before capabilities could be withheld — so these
     // snapshots keep proving the navigation is unchanged for a full workspace.
+    // The menu features are on unless switched off (features-switches-plan-2026-11-21.md),
+    // so the server's answer carries all seven.
     if (queryRef === "companies:getMyWorkspaceModules") {
-      return { companyName: "Acme", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] };
+      return { companyName: "Acme", enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS, ...MENU_FEATURE_KEYS] };
     }
     return undefined;
   });
@@ -198,6 +200,9 @@ describe("sidebar navigation characterisation", () => {
   // Calls, Reception, Reports, Properties, workspace Governance) now wait for
   // the workspace's module list, so a signed-out render no longer offers
   // links that would only bounce. The signed-in snapshots above are untouched.
+  // Updated again 2026-11-21 for the same reason: the seven menu features
+  // (features-switches-plan-2026-11-21.md) wait for the list too, so a
+  // signed-out render offers only Dashboard, Ask Hakken, Reading room and Usage.
   it("signed-out navigation is unchanged", () => {
     useQueryMock.mockImplementation(() => undefined);
     vi.mocked(usePathname).mockReturnValue("/app");

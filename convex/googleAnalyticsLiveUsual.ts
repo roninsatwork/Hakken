@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { slotKey, splitEventHourKey, splitTotalHourKey } from "./googleAnalyticsLists";
@@ -152,7 +153,8 @@ export async function readLiveUsual(ctx: SiteReader, args: { siteId: Id<"company
   };
 }
 
-export const analyticsLiveUsual = tenantQuery({
+export const analyticsLiveUsual = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: usualArgs,
   returns: usualValidator,
   handler: async (ctx, args) => await readLiveUsual(ctx, args),

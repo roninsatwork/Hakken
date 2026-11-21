@@ -1,7 +1,8 @@
 import { v, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { splitChannelKey } from "./googleAnalyticsLists";
@@ -120,7 +121,8 @@ const itemsBoughtIn = (rows: readonly ProductRow[]) => rows.reduce((sum, row) =>
 const eventFigureValidator = v.object({ eventName: v.string(), visits: v.number(), visitsBefore: v.union(v.number(), v.null()) });
 
 /** Products above its table: the steps, the sale, the boxes' figures and What Hakken sees. */
-export const analyticsProducts = tenantQuery({
+export const analyticsProducts = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsProductsArgs,
   returns: v.union(v.null(), v.object({
     shop: v.boolean(),
@@ -207,7 +209,8 @@ const CHART_ROWS = 10;
 const chartArgs = { ...filterArgs, category: v.optional(v.string()) };
 
 /** The products chart's four views (board "The products chart, ready to reuse"), for one category or all. */
-export const analyticsProductChart = tenantQuery({
+export const analyticsProductChart = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: chartArgs,
   returns: v.object({
     left: v.array(shownValidator),
@@ -307,7 +310,8 @@ function categoriesAddedUp(rows: readonly ProductRow[], total: number): Shown[] 
 }
 
 /** One page of the products or categories, counted exactly. */
-export const analyticsProductList = tenantQuery({
+export const analyticsProductList = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...listArgs, ...listPageArgs },
   returns: v.object({
     rows: v.array(shownValidator),
@@ -328,7 +332,8 @@ export const analyticsProductList = tenantQuery({
 });
 
 /** Every product or category, in the order on screen: its download. */
-export const analyticsProductListAll = tenantQuery({
+export const analyticsProductListAll = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: listArgs,
   returns: v.object({ rows: v.array(shownValidator) }),
   handler: async (ctx, args) => {
@@ -393,7 +398,8 @@ export function soldOnPage(name: string, address: string): boolean {
 }
 
 /** The page a product is sold on, as its own screen's key: one read when a row is clicked. */
-export const analyticsProductPage = tenantQuery({
+export const analyticsProductPage = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...filterArgs, name: v.string() },
   returns: v.union(v.null(), v.object({ key: v.string() })),
   handler: async (ctx, args) => {

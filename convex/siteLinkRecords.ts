@@ -3,7 +3,8 @@ import { anchorRecordSees, domainRecordSees } from "./utils/sees/backlinks";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { referringDomainNamed } from "./siteReferringDomainParts";
 import { anchorNamed } from "./siteLinkGroupParts";
@@ -125,7 +126,8 @@ async function linksBy(
  * One website linking to this site: how strong it is, how many links and
  * pages it has pointing here, and each of its links in full.
  */
-export const linkingWebsiteRecord = tenantQuery({
+export const linkingWebsiteRecord = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), domain: v.string() },
   returns: v.object({
     domain: v.string(),
@@ -201,7 +203,8 @@ export const linkingWebsiteRecord = tenantQuery({
  * uses them, strongest linking website first. The empty anchor is a link with
  * no words: an image.
  */
-export const anchorRecord = tenantQuery({
+export const anchorRecord = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), anchor: v.string() },
   returns: v.object({
     anchor: v.string(),

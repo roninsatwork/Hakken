@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { tenantAction } from "./tenantFunctions";
+import { moduleAction } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { isTrackedHold } from "./utils/websitePairing";
 import { mainConsoleCountry } from "./searchConsoleCountries";
@@ -124,7 +125,8 @@ export function funnelAsk(event: string, period: string, device: string, country
  * says Google could not answer rather than asking again and again. Answers
  * whether it was asked, or why not.
  */
-export const askEventFunnel = tenantAction({
+export const askEventFunnel = moduleAction({
+  module: MENU_FEATURES.googleAnalytics,
   args: {
     siteId: v.id("companyWebsites"),
     period: analyticsPeriodValidator,
@@ -183,7 +185,8 @@ export const customTarget = internalQuery({
  * night's asks, inside the website's allowance (openSession); a refusal stops the build and is said, never retried.
  * The lists land under the custom key, so every screen reads them as it reads a period's.
  */
-export const prepareAnalyticsCustom = tenantAction({
+export const prepareAnalyticsCustom = moduleAction({
+  module: MENU_FEATURES.googleAnalytics,
   args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
   returns: v.object({ building: v.boolean(), problem: v.union(v.null(), v.literal("NOT_CONNECTED"), v.literal("GOOGLE_BUSY"), v.literal("GOOGLE_REFUSED")) }),
   handler: async (ctx, args): Promise<{ building: boolean; problem: null | "NOT_CONNECTED" | "GOOGLE_BUSY" | "GOOGLE_REFUSED" }> => {

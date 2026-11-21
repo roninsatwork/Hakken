@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantAction, tenantQuery } from "./tenantFunctions";
+import { moduleAction, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { websiteIconUrl } from "./websiteIcons";
 import { appError } from "./utils/appError";
@@ -73,7 +74,8 @@ const shareOf = (bing: number, google: number | null) => (google === null || bin
 // ---------------------------------------------------------------------------
 
 /** The company's own websites in the Bing Webmaster section: each with last month on Bing, beside Google's (calendar-periods-plan.md, rule 7). */
-export const bingSites = tenantQuery({
+export const bingSites = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: {},
   returns: v.array(v.object({
     siteId: v.id("companyWebsites"),
@@ -207,7 +209,8 @@ const totalsValidator = v.object({ clicks: v.number(), impressions: v.number() }
  * ending on Bing's newest, beside Google's for the same days, and week by
  * week Bing's share of the clicks from both.
  */
-export const bingPerformance = tenantQuery({
+export const bingPerformance = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites"), period: bingPeriodArgValidator },
   returns: v.union(v.null(), v.object({
     from: v.string(),
@@ -479,7 +482,8 @@ const summaryValidator = v.object({
 });
 
 /** A page of Keywords or Pages — or of Bing against Google — searched, filtered, sorted and paged on the server. */
-export const bingListPage = tenantQuery({
+export const bingListPage = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: { ...listArgs, page: v.number(), rows: v.number() },
   returns: v.object({
     rows: v.array(shownRowValidator),
@@ -518,7 +522,8 @@ export const bingListPage = tenantQuery({
 });
 
 /** Every row of a list, named, in the order on screen: its download. */
-export const bingListAll = tenantQuery({
+export const bingListAll = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: listArgs,
   returns: v.array(shownRowValidator),
   handler: async (ctx, args) => {
@@ -586,7 +591,8 @@ export async function readListSeen(ctx: { db: QueryCtx["db"] }, holdId: Id<"comp
 }
 
 /** A Bing list read whole for the eye: Keywords, Pages and Bing against Google hand it beside their table's page. */
-export const bingListSeen = tenantQuery({
+export const bingListSeen = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites"), list: v.union(v.literal("query"), v.literal("page")), period: bingPeriodArgValidator },
   returns: v.union(v.null(), v.object({
     from: v.string(),
@@ -622,7 +628,8 @@ export const bingListSeen = tenantQuery({
  * Google's: `ref` is its place in the website's Bing book, or its page
  * reference, as the lists give it.
  */
-export const bingRecord = tenantQuery({
+export const bingRecord = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites"), list: v.union(v.literal("query"), v.literal("page")), ref: v.string(), period: v.optional(bingPeriodArgValidator) },
   returns: v.union(v.null(), v.object({
     key: v.string(),
@@ -683,7 +690,8 @@ export const bingRecord = tenantQuery({
 const liveRowValidator = v.object({ key: v.string(), clicks: v.number(), impressions: v.number(), position: v.union(v.number(), v.null()) });
 
 /** A keyword's pages, or a page's keywords, as Bing gave them when its screen opened; null until asked. */
-export const bingLiveRows = tenantQuery({
+export const bingLiveRows = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites"), ask: v.string() },
   returns: v.union(v.null(), v.array(liveRowValidator)),
   handler: async (ctx, args) => {
@@ -720,7 +728,8 @@ export const keepLive = internalMutation({
  * pages or the page's keywords, and hold the answer until the next collection
  * (§4.1): its rows are its weeks added up.
  */
-export const askBingLive = tenantAction({
+export const askBingLive = moduleAction({
+  module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites"), list: v.union(v.literal("query"), v.literal("page")), key: v.string() },
   returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, args) => {
@@ -807,7 +816,8 @@ const crawlTotals = (days: readonly { crawled: number; errors: number; blocked: 
 const crawlTotalsValidator = v.object({ crawled: v.number(), errors: v.number(), blocked: v.number() });
 
 /** How Bing read the website day by day, and each money page in its index beside Google's. */
-export const bingCrawling = tenantQuery({
+export const bingCrawling = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites"), period: bingPeriodArgValidator },
   returns: v.union(v.null(), v.object({
     from: v.string(),

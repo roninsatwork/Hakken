@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { listHold, requireMySite, SITE_PAGE_MAX } from "./siteAccess";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { keywordStanding, readKeywordCopy, type KeywordCopyRow } from "./siteKeywordCopy";
@@ -176,7 +177,8 @@ const KEYWORD_SORTS: ListSorts<KeywordCopyRow, "keyword" | "position" | "change"
  * by status, and those still held from an older check only with `older` — a
  * list of what a site ranks for should not end in everything it used to.
  */
-export const listKeywords = tenantQuery({
+export const listKeywords = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -237,7 +239,8 @@ export const listKeywords = tenantQuery({
  * Only for the rows on screen — one point read each — so comparing two dates
  * never reads either date in full.
  */
-export const keywordsOnDay = tenantQuery({
+export const keywordsOnDay = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), day: v.string(), keywords: v.array(v.string()) },
   returns: v.array(v.object({
     keyword: v.string(),
@@ -300,7 +303,8 @@ const MOVE_SORTS: ListSorts<KeywordCopyRow, "keyword" | "fromTo" | "change" | "v
  * biggest move first; new and lost searches, which have no move to measure,
  * A to Z, as they always have.
  */
-export const listMoves = tenantQuery({
+export const listMoves = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -363,7 +367,8 @@ const PAGE_SORTS: ListSorts<PageCopyRow, "page" | "traffic" | "keywords" | "best
  * the page's classification (`pageKinds.ts`): every page is classified in
  * memory, by the caller's own hold, to filter by one.
  */
-export const listPages = tenantQuery({
+export const listPages = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -451,7 +456,8 @@ export const listPages = tenantQuery({
 });
 
 /** The site's folders: pages, keywords and page-one results in each. */
-export const listSections = tenantQuery({
+export const listSections = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     rows: v.array(v.object({
@@ -501,7 +507,8 @@ const PLACES_KNOWN = 100;
  * the table counts it (the searches the newest check found). Searches and estimated visitors only, never what a click
  * costs (Anthony, 2026-11-03: "Yes, all of it").
  */
-export const keywordFigures = tenantQuery({
+export const keywordFigures = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     day: v.union(v.string(), v.null()),
@@ -575,7 +582,8 @@ export const keywordFigures = tenantQuery({
  * with its pages, searches and visitors, over the whole list rather than the page on screen. Pages not sorted yet are
  * marked so, as housekeeping no finding names (Anthony, 2026-11-03, on the Visits eye).
  */
-export const pageFigures = tenantQuery({
+export const pageFigures = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     pages: v.number(),

@@ -6,6 +6,7 @@ import { aiEngineValidator } from "./seoAiEngines";
 import { answerChartValidator } from "./utils/assistantCharts";
 import { lookupValidator } from "./utils/assistantLookups";
 import { billingTables } from "./billingSchema";
+import { featureSwitchesTables } from "./featureSwitchesSchema";
 import { uploadTables } from "./uploadSchema";
 import { siteTables } from "./siteSchema";
 import { searchConsoleTables } from "./searchConsoleSchema";
@@ -49,6 +50,7 @@ export const opportunityHeadlineValidator = v.object({
 export default defineSchema({
   ...authTables,
   ...billingTables,
+  ...featureSwitchesTables,
   ...uploadTables,
   ...siteTables,
   ...autoSetupTables,

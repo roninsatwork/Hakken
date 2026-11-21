@@ -5,7 +5,8 @@ import { internalMutation, type ActionCtx } from "./_generated/server";
 import { noteWebsitePagesChanged } from "./holdPages";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { placesWatching } from "./siteRankings";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getErrorMessage } from "./utils/lang";
 
 /**
@@ -236,7 +237,8 @@ export const writeCrawl = internalMutation({
 });
 
 /** The newest finished crawl of the site: the Site audit page. Null until the first. */
-export const siteAudit = tenantQuery({
+export const siteAudit = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     day: v.string(),

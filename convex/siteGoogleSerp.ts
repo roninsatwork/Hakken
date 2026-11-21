@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { listHold, listWebsiteId, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { asOfListCheck, searchStats, type StandingStats } from "./siteGoogle";
 import { serpPagesKeptFrom } from "./seoCollectionPolicy";
@@ -96,7 +97,8 @@ const PAGE_ONE = 10;
  * Google's full page is kept has its position from the positions kept, and
  * nobody above (`pageKept` false).
  */
-export const listAbove = tenantQuery({
+export const listAbove = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({
     keyword: v.string(),
@@ -162,7 +164,8 @@ export async function readListAbove(ctx: SiteReader, args: { siteId: Id<"company
  * Overview, a map pack, a featured snippet, "People also ask" — and whether
  * the site is in the ones that name websites.
  */
-export const listFeatures = tenantQuery({
+export const listFeatures = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     searches: v.array(v.object({
@@ -223,7 +226,8 @@ export async function readListFeatures(ctx: SiteReader, args: { siteId: Id<"comp
  * "People also ask" questions and related searches from the site's searches'
  * results pages, each once, with the searches it came up on.
  */
-export const listQuestions = tenantQuery({
+export const listQuestions = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     ...listWithCut(v.object({

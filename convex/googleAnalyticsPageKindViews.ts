@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
@@ -29,7 +30,8 @@ const pageKindViewsArgs = {
   shopApart: v.optional(v.boolean()),
 };
 
-export const analyticsPageKindViews = tenantQuery({
+export const analyticsPageKindViews = moduleQuery({
+  module: [MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: pageKindViewsArgs,
   returns: v.union(v.null(), v.object({
     /** One device's page list not built yet: the next collection builds it. */

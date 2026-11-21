@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { pointsBetween } from "./positionHistory";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { listHold, listWebsiteId, requireMySite, type SiteReader } from "./siteAccess";
 import { holdFirstCheck, holdSearch, holdSearches } from "./holdLists";
 import { searchVerdict, searchVerdictValidator } from "./utils/trackingVerdicts";
@@ -106,7 +107,8 @@ export async function searchStandings(
   }));
 }
 
-export const listSearches = tenantQuery({
+export const listSearches = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({
     keyword: v.string(),
@@ -155,7 +157,8 @@ export async function readListSearches(ctx: SiteReader, args: { siteId: Id<"comp
  * daily, whatever the step). A position is a level, so a week or month takes
  * its last day's, as every Sites chart's levels do (`seriesFor`).
  */
-export const searchPositions = tenantQuery({
+export const searchPositions = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), keywords: v.array(v.string()), from: v.string(), to: v.string(), step: stepValidator },
   returns: v.array(v.object({
     keyword: v.string(),

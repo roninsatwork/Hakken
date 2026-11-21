@@ -7,7 +7,8 @@ import { requireMySite } from "./siteAccess";
 import { checkStarts } from "./siteFigures";
 import { keywordStanding, readKeywordCopy, type KeywordCopy } from "./siteKeywordCopy";
 import { heldTo, listWithCut } from "./siteListPages";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { bandForPosition, type RankBand } from "./utils/siteShapes";
 
 /**
@@ -68,7 +69,8 @@ async function readNewest(ctx: QueryCtx, websiteId: Id<"websites">, place: numbe
   return { copy, start };
 }
 
-export const bandMoves = tenantQuery({
+export const bandMoves = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     /** The newest check, and the one before it the moves are counted from. */
@@ -150,7 +152,8 @@ const MOVED_KEPT = 5_000;
  * first: all of them, or one square of the grid — from one band (or not
  * ranking) to another. Sent whole, for the page to sort, page and download.
  */
-export const listBandMoves = tenantQuery({
+export const listBandMoves = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     from: v.optional(fromValidator),

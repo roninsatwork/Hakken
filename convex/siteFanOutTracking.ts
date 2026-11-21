@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { tenantMutation } from "./tenantFunctions";
+import { moduleMutation } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { listedAlready, queueFirstChecks, tick, untick } from "./promptFanOut";
 import { readSearchPhrase } from "./websiteCanonical";
@@ -24,7 +25,8 @@ const MAX_WORDINGS = 50;
  * Anyone in the company who can open the site may do it, as with every Sites
  * page; only on the company's own website, never on a competitor's list.
  */
-export const trackSiteFanOutQuery = tenantMutation({
+export const trackSiteFanOutQuery = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     prompt: v.string(),

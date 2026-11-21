@@ -1,7 +1,8 @@
 import { readDayPoints } from "./googleAnalyticsHistory";
 import { v, type ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -37,7 +38,8 @@ const spanValidator = v.union(v.null(), v.object({ from: v.string(), to: v.strin
 const pointValidator = v.object({ day: v.string(), lastDay: v.optional(v.string()), new: v.number(), returning: v.number() });
 type Point = { day: string; lastDay?: string; new: number; returning: number };
 
-export const analyticsVisitors = tenantQuery({
+export const analyticsVisitors = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsVisitorsArgs,
   returns: v.union(v.null(), v.object({
     /** Visitors' lists not built yet: they come in with the next collection. */
@@ -138,7 +140,8 @@ export async function readVisitors(ctx: SiteReader, args: ObjectType<typeof anal
  * SF14), read on every device's dates. Its own read beside the boxes', as the two together came within a quarter of a
  * second of Convex's limit on morehandles.co.uk (0.78s, 3 November 2026).
  */
-export const analyticsVisitorDays = tenantQuery({
+export const analyticsVisitorDays = moduleQuery({
+  module: [MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: analyticsVisitorsArgs,
   returns: v.union(v.null(), v.object({
     points: v.array(pointValidator),
@@ -170,7 +173,8 @@ const visitorBarsArgs = { ...analyticsVisitorsArgs, list: v.union(...VISITOR_LIS
  * group Google gives, the unknown among them — the screen leaves those out where Google places only some (age,
  * gender, interests) and says how many it placed. Nothing is asked of Google: both spans are kept.
  */
-export const analyticsVisitorBars = tenantQuery({
+export const analyticsVisitorBars = moduleQuery({
+  module: [MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: visitorBarsArgs,
   returns: v.union(v.null(), v.object({
     /** One device's list not built yet: the next collection builds it. */
@@ -214,7 +218,8 @@ const EYE_GROUPS = 8;
  * as a reader can switch between them, so its code finds what moved in any (on morehandles.co.uk, October 2026, the one
  * list on screen moved too little for any finding). Nothing is asked of Google.
  */
-export const analyticsVisitorGroups = tenantQuery({
+export const analyticsVisitorGroups = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsVisitorsArgs,
   returns: v.union(v.null(), v.array(v.object({
     list: v.union(...VISITOR_LISTS.map((list) => v.literal(list))),

@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { companyHasFeature, featureOffCheck } from "./utils/featureSwitchReads";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -72,9 +74,13 @@ export const agentCollections = internalQuery({
     }
     const now = Date.now();
     const out: Site[] = [];
+    const featureOff = await featureOffCheck(ctx, MENU_FEATURES.bingWebmaster);
     for (const connection of connected.sort((left, right) => (left.lastCollectedAt ?? 0) - (right.lastCollectedAt ?? 0))) {
       // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
       if (!connection.site || connection.clearing || connection.switchedOff) continue;
+      // Switched off for this company, for everyone or for it alone: nothing new is fetched, and the figures so far
+      // stay (features-switches-plan-2026-11-21.md, FS8).
+      if (await featureOff(connection.companyId)) continue;
       if (connection.collecting && collectingNow(await ctx.db.get(connection.collecting.runId), now)) continue;
       const website = await ctx.db.get(connection.websiteId);
       out.push({ connectionId: connection._id, companyId: connection.companyId, host: website?.displayHost ?? website?.host ?? connection.site, site: connection.site });
@@ -127,6 +133,9 @@ export const runBingCollectorNow = internalAction({
 async function beginSiteRun(ctx: MutationCtx, agentId: Id<"agents">, site: Site, delayMs: number): Promise<Id<"agentRuns"> | null> {
   const connection = await ctx.db.get(site.connectionId);
   if (!connection || connection.status !== "CONNECTED" || connection.site !== site.site || connection.clearing || connection.switchedOff) return null;
+  // Bing Webmaster switched off for this company: no run, not even a first collection on connecting
+  // (features-switches-plan-2026-11-21.md, FS8).
+  if (!(await companyHasFeature(ctx, connection.companyId, MENU_FEATURES.bingWebmaster))) return null;
   const now = Date.now();
   const runId = await ctx.db.insert("agentRuns", {
     agentId,

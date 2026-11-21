@@ -49,6 +49,7 @@ describe("system settings menu", () => {
       "/admin/settings/limits",
       // And another: the page types every classification picks from (classification-types-plan.md, CT1).
       "/admin/settings/classification",
+      "/admin/settings/features",
     ]));
   });
 

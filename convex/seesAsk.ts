@@ -3,7 +3,7 @@ import { creditSeesPress } from "./creditHooks";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
-import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, type TenantMutationCtx } from "./tenantFunctions";
+import { requireSectionOn, superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, type TenantMutationCtx } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
@@ -13,7 +13,7 @@ import { weekOf } from "./insightsTeam";
 import { creditBalance, ensurePlanBatch, readCreditPrice } from "./creditLedger";
 import { creditsForUnits } from "./creditKinds";
 import { pageDataFor, pageFacts } from "./utils/sees/pageData";
-import { seesScreenFor } from "./utils/sees/screens";
+import { SEES_SECTION_FEATURE, seesScreenFor } from "./utils/sees/screens";
 import { seesStageRowValidator, seesStageValidator, withStage } from "./utils/sees/stages";
 
 /**
@@ -93,6 +93,8 @@ async function startPress(ctx: TenantMutationCtx, args: ObjectType<typeof seesAs
   const now = Date.now();
   const screen = seesScreenFor(args.screen);
   if (!screen) throw appError("INVALID_INPUT", "That page has no eye.");
+  // The eye is shared by every section, so it checks the section it was pressed on, as that section's screens do.
+  await requireSectionOn(ctx, SEES_SECTION_FEATURE[screen.section]);
   if (!screen.writes) throw appError("INVALID_INPUT", "That page's words are the team's own: pressing writes nothing new.");
   const data = args.data !== undefined ? pageDataFor(args.data, args.screen) : undefined;
   // The page's own facts, or its figures keyed as the writer will name them.
@@ -156,6 +158,9 @@ export const seesAnswer = tenantQuery({
   returns: v.union(v.null(), answerValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
+    // A key starts with its screen ("searchConsole.keywords|…"), whose section's switch it answers to.
+    const screen = seesScreenFor(args.key.split(/[?|]/)[0] ?? "");
+    if (screen) await requireSectionOn(ctx, SEES_SECTION_FEATURE[screen.section]);
     const row = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", site.hold._id).eq("key", args.key)).first();
     if (!row) return null;
     // An answer past its day reads as none: the next press writes afresh.

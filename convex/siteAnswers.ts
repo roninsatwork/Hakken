@@ -6,7 +6,8 @@ import { askedPlace, listHold, requireMySite } from "./siteAccess";
 import { holdBrandNames } from "./holdProfiles";
 import { holdQuestion, holdQuestions } from "./holdLists";
 import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { appError } from "./utils/appError";
 import { answerStance } from "./utils/siteShapes";
 import { wordStartMatcher, wordsOf } from "./utils/wordStarts";
@@ -170,7 +171,8 @@ const stanceValidator = v.union(
 );
 
 /** The questions the site is measured on, with the engines asked, and the names it goes by. */
-export const answerQuestions = tenantQuery({
+export const answerQuestions = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     questions: v.array(v.object({ prompt: v.string(), engines: v.array(aiEngineValidator), isActive: v.boolean() })),
@@ -240,7 +242,8 @@ const ANSWER_SORTS: ListSorts<AnswerEntry, "day"> = {
  * kept 90 days. A search reads the wording, so it finds answers of those 90
  * days.
  */
-export const listAnswers = tenantQuery({
+export const listAnswers = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -368,7 +371,8 @@ const SEARCHES_SHOWN = 25;
  * An answer whose wording is no longer kept (90 days) is opened by its own
  * id: no text, how it treated the site, and the sources its citations kept.
  */
-export const answerRecord = tenantQuery({
+export const answerRecord = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), answerId: answerIdValidator },
   returns: v.union(v.object({
     prompt: v.string(),

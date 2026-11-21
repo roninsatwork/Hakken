@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { bucketOf, stepValidator } from "./siteFigures";
 import { linksCopyKey, readListCopy } from "./siteListCopies";
@@ -165,7 +166,8 @@ export function linkChangedIn(row: Pick<Doc<"siteBacklinks">, "firstSeen" | "las
  * link can run to the site's backlink limit, and is counted from its compact
  * copy (docs/plans/active/sites-table-pages-plan.md §5).
  */
-export const listBacklinks = tenantQuery({
+export const listBacklinks = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -239,7 +241,8 @@ const BROKEN_SORTS: ListSorts<Doc<"siteBacklinks">, "from" | "code" | "domainRan
 };
 
 /** Links pointing at pages here that no longer work, strongest linking website first unless a heading says otherwise. */
-export const listBrokenBacklinks = tenantQuery({
+export const listBrokenBacklinks = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -301,7 +304,8 @@ const DOMAIN_SORTS: ListSorts<ReferringDomainRow, "domain" | "rank" | "backlinks
 };
 
 /** Every website linking here, live or lost: strongest first unless a heading says otherwise. */
-export const listReferringDomains = tenantQuery({
+export const listReferringDomains = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -359,7 +363,8 @@ const ANCHOR_SORTS: ListSorts<AnchorRow, "anchor" | "backlinks" | "domains" | "f
 };
 
 /** The words other websites link here with: most links first unless a heading says otherwise. */
-export const listAnchors = tenantQuery({
+export const listAnchors = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -400,7 +405,8 @@ const IP_SORTS: ListSorts<ReferringIpRow, "ip" | "domains" | "backlinks"> = {
 };
 
 /** The servers links come from, or those on one network: most links first unless a heading says otherwise. */
-export const listReferringIps = tenantQuery({
+export const listReferringIps = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -437,7 +443,8 @@ export const listReferringIps = tenantQuery({
 });
 
 /** The networks with the most linking websites: the Referring IPs chart. */
-export const topSubnets = tenantQuery({
+export const topSubnets = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({ subnet: v.string(), ips: v.number(), backlinks: v.number(), referringDomains: v.number() })),
   handler: async (ctx, args) => {
@@ -449,7 +456,8 @@ export const topSubnets = tenantQuery({
 });
 
 /** Links and linking websites gained and lost, added up per day, week or month. */
-export const linkChanges = tenantQuery({
+export const linkChanges = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string(), step: stepValidator },
   returns: v.array(v.object({
     day: v.string(),
@@ -488,7 +496,8 @@ const shareShape = v.object({ links: v.number(), websites: v.number(), anchors: 
  * shares are worked out here, over every anchor. The links with the most-used words, those naming the business, those
  * with no words, those whose words score as spam, and those first seen in the last 90 days. No money, nothing bought.
  */
-export const anchorFigures = tenantQuery({
+export const anchorFigures = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     day: v.union(v.string(), v.null()),
@@ -528,7 +537,8 @@ export const anchorFigures = tenantQuery({
  * linking websites"): the server carrying the most links and its share of every link, and the network holding the most
  * linking websites, over the whole list rather than the page on screen.
  */
-export const serverFigures = tenantQuery({
+export const serverFigures = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     servers: v.number(),

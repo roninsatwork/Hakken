@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { localMarketSees, rivalActivitySees } from "./utils/sees/local";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { ACTIVITY_KINDS } from "./localSchema";
 import { listingRowOf, listingRowValidator, readListingActivity, readListingWeeks } from "./localListings";
@@ -21,7 +22,8 @@ import { calendarPeriodValidator, periodSpan, ukDay, type CalendarPeriod } from 
 
 const officeOptionValidator = v.object({ listingId: v.id("listings"), name: v.string(), town: v.union(v.string(), v.null()) });
 
-export const localMarket = tenantQuery({
+export const localMarket = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
   returns: v.object({
     offices: v.array(officeOptionValidator),
@@ -94,7 +96,8 @@ export function weekLines(weeks: Awaited<ReturnType<typeof readListingWeeks>>) {
   return lines;
 }
 
-export const rivalActivity = tenantQuery({
+export const rivalActivity = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator },
   returns: v.object({
     rivals: v.array(v.object({ listingId: v.id("listings"), name: v.string() })),

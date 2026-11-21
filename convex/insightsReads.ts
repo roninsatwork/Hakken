@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { pageKindsOf } from "./insightsPeriodData";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { marketFacts } from "./insightsReading";
 import { LEAGUE_IDS, leaguesFrom } from "./utils/insightLeagues";
@@ -36,7 +37,8 @@ const siteValidator = v.object({ siteId: v.id("companyWebsites"), host: v.string
 const MOST_WEEKS_KEPT = 110;
 
 /** Every section shares this refresh status. A saved week alone does not establish whole-section freshness. */
-export const sectionRefresh = tenantQuery({
+export const sectionRefresh = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string(), status: v.string(), updatedAt: v.number(), recorded: v.boolean(), stages: v.array(v.object({ stage: insightRunStageValidator, status: v.union(v.literal("SUCCESS"), v.literal("FAILED"), v.literal("PENDING")) })) })),
   handler: async (ctx, args) => {
@@ -58,7 +60,8 @@ export const sectionRefresh = tenantQuery({
 });
 
 /** The section's frame: the company, its own websites, when the team last looked, and the menu's numbers. */
-export const insightsHome = tenantQuery({
+export const insightsHome = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: {},
   returns: v.union(v.null(), v.object({
     company: v.string(),
@@ -118,7 +121,8 @@ const leagueValidator = v.object({
  * the same facts the team reads, with each place a year before where Hakken
  * holds it. The figures' newest day, for the screen to say.
  */
-export const insightsLeagues = tenantQuery({
+export const insightsLeagues = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), v.object({
     siteId: v.id("companyWebsites"),
@@ -253,7 +257,8 @@ async function checksOf(ctx: SiteReader, holdId: Id<"companyWebsites">): Promise
 }
 
 /** This week: each website's newest week and its published findings, most at stake first (§4.1). */
-export const insightsThisWeek = tenantQuery({
+export const insightsThisWeek = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.object({ weeks: v.array(weekView), findings: v.array(findingRow), open: v.number() }),
   handler: async (ctx, args) => {
@@ -298,7 +303,8 @@ export const insightsThisWeek = tenantQuery({
 });
 
 /** Every published finding Hakken has written for the company, newest week first (§4.1, All findings). */
-export const insightsAllFindings = tenantQuery({
+export const insightsAllFindings = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.array(findingRow),
   handler: async (ctx, args) => {
@@ -314,7 +320,8 @@ export const insightsAllFindings = tenantQuery({
 });
 
 /** One finding, the whole case (§4.1, A finding): only the caller's own company's. */
-export const insightsFinding = tenantQuery({
+export const insightsFinding = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { findingId: v.id("insightFindings") },
   returns: v.union(v.null(), v.object({
     findingId: v.id("insightFindings"),
@@ -388,7 +395,8 @@ const reportRow = v.object({
 });
 
 /** Every report Hakken has written for the company, newest first, kept two years (I7). */
-export const insightsReports = tenantQuery({
+export const insightsReports = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.array(reportRow),
   handler: async (ctx, args) => {
@@ -447,7 +455,8 @@ async function viewOf(ctx: SiteReader, report: Doc<"insightReports">): Promise<t
 }
 
 /** One report, exactly as written. */
-export const insightsReport = tenantQuery({
+export const insightsReport = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { reportId: v.id("insightReports") },
   returns: v.union(v.null(), reportView),
   handler: async (ctx, args) => {
@@ -457,7 +466,8 @@ export const insightsReport = tenantQuery({
 });
 
 /** The newest report of a kind: Your month's monthly report, the executive summary's board report. */
-export const insightsLatestReport = tenantQuery({
+export const insightsLatestReport = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { kind: v.union(...REPORT_KINDS.map((kind) => v.literal(kind))), siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), reportView),
   handler: async (ctx, args) => {
@@ -472,7 +482,8 @@ export const insightsLatestReport = tenantQuery({
 });
 
 /** A report read: its status says so (§4.1, Reports' Written and Read). Any member of the company. */
-export const markInsightReportRead = tenantMutation({
+export const markInsightReportRead = moduleMutation({
+  module: MENU_FEATURES.insights,
   args: { reportId: v.id("insightReports") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -487,7 +498,8 @@ export const markInsightReportRead = tenantMutation({
 // Strategy and a service (§4.1, drawn as the Strategy and ServiceDetail boards)
 
 /** The quarter's strategy: each service and its call from the newest week, and the roadmap — the week's three findings most at stake. */
-export const insightsStrategy = tenantQuery({
+export const insightsStrategy = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), v.object({
     siteId: v.id("companyWebsites"),
@@ -520,7 +532,8 @@ export const insightsStrategy = tenantQuery({
 const SERVICE_SEARCHES = 15;
 
 /** One service: its figures from the newest week, the searches its page ranks for, and the best rival on each (DataForSEO's rankings, §5). */
-export const insightsService = tenantQuery({
+export const insightsService = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")), page: v.string() },
   returns: v.union(v.null(), v.object({
     host: v.string(),
@@ -562,7 +575,8 @@ export const insightsService = tenantQuery({
 /** Learnings across companies show once this many companies have made a change of that kind: none is ever shown another's figures. */
 const LIKE_YOURS = 5;
 
-export const insightsTrackRecord = tenantQuery({
+export const insightsTrackRecord = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.object({
     findings: v.array(v.object({
@@ -640,7 +654,8 @@ export const insightsTrackRecord = tenantQuery({
 });
 
 /** A finding's steps taken on (Add the steps to Hakken tasks): the Track record's "acted on". Any member of the company. */
-export const markInsightFindingActed = tenantMutation({
+export const markInsightFindingActed = moduleMutation({
+  module: MENU_FEATURES.insights,
   args: { findingId: v.id("insightFindings") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -659,7 +674,8 @@ export const markInsightFindingActed = tenantMutation({
  * figures can be trusted, as the newest week's run found — the same checks the
  * findings were written beside, so the page and the findings never disagree.
  */
-export const insightsMeasurement = tenantQuery({
+export const insightsMeasurement = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), v.object({
     siteId: v.id("companyWebsites"),
@@ -680,7 +696,8 @@ export const insightsMeasurement = tenantQuery({
  * and Page plan boards): as the newest run worked them out, one read for both
  * pages, with each page's name from Hakken's page list.
  */
-export const insightsPlan = tenantQuery({
+export const insightsPlan = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), v.object({
     siteId: v.id("companyWebsites"),
@@ -722,7 +739,8 @@ const LISTINGS_READ = 40;
  * far back it goes — and what connecting or setting the rest would unlock.
  * Read live from the connections themselves: one document each.
  */
-export const insightsSources = tenantQuery({
+export const insightsSources = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string(), sources: v.array(sourceRow) })),
   handler: async (ctx, args) => {

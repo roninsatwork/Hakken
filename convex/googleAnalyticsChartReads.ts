@@ -1,5 +1,6 @@
 import { v, type ObjectType } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
 import { periodRange, slotKey } from "./googleAnalyticsCollect";
@@ -33,7 +34,8 @@ const analyticsChartArgs = { siteId: v.id("companyWebsites"), period: analyticsP
  * chart asked of Google ready-made for the 90 days and 12 months. Each counted
  * event's own line comes with it, for Conversions' chart.
  */
-export const analyticsChart = tenantQuery({
+export const analyticsChart = moduleQuery({
+  module: [MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: analyticsChartArgs,
   returns: v.object({
     points: v.array(v.object({
@@ -115,7 +117,8 @@ const PERIODS_DRAWN_BEFORE: ReadonlySet<string> = new Set(["thisWeek", "lastWeek
  * those days are not held. Each counted kind's own count beside them, for the
  * chart's tick boxes. Nothing is asked of Google.
  */
-export const analyticsPeriodBeforeChart = tenantQuery({
+export const analyticsPeriodBeforeChart = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsChartArgs,
   returns: v.object({
     held: v.boolean(),
@@ -185,7 +188,8 @@ const campaignPointValidator = v.object({ day: v.string(), lastDay: v.optional(v
  * it can also be drawn as a line under the dates: only on the weeks and months, whose span before is all days. `shift` moves its
  * days over the period's. A month's or a year's span before reaching past what's held is null.
  */
-export const analyticsCampaignChart = tenantQuery({
+export const analyticsCampaignChart = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()), cameFrom: v.optional(v.string()) },
   returns: v.object({
     live: v.boolean(),

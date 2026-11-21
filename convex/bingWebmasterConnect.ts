@@ -3,7 +3,8 @@ import { httpAction, internalMutation, internalQuery } from "./_generated/server
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { adminMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { ADMIN_WRITE_ROLES } from "./authz";
 import { companyHolds, findMySite, requireMySite } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -85,7 +86,9 @@ async function connectionOfHold(ctx: { db: QueryCtx["db"] }, companyWebsiteId: I
 // ---------------------------------------------------------------------------
 
 /** Start connecting a website: its admins and super admins, its own websites only (BW7). */
-export const beginBingConnect = adminMutation({
+export const beginBingConnect = moduleMutation({
+  module: MENU_FEATURES.bingWebmaster,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({ authorizeUrl: v.string() }),
   handler: async (ctx, args) => {
@@ -333,7 +336,9 @@ async function connectTo(ctx: MutationCtx, connectionId: Id<"bingConnections">, 
 }
 
 /** The admin's choice among the account's verified sites that are this website. */
-export const chooseBingSite = adminMutation({
+export const chooseBingSite = moduleMutation({
+  module: MENU_FEATURES.bingWebmaster,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites"), site: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -351,7 +356,9 @@ export const chooseBingSite = adminMutation({
 // ---------------------------------------------------------------------------
 
 /** Stop collecting and forget the keys: what was collected stays, marked with the day it was disconnected. */
-export const disconnectBing = adminMutation({
+export const disconnectBing = moduleMutation({
+  module: MENU_FEATURES.bingWebmaster,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -524,7 +531,8 @@ const orNull = <T extends ReturnType<typeof v.string>>(validator: T) => v.union(
  * this reader may connect, choose and disconnect (BW7). Null for a website
  * that is not one of the caller's company's — the same answer as a missing one.
  */
-export const bingStatus = tenantQuery({
+export const bingStatus = moduleQuery({
+  module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     configured: v.boolean(),

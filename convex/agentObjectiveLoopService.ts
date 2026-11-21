@@ -1,6 +1,7 @@
 "use node";
 
 import type { ActionCtx } from "./_generated/server";
+import { toolOfferedWith } from "./utils/assistantToolFeatures";
 import type { AgentProviderAdapter, AgentToolDeclaration } from "./agentProviderTypes";
 import { getAgentProviderAdapter } from "./agentProviderRegistry";
 import { isToolVisibleToCompany } from "./mcpToolPolicy";
@@ -269,6 +270,10 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
         useCase: isAssistant ? HAKKEN_ASSISTANT.modelUseCase : "agent",
       });
   const agentTools = await ctx.runQuery(internal.agents.getAgentToolsInternal, { agentId: args.agentId });
+  // A section switched off for the company isn't offered to the model (features-switches-plan-2026-11-21.md, FS9).
+  const featuresOn = owner.companyId
+    ? await ctx.runQuery(internal.featureSwitches.menuFeaturesForCompanyInternal, { companyId: owner.companyId })
+    : null;
   const dynamicTools: FunctionDeclaration[] = [];
   const toolMetadataByName = new Map<string, RuntimeToolMetadata>();
 
@@ -281,6 +286,7 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
     // a binding exists. This is the boundary, and it is here rather than at the
     // binding screen because this is the last place before a model sees the tool.
     if (toolDef && !isToolVisibleToCompany(toolDef, owner.companyId)) continue;
+    if (toolDef && featuresOn && !toolOfferedWith(toolDef.handlerMapping, featuresOn)) continue;
     const schemaStr = toolDef && "inputSchema" in toolDef && typeof toolDef.inputSchema === "string"
       ? toolDef.inputSchema
       : undefined;

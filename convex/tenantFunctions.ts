@@ -33,6 +33,9 @@ import {
 import { requireActionRole, requireActionUser } from "./actionAuth";
 import { appError } from "./utils/appError";
 import { normalizeEnabledModules } from "./utils/companyModules";
+import { MENU_FEATURE_KEYS, type MenuFeature } from "./utils/coreModules";
+import { menuFeaturesFor } from "./utils/featureSwitchReads";
+import { internal } from "./_generated/api";
 
 /**
  * Tenant-aware function builders.
@@ -74,6 +77,8 @@ export type TenantIdentity = {
 
 export type TenantQueryCtx = QueryCtx & TenantIdentity;
 export type TenantMutationCtx = MutationCtx & TenantIdentity;
+/** What `tenantAction` and `moduleAction` hand a handler: no database, so no company read for it. */
+export type TenantActionCtx = ActionCtx & Pick<TenantIdentity, "user" | "userId">;
 
 /**
  * `admin` guards writes; `adminRead` guards reads and additionally admits
@@ -275,27 +280,56 @@ export async function effectiveModulesFor(
 ): Promise<string[]> {
   if (!company) return [];
 
+  // The menu features (features-switches-plan-2026-11-21.md) join the list
+  // here, so the sidebar, the section gates and the server checks read them as
+  // they read any module. They are on unless switched off for everyone or for
+  // this company, and no plan or billing state changes that.
+  const menu = await menuFeaturesFor(ctx, company._id);
   const own = normalizeEnabledModules(company.enabledModules);
-  if (!company.planId || await billingBlocksPaidAccess(ctx, company._id)) return own;
+  if (!company.planId || await billingBlocksPaidAccess(ctx, company._id)) return [...own, ...menu];
 
   const plan = await ctx.db.get(company.planId);
   const granted = normalizeEnabledModules(plan?.grantedModules);
-  return [...new Set([...own, ...granted])];
+  return [...new Set([...own, ...granted, ...menu])];
 }
+
+/**
+ * The capability a function belongs to: one key, or several when the same
+ * function serves more than one section's screens. Several pass when any one is
+ * on. A Search Console list that Visibility's keyword research also shows stays
+ * open while either is (features-switches-plan-2026-11-21.md, phase 2).
+ */
+export type ModuleKeys = string | readonly string[];
+
+const isMenuFeature = (key: string): key is MenuFeature => (MENU_FEATURE_KEYS as readonly string[]).includes(key);
 
 async function requireModuleOn(
   ctx: QueryCtx | MutationCtx,
   identity: TenantIdentity,
-  moduleKey: string,
+  module: ModuleKeys,
 ): Promise<void> {
   if (identity.user.role === "SUPER_ADMIN") return;
   if (!identity.companyId) return;
 
-  const company = await ctx.db.get(identity.companyId);
-  const held = await effectiveModulesFor(ctx, company);
-  if (!held.includes(moduleKey)) {
+  const keys: readonly string[] = typeof module === "string" ? [module] : module;
+  // A menu feature is never a plan's to grant, so its check reads only the two
+  // small switch rows (none for a company with every section on), and nothing
+  // about the company, its plan or its billing.
+  const held = keys.every(isMenuFeature)
+    ? await menuFeaturesFor(ctx, identity.companyId)
+    : await effectiveModulesFor(ctx, await ctx.db.get(identity.companyId));
+  if (!keys.some((key) => (held as readonly string[]).includes(key))) {
     throw appError("MODULE_DISABLED", "This section is switched off for your workspace");
   }
+}
+
+/**
+ * The same check inside a handler, for a function shared by every section that
+ * still serves one section at a time: the eye reads the section from the screen
+ * it was pressed on (`seesAsk.ts`).
+ */
+export async function requireSectionOn(ctx: TenantQueryCtx | TenantMutationCtx, section: MenuFeature): Promise<void> {
+  await requireModuleOn(ctx, ctx, section);
 }
 
 /*
@@ -338,7 +372,7 @@ export function moduleQuery<
   ReturnsValidator extends AnyReturnsValidator | void = void,
   Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
 >(config: {
-  module: string;
+  module: ModuleKeys;
   guard?: ModuleGuard;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
@@ -361,7 +395,7 @@ export function moduleMutation<
   ReturnsValidator extends AnyReturnsValidator | void = void,
   Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
 >(config: {
-  module: string;
+  module: ModuleKeys;
   guard?: ModuleGuard;
   args: ArgsValidator;
   /** Passed straight to Convex, exactly as on a plain declaration. */
@@ -375,6 +409,43 @@ export function moduleMutation<
       const identity = await resolveTenantIdentity(ctx, config.guard ?? "authenticated");
       await requireModuleOn(ctx, identity, config.module);
       return config.handler({ ...ctx, ...identity }, args);
+    },
+  });
+}
+
+/**
+ * `moduleQuery` for an action, for the menu features only (phase 2 of
+ * features-switches-plan-2026-11-21.md): a section's live asks and refreshes
+ * are refused when the section is switched off, as its reads are. An action
+ * has no database, so the company's features are read through an internal
+ * query. Super admins and platform readers pass, as they do above.
+ */
+export function moduleAction<
+  ArgsValidator extends PropertyValidators,
+  ReturnsValidator extends AnyReturnsValidator | void = void,
+  Output extends HandlerOutputFor<ReturnsValidator> = InferredOutput,
+>(config: {
+  module: MenuFeature | readonly MenuFeature[];
+  guard?: "authenticated" | "admin";
+  args: ArgsValidator;
+  /** Passed straight to Convex, exactly as on a plain declaration. */
+  returns?: ReturnsValidator;
+  handler: (ctx: TenantActionCtx, args: ObjectType<ArgsValidator>) => Output | Promise<Output>;
+}) {
+  return action({
+    args: config.args,
+    ...(config.returns ? { returns: config.returns } : {}),
+    handler: async (ctx: ActionCtx, args: ObjectType<ArgsValidator>) => {
+      const current = config.guard === "admin" ? await requireActionRole(ctx, ADMIN_WRITE_ROLES) : await requireActionUser(ctx);
+      const companyId = getActiveCompanyId(current.user);
+      if (current.user.role !== "SUPER_ADMIN" && companyId) {
+        const keys: readonly MenuFeature[] = typeof config.module === "string" ? [config.module] : config.module;
+        const held = await ctx.runQuery(internal.featureSwitches.menuFeaturesForCompanyInternal, { companyId });
+        if (!keys.some((key) => held.includes(key))) {
+          throw appError("MODULE_DISABLED", "This section is switched off for your workspace");
+        }
+      }
+      return config.handler({ ...ctx, user: current.user, userId: current.userId }, args);
     },
   });
 }

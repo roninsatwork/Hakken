@@ -1,0 +1,10 @@
+# Admin → System Settings → Features — the approved look (board "Main" of docs/plans/assets/features-switches/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+record-header: System Settings
+tabs: Identity | Security | System Options | Limits | Classification | Features
+page-header: Features
+search: Search features...
+table: Feature | What it does | Companies | Switched on
+  table-footer
+save

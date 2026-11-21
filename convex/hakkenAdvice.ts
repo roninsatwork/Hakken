@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { IntlMessageFormat } from "intl-messageformat";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
-import { tenantMutation } from "./tenantFunctions";
+import { moduleMutation } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
 import { appError } from "./utils/appError";
@@ -58,7 +59,8 @@ const today = (now: number) => new Date(now).toISOString().slice(0, 10);
  * A screen's box, saved when it shows: the screen's own sentences only, for one of the company's websites. Called by
  * the box on screen (`useNoteAdvice`), at most once a day per screen and advice.
  */
-export const noteAdvice = tenantMutation({
+export const noteAdvice = moduleMutation({
+  module: [MENU_FEATURES.visibility, MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: { siteId: v.id("companyWebsites"), screen: v.string(), path: v.string(), seen: seenValidator, currency: v.optional(v.string()) },
   returns: v.null(),
   handler: async (ctx, args) => {

@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { adminAction, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleAction, moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { companyHolds, requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
@@ -241,7 +242,8 @@ export function clarityDays(record: Doc<"clarityFigures">, device?: string): Arr
 }
 
 /** The website's Clarity connection, as its screens show it: never the token. */
-export const clarityStatus = tenantQuery({
+export const clarityStatus = moduleQuery({
+  module: MENU_FEATURES.clarity,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     host: v.string(),
@@ -265,7 +267,8 @@ export const clarityStatus = tenantQuery({
 });
 
 /** The company's own websites, each with its Clarity connection and its last 30 days, read from the ready-made period. */
-export const claritySites = tenantQuery({
+export const claritySites = moduleQuery({
+  module: MENU_FEATURES.clarity,
   args: {},
   returns: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string(), status: v.string(), sessions: v.union(v.number(), v.null()), scroll: v.union(v.number(), v.null()), lastCollectedAt: v.union(v.number(), v.null()) })),
   handler: async (ctx) => {
@@ -284,7 +287,9 @@ export const claritySites = tenantQuery({
 });
 
 /** Paste a project's Data Export token: tested with one ask, kept as ciphertext, read each morning from then. */
-export const connectClarity = adminAction({
+export const connectClarity = moduleAction({
+  module: MENU_FEATURES.clarity,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites"), token: v.string() },
   returns: v.object({ ok: v.boolean(), problem: v.union(v.string(), v.null()) }),
   handler: async (ctx, args): Promise<{ ok: boolean; problem: string | null }> => {
@@ -330,7 +335,8 @@ export const saveConnection = internalMutation({
 });
 
 /** Disconnect: the token goes; the figures kept stay, as a disconnected Analytics' do. */
-export const disconnectClarity = tenantMutation({
+export const disconnectClarity = moduleMutation({
+  module: MENU_FEATURES.clarity,
   args: { siteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -583,7 +589,8 @@ const CUSTOM_SPAN_KEPT_MS = 24 * 60 * 60 * 1000;
  * before it built from the days and months held, as the morning builds every period, when a screen first asks for
  * them; built again only once a day. The screen reads `preparing` until the records are in.
  */
-export const prepareCustomSpan = tenantMutation({
+export const prepareCustomSpan = moduleMutation({
+  module: MENU_FEATURES.clarity,
   args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
   returns: v.object({ building: v.boolean() }),
   handler: async (ctx, args) => {

@@ -5,7 +5,8 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import { postDataForSeoTask, readDataForSeoCredentials } from "./dataForSeoRest";
 import { requireMySite } from "./siteAccess";
 import { CRAWL_ISSUES } from "./siteCrawl";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getErrorMessage } from "./utils/lang";
 import { pagePath } from "./utils/siteShapes";
 import { heldTo, listWithCut } from "./siteListPages";
@@ -343,7 +344,8 @@ const PAGES_READ = 1_000;
  * The pages of the newest crawl with one problem, and — for broken links —
  * the broken links on each: what "4 pages" on the Site audit is made of.
  */
-export const crawlProblemPages = tenantQuery({
+export const crawlProblemPages = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), check: v.string() },
   returns: listWithCut(v.object({
     page: v.string(),

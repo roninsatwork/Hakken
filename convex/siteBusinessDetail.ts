@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { myRivals, requireMySite } from "./siteAccess";
 import { holdBrandNames } from "./holdProfiles";
 import { appAnswers, normalName, sameHost } from "./siteAiApps";
@@ -72,7 +73,8 @@ const placeOf = (named: ReadonlyArray<{ key: string; at: number }>, key: string)
   return at >= 0 ? at + 1 : null;
 };
 
-export const businessDetail = tenantQuery({
+export const businessDetail = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), business: v.string() },
   returns: v.object({
     found: v.boolean(),

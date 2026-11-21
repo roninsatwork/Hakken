@@ -2,7 +2,8 @@ import { v, type Infer } from "convex/values";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { tenantAction } from "./tenantFunctions";
+import { moduleAction } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { askLive, checkedRange } from "./searchConsoleReads";
@@ -170,7 +171,8 @@ const pageKeywordsAnswer = v.union(
  * the list is downloaded, the only place they show (Pages and Tracked pages' Keywords and Top keyword columns), with the
  * list's own dates, country and device. One ask of Google's pairs: two requests for More Handles in October.
  */
-export const searchConsoleLivePageKeywords = tenantAction({
+export const searchConsoleLivePageKeywords = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,

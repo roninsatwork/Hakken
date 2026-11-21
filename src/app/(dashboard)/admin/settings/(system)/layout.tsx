@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import {
+  Blocks,
   Building2,
   Database,
   Gauge,
@@ -77,6 +78,10 @@ export default function SystemSettingsLayout({ children }: { children: React.Rea
     // Anthony, 2026-10-15: "we need a new tab in system settings for it. Lets
     // call it Classification".
     { label: t("nav.classification"), href: `${SETTINGS_ROOT}/classification`, icon: Layers },
+    // One page, so no dropdown: the menu features every company has
+    // (docs/plans/active/features-switches-plan-2026-11-21.md). Anthony,
+    // 2026-11-21: "configurable in the admin to globally turn them on and off".
+    { label: t("nav.features"), href: `${SETTINGS_ROOT}/features`, icon: Blocks },
   ];
 
   return (

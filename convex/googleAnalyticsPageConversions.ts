@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { isPageRef } from "./holdPageRefs";
 import { periodRange, slotKey } from "./googleAnalyticsCollect";
@@ -41,7 +42,8 @@ const pointValidator = v.object({ day: v.string(), lastDay: v.optional(v.string(
  * here" counts them, now and before, so the words and the figures agree.
  * `live` while the page's days are not held yet.
  */
-export const analyticsPageVisitsPerConversion = tenantQuery({
+export const analyticsPageVisitsPerConversion = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: pageArgs,
   returns: v.object({
     live: v.boolean(),
@@ -128,7 +130,8 @@ export const analyticsPageVisitsPerConversion = tenantQuery({
  * Compare. A row kept before the two units were stored carries Google's own
  * count, which stands in for both until the next night's run.
  */
-export const analyticsPageConversionGrid = tenantQuery({
+export const analyticsPageConversionGrid = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: pageArgs,
   returns: v.union(v.null(), v.object({
     /** One device's landing pages by channel not kept yet: every device's are shown. */

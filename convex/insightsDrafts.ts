@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
-import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { assertInsightsPublisher, insightsPublicationArgs } from "./insightsRunState";
@@ -183,7 +184,8 @@ const draftRow = v.object({
 });
 
 /** The drafts written lately for one of the website's areas, newest first: waiting ones and those answered in the last 60 days. */
-export const siteDrafts = tenantQuery({
+export const siteDrafts = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), area: draftAreaValidator },
   returns: v.union(v.null(), v.array(draftRow)),
   handler: async (ctx, args) => {
@@ -196,7 +198,8 @@ export const siteDrafts = tenantQuery({
 });
 
 /** One draft, whole, for its own page. */
-export const siteDraft = tenantQuery({
+export const siteDraft = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { draftId: v.id("insightDrafts") },
   returns: v.union(v.null(), v.object({
     draftId: v.id("insightDrafts"),
@@ -223,7 +226,8 @@ export const siteDraft = tenantQuery({
 });
 
 /** The person's answer to a draft: approved (they copy and use it) or dismissed. */
-export const decideDraft = tenantMutation({
+export const decideDraft = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { draftId: v.id("insightDrafts"), decision: v.union(v.literal("APPROVED"), v.literal("DISMISSED"), v.literal("DRAFTED")) },
   returns: v.null(),
   handler: async (ctx, args) => {

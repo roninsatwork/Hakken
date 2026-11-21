@@ -4,7 +4,8 @@ import { internalMutation, type MutationCtx, type QueryCtx } from "./_generated/
 import { readerFields, requestTranslation } from "./contentTranslation";
 import { connectionOf } from "./googleAnalyticsRows";
 import { requireMySite } from "./siteAccess";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { isTrackedHold } from "./utils/websitePairing";
 
 /**
@@ -57,7 +58,8 @@ export const writeEventNames = internalMutation({
 });
 
 /** Each named event's everyday name, in the reader's language where it's been translated. */
-export const analyticsEventNames = tenantQuery({
+export const analyticsEventNames = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { siteId: v.id("companyWebsites"), language: v.string() },
   returns: v.record(v.string(), v.string()),
   handler: async (ctx, args) => {

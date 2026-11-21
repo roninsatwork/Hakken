@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { daysOf } from "./searchConsoleReads";
 import { shiftDay } from "./utils/insightFacts";
@@ -84,7 +85,8 @@ export const quickCheck = internalAction({
 });
 
 /** Today's quick check for the website chosen, or the company's first: what it found, and when. */
-export const insightsQuickCheck = tenantQuery({
+export const insightsQuickCheck = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), v.object({ day: v.string(), alerts: v.array(alertValidator) })),
   handler: async (ctx, args) => {

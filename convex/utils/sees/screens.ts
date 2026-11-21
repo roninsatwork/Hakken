@@ -1,4 +1,5 @@
 import type { InsightsRole } from "../agentRoles";
+import { MENU_FEATURES, type MenuFeature } from "../coreModules";
 import type { FactSource } from "../insightFacts";
 import { BING_SCREENS } from "./screenEntries/bing";
 import { CLARITY_SCREENS } from "./screenEntries/clarity";
@@ -19,6 +20,20 @@ import { VISIBILITY_SCREENS } from "./screenEntries/visibility";
 
 export const SEES_SECTIONS = ["googleAnalytics", "searchConsole", "bing", "clarity", "visibility", "insights"] as const;
 export type SeesSection = (typeof SEES_SECTIONS)[number];
+
+/**
+ * The menu feature each section's eye belongs to, so a press on a switched-off
+ * section is refused as its screens are (features-switches-plan-2026-11-21.md,
+ * phase 2).
+ */
+export const SEES_SECTION_FEATURE: Record<SeesSection, MenuFeature> = {
+  googleAnalytics: MENU_FEATURES.googleAnalytics,
+  searchConsole: MENU_FEATURES.searchConsole,
+  bing: MENU_FEATURES.bingWebmaster,
+  clarity: MENU_FEATURES.clarity,
+  visibility: MENU_FEATURES.visibility,
+  insights: MENU_FEATURES.insights,
+};
 
 export type SeesScreen = {
   section: SeesSection;

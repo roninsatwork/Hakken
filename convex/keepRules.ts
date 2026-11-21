@@ -46,6 +46,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   invitations: RECORD,
   emailTemplates: RECORD,
   systemSettings: RECORD,
+  featureSwitches: RECORD,
   systemConfig: RECORD,
   apiKeys: RECORD,
   dataMigrations: RECORD,

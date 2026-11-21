@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { searchTypeValidator } from "./searchConsoleSchema";
 import { checkedRange } from "./searchConsoleReads";
@@ -16,7 +17,8 @@ const topKeywordValidator = v.object({ key: v.string(), clicks: v.number(), impr
  * keyword list, as the Keywords screen reads it (`readList`), with only the top `TOP_KEYWORDS` named and sent. `live`
  * for other dates and a country not kept ready: the page then asks Google for the list (`searchConsoleLiveList`).
  */
-export const searchConsoleTopKeywords = tenantQuery({
+export const searchConsoleTopKeywords = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,

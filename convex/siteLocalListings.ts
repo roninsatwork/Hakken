@@ -4,7 +4,8 @@ import { seeing, seenValidator } from "./utils/hakkenSees";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { tenantMutation, tenantQuery, type TenantIdentity } from "./tenantFunctions";
+import { moduleMutation, moduleQuery, type TenantIdentity } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { isOversightRole } from "./authz";
 import { appError } from "./utils/appError";
@@ -126,7 +127,8 @@ const findRowValidator = v.object({
   linkedAs: v.union(v.literal("OWN"), v.literal("RIVAL"), v.null()),
 });
 
-export const localListings = tenantQuery({
+export const localListings = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     /** Local is switched on for the company (D16). */
@@ -206,7 +208,8 @@ export const localListings = tenantQuery({
 });
 
 /** Find: one search of Google Maps, Trustpilot or Tripadvisor by name and town, bought now through the Collector. */
-export const findListing = tenantMutation({
+export const findListing = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), source: listingSourceValidator, text: v.string() },
   returns: v.object({ sending: v.boolean() }),
   handler: async (ctx, args) => {
@@ -251,7 +254,8 @@ export const findListing = tenantMutation({
  * Trustpilot or Tripadvisor) or "Watch as a rival" — against the office
  * nearest it, when it has a map point. Within the website's limits (D9).
  */
-export const linkListing = tenantMutation({
+export const linkListing = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     listingId: v.id("listings"),
@@ -306,7 +310,8 @@ export const linkListing = tenantMutation({
 });
 
 /** Take a listing off the website: an office stops being checked, a rival stops being watched. */
-export const unlinkListing = tenantMutation({
+export const unlinkListing = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), listingId: v.id("listings") },
   returns: v.null(),
   handler: async (ctx, args) => {

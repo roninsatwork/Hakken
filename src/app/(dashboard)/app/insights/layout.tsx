@@ -14,6 +14,8 @@ import { InsightsMenu } from "./_components/InsightsMenu";
 import { useInsightsHome, useInsightsPeriodChoice, useInsightsPeriodView } from "./_components/useInsights";
 import { InsightsRefreshNotice } from "./_components/InsightsRefreshNotice";
 import { periodWords } from "./_components/insightPeriodWords";
+import { CapabilityGate } from "../_components/CapabilityGate";
+import { MENU_FEATURES } from "@/convex/utils/coreModules";
 
 /**
  * The Insights section (docs/plans/active/insights-analyst-plan.md §4.1; a
@@ -23,6 +25,12 @@ import { periodWords } from "./_components/insightPeriodWords";
  * read the whole company with a filter for one website (`site`).
  */
 export default function InsightsLayout({ children }: { children: React.ReactNode }) {
+  // Closed when Insights is switched off for this company
+  // (features-switches-plan-2026-11-21.md), before any of its reads run.
+  return <CapabilityGate moduleKey={MENU_FEATURES.insights}><InsightsSection>{children}</InsightsSection></CapabilityGate>;
+}
+
+function InsightsSection({ children }: { children: React.ReactNode }) {
   const t = usePlatformTranslations("insights.section");
   const tPeriod = usePlatformTranslations("insights.period");
   const router = useRouter();

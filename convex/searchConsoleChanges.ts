@@ -3,7 +3,8 @@ import { internalQuery } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantAction, tenantQuery } from "./tenantFunctions";
+import { moduleAction, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { requireMySite, type SiteReader } from "./siteAccess";
@@ -182,7 +183,8 @@ const readNewLostArgs = {
     ...listPageArgs,
   };
 
-export const searchConsoleNewLost = tenantQuery({
+export const searchConsoleNewLost = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: readNewLostArgs,
   returns: v.object({
     rows: v.array(changeValidator),
@@ -500,7 +502,8 @@ async function withFigures(
  */
 const readUpdatesArgs = { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, language: v.string(), country: v.optional(v.string()), from: v.string(), to: v.string() };
 
-export const searchConsoleUpdates = tenantQuery({
+export const searchConsoleUpdates = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: readUpdatesArgs,
   returns: v.object({
     from: v.union(v.string(), v.null()),
@@ -606,7 +609,8 @@ type LiveUpdatesAnswer =
  * the days held for all countries; an update's days before are compared only
  * where Google still keeps them, sixteen months.
  */
-export const searchConsoleLiveUpdates = tenantAction({
+export const searchConsoleLiveUpdates = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, language: v.string(), country: v.string(), from: v.string(), to: v.string() },
   returns: v.union(
     v.object({ ok: v.literal(true), from: v.union(v.string(), v.null()), to: v.union(v.string(), v.null()), updates: v.array(updateValidator) }),
@@ -652,7 +656,8 @@ export const searchConsoleLiveUpdates = tenantAction({
  * to that Profile to change them. A company's own users see the words only
  * (search-console-plan.md §13.3, "Brand words").
  */
-export const searchConsoleBrandWords = tenantQuery({
+export const searchConsoleBrandWords = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({ names: v.array(v.string()), profileHref: v.union(v.string(), v.null()) }),
   handler: async (ctx, args) => {
@@ -672,7 +677,8 @@ export const searchConsoleBrandWords = tenantQuery({
  */
 const readCurveArgs = { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), country: v.optional(v.string()) };
 
-export const searchConsoleCurve = tenantQuery({
+export const searchConsoleCurve = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: readCurveArgs,
   returns: v.object({
     live: v.boolean(),

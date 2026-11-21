@@ -3,7 +3,8 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { readPeriod } from "./searchConsolePeriodReads";
 import { readSlot } from "./googleAnalyticsRows";
@@ -363,7 +364,8 @@ export async function savedDecisionsOf(ctx: { db: QueryCtx["db"] }, holdId: Id<"
 }
 
 /** Page decisions: every page's verdict, and the pages to create. */
-export const insightsPageDecisions = tenantQuery({
+export const insightsPageDecisions = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), v.object({
     siteId: v.id("companyWebsites"),

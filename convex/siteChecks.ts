@@ -5,7 +5,8 @@ import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { requireMySite } from "./siteAccess";
 import { bucketOf, checkStarts, stepValidator, type CheckStarts } from "./siteFigures";
 import { listDayComplete, listDayReach, pagesByDay, type ListPageFigures } from "./siteSummaries";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 
 /**
  * Each keyword check of a site in the dates chosen, as New and lost keywords
@@ -132,7 +133,8 @@ const checkFields = {
   rankedLeft: counted,
 };
 
-export const siteChecks = tenantQuery({
+export const siteChecks = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string(), step: stepValidator },
   returns: v.object({
     /**

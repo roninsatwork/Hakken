@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { groupOwner, listHold, requireMySite, type SiteReader } from "./siteAccess";
 import { holdQuestions } from "./holdLists";
 import { readFanOutLimits } from "./fanOutLimits";
@@ -68,7 +69,8 @@ const hostOf = hostOfUrl;
 const pathOf = pathOfUrl;
 const onHost = urlIsOnHost;
 
-export const radarOverview = tenantQuery({
+export const radarOverview = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     month: v.union(v.string(), v.null()),
@@ -171,7 +173,8 @@ export async function readRadarOverview(ctx: SiteReader, args: { siteId: Id<"com
 
 const kindValidator = v.union(v.literal("DIRECTORY"), v.literal("REVIEWS"), v.literal("FORUM"), v.literal("NEWS"), v.literal("VIDEO"), v.literal("REFERENCE"), v.literal("WEBSITE"), v.literal("RIVAL"), v.literal("YOURS"));
 
-export const radarSources = tenantQuery({
+export const radarSources = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     websites: v.array(v.object({

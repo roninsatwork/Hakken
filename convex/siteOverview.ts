@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { aiEngineValidator, AI_ENGINES } from "./seoAiEngines";
 import { listHold, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { citedPagesIn, latestFigures, searchTotalOf } from "./siteFigures";
@@ -57,7 +58,8 @@ const visitBandValidator = v.union(
 
 const nullableNumber = v.union(v.number(), v.null());
 
-export const overviewExtras = tenantQuery({
+export const overviewExtras = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     homePageRank: nullableNumber,

@@ -1,6 +1,7 @@
 import { v, type ObjectType } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -69,7 +70,8 @@ export const overviewSplitValidator = v.object({
   })),
 });
 
-export const analyticsOverviewSplit = tenantQuery({
+export const analyticsOverviewSplit = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: splitArgs,
   returns: overviewSplitValidator,
   handler: async (ctx, args) => await readOverviewSplit(ctx, args),

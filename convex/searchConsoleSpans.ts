@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalQuery, type QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import type { Id } from "./_generated/dataModel";
 import { titlesOf } from "./pageTitles";
@@ -40,7 +41,8 @@ export const googleHasDays = internalQuery({
  * stretches inside them: morehandles.co.uk holds nothing from 11 August 2025 to 22 April 2026, so its Last 12 months is
  * seven months. Every Search Console screen says so when the dates begin well before the first day held.
  */
-export const searchConsoleFirstDayHeld = tenantQuery({
+export const searchConsoleFirstDayHeld = moduleQuery({
+  module: [MENU_FEATURES.visibility, MENU_FEATURES.searchConsole],
   args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
   returns: v.union(v.null(), v.object({ day: v.string(), days: v.number() })),
   handler: async (ctx, args) => {

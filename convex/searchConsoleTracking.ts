@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
 import { appError } from "./utils/appError";
@@ -47,7 +48,8 @@ export async function trackedKeys(ctx: { db: QueryCtx["db"] }, companyWebsiteId:
 const countValidator = v.object({ count: v.number(), limit: v.number() });
 
 /** How many searches and pages the company tracks on this website, and its limits: the "x of y tracked" every table shows. */
-export const searchConsoleTracking = tenantQuery({
+export const searchConsoleTracking = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({ keywords: countValidator, pages: countValidator })),
   handler: async (ctx, args) => {
@@ -62,7 +64,8 @@ export const searchConsoleTracking = tenantQuery({
 });
 
 /** Track a search or a page on the website's Search Console, or stop tracking it. */
-export const trackSearchConsoleItem = tenantMutation({
+export const trackSearchConsoleItem = moduleMutation({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), kind: kindValidator, key: v.string(), track: v.boolean() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -104,7 +107,8 @@ export const trackSearchConsoleItem = tenantMutation({
 });
 
 /** Whether the company tracks one keyword or page on its website: the "Track this keyword" tick on its own screen. */
-export const searchConsoleIsTracked = tenantQuery({
+export const searchConsoleIsTracked = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), kind: kindValidator, key: v.string() },
   returns: v.union(v.null(), v.boolean()),
   handler: async (ctx, args) => {
@@ -119,7 +123,8 @@ export const searchConsoleIsTracked = tenantQuery({
 });
 
 /** The keywords or pages the company tracks on its website, for a list asked of Google to show its ticks as they change. */
-export const searchConsoleTrackedKeys = tenantQuery({
+export const searchConsoleTrackedKeys = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), kind: kindValidator },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {

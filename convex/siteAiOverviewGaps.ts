@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { seenValidator } from "./utils/hakkenSees";
 import { overviewGapsSees } from "./utils/sees/radar";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
 import { holdSearches } from "./holdLists";
 import { searchVolumeOf } from "./searchVolumes";
@@ -20,7 +21,8 @@ type Reader = { db: QueryCtx["db"] };
  */
 const DAY_MS = 86_400_000;
 
-export const overviewGaps = tenantQuery({
+export const overviewGaps = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     searches: v.number(),

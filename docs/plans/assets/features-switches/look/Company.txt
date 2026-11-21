@@ -1,0 +1,8 @@
+# Admin → Companies → a company → Features — the approved look (board "Company" of docs/plans/assets/features-switches/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Features
+search: Search features...
+table: Feature | What it does | Switched on
+  table-footer
+save

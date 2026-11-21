@@ -215,6 +215,13 @@ async function reportStep(ctx: ActionCtx): Promise<Counts> {
   const due: Id<"hakkenTasks">[] = await ctx.runQuery(internal.hakkenStatReporter.dueReportsInternal, { now: Date.now(), limit: REPORT_STEP });
   for (const taskId of due) {
     try {
+      // Hakken tasks switched off for its company: on to its next time, nothing sent or charged
+      // (features-switches-plan-2026-11-21.md, FS8).
+      if (await ctx.runQuery(internal.hakkenWatcher.taskSwitchedOffInternal, { taskId })) {
+        await ctx.runMutation(internal.hakkenWatcher.recordCheckInternal, { taskId, judged: [] });
+        counts.NOTHING_YET += 1;
+        continue;
+      }
       const outcome: SendOutcome = await ctx.runMutation(internal.hakkenStatReporter.sendReportInternal, { taskId });
       counts[outcome] += 1;
     } catch (error) {

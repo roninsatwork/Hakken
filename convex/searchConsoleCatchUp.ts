@@ -3,7 +3,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { periodOf } from "./searchConsoleLists";
 import { firstPartOf } from "./searchConsolePeriodReads";
@@ -54,7 +55,8 @@ async function behindOf(ctx: { db: QueryCtx["db"] }, holdId: Doc<"companyWebsite
 }
 
 /** What the screen says: whether its figures are behind, to which day, and how far along adding them up is. */
-export const searchConsoleCatchUp = tenantQuery({
+export const searchConsoleCatchUp = moduleQuery({
+  module: [MENU_FEATURES.visibility, MENU_FEATURES.searchConsole],
   args: datesArgs,
   returns: v.object({
     behind: v.boolean(),
@@ -77,7 +79,8 @@ export const searchConsoleCatchUp = tenantQuery({
 });
 
 /** Ask for the lists on screen to be caught up, once: nothing when they are not behind or already being added up. */
-export const requestSearchConsoleCatchUp = tenantMutation({
+export const requestSearchConsoleCatchUp = moduleMutation({
+  module: [MENU_FEATURES.visibility, MENU_FEATURES.searchConsole],
   args: datesArgs,
   returns: v.boolean(),
   handler: async (ctx, args) => {

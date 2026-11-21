@@ -2,7 +2,8 @@ import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
-import { tenantAction, tenantQuery } from "./tenantFunctions";
+import { moduleAction, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { requireMySite } from "./siteAccess";
@@ -187,7 +188,8 @@ export async function readIndexing(ctx: { db: QueryCtx["db"] }, holdId: Id<"comp
 }
 
 /** Indexing's summary: how far the checks have got, each reason's pages and, kept, their clicks for the dates. */
-export const searchConsoleIndexing = tenantQuery({
+export const searchConsoleIndexing = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: indexingArgs,
   returns: v.union(v.null(), indexingAnswer),
   handler: async (ctx, args) => {
@@ -249,7 +251,8 @@ export async function readReason(ctx: { db: QueryCtx["db"] }, holdId: Id<"compan
 }
 
 /** A reason's own page: its pages, where Google sends each, and, kept, their clicks for the dates. */
-export const searchConsoleIndexingReason = tenantQuery({
+export const searchConsoleIndexingReason = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { ...indexingArgs, reason: v.string() },
   returns: v.union(v.null(), reasonAnswer),
   handler: async (ctx, args) => {
@@ -296,7 +299,8 @@ const liveAnswer = v.union(
  * up yet: one ask for the dates, the country's filter on (`askLive` filters to the main country itself), each reason's
  * and, for one reason's page, each of its pages'.
  */
-export const searchConsoleLiveIndexing = tenantAction({
+export const searchConsoleLiveIndexing = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: { ...indexingArgs, reason: v.optional(v.string()) },
   returns: liveAnswer,
   handler: async (ctx, args): Promise<Infer<typeof liveAnswer>> => {
@@ -360,7 +364,8 @@ export const keptDaysTarget = internalQuery({
  * clicks and impressions on them, and each page's last day shown and days shown. A country kept ready reads its own;
  * every other choice reads every country's, as a page's days are. Asks Google nothing.
  */
-export const searchConsoleIndexingDays = tenantAction({
+export const searchConsoleIndexingDays = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), reason: v.string(), country: v.optional(v.string()) },
   returns: daysAnswer,
   handler: async (ctx, args): Promise<Infer<typeof daysAnswer>> => {

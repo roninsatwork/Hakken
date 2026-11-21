@@ -3,7 +3,8 @@ import { customersSaySees, reviewsRivalsSees, yourReviewsSees } from "./utils/se
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { listingSourceValidator } from "./localSchema";
 import { listingsById, localSetup, rivalsOf } from "./localReads";
@@ -102,7 +103,8 @@ const reviewRowValidator = v.object({
   replyRough: v.boolean(),
 });
 
-export const yourReviews = tenantQuery({
+export const yourReviews = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")), period: calendarPeriodValidator, step: stepValidator },
   returns: v.object({
     offices: v.array(officeOptionValidator),
@@ -176,7 +178,8 @@ const businessRowValidator = v.object({
   daysToAnswer: v.union(v.number(), v.null()),
 });
 
-export const reviewsAgainstRivals = tenantQuery({
+export const reviewsAgainstRivals = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")), period: calendarPeriodValidator, step: stepValidator },
   returns: v.object({
     offices: v.array(officeOptionValidator),
@@ -267,7 +270,8 @@ function marksOf(topics: string | undefined): Array<{ topic: string; praise: boo
   return topics.split("|").filter(Boolean).map((mark) => ({ topic: mark.slice(0, -1), praise: mark.endsWith("+") }));
 }
 
-export const whatCustomersSay = tenantQuery({
+export const whatCustomersSay = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
   returns: v.object({
     offices: v.array(officeOptionValidator),

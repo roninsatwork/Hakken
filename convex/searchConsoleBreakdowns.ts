@@ -5,7 +5,8 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { appError } from "./utils/appError";
 import { UNKNOWN } from "./searchConsoleFacts";
 import { getActiveCompanyId } from "./authz";
-import { tenantAction, tenantQuery } from "./tenantFunctions";
+import { moduleAction, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { askGoogle } from "./searchConsoleLiveAsks";
@@ -167,7 +168,8 @@ export const devicesValidator = v.object({ mobile: v.array(pointValidator), desk
  * Click rate by position on mobile and on desktop for dates or a country not kept ready: asked of Google when the screen
  * opens, two asks, and only each position's figures sent back, never the keywords (a month's were 13 and 18 MB).
  */
-export const searchConsoleLiveDeviceCurve = tenantAction({
+export const searchConsoleLiveDeviceCurve = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), country: v.optional(v.string()) },
   returns: v.union(
     v.object({ ok: v.literal(true), devices: devicesValidator }),
@@ -320,7 +322,8 @@ const monthValidator = v.object({ month: v.string(), days: v.number(), clicks: v
  * Rich results' last six months, for the country chosen: each month's clicks (every click, from the day totals) and its rich
  * results where they're kept. A country not kept ready has none (`notReady`), as Brand and non-brand's chart.
  */
-export const searchConsoleLookMonths = tenantQuery({
+export const searchConsoleLookMonths = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, country: v.optional(v.string()) },
   returns: v.object({ months: v.array(monthValidator), notReady: v.boolean() }),
   handler: async (ctx, args) => {

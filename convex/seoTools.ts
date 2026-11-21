@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { companyHasFeature } from "./utils/featureSwitchReads";
 
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -140,6 +142,12 @@ export async function openSeoCycle(
   },
 ): Promise<{ ok: boolean; cycleId: Id<"seoCollectionCycles"> | null; message: string }> {
   {
+    // Visibility switched off for this company, for everyone or for it alone: nothing is bought for it. Every way a
+    // collection opens comes here (features-switches-plan-2026-11-21.md, FS8).
+    if (!(await companyHasFeature(ctx, args.companyId, MENU_FEATURES.visibility))) {
+      return { ok: false, cycleId: null, message: "Visibility is switched off for this company, so nothing is collected." };
+    }
+
     const schedule = await ctx.db
       .query("schedules")
       .withIndex("by_company_agent", (q) => q.eq("companyId", args.companyId))

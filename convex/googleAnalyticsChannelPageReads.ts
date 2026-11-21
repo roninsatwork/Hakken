@@ -10,7 +10,8 @@ import { EVERY_DEVICE, splitChannelKey, type ListRow } from "./googleAnalyticsLi
 import { SHOP_STEPS_ONLY, addInto, blank, connectionOf, conversionsOf, countedOf, readSlot, shopStepsOf, type Counted } from "./googleAnalyticsRows";
 import { analyticsPeriodValidator, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { requireMySite, type SiteReader } from "./siteAccess";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { BASKET_EVENT, CHECKOUT_EVENT } from "./utils/analyticsEvents";
 import { chosenActions } from "./utils/campaignActions";
 import { NO_PAGE_KIND, OTHER_KIND } from "./utils/sees/analyticsChannel";
@@ -60,7 +61,8 @@ const eachDayValidator = v.object({
   before: v.union(v.null(), v.array(v.object({ day: v.string(), lastDay: v.optional(v.string()), visits: v.array(v.number()) }))),
 });
 
-export const analyticsChannelsEachDay = tenantQuery({
+export const analyticsChannelsEachDay = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: argsOf,
   returns: eachDayValidator,
   handler: async (ctx, args) => await readChannelsEachDay(ctx, args),
@@ -170,7 +172,8 @@ const squaresValidator = v.object({
   rows: v.array(v.object({ channel: v.string(), ...figuresValidator, cells: v.array(v.object(figuresValidator)) })),
 });
 
-export const analyticsChannelSquares = tenantQuery({
+export const analyticsChannelSquares = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...argsOf, split: v.union(v.literal("kind"), v.literal("device")) },
   returns: squaresValidator,
   handler: async (ctx, args) => await readChannelSquares(ctx, args),
@@ -316,7 +319,8 @@ const channelStepsValidator = v.object({
   channels: v.array(v.object({ channel: v.string(), ...stepsValidator })),
 });
 
-export const analyticsChannelSteps = tenantQuery({
+export const analyticsChannelSteps = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: argsOf,
   returns: channelStepsValidator,
   handler: async (ctx, args) => await readChannelSteps(ctx, args),

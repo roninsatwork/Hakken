@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { featureOffCheck } from "./utils/featureSwitchReads";
 
 import { discoveryPartOf } from "./discoveryParts";
 import { engineForOperationId } from "./seoAiEngines";
@@ -174,6 +176,11 @@ async function stillWanted(ctx: MutationCtx, pull: Doc<"seoDataPulls">): Promise
   const lines = await ctx.db.query("seoCycleLines").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(LINES_READ_FOR_SWITCH);
   for (const line of lines) companies.add(line.companyId);
   if (companies.size === 0) return true;
+
+  // A company with Visibility switched off wants nothing bought (features-switches-plan-2026-11-21.md, FS8).
+  const visibilityOff = await featureOffCheck(ctx, MENU_FEATURES.visibility);
+  for (const companyId of [...companies]) if (await visibilityOff(companyId)) companies.delete(companyId);
+  if (companies.size === 0) return false;
 
   // Visibility's Local and Reviews purchases are held by the company's switch
   // for each (discovery-local-reputation-ai-plan.md, D16), not its collection

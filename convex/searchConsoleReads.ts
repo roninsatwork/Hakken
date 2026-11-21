@@ -3,7 +3,8 @@ import { internalQuery } from "./_generated/server";
 import type { ActionCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { tenantAction, tenantQuery } from "./tenantFunctions";
+import { moduleAction, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -84,7 +85,8 @@ export function countryFilters(country: string | undefined): Array<{ dimension: 
  * for the thirty days to the newest Google has — a competitor's is never
  * here (SC1, SC8).
  */
-export const listSearchConsoleSites = tenantQuery({
+export const listSearchConsoleSites = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: {},
   returns: v.array(v.object({
     siteId: v.id("companyWebsites"),
@@ -135,7 +137,8 @@ export const listSearchConsoleSites = tenantQuery({
  * For one country kept ready, its own days. For any other country `live`,
  * with nothing read: the page asks Google instead (`searchConsoleLiveDays`).
  */
-export const searchConsolePerformance = tenantQuery({
+export const searchConsolePerformance = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), period: v.optional(calendarPeriodValidator), country: v.optional(v.string()) },
   returns: v.object({
     days: v.array(dayValidator),
@@ -206,7 +209,8 @@ const problemValidator = v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_R
  * day's searches): `named` is null. The days before are compared only where
  * Google still keeps them, sixteen months.
  */
-export const searchConsoleLiveDays = tenantAction({
+export const searchConsoleLiveDays = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), period: v.optional(calendarPeriodValidator), country: v.string() },
   returns: v.union(
     v.object({

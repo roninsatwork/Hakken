@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import { demandSees } from "./utils/sees/aiAnswers";
 import type { Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { groupOwner, requireMySite, type SiteReader } from "./siteAccess";
 import { aiVolumeOf, demandSearches } from "./aiDemand";
 import { searchVolumeOf } from "./searchVolumes";
@@ -16,7 +17,8 @@ import { unpackColumn } from "./utils/packedColumns";
  * among its biggest keywords — with how often it is asked of AI tools a
  * month beside how often it is searched on Google, both over a year.
  */
-export const aiDemand = tenantQuery({
+export const aiDemand = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     /** The newest month the AI figures are for, "2026-09"; null before any is bought. */

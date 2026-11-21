@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { clarityDays, clarityPeriod } from "./clarity";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { seriesFor } from "./siteFigures";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
@@ -234,7 +235,8 @@ async function siteFor(ctx: SiteReader, siteId: Id<"companyWebsites"> | undefine
 }
 
 /** What a screen reads for the period chosen in the section's header (`period`: `2026-09`, `2026-Q3` or `12M`). */
-export const insightsPeriodView = tenantQuery({
+export const insightsPeriodView = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")), period: v.optional(v.string()) },
   returns: v.union(v.null(), periodViewValidator),
   handler: async (ctx, args) => {
@@ -462,7 +464,8 @@ const kindType = v.string();
 const chosenValidator = v.object({ id: v.string(), kind: periodKind, months: v.array(v.string()), before: v.union(v.null(), v.array(v.string())), yearAgo: v.union(v.null(), v.array(v.string())) });
 
 /** What brings enquiries: the period chosen in the section's header, for the website chosen. */
-export const insightsEnquiries = tenantQuery({
+export const insightsEnquiries = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")), period: v.optional(v.string()) },
   returns: v.union(v.null(), v.object({
     siteId: v.id("companyWebsites"),
@@ -551,7 +554,8 @@ export async function enquirySourceView(ctx: Pick<QueryCtx, "db">, hold: Doc<"co
 }
 
 /** One source's page under What brings enquiries. */
-export const insightsEnquirySource = tenantQuery({
+export const insightsEnquirySource = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { name: v.string(), siteId: v.optional(v.id("companyWebsites")), period: v.optional(v.string()) },
   returns: v.union(v.null(), v.object({ chosen: v.null() }), v.object({
     chosen: chosenValidator,

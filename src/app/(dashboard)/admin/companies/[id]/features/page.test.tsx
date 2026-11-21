@@ -34,6 +34,10 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Hakken" }),
+}));
+
 function getConvexPath(functionReference: unknown) {
   try {
     return getFunctionName(functionReference as never);
@@ -54,12 +58,15 @@ describe("CompanyFeaturesPage", () => {
   function mockQueries({
     role = "SUPER_ADMIN",
     enabledModules,
-  }: { role?: string; enabledModules?: string[] } = {}) {
+    featuresOff,
+    offForEveryone = [],
+  }: { role?: string; enabledModules?: string[]; featuresOff?: string[]; offForEveryone?: string[] } = {}) {
     (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown) => {
       const path = getConvexPath(queryFn);
       if (path.includes("getCompanyById")) {
         return { _id: "company_1", name: "Module Corp", enabledModules };
       }
+      if (path.includes("getFeatureSwitches")) return { offForEveryone, companyOff: featuresOff ?? [], companies: 6, ticked: [] };
       if (path.includes("getMe")) return { role };
       if (path.includes("getActivePlans")) return [];
       if (path.includes("getCompanyPlanStatus")) {
@@ -82,27 +89,53 @@ describe("CompanyFeaturesPage", () => {
     mockQueries();
   });
 
-  it("shows every feature to a super admin, as a row in the table", async () => {
+  it("lists the menu in menu order, then the other four, as rows in the table (features-switches-plan FS5)", async () => {
     render(<CompanyFeaturesPage />);
 
-    expect(
-      await screen.findByRole("heading", { name: "featuresTitle" })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "title" })).toBeInTheDocument();
 
+    const rows = screen.getAllByRole("row").slice(1).map((row) => row.querySelector("td span")?.textContent);
+    expect(rows).toEqual([
+      "dashboard", "askPlatform", "insights", "sites", "searchConsole", "bingWebmaster",
+      "googleAnalytics", "clarity", "learn", "hakkenTasks", "usage",
+      "modules.tasks.name", "modules.calls.name", "modules.reception.name", "modules.wiki.name",
+    ]);
+    // The four always on carry no tick box.
+    expect(screen.getAllByText("alwaysOn")).toHaveLength(4);
+    expect(screen.queryByRole("checkbox", { name: "dashboard" })).not.toBeInTheDocument();
     // Twice on purpose: once visibly in the name column, and once as the
     // tick box's own label, which is hidden but still tied to the box.
     const named = screen.getAllByText("modules.calls.name");
     expect(named).toHaveLength(2);
     expect(named.some((node) => node.classList.contains("sr-only"))).toBe(true);
-    expect(screen.getByRole("checkbox", { name: "modules.calls.name" })).toBeInTheDocument();
+  });
+
+  it("ticks every menu feature the company hasn't switched off", async () => {
+    mockQueries({ featuresOff: ["bingWebmaster"] });
+    render(<CompanyFeaturesPage />);
+
+    expect(await screen.findByRole("checkbox", { name: "searchConsole" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "bingWebmaster" })).not.toBeChecked();
+  });
+
+  it("says Off for everyone, with no tick box, for what System Settings has switched off", async () => {
+    mockQueries({ offForEveryone: ["clarity"] });
+    render(<CompanyFeaturesPage />);
+
+    expect(await screen.findByText("offForEveryone")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "clarity" })).not.toBeInTheDocument();
+  });
+
+  it("links the strip's first step to System Settings → Features", async () => {
+    render(<CompanyFeaturesPage />);
+
+    expect(await screen.findByRole("link", { name: "levels.platformPage" })).toHaveAttribute("href", "/admin/settings/features");
   });
 
   it("carries the house search box and pagination footer", async () => {
     render(<CompanyFeaturesPage />);
 
-    expect(
-      await screen.findByPlaceholderText("featuresSearchPlaceholder")
-    ).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText("search")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /previous/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
   });
@@ -110,12 +143,13 @@ describe("CompanyFeaturesPage", () => {
   it("narrows the rows to what was searched for", async () => {
     render(<CompanyFeaturesPage />);
 
-    fireEvent.change(await screen.findByPlaceholderText("featuresSearchPlaceholder"), {
+    fireEvent.change(await screen.findByPlaceholderText("search"), {
       target: { value: "calls" },
     });
 
     expect(screen.getByRole("checkbox", { name: "modules.calls.name" })).toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: "modules.tasks.name" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "searchConsole" })).not.toBeInTheDocument();
   });
 
   it("refuses anyone who is not a super admin", () => {
@@ -149,13 +183,14 @@ describe("CompanyFeaturesPage", () => {
     expect(await screen.findByRole("checkbox", { name: /calls/ })).toBeChecked();
   });
 
-  it("saves through its own mutation, not the profile save", async () => {
+  it("saves both kinds through its own mutation, not the profile save", async () => {
     render(<CompanyFeaturesPage />);
 
-    const save = await screen.findByRole("button", { name: /Save Features/i });
+    const save = await screen.findByRole("button", { name: "save" });
     expect(save).toBeDisabled();
 
     fireEvent.click(await screen.findByRole("checkbox", { name: /calls/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "searchConsole" }));
     expect(save).toBeEnabled();
     fireEvent.click(save);
 
@@ -163,6 +198,7 @@ describe("CompanyFeaturesPage", () => {
       expect(setCompanyModules).toHaveBeenCalledWith({
         id: "company_1",
         enabledModules: ["calls"],
+        featuresOff: ["searchConsole"],
       });
     });
     // The profile mutations must not fire: ticking a module should not rewrite
@@ -170,17 +206,19 @@ describe("CompanyFeaturesPage", () => {
     expect(otherMutation).not.toHaveBeenCalled();
   });
 
-  it("can switch a module back off", async () => {
-    mockQueries({ enabledModules: ["calls"] });
+  it("can switch a module back off, and a menu feature back on", async () => {
+    mockQueries({ enabledModules: ["calls"], featuresOff: ["clarity"] });
     render(<CompanyFeaturesPage />);
 
     fireEvent.click(await screen.findByRole("checkbox", { name: /calls/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Features/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "clarity" }));
+    fireEvent.click(screen.getByRole("button", { name: "save" }));
 
     await waitFor(() => {
       expect(setCompanyModules).toHaveBeenCalledWith({
         id: "company_1",
         enabledModules: [],
+        featuresOff: [],
       });
     });
   });
@@ -190,10 +228,10 @@ describe("CompanyFeaturesPage", () => {
     render(<CompanyFeaturesPage />);
 
     fireEvent.click(await screen.findByRole("checkbox", { name: /calls/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Save Features/i }));
+    fireEvent.click(screen.getByRole("button", { name: "save" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Unauthorized|Failed to update features/)).toBeInTheDocument();
+      expect(screen.getByText(/Unauthorized|saveFailed/)).toBeInTheDocument();
     });
   });
 });

@@ -2,7 +2,8 @@ import { assetsOf } from "./assetSummaries";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery, tenantQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { companyHolds, findMySite, listHold, myRivals, placeName, type HoldSummary, type SiteReader } from "./siteAccess";
 import { citedPagesIn, coverageOf, coverageValidator, enginesNamingIn, latestBands, latestFigures, latestListAi, linkingWebsitesOf, searchTotalOf } from "./siteFigures";
 import { holdAiSummary, holdQuestions, holdSearches } from "./holdLists";
@@ -127,7 +128,8 @@ export const holdFocusInternal = internalQuery({
 });
 
 /** Every website the company holds, owned first, with its headline figures. */
-export const listMySites = tenantQuery({
+export const listMySites = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {},
   returns: v.array(v.object({
     ...pickerHoldValidator.fields,
@@ -217,7 +219,8 @@ export const listMySites = tenantQuery({
  * can be compared, and the number beside each menu item. Null for a hold that
  * is not the company's, exactly as for a missing one.
  */
-export const getMySite = tenantQuery({
+export const getMySite = moduleQuery({
+  module: [MENU_FEATURES.insights, MENU_FEATURES.visibility],
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     ...holdSummaryValidator.fields,

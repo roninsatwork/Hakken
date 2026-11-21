@@ -8,7 +8,8 @@ import { listHold, myRivals, requireMySite } from "./siteAccess";
 import { holdQuestions } from "./holdLists";
 import { holdBrandNames } from "./holdProfiles";
 import { citedSourcesOf } from "./siteAnswers";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { listingsById, localSetup, officeChecks, officeSearches } from "./localReads";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { readFanOutLimits } from "./fanOutLimits";
@@ -74,7 +75,8 @@ export const sameHost = (candidate: string | null | undefined, host: string) => 
 /** A business's name as compared across Google, the AI apps and Brand radar: lowercase letters and digits, single spaces. */
 export const normalName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-export const businessesRecommended = tenantQuery({
+export const businessesRecommended = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     questions: v.array(v.string()),
@@ -169,7 +171,8 @@ export const businessesRecommended = tenantQuery({
   }, businessesSees),
 });
 
-export const readNotCited = tenantQuery({
+export const readNotCited = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     questions: v.number(),

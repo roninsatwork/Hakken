@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { lookupIdeasShape } from "./keywordResearchShapes";
-import { tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
+import { moduleMutation, moduleQuery, requireTenant } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { isOversightRole } from "./authz";
 import { readFanOutLimits } from "./fanOutLimits";
 import { freshnessOf, newestSerp } from "./keywordResearchData";
@@ -22,7 +23,8 @@ const KINDS = ["TERMS", "QUESTIONS", "ALSO_RANK"] as const;
 const kindValidator = v.union(v.literal("TERMS"), v.literal("QUESTIONS"), v.literal("ALSO_RANK"));
 
 /** Ideas opened: what is not held and fresh is bought — the two kinds of idea, and the top ten in full for "also rank for". */
-export const openIdeas = tenantMutation({
+export const openIdeas = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -64,7 +66,8 @@ export const openIdeas = tenantMutation({
 });
 
 /** One kind of idea for a lookup, with each idea's position for the website measured, and how many of each kind there are. */
-export const lookupIdeas = tenantQuery({
+export const lookupIdeas = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups"), kind: kindValidator },
   returns: lookupIdeasShape,
   handler: async (ctx, args) => {

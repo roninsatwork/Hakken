@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check, CircleX, Clock, Info, Loader2, Minus, Pin, ShieldCheck, TriangleAlert, User, UserCheck, type LucideIcon } from "lucide-react";
+import { Check, CircleX, Clock, Info, Loader2, Lock, Minus, Pin, ShieldCheck, TriangleAlert, User, UserCheck, type LucideIcon } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { STATUS_TONE_TEXT_CLASSES, type StatusTone } from "./statusTone";
 
@@ -30,6 +30,8 @@ export const STATUS_ICONS = {
   member: { Icon: User, spin: false },
   /** How many facts are pinned to a wiki page: the pin is the word, the number beside it. */
   pinned: { Icon: Pin, spin: false },
+  /** Can't be switched off by anyone: the menu features that are always on (features-switches-plan-2026-11-21.md). */
+  locked: { Icon: Lock, spin: false },
 } satisfies Record<string, { Icon: LucideIcon; spin: boolean }>;
 
 export type StatusIconName = keyof typeof STATUS_ICONS;

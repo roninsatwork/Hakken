@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, type QueryCtx } from "./_generated/server";
 import { requireMySite } from "./siteAccess";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 
 /**
  * How many competitors DataForSEO found for a site, against the few it hands
@@ -58,7 +59,8 @@ export async function discoveredTotal(ctx: QueryCtx, websiteId: Id<"websites">, 
 }
 
 /** How many websites rank for the same searches as the site, from its place: what Organic competitors' rows are "of". */
-export const siteDiscoveryTotal = tenantQuery({
+export const siteDiscoveryTotal = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.number(), v.null()),
   handler: async (ctx, args) => {
@@ -74,7 +76,8 @@ export const siteDiscoveryTotal = tenantQuery({
  * searches in both kept lists, and says which part that is (§4.D3). Null when
  * neither discovery found the other.
  */
-export const sharedWithRival = tenantQuery({
+export const sharedWithRival = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), rivalId: v.id("companyWebsites") },
   returns: v.union(v.number(), v.null()),
   handler: async (ctx, args) => {

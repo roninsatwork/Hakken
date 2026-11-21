@@ -19,6 +19,7 @@ import {
   incrementGlobalInventoryTotals,
 } from "./utils/inventoryRollupService";
 import { normalizeEnabledModules } from "./utils/companyModules";
+import { companyFeaturesOff, writeFeaturesOff } from "./utils/featureSwitchReads";
 import { appError } from "./utils/appError";
 import * as companyShapes from "./utils/companyShapes";
 import { collectionTimetable, companyCollectionState } from "./seoScheduleService";
@@ -296,6 +297,12 @@ export const setCompanyModules = superAdminMutation({
   args: {
     id: v.id("companies"),
     enabledModules: v.array(v.string()),
+    /**
+     * The menu features switched off for this company alone
+     * (features-switches-plan-2026-11-21.md). Left out, they stay as they are,
+     * so a caller that only knows the old four changes nothing else.
+     */
+    featuresOff: v.optional(v.array(v.string())),
   },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
@@ -306,6 +313,8 @@ export const setCompanyModules = superAdminMutation({
 
     const previous = normalizeEnabledModules(company.enabledModules);
     const next = normalizeEnabledModules(args.enabledModules);
+    const previousOff = await companyFeaturesOff(ctx, args.id);
+    const nextOff = args.featuresOff === undefined ? previousOff : await writeFeaturesOff(ctx, args.id, args.featuresOff);
 
     await ctx.db.patch(args.id, { enabledModules: next });
 
@@ -318,6 +327,8 @@ export const setCompanyModules = superAdminMutation({
       metadata: JSON.stringify({
         previousModules: previous,
         newModules: next,
+        previousFeaturesOff: previousOff,
+        newFeaturesOff: nextOff,
       }),
       timestamp: Date.now(),
     });
@@ -352,6 +363,8 @@ export const deleteCompany = superAdminMutation({
     for (const row of await ctx.db.query("autoSetupRuns").withIndex("by_company", (q) => q.eq("companyId", args.id)).take(5)) {
       await ctx.db.delete(row._id);
     }
+    // And its own Features switches (features-switches-plan-2026-11-21.md).
+    await writeFeaturesOff(ctx, args.id, []);
 
     // Erase the company entity representation globally
     await ctx.db.delete(args.id);

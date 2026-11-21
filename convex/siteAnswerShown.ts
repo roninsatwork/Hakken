@@ -6,7 +6,8 @@ import { aiCitationOperationId, AI_MODE_ENGINE, aiEngineValidator, answerPlace }
 import { listHold, requireMySite } from "./siteAccess";
 import { holdBrandNames } from "./holdProfiles";
 import { holdQuestion } from "./holdLists";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { answerById, answerIdValidator } from "./siteAnswers";
 import { readSearchPhrase } from "./websiteCanonical";
 
@@ -23,7 +24,8 @@ import { readSearchPhrase } from "./websiteCanonical";
  */
 const askedAsValidator = v.union(v.literal("APP"), v.literal("MODEL"), v.literal("PAGE"));
 
-export const answerShown = tenantQuery({
+export const answerShown = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), answerId: answerIdValidator },
   returns: v.union(v.null(), v.object({
     askedAs: askedAsValidator,

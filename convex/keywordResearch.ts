@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { lookupOverviewShape, lookupResultsShape, pastLookupsShape, researchListShape, researchListsShape, researchSetupShape } from "./keywordResearchShapes";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { requireTenant, tenantMutation, tenantQuery, type TenantIdentity } from "./tenantFunctions";
+import { moduleMutation, moduleQuery, requireTenant, type TenantIdentity } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { appError } from "./utils/appError";
 import { isOversightRole } from "./authz";
 import { companyHolds } from "./siteAccess";
@@ -147,7 +148,8 @@ export async function partIsBuying(ctx: Reader, lookupId: Id<"keywordLookups">, 
 const keywordsWord = (count: number) => (count === 1 ? "1 keyword" : `${count} keywords`);
 
 /** What the Look up screen offers: the countries, the company's own websites, its limits, and whether the agent is there to buy. */
-export const researchSetup = tenantQuery({
+export const researchSetup = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {},
   returns: researchSetupShape,
   handler: async (ctx) => {
@@ -171,7 +173,8 @@ export const researchSetup = tenantQuery({
  * is opened again rather than written twice; what is held and fresh is not
  * bought again; the rest waits for the agent, started here.
  */
-export const lookUp = tenantMutation({
+export const lookUp = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { keywords: v.array(v.string()), locationCode: v.number(), siteId: v.optional(v.id("companyWebsites")) },
   returns: v.object({ lookupIds: v.array(v.id("keywordLookups")), waiting: v.number() }),
   handler: async (ctx, args) => {
@@ -227,7 +230,8 @@ export const lookUp = tenantMutation({
 });
 
 /** Look up again: buy the keyword afresh now, however recently it was bought. */
-export const lookUpAgain = tenantMutation({
+export const lookUpAgain = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -241,7 +245,8 @@ export const lookUpAgain = tenantMutation({
 });
 
 /** Searches by country: look the keyword up in one more country, its overview alone (about 1 cent: `researchCosts`). */
-export const lookUpInCountry = tenantMutation({
+export const lookUpInCountry = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups"), locationCode: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -282,7 +287,8 @@ async function figuresOf(ctx: Reader, lookup: Pick<Doc<"keywordLookups">, "keywo
 }
 
 /** Past lookups: every keyword the company looked up, newest first, with its figures and its website's position. */
-export const pastLookups = tenantQuery({
+export const pastLookups = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {},
   returns: pastLookupsShape,
   handler: async (ctx) => {
@@ -331,7 +337,8 @@ async function strengthOfWebsite(ctx: Reader, websiteId: Id<"websites">, place: 
 export const watchedIn = (website: { homeCountry: number } | null, locationCode: number) => Boolean(website && website.homeCountry === locationCode);
 
 /** A lookup's overview (board 2): its figures, its 24 months, Google's top results, and what it means for the website measured. */
-export const lookupOverview = tenantQuery({
+export const lookupOverview = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups") },
   returns: lookupOverviewShape,
   handler: async (ctx, args) => {
@@ -466,7 +473,8 @@ function topPages(serp: Doc<"researchSerps">) {
  * and top keyword are bought the first time, and again once older than the
  * company's days; the agent buys them.
  */
-export const openResults = tenantMutation({
+export const openResults = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -488,7 +496,8 @@ export const openResults = tenantMutation({
 });
 
 /** Google's results (board 3): the top ten with each page's figures, and where the website and its competitors are in the top 100. */
-export const lookupResults = tenantQuery({
+export const lookupResults = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups") },
   returns: lookupResultsShape,
   handler: async (ctx, args) => {
@@ -530,7 +539,8 @@ export const lookupResults = tenantQuery({
 });
 
 /** Research lists (board 1's second table): each list, its keywords and their searches added together. */
-export const researchLists = tenantQuery({
+export const researchLists = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {},
   returns: researchListsShape,
   handler: async (ctx) => {
@@ -556,7 +566,8 @@ export const researchLists = tenantQuery({
 });
 
 /** A research list (board 7): its keywords with their figures, whether each is worth it, and whether it is tracked. */
-export const researchList = tenantQuery({
+export const researchList = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { listId: v.id("researchLists") },
   returns: researchListShape,
   handler: async (ctx, args) => {
@@ -614,7 +625,8 @@ const itemValidator = v.object({ keyword: v.string(), locationCode: v.number() }
  * Add keywords to a list — an existing one, or a new one named here, measured
  * against a website or none. A keyword already on the list stays once.
  */
-export const addToResearchList = tenantMutation({
+export const addToResearchList = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: {
     listId: v.optional(v.id("researchLists")),
     newList: v.optional(v.object({ name: v.string(), siteId: v.optional(v.id("companyWebsites")) })),
@@ -658,7 +670,8 @@ export const addToResearchList = tenantMutation({
 });
 
 /** Take keywords off a list. A keyword tracked from it stays tracked: the list and the tracked searches never sync. */
-export const removeFromResearchList = tenantMutation({
+export const removeFromResearchList = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { listId: v.id("researchLists"), items: v.array(itemValidator) },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -677,7 +690,8 @@ export const removeFromResearchList = tenantMutation({
   },
 });
 
-export const renameResearchList = tenantMutation({
+export const renameResearchList = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { listId: v.id("researchLists"), name: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -688,7 +702,8 @@ export const renameResearchList = tenantMutation({
   },
 });
 
-export const deleteResearchList = tenantMutation({
+export const deleteResearchList = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { listId: v.id("researchLists") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -706,7 +721,8 @@ export const deleteResearchList = tenantMutation({
  * checked every run at the usual cost, within the website's tracked limit.
  * The list is left as it is (Anthony: research lists stay separate).
  */
-export const trackFromResearchList = tenantMutation({
+export const trackFromResearchList = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { listId: v.id("researchLists"), keywords: v.array(v.string()) },
   returns: v.object({ tracked: v.number() }),
   handler: async (ctx, args) => {

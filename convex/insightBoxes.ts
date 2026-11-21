@@ -3,7 +3,8 @@ import { v, type Infer } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { companyHolds, requireMySite } from "./siteAccess";
 import { ask, factLines, type InsightsRunArgs } from "./insightsAsk";
 import type { TeamMember } from "./insightsTeam";
@@ -149,7 +150,8 @@ export async function boxesOf(ctx: { db: import("./_generated/server").QueryCtx[
 }
 
 /** One screen's box for the website shown: the one chosen, or the company's first owned website with one. Null when none was written. */
-export const insightsScreenBox = tenantQuery({
+export const insightsScreenBox = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")), screen: boxScreenValidator },
   returns: v.union(v.null(), v.object({ says: v.array(v.string()), role: v.string(), week: v.string(), period: v.union(v.string(), v.null()) })),
   handler: async (ctx, args) => {

@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { CLARITY_RECORDING_DAYS_KEPT, clarityDays, readClarityPeriod, readPageRows, type ClarityPeriodRead, clarityPeriodArgValidator, claritySpanOf, periodKeyOf, type ClarityPeriodArg } from "./clarity";
 import { ukDay } from "./utils/calendarPeriods";
@@ -284,7 +285,8 @@ async function newestOf(ctx: Reader, holdId: HoldId): Promise<string | null> {
 
 // ---------------------------------------------------------------- Overview (CS3)
 
-export const clarityOverview = tenantQuery({
+export const clarityOverview = moduleQuery({
+  module: MENU_FEATURES.clarity,
   args: screenArgs,
   returns: v.object({
     period: periodValidator,
@@ -384,7 +386,8 @@ function listedPages(lines: readonly PageLine[], args: { q?: string; group?: str
     .sort(listOrder(PAGE_SORTS, args.sort ?? "visits", args.direction, (row) => row.page));
 }
 
-export const clarityPagesList = tenantQuery({
+export const clarityPagesList = moduleQuery({
+  module: MENU_FEATURES.clarity,
   args: { ...pageListArgs, ...listPageArgs },
   returns: v.object({
     ...listPageResult(pageLineValidator).fields,
@@ -463,7 +466,8 @@ function summaryOf(lines: readonly PageLine[], before: ClarityPeriodRead | null,
 }
 
 /** Every page the list shows, for its download: the same pages in the same order, without titles, which are read a page at a time. */
-export const clarityPagesAll = tenantQuery({
+export const clarityPagesAll = moduleQuery({
+  module: MENU_FEATURES.clarity,
   args: pageListArgs,
   returns: v.object({ rows: v.array(pageLineValidator) }),
   handler: async (ctx, args) => {
@@ -476,7 +480,8 @@ export const clarityPagesAll = tenantQuery({
 
 // ---------------------------------------------------------------- A page's own screen (CS5)
 
-export const clarityPage = tenantQuery({
+export const clarityPage = moduleQuery({
+  module: MENU_FEATURES.clarity,
   args: { ...screenArgs, page: v.string() },
   returns: v.object({
     period: periodValidator,
@@ -546,7 +551,8 @@ export async function pageOf(ctx: Reader, holdId: HoldId, args: ScreenRead & { p
 
 // ---------------------------------------------------------------- Errors (CS6)
 
-export const clarityErrors = tenantQuery({
+export const clarityErrors = moduleQuery({
+  module: MENU_FEATURES.clarity,
   args: screenArgs,
   returns: v.object({
     period: periodValidator,
@@ -603,7 +609,8 @@ function errorPagesOf(errorLines: readonly PageLine[], before: ClarityPeriodRead
  * date menu says, which this screen does not show (calendar-periods-plan.md,
  * item 11.6): its first and last days, and how many days they span.
  */
-export const clarityRecordingsList = tenantQuery({
+export const clarityRecordingsList = moduleQuery({
+  module: MENU_FEATURES.clarity,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({ span: v.union(v.null(), v.object({ from: v.string(), to: v.string() })), recordings: v.array(recordingValidator) }),
   handler: async (ctx, args) => {

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Building2, FileText, Gauge, Globe, GraduationCap, SearchCheck, ChartColumn, Bot, Workflow, ShieldCheck, Settings, CreditCard, Wrench, ListChecks, ListTodo, MonitorSpeaker, Phone, Gamepad2, Lightbulb, MousePointerClick, ScanSearch } from 'lucide-react';
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { CORE_MODULES } from "@/convex/utils/coreModules";
+import { CORE_MODULES, MENU_FEATURES } from "@/convex/utils/coreModules";
 import {
 } from "@/convex/utils/coreModules";
 import {
@@ -335,6 +335,7 @@ export function UserNavTree({
     Insights, the AI analyst's findings, straight under Ask Hakken
     (docs/plans/active/menu-names-plan.md, phase 7; insights-analyst-plan.md I1).
   */}
+  {hasCapability(MENU_FEATURES.insights) && (
   <NavItem
     icon={Lightbulb}
     label={t('insights')}
@@ -342,6 +343,7 @@ export function UserNavTree({
     isActive={activeItem === 'Insights' || pathname.startsWith('/app/insights')}
     onClick={() => setActiveItem('Insights')}
   />
+  )}
 
   {hasCapability(CORE_MODULES.tasks) && (
   <NavItem
@@ -371,6 +373,7 @@ export function UserNavTree({
     research (docs/plans/active/keyword-research-plan.md, 2026-10-04). Each
     sub-item is lit on its own pages only.
   */}
+  {hasCapability(MENU_FEATURES.visibility) && (
   <NavItem
     icon={Globe}
     label={t('sites')}
@@ -383,8 +386,10 @@ export function UserNavTree({
     <SubNavItem label={t('yourSites')} href="/app/sites" isActive={pathname.startsWith('/app/sites')} onClick={() => setActiveItem('Sites')} />
     <SubNavItem label={t('keywordResearch')} href="/app/keyword-research" isActive={pathname.startsWith('/app/keyword-research')} onClick={() => setActiveItem('Sites')} />
   </NavItem>
+  )}
 
   {/* Each own website's real clicks from Google (docs/plans/active/search-console-plan.md, SC1). */}
+  {hasCapability(MENU_FEATURES.searchConsole) && (
   <NavItem
     icon={SearchCheck}
     label={t('searchConsole')}
@@ -392,8 +397,10 @@ export function UserNavTree({
     isActive={activeItem === 'Search Console' || pathname.startsWith('/app/search-console')}
     onClick={() => setActiveItem('Search Console')}
   />
+  )}
 
   {/* Each own website's real clicks from Bing, beside Google's (docs/plans/active/bing-webmaster-plan.md, BW4): straight after Search Console. */}
+  {hasCapability(MENU_FEATURES.bingWebmaster) && (
   <NavItem
     icon={ScanSearch}
     label={t('bingWebmaster')}
@@ -401,12 +408,14 @@ export function UserNavTree({
     isActive={activeItem === 'BingWebmaster' || pathname.startsWith('/app/bing-webmaster')}
     onClick={() => setActiveItem('BingWebmaster')}
   />
+  )}
 
   {/*
     Each own website's Google Analytics (docs/plans/active/google-analytics-plan.md,
     GA1): its own item after Search Console, "Google Analytics" (§10, Q7), with
     its own key — Admin's System Settings → Analytics keeps 'Analytics'.
   */}
+  {hasCapability(MENU_FEATURES.googleAnalytics) && (
   <NavItem
     icon={ChartColumn}
     label={t('googleAnalytics')}
@@ -414,8 +423,10 @@ export function UserNavTree({
     isActive={activeItem === 'GoogleAnalytics' || pathname.startsWith('/app/analytics')}
     onClick={() => setActiveItem('GoogleAnalytics')}
   />
+  )}
 
   {/* Each own website's Microsoft Clarity, after Google Analytics like the other sources (insights-analyst-plan.md I27). */}
+  {hasCapability(MENU_FEATURES.clarity) && (
   <NavItem
     icon={MousePointerClick}
     label={t('clarity')}
@@ -423,6 +434,7 @@ export function UserNavTree({
     isActive={activeItem === 'Clarity' || pathname.startsWith('/app/clarity')}
     onClick={() => setActiveItem('Clarity')}
   />
+  )}
 
   {/*
     Reading room (Learn, then Insights, until 2026-10-11, menu-names-plan.md),
@@ -442,6 +454,7 @@ export function UserNavTree({
     What Hakken keeps doing for the person reading — theirs alone (docs/plans/active/hakken-tasks-plan.md, 1.5),
     after Reading room since 2026-10-11 (menu-names-plan.md).
   */}
+  {hasCapability(MENU_FEATURES.hakkenTasks) && (
   <NavItem
     icon={ListTodo}
     label={t('hakkenTasks', { platformName: settings.platformName })}
@@ -449,6 +462,7 @@ export function UserNavTree({
     isActive={activeItem === 'PlatformTasks' || pathname.startsWith('/app/hakken-tasks')}
     onClick={() => setActiveItem('PlatformTasks')}
   />
+  )}
 
   {/* Usage, after Hakken tasks: where the company's credits go (docs/plans/active/usage-credits-plan.md, step 3). */}
   <NavItem

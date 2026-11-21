@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { myRivals, requireMySite } from "./siteAccess";
 import { appAnswers } from "./siteAiApps";
 import { citedSourcesOf } from "./siteAnswers";
@@ -22,7 +23,8 @@ import { seen, seenValidator, toRecord, type SeenPhrase, type SeenStep } from ".
 const whoseValidator = v.union(v.literal("YOURS"), v.literal("RIVAL"), v.literal("OTHER"));
 type Whose = typeof whoseValidator.type;
 
-export const aiPageDetail = tenantQuery({
+export const aiPageDetail = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), url: v.string() },
   returns: v.object({
     url: v.string(),

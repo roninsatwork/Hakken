@@ -41,7 +41,7 @@ describe('no Google Analytics screen asks Google (SF1)', () => {
 
   test('the live module answers for the event funnel and custom dates alone', () => {
     const text = readRepoFile('convex/googleAnalyticsLive.ts');
-    const actions = [...text.matchAll(/export const (\w+)\s*=\s*tenantAction\(/g)].map((match) => match[1]);
+    const actions = [...text.matchAll(/export const (\w+)\s*=\s*(?:tenant|module)Action\(/g)].map((match) => match[1]);
     expect(actions).toEqual(['askEventFunnel', 'prepareAnalyticsCustom']);
     // Only the layout asks for them, so a page cannot ask twice.
     const askers = screenFiles().filter((file) => readRepoFile(relativePath(file)).includes('prepareAnalyticsCustom')).map((file) => relativePath(file));

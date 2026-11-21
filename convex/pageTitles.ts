@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { normalisePage } from "./utils/pageClassification";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 
 /**
@@ -59,7 +60,8 @@ async function titleKeeper(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsi
 }
 
 /** One page's title, for its own screen's header: Search Console's page screen. Only the caller's own website. */
-export const pageTitle = tenantQuery({
+export const pageTitle = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), page: v.string() },
   returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
@@ -76,7 +78,8 @@ const TITLES_AT_ONCE = 5;
  * search-console-pages-way-1-plan-2026-11-17.md): the first five pages asked, a title each where the website has one.
  * Only the caller's own website.
  */
-export const pageTitlesFor = tenantQuery({
+export const pageTitlesFor = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), pages: v.array(v.string()) },
   returns: v.array(v.object({ page: v.string(), title: v.string() })),
   handler: async (ctx, args) => {

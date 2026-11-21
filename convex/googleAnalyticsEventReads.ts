@@ -1,5 +1,6 @@
 import { v, type ObjectType } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { decodePages } from "./holdPageRefs";
 import { slotKey } from "./googleAnalyticsCollect";
@@ -74,7 +75,8 @@ const analyticsEventsArgs = { siteId: v.id("companyWebsites"), period: analytics
  * count and never happened among them — and the change; scrolls and link
  * clicks a day. Every device's and each device's, kept by each collection.
  */
-export const analyticsEvents = tenantQuery({
+export const analyticsEvents = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsEventsArgs,
   returns: v.union(v.null(), v.object({
     /** No event list held yet: it comes in with the next collection. */
@@ -164,7 +166,8 @@ const analyticsEventArgs = { siteId: v.id("companyWebsites"), event: v.string(),
  * are held; and who converted after it, its funnel asked of Google when the
  * screen opens and kept a week (`askEventFunnel`, SF8), `afterLive` until then.
  */
-export const analyticsEvent = tenantQuery({
+export const analyticsEvent = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsEventArgs,
   returns: v.union(v.null(), v.object({
     eventName: v.string(),
@@ -309,7 +312,8 @@ export const hourGrid = (rows: readonly ListRow[], event: string): { times: numb
  * `held` false until the first collection since the list was added has run;
  * `live` while this device's list is not built yet.
  */
-export const analyticsEventHours = tenantQuery({
+export const analyticsEventHours = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: analyticsEventHoursArgs,
   returns: v.union(v.null(), v.object({
     held: v.boolean(),

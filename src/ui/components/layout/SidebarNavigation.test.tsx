@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SidebarNavigation from "./SidebarNavigation";
 import { NAV_ACTIVE_TEXT } from "./navStyles";
+import { MENU_FEATURE_KEYS, MENU_FEATURES } from "@/convex/utils/coreModules";
 
 const setIsSidebarOpen = vi.hoisted(() => vi.fn());
 const useQueryMock = vi.hoisted(() => vi.fn());
@@ -385,7 +386,12 @@ describe("Visibility's menu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useMutationMock.mockReturnValue(vi.fn());
-    useQueryMock.mockImplementation((ref: unknown) => (ref === "users:getMe" ? { role: "USER", companyId: "company" } : undefined));
+    useQueryMock.mockImplementation((ref: unknown) => {
+      if (ref === "users:getMe") return { role: "USER", companyId: "company" };
+      // Every menu feature on, as the server answers for a company with none switched off.
+      if (ref === "companies:getMyWorkspaceModules") return { companyName: "Acme", enabledModules: [...MENU_FEATURE_KEYS] };
+      return undefined;
+    });
   });
 
   it("lists Keyword research after Websites, lit on its own pages and Websites not", () => {
@@ -417,5 +423,46 @@ describe("Visibility's menu", () => {
 
     expect(screen.getByRole("link", { name: "yourSites" }).className).toContain(NAV_ACTIVE_TEXT);
     expect(screen.getByRole("link", { name: "keywordResearch" }).className).not.toContain(NAV_ACTIVE_TEXT);
+  });
+});
+
+/**
+ * A menu feature switched off, for everyone or for the company, leaves the menu
+ * (docs/plans/active/features-switches-plan-2026-11-21.md, FS7). The four that
+ * are always on stay whatever the answer says.
+ */
+describe("menu features switched off", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useMutationMock.mockReturnValue(vi.fn());
+  });
+
+  it("leaves out the sections that are off, and keeps the four that are always on", () => {
+    const on = MENU_FEATURE_KEYS.filter((key) => key !== MENU_FEATURES.bingWebmaster && key !== MENU_FEATURES.clarity);
+    useQueryMock.mockImplementation((ref: unknown) => {
+      if (ref === "users:getMe") return { role: "USER", companyId: "company" };
+      if (ref === "companies:getMyWorkspaceModules") return { companyName: "Acme", enabledModules: on };
+      return undefined;
+    });
+    vi.mocked(usePathname).mockReturnValue("/app");
+    render(<SidebarNavigation />);
+
+    expect(screen.queryByText("bingWebmaster")).not.toBeInTheDocument();
+    expect(screen.queryByText("clarity")).not.toBeInTheDocument();
+    for (const label of ["searchConsole", "googleAnalytics", "insights", "sites", "hakkenTasks", "learn", "usage"]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+  });
+
+  it("shows none of the seven while the answer is on its way", () => {
+    useQueryMock.mockImplementation((ref: unknown) => (ref === "users:getMe" ? { role: "USER", companyId: "company" } : undefined));
+    vi.mocked(usePathname).mockReturnValue("/app");
+    render(<SidebarNavigation />);
+
+    for (const label of ["insights", "sites", "searchConsole", "bingWebmaster", "googleAnalytics", "clarity", "hakkenTasks"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+    expect(screen.getByText("usage")).toBeInTheDocument();
   });
 });

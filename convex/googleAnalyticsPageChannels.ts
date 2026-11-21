@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { isPageRef } from "./holdPageRefs";
 import { periodRange, slotKey } from "./googleAnalyticsCollect";
@@ -104,7 +105,8 @@ const pointValidator = v.object({
  * before them, and the same dates 52 weeks before, each a point at the grain held. `everyDevice` when a device is
  * chosen, as the page's channels are kept for every device only.
  */
-export const analyticsPageChannelExplorer = tenantQuery({
+export const analyticsPageChannelExplorer = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { siteId: v.id("companyWebsites"), page: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
   returns: v.object({
     heldFrom: v.union(v.string(), v.null()),

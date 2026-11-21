@@ -1,4 +1,6 @@
 import { collectPageDays } from "./googleAnalyticsPageSeries";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { companyHasFeature, featureOffCheck } from "./utils/featureSwitchReads";
 import { collectPageLists, pageListJobs, type PageListsJob } from "./googleAnalyticsPageLists";
 import { collectActionFunnels, type FunnelsJob } from "./googleAnalyticsActionFunnels";
 import { v, type ObjectType } from "convex/values";
@@ -137,9 +139,13 @@ export const agentCollections = internalQuery({
     }
     const now = Date.now();
     const out: Site[] = [];
+    const featureOff = await featureOffCheck(ctx, MENU_FEATURES.googleAnalytics);
     for (const connection of connected.sort((left, right) => (left.lastCollectedAt ?? 0) - (right.lastCollectedAt ?? 0))) {
       // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
       if (!connection.property || connection.clearing || connection.switchedOff) continue;
+      // Switched off for this company, for everyone or for it alone: nothing new is fetched, and the figures so far
+      // stay (features-switches-plan-2026-11-21.md, FS8).
+      if (await featureOff(connection.companyId)) continue;
       if (connection.collecting && collectingNow(await ctx.db.get(connection.collecting.runId), now)) continue;
       const website = await ctx.db.get(connection.websiteId);
       out.push({
@@ -215,6 +221,9 @@ async function beginSiteRun(
 ): Promise<{ runId: Id<"agentRuns">; from: string; top: string } | "CLEARING" | "LISTING" | null> {
   const connection = await ctx.db.get(site.connectionId);
   if (!connection || connection.status !== "CONNECTED" || connection.property !== site.property || connection.switchedOff) return null;
+  // Google Analytics switched off for this company: no run, not even a first collection on connecting
+  // (features-switches-plan-2026-11-21.md, FS8).
+  if (!(await companyHasFeature(ctx, connection.companyId, MENU_FEATURES.googleAnalytics))) return null;
   // Its figures must be its main home country's: when not, they are cleared and this run waits for the clearing's (§18.6.1).
   if (connection.clearing || (await prepareAnalyticsCountry(ctx, connection)) === "SWITCHING") return "CLEARING";
   // Figures counted another way are collected again, whole, by Google's own counts (conversions-back-in-time-plan.md BT4).

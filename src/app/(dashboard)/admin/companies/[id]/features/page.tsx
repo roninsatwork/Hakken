@@ -45,10 +45,13 @@ export default function CompanyFeaturesPage() {
   const company = useQuery(api.companies.getCompanyById, { id: companyId });
   const currentUser = useQuery(api.users.getMe);
   const planGrants = useQuery(api.companies.getPlanGrantsForCompany, { id: companyId });
+  // What System Settings has switched off for every company, and what this
+  // company has off itself (features-switches-plan-2026-11-21.md).
+  const switches = useQuery(api.featureSwitches.getFeatureSwitches, { companyId });
 
   // Nothing at all until the answer arrives, rather than a screen that says
   // "not allowed" for a moment to the person who is allowed.
-  if (currentUser === undefined || company === undefined) return null;
+  if (currentUser === undefined || company === undefined || switches === undefined) return null;
 
   if (currentUser?.role !== "SUPER_ADMIN") {
     return (
@@ -62,7 +65,10 @@ export default function CompanyFeaturesPage() {
     <Suspense fallback={null}>
       <CompanyFeaturesContent
         companyId={companyId}
+        companyName={company?.name ?? ""}
         enabledModules={company?.enabledModules}
+        featuresOff={switches.companyOff}
+        offForEveryone={switches.offForEveryone}
         planGrants={planGrants}
       />
     </Suspense>

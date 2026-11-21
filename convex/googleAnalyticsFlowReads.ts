@@ -1,5 +1,6 @@
 import { v, type ObjectType } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -90,7 +91,8 @@ const flowValidator = v.object({
   })),
 });
 
-export const analyticsLandingFlow = tenantQuery({
+export const analyticsLandingFlow = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: flowArgs,
   returns: flowValidator,
   handler: async (ctx, args) => await readLandingFlow(ctx, args),

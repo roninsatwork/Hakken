@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
-import { adminMutation } from "./tenantFunctions";
+import { moduleMutation } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { connectionOf } from "./googleAnalyticsRows";
 import { appError } from "./utils/appError";
@@ -29,7 +30,9 @@ export function shopChoiceOf(connection: Pick<Doc<"googleAnalyticsConnections">,
 }
 
 /** Pick the shop's steps and its sale for everyone at the company: Products' two dropdowns. */
-export const saveShopSteps = adminMutation({
+export const saveShopSteps = moduleMutation({
+  module: MENU_FEATURES.googleAnalytics,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites"), steps: v.array(v.string()), sale: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {

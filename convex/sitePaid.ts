@@ -4,7 +4,8 @@ import type { MutationCtx } from "./_generated/server";
 import { requireMySite } from "./siteAccess";
 import { heldTo, listOrder, listPageArgs, listPageSeenResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { paidKeywordsSees } from "./utils/sees/paid";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { normaliseKeyword } from "./seoJudgments";
 import { pagePath } from "./utils/siteShapes";
 import { wordStartMatcher } from "./utils/wordStarts";
@@ -110,7 +111,8 @@ const PAID_SORTS: ListSorts<Doc<"sitePaidKeywords">, "keyword" | "position" | "v
  * be far fewer than DataForSEO's own count of searches with adverts. The
  * screen says so (docs/plans/active/sites-audit-fixes-plan.md, 2.2).
  */
-export const listPaidKeywords = tenantQuery({
+export const listPaidKeywords = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,

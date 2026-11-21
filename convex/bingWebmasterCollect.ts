@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { appError } from "./utils/appError";
 import { getActiveCompanyId } from "./authz";
-import { tenantAction } from "./tenantFunctions";
+import { moduleAction } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -434,7 +435,8 @@ export const customTarget = internalQuery({
  * asks and once a day after; Google's columns are not beside them, since Search Console prepares no list for those
  * dates. The nightly build's drop of older parts clears them in time.
  */
-export const prepareBingCustom = tenantAction({
+export const prepareBingCustom = moduleAction({
+  module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string() },
   returns: v.object({ building: v.boolean() }),
   handler: async (ctx, args): Promise<{ building: boolean }> => {

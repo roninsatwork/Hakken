@@ -10,7 +10,7 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { Select } from "@/src/ui/components/screens/Select";
 import { SettingRow, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
-import { LevelsStrip, type LimitLevel } from "./LevelsStrip";
+import { LimitLevelsStrip, type LimitLevel } from "./LevelsStrip";
 import { LIMIT_TOPICS, LIMIT_UNITS, type LimitTopic } from "./limitTopics";
 
 /** The select's value for "use the level above's number". A real limit is never empty. */
@@ -59,7 +59,7 @@ export function useLimitWords() {
 export function LimitsScreen(props: LimitsScreenProps) {
   return (
     <>
-      <LevelsStrip level={props.level} companyHref={props.companyHref} />
+      <LimitLevelsStrip level={props.level} companyHref={props.companyHref} />
       {LIMIT_TOPICS.map((topic) => {
         const settable = topic.keys.filter((key) => props.keys.includes(key));
         if (settable.length > 0) return <TopicCard key={topic.id} topic={{ ...topic, keys: settable }} {...props} />;

@@ -1,5 +1,6 @@
 import { v, type ObjectType } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { daysOf } from "./searchConsoleReads";
 import { addUp, shiftDay } from "./searchConsoleDays";
@@ -25,7 +26,8 @@ const scoreValidator = v.union(v.number(), v.null());
 
 const readVolatilityArgs = { siteId: v.id("companyWebsites"), language: v.string(), country: v.optional(v.string()) };
 
-export const searchConsoleVolatility = tenantQuery({
+export const searchConsoleVolatility = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: readVolatilityArgs,
   returns: v.object({
     /** A country not kept ready: Volatility is worked out for the home countries only (V5). */

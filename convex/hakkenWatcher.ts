@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { companyHasFeature } from "./utils/featureSwitchReads";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
@@ -58,6 +60,23 @@ export const ensureWatcherInternal = internalMutation({
       await ctx.db.patch(existing._id, { ...definition, updatedAt: now });
     }
     return null;
+  },
+});
+
+/**
+ * Whether a task's company has Hakken tasks switched off, for everyone or for
+ * it alone (features-switches-plan-2026-11-21.md, FS8). Its alerts and reports
+ * then move on to their next time without being judged, sent or charged, so
+ * they never sit at the front of the due list, and they pick up again when the
+ * feature is ticked.
+ */
+export const taskSwitchedOffInternal = internalQuery({
+  args: { taskId: v.id("hakkenTasks") },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) return false;
+    return !(await companyHasFeature(ctx, task.companyId, MENU_FEATURES.hakkenTasks));
   },
 });
 

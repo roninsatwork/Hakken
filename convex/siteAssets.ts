@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { groupOwner, requireMySite } from "./siteAccess";
 import { assetsOf } from "./assetSummaries";
 import { assetRowValidator } from "./radarSchema";
@@ -10,7 +11,8 @@ import { assetRowValidator } from "./radarSchema";
  * website's every asset as worked out after its last collection
  * (`assetSummaries.ts`) — one small record read.
  */
-export const yourAssets = tenantQuery({
+export const yourAssets = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({ rows: v.array(assetRowValidator), workedOutAt: v.union(v.number(), v.null()) }),
   handler: async (ctx, args) => {

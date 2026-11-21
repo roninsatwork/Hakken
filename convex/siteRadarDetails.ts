@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { groupOwner, listHold, requireMySite } from "./siteAccess";
 import { holdQuestions } from "./holdLists";
 import { questionsOf, readings } from "./siteBrandRadar";
@@ -49,7 +50,8 @@ function stepFor(kind: Kind, host: string): SeenStep | null {
   return null;
 }
 
-export const websiteDetail = tenantQuery({
+export const websiteDetail = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), host: v.string() },
   returns: v.object({
     host: v.string(),
@@ -175,7 +177,8 @@ export const websiteDetail = tenantQuery({
   },
 });
 
-export const questionDetail = tenantQuery({
+export const questionDetail = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), question: v.string() },
   returns: v.object({
     question: v.string(),

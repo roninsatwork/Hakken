@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { myRivals, requireMySite } from "./siteAccess";
 
 /**
@@ -92,7 +93,8 @@ async function newestLinkProfile(ctx: { db: QueryCtx["db"] }, websiteId: Id<"web
   };
 }
 
-export const linkProfile = tenantQuery({
+export const linkProfile = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), profileValidator),
   handler: async (ctx, args) => {
@@ -107,7 +109,8 @@ export const linkProfile = tenantQuery({
  * 3–5", "18% of links from your own country against 55% for rivals"). Each website's newest summary, one read each;
  * a rival with none yet is left out. Rivals' summaries are bought with their checks, so nothing is bought here.
  */
-export const linkProfilesAgainstRivals = tenantQuery({
+export const linkProfilesAgainstRivals = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({ host: v.string(), isYou: v.boolean(), profile: profileValidator })),
   handler: async (ctx, args) => {
@@ -140,7 +143,8 @@ const LIST_PAGES_READ = 30;
  * newest list was bought — what the rows kept are "of" (sites-data-completeness-plan.md,
  * §4.E and §4.G). Null for a list bought before its total was kept.
  */
-export const linkListTotals = tenantQuery({
+export const linkListTotals = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object(Object.fromEntries(Object.keys(LIST_TOTALS).map((key) => [key, numberOrNull])) as Record<keyof typeof LIST_TOTALS, typeof numberOrNull>),
   handler: async (ctx, args) => {

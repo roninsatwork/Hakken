@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { mapRankingsSees, mapSearchSees } from "./utils/sees/local";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { listingRowOf, listingRowValidator } from "./localListings";
 import {
@@ -42,7 +43,8 @@ async function googlePositions(ctx: Parameters<typeof searchVolumesOf>[0], websi
   return positions;
 }
 
-export const mapRankings = tenantQuery({
+export const mapRankings = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
   returns: v.object({
     offices: v.array(officeOptionValidator),
@@ -132,7 +134,8 @@ export const mapRankings = tenantQuery({
   }, mapRankingsSees),
 });
 
-export const mapSearch = tenantQuery({
+export const mapSearch = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")), keyword: v.string() },
   returns: v.union(v.null(), v.object({
     office: v.object({ listingId: v.id("listings"), name: v.string(), town: v.union(v.string(), v.null()) }),

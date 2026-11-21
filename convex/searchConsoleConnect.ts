@@ -3,7 +3,8 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { adminMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { ADMIN_WRITE_ROLES } from "./authz";
 import { companyHolds, findMySite, requireMySite } from "./siteAccess";
 import { noteHoldPagesChanged } from "./holdPages";
@@ -68,7 +69,9 @@ async function connectionOfHold(ctx: { db: QueryCtx["db"] }, companyWebsiteId: I
  * websites only (SC8). Hands back the one link the browser follows; the state
  * it carries is the only thing that leaves the server.
  */
-export const beginSearchConsoleConnect = adminMutation({
+export const beginSearchConsoleConnect = moduleMutation({
+  module: [MENU_FEATURES.visibility, MENU_FEATURES.searchConsole],
+  guard: "admin",
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({ authorizeUrl: v.string() }),
   handler: async (ctx, args) => {
@@ -263,7 +266,9 @@ async function connectTo(
 }
 
 /** The admin's choice among the account's properties that are this website. */
-export const chooseSearchConsoleProperty = adminMutation({
+export const chooseSearchConsoleProperty = moduleMutation({
+  module: MENU_FEATURES.searchConsole,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites"), property: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -287,7 +292,9 @@ export const chooseSearchConsoleProperty = adminMutation({
  * Stop collecting and give Google's access back (SC7): what was collected
  * stays, marked with the day it was disconnected.
  */
-export const disconnectSearchConsole = adminMutation({
+export const disconnectSearchConsole = moduleMutation({
+  module: MENU_FEATURES.searchConsole,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -394,7 +401,8 @@ const orNull = <T extends ReturnType<typeof v.string>>(validator: T) => v.union(
  * website that is not one of the caller's company's — the same answer as a
  * missing one, as the Sites header gives.
  */
-export const searchConsoleStatus = tenantQuery({
+export const searchConsoleStatus = moduleQuery({
+  module: [MENU_FEATURES.visibility, MENU_FEATURES.searchConsole],
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     configured: v.boolean(),

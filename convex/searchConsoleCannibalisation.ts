@@ -1,7 +1,8 @@
 import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalQuery } from "./_generated/server";
-import { tenantAction } from "./tenantFunctions";
+import { moduleAction } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { titlesOf } from "./pageTitles";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
@@ -96,7 +97,8 @@ export function keywordPagesOf(lines: readonly Line[]): Extract<KeywordPagesAnsw
   return { ok: true as const, pages: ranked, swaps, days: tops.size };
 }
 
-export const searchConsoleKeywordPagesByDay = tenantAction({
+export const searchConsoleKeywordPagesByDay = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,

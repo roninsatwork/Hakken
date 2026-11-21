@@ -3,7 +3,8 @@ import { businessProfileSees, everyOfficeSees } from "./utils/sees/local";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { listingRowOf, listingRowValidator, readListingWeeks, type ListingWeek } from "./localListings";
 import {
@@ -156,7 +157,8 @@ async function officeMap(ctx: Reader, office: Doc<"listings">, searches: string[
   return { searches, checks, boxes: boxesOf(checks) };
 }
 
-export const businessProfile = tenantQuery({
+export const businessProfile = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
   returns: v.object({
     offices: v.array(officeOptionValidator),
@@ -242,7 +244,8 @@ export const businessProfile = tenantQuery({
   }, businessProfileSees),
 });
 
-export const everyOffice = tenantQuery({
+export const everyOffice = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     offices: v.array(v.object({

@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { holdBrandNames } from "./holdProfiles";
 import { holdQuestions } from "./holdLists";
@@ -126,7 +127,8 @@ async function setActive(ctx: MutationCtx, holdId: Id<"companyWebsites">, prompt
  * each question, what it was built from, how often that is searched, whether
  * it names the business, and whether it is being asked.
  */
-export const sitePanel = tenantQuery({
+export const sitePanel = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     on: v.boolean(),

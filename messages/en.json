@@ -986,28 +986,22 @@
       "warningDesc": "This action will purge all agents, messages, and configurations for this company. This cannot be undone.",
       "deleteTenant": "Delete Company",
       "deleteAndWipe": "Delete Company & Wipe Data",
-      "featuresTitle": "Features",
-      "featuresSearchPlaceholder": "Search features...",
-      "featuresEmptyState": "No features match that search.",
-      "featuresOnColumn": "Switched on",
-      "featuresNameColumn": "Feature",
-      "featuresDescriptionColumn": "What it does",
       "modules": {
         "tasks": {
           "name": "Tasks",
-          "description": "The shared to-do list: things to chase, who is chasing them, and what is already done."
+          "description": "The shared to-do list. What to chase, who's chasing it, and what's done."
         },
         "calls": {
           "name": "Calls",
-          "description": "The phone line's history — every call, who rang, and what the assistant did with it."
+          "description": "Who rang the company's phone line, and what the assistant did."
         },
         "reception": {
           "name": "Reception",
-          "description": "The front-desk screen visitors use to say they have arrived."
+          "description": "The front-desk screen visitors use to say they've arrived."
         },
         "wiki": {
           "name": "Wiki",
-          "description": "The assistant's growing notebook about this workspace — what it has learned and where it came from."
+          "description": "What the assistant has learned about the company, and where it found each fact."
         },
         "reports": {
           "name": "Reports",
@@ -1017,9 +1011,7 @@
       "errors": {
         "deleteFailed": "Failed to purge tenant from protocol."
       },
-      "featuresIntro": "What this workspace can reach. Switching one off removes it from their menu and closes the section — typing the address will not get them in. Nobody else is affected.",
-      "featuresPlanNote": "Already included in this plan",
-      "featuresSaveFailed": "The features could not be updated. Try again."
+      "featuresPlanNote": "Already included in this plan"
     },
     "plans": {
       "title": "Subscription Plans",
@@ -5036,7 +5028,8 @@
         "approvals": "Agent Approval Window",
         "purgeHistory": "Purge History",
         "limits": "Limits",
-        "classification": "Classification"
+        "classification": "Classification",
+        "features": "Features"
       },
       "selfImprovement": {
         "title": "Self-Improvement",
@@ -7986,6 +7979,53 @@
         "HAKKEN": "By {platformName}",
         "HAKKEN_COUNT": "{count} by {platformName}",
         "WRITING": "Writing"
+      }
+    },
+    "features": {
+      "title": "Features",
+      "everyoneDescription": "What every company can see in its menu. Switch a feature off and nothing new comes in for it. The figures so far stay.",
+      "companyDescription": "What {company} sees in its menu. Switch a feature off and nothing new comes in for it. The figures so far stay.",
+      "levels": {
+        "platform": "{number} · Platform",
+        "company": "{number} · Company",
+        "thisPage": "This page",
+        "platformPage": "System Settings → Features",
+        "itsFeatures": "Its Features page",
+        "platformHere": "Every company starts with what's switched on here.",
+        "platformThere": "Every company starts with what's switched on there.",
+        "companyFromPlatform": "Switch a feature off on a company's page and only that company loses it.",
+        "companyHere": "Switch a feature off here and only {company} loses it.",
+        "platformNote": "Switch a feature off here and every company loses it. Switch it back on and each company goes back to how it was.",
+        "companyNote": "A feature marked Off for everyone is switched off in System Settings. Switch it back on there."
+      },
+      "columns": {
+        "feature": "Feature",
+        "what": "What it does",
+        "companies": "Companies",
+        "on": "Switched on"
+      },
+      "search": "Search features...",
+      "empty": "No features match that search.",
+      "alwaysOn": "Always on",
+      "offForEveryone": "Off for everyone",
+      "companiesOn": "{on} of {all}",
+      "save": "Save Features",
+      "saving": "Saving…",
+      "saved": "Features updated.",
+      "saveFailed": "The features could not be saved. Try again.",
+      "onlyPlatform": "Only a platform administrator can change which features a company has.",
+      "descriptions": {
+        "dashboard": "The first page people see when they sign in.",
+        "askPlatform": "People ask about their websites and get answers.",
+        "insights": "What changed on the company's websites, and why.",
+        "visibility": "Where the company shows up on Google and in AI answers, next to its rivals.",
+        "searchConsole": "Which keywords Google shows the company's websites for, and which get clicked.",
+        "bingWebmaster": "Which keywords Bing shows the company's websites for, and which get clicked.",
+        "googleAnalytics": "Who visits the company's websites, where they come from and what they do.",
+        "clarity": "How far people scroll on each page, and where they get stuck or turn back.",
+        "readingRoom": "News, people worth following and helpful guides.",
+        "hakkenTasks": "The alerts and reports people ask for.",
+        "usage": "Where the company's credits go."
       }
     }
   },
@@ -15465,7 +15505,7 @@
   "searchConsole": {
     "list": {
       "title": "Search Console",
-      "description": "What Google itself counted for your own websites: real clicks and impressions for every search and page. Open one to see them.",
+      "description": "How often Google showed your websites, and the clicks they got. Open one to see every keyword and page.",
       "searchPlaceholder": "Find a website…",
       "empty": "Your company has no websites of its own yet.",
       "noMatch": "No website matches that search.",

@@ -73,6 +73,11 @@ async function checkWatch(
 const STANCE_VALUES: Record<Stance, number> = { RECOMMENDED: 3, NAMED: 2, NOT_NAMED: 1, WARNED_AGAINST: 0 };
 
 async function checkOne(ctx: ActionCtx, taskId: Id<"hakkenTasks">): Promise<CheckOutcome> {
+  // Hakken tasks switched off for its company: on to its next time, nothing judged or charged (FS8).
+  if (await ctx.runQuery(internal.hakkenWatcher.taskSwitchedOffInternal, { taskId })) {
+    await ctx.runMutation(internal.hakkenWatcher.recordCheckInternal, { taskId, judged: [] });
+    return "NOTHING_NEW";
+  }
   const task = await ctx.runQuery(internal.hakkenWatcher.taskForCheckInternal, { taskId });
   if (!task) {
     // Not a Search Console alert: one on AI answers or a ranking, or gone.

@@ -986,15 +986,14 @@
       "warningDesc": "Questa azione cancellerà tutti gli agent, i messaggi e le configurazioni per questo tenant. L'azione non può essere annullata.",
       "deleteTenant": "Purga Tenant",
       "deleteAndWipe": "Elimina l'azienda e cancella i dati",
-      "featuresTitle": "Funzionalità",
       "modules": {
         "tasks": {
           "name": "Attività",
-          "description": "La lista delle cose da fare condivisa: cosa seguire, chi se ne occupa e cosa è già stato fatto."
+          "description": "La lista condivisa delle cose da fare. Cosa seguire, chi se ne occupa e cosa è già fatto."
         },
         "calls": {
           "name": "Chiamate",
-          "description": "La storia della linea telefonica: ogni chiamata, chi ha chiamato e cosa ha fatto l'assistente."
+          "description": "Chi ha chiamato la linea telefonica dell'azienda, e cosa ha fatto l'assistente."
         },
         "reception": {
           "name": "Reception",
@@ -1002,7 +1001,7 @@
         },
         "wiki": {
           "name": "Wiki",
-          "description": "Il quaderno dell'assistente su questo spazio di lavoro: cosa ha imparato e da dove viene."
+          "description": "Cosa ha imparato l'assistente sull'azienda, e dove ha trovato ogni fatto."
         },
         "reports": {
           "name": "Report",
@@ -1012,14 +1011,7 @@
       "errors": {
         "deleteFailed": "Impossibile purgare il tenant dal protocollo."
       },
-      "featuresNameColumn": "Funzionalità",
-      "featuresDescriptionColumn": "Cosa fa",
-      "featuresOnColumn": "Attiva",
-      "featuresSearchPlaceholder": "Cerca funzionalità...",
-      "featuresEmptyState": "Nessuna funzionalità corrisponde alla ricerca.",
-      "featuresPlanNote": "Già inclusa in questo piano",
-      "featuresIntro": "Cosa può raggiungere questo workspace. Disattivarne una la rimuove dal loro menu e chiude la sezione: digitare l'indirizzo non permetterà l'accesso. Nessun altro viene coinvolto.",
-      "featuresSaveFailed": "Impossibile aggiornare le funzionalità. Riprova."
+      "featuresPlanNote": "Già inclusa in questo piano"
     },
     "plans": {
       "title": "Piani di Abbonamento",
@@ -5036,7 +5028,8 @@
         "approvals": "Finestra di Approvazione Agente",
         "purgeHistory": "Cronologia Purge",
         "limits": "Limiti",
-        "classification": "Classificazione"
+        "classification": "Classificazione",
+        "features": "Funzionalità"
       },
       "selfImprovement": {
         "title": "Auto-miglioramento",
@@ -7986,6 +7979,53 @@
         "HAKKEN": "Da {platformName}",
         "HAKKEN_COUNT": "{count} da {platformName}",
         "WRITING": "In scrittura"
+      }
+    },
+    "features": {
+      "title": "Funzionalità",
+      "everyoneDescription": "Cosa può vedere ogni azienda nel suo menu. Spegni una funzionalità e non arriva più nulla di nuovo. I dati raccolti finora restano.",
+      "companyDescription": "Cosa vede {company} nel suo menu. Spegni una funzionalità e non arriva più nulla di nuovo. I dati raccolti finora restano.",
+      "levels": {
+        "platform": "{number} · Piattaforma",
+        "company": "{number} · Azienda",
+        "thisPage": "Questa pagina",
+        "platformPage": "Impostazioni di sistema → Funzionalità",
+        "itsFeatures": "La sua pagina Funzionalità",
+        "platformHere": "Ogni azienda parte da ciò che è attivo qui.",
+        "platformThere": "Ogni azienda parte da ciò che è attivo lì.",
+        "companyFromPlatform": "Spegni una funzionalità nella pagina di un'azienda e solo quell'azienda la perde.",
+        "companyHere": "Spegni una funzionalità qui e solo {company} la perde.",
+        "platformNote": "Spegni una funzionalità qui e ogni azienda la perde. Riaccendila e ogni azienda torna com'era.",
+        "companyNote": "Una funzionalità segnata Spenta per tutti è spenta in Impostazioni di sistema. Riaccendila lì."
+      },
+      "columns": {
+        "feature": "Funzionalità",
+        "what": "Cosa fa",
+        "companies": "Aziende",
+        "on": "Attiva"
+      },
+      "search": "Cerca funzionalità...",
+      "empty": "Nessuna funzionalità corrisponde alla ricerca.",
+      "alwaysOn": "Sempre attiva",
+      "offForEveryone": "Spenta per tutti",
+      "companiesOn": "{on} su {all}",
+      "save": "Salva funzionalità",
+      "saving": "Salvataggio…",
+      "saved": "Funzionalità aggiornate.",
+      "saveFailed": "Non è stato possibile salvare le funzionalità. Riprova.",
+      "onlyPlatform": "Solo un amministratore della piattaforma può cambiare le funzionalità di un'azienda.",
+      "descriptions": {
+        "dashboard": "La prima pagina che le persone vedono quando accedono.",
+        "askPlatform": "Le persone chiedono dei loro siti e ricevono risposte.",
+        "insights": "Cosa è cambiato sui siti dell'azienda, e perché.",
+        "visibility": "Dove compare l'azienda su Google e nelle risposte dell'IA, accanto ai concorrenti.",
+        "searchConsole": "Per quali parole chiave Google mostra i siti dell'azienda, e quali vengono cliccate.",
+        "bingWebmaster": "Per quali parole chiave Bing mostra i siti dell'azienda, e quali vengono cliccate.",
+        "googleAnalytics": "Chi visita i siti dell'azienda, da dove arriva e cosa fa.",
+        "clarity": "Quanto scorrono le persone su ogni pagina, e dove si bloccano o tornano indietro.",
+        "readingRoom": "Notizie, persone da seguire e guide utili.",
+        "hakkenTasks": "Gli avvisi e i report che le persone chiedono.",
+        "usage": "Dove vanno i crediti dell'azienda."
       }
     }
   },
@@ -15465,7 +15505,7 @@
   "searchConsole": {
     "list": {
       "title": "Search Console",
-      "description": "Quello che Google stesso ha contato per i tuoi siti: clic e impressioni reali per ogni ricerca e pagina. Aprine uno per vederli.",
+      "description": "Quante volte Google ha mostrato i tuoi siti, e i clic che hanno ricevuto. Aprine uno per vedere ogni parola chiave e pagina.",
       "searchPlaceholder": "Trova un sito…",
       "empty": "La tua azienda non ha ancora siti propri.",
       "noMatch": "Nessun sito corrisponde alla ricerca.",

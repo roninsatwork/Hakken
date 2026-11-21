@@ -7,7 +7,8 @@ import { readFanOutLimits } from "./fanOutLimits";
 import { deleteBooks } from "./searchConsoleKeywordBooks";
 import { deletePeriodBooks } from "./searchConsolePeriodBooks";
 import { requireMySite } from "./siteAccess";
-import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
+import { moduleQuery, superAdminMutation, superAdminQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { appError } from "./utils/appError";
 import { alpha3Of, isGoogleCountry } from "./utils/countryCodes";
 import { SEO_LOCATIONS, resolveLocationCode } from "./utils/seoLocations";
@@ -142,7 +143,8 @@ export async function countryScope(
  * countries kept ready, in the order added. The company's own website only,
  * as every read.
  */
-export const searchConsoleCountryChoices = tenantQuery({
+export const searchConsoleCountryChoices = moduleQuery({
+  module: [MENU_FEATURES.visibility, MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({ main: v.string(), ready: v.array(v.string()) }),
   handler: async (ctx, args) => {

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import type { Id } from "./_generated/dataModel";
 import { listHold, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { holdAiSummary, holdQuestionAnswers, holdQuestions } from "./holdLists";
@@ -33,7 +34,8 @@ import { citedSees } from "./utils/sees/aiAnswers";
  * company's own website and a competitor, and read from the list's rows in
  * one go, however long the list.
  */
-export const listMentions = tenantQuery({
+export const listMentions = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({
     prompt: v.string(),
@@ -90,7 +92,8 @@ export async function readMentions(ctx: SiteReader, siteId: Id<"companyWebsites"
  * Against tracked rivals only (D7): an answer names many firms, and the ones
  * we can count are the ones we hold names for. The screen says so.
  */
-export const shareOfVoice = tenantQuery({
+export const shareOfVoice = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({
     engine: aiEngineValidator,
@@ -136,7 +139,8 @@ export async function readShareOfVoice(ctx: SiteReader, args: { siteId: Id<"comp
  * list, read whole: the pages cited for a site's questions, not every page any
  * answer ever linked to. The screen searches and pages it in place.
  */
-export const listCitedPages = tenantQuery({
+export const listCitedPages = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({
     ...listWithCut(v.object({

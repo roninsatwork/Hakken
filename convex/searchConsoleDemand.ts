@@ -2,7 +2,8 @@ import { v, type Infer } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { tenantAction, tenantQuery } from "./tenantFunctions";
+import { moduleAction, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { requireMySite } from "./siteAccess";
@@ -95,7 +96,8 @@ export async function readDemand(
 }
 
 /** The kept figures, or `live` when the page must ask Google (`searchConsoleLiveDemand`). */
-export const searchConsoleDemand = tenantQuery({
+export const searchConsoleDemand = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: demandArgs,
   returns: v.union(v.object({ live: v.literal(true) }), v.object({ live: v.literal(false), ...demandFigures })),
   handler: async (ctx, args) => {
@@ -125,7 +127,8 @@ const liveDemandAnswer = v.union(
  * Without Classifications, a page's type is looked up for the pages with most clicks, up to the website's limit
  * (`consoleLiveFactsRows`), as every live list of pages: the rest read as not judged yet.
  */
-export const searchConsoleLiveDemand = tenantAction({
+export const searchConsoleLiveDemand = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: demandArgs,
   returns: liveDemandAnswer,
   handler: async (ctx, args): Promise<Infer<typeof liveDemandAnswer>> => {

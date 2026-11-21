@@ -20,7 +20,8 @@ import {
 import { resolvePlatformName } from "./settingsService";
 import { addWebsiteKeywordCore, addWebsiteQuestionCore } from "./websiteCanonical";
 import { problemOf } from "./hakkenCaretaker";
-import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
+import { moduleMutation, moduleQuery, requireTenant, superAdminMutation, superAdminQuery, tenantMutation } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { appError } from "./utils/appError";
 import { nextRunOf, taskTimeOfDay, taskTimeZone } from "./utils/hakkenTaskTiming";
 
@@ -139,7 +140,8 @@ async function resume(ctx: MutationCtx, task: Doc<"hakkenTasks">, now: number) {
 // ── The owner's ─────────────────────────────────────────────────────────────
 
 /** Hakken tasks: the caller's own, in their active company. */
-export const listMine = tenantQuery({
+export const listMine = moduleQuery({
+  module: MENU_FEATURES.hakkenTasks,
   args: {},
   returns: v.array(taskRowValidator),
   handler: async (ctx) => {
@@ -148,7 +150,8 @@ export const listMine = tenantQuery({
   },
 });
 
-export const pauseMine = tenantMutation({
+export const pauseMine = moduleMutation({
+  module: MENU_FEATURES.hakkenTasks,
   args: { taskId: v.id("hakkenTasks") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -158,7 +161,8 @@ export const pauseMine = tenantMutation({
   },
 });
 
-export const resumeMine = tenantMutation({
+export const resumeMine = moduleMutation({
+  module: MENU_FEATURES.hakkenTasks,
   args: { taskId: v.id("hakkenTasks") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -167,7 +171,8 @@ export const resumeMine = tenantMutation({
   },
 });
 
-export const deleteMine = tenantMutation({
+export const deleteMine = moduleMutation({
+  module: MENU_FEATURES.hakkenTasks,
   args: { taskId: v.id("hakkenTasks") },
   returns: v.null(),
   handler: async (ctx, args) => {

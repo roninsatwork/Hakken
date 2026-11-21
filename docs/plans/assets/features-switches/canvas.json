@@ -1,0 +1,79 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-21T08:40:00Z"
+  },
+  "title": "Features, for everyone and for each company",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1440,
+      "title": "1 · System Settings → Features, for every company",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Company.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1640,
+      "title": "2 · Period House Group's Features page",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Menu.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "3 · What Period House Group sees in its menu",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Company.dc.html",
+    "Menu.dc.html"
+  ],
+  "notes": {
+    "heading": {
+      "x": 0,
+      "y": -300,
+      "text": "Features, for every company and for each one",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "rules": {
+      "x": 4560,
+      "y": 0,
+      "w": 420,
+      "text": "A feature has to be switched on in two places for a company to see it. One is System Settings. The other is the company's own Features page.\n\nDashboard, Ask Hakken, Reading room and Usage are always on. Nobody can switch them off.\n\nA new company starts with what's switched on in System Settings.\n\nSwitch a feature off and nothing new comes in for it. The figures so far are kept.\n\nSwitch a feature off in System Settings and every company loses it. When it's switched back on, each company goes back to how it was.\n\nSwitch a feature back on and its missed days come back, if Google or Microsoft still keeps them. Google keeps 16 months for Search Console. Clarity keeps only about 3 days. A longer gap in Clarity stays empty.\n\nWhen a feature is off, its pages take people to the Dashboard. Tasks and Calls already work this way."
+    },
+    "example": {
+      "x": 4560,
+      "y": 900,
+      "w": 420,
+      "text": "The switches shown are an example, so you can see each case. Right now nothing is switched off for anyone.\n\nOn the System Settings page, Microsoft Clarity is off for everyone. Bing Webmaster is off for 2 of the 6 companies.\n\nOn Period House Group's page, Bing Webmaster is switched off. Microsoft Clarity shows Off for everyone.\n\nSo Period House Group's menu has no Bing Webmaster and no Microsoft Clarity."
+    },
+    "parts": {
+      "x": 4560,
+      "y": 1480,
+      "w": 420,
+      "text": "Both pages use the parts the Features page already used. That's the table, the tick boxes and Save.\n\nThe strip at the top is LevelsStrip, from Limits. It's now a shared part with two or three steps. Any setting made for everyone first, then for each company, can use it.\n\nAlways on is a status with a new lock icon.\n\nTasks, Calls, Reception and Wiki stay as they were. Only a company's own page switches them."
+    },
+    "kit": {
+      "x": 4560,
+      "y": 2040,
+      "w": 420,
+      "text": "Drawn from the drawing kit, kit.css 2a6389fe345e, look 149d9f4fb243, on 21 November 2026. The tick boxes and Save work in Play. The link in the company page's strip opens the System Settings page."
+    }
+  },
+  "designSystems": []
+}

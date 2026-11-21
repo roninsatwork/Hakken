@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { lookupAnswersShape } from "./keywordResearchShapes";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { requireTenant, tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery, requireTenant } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { isOversightRole } from "./authz";
 import { readFanOutLimits } from "./fanOutLimits";
 import { companyHolds } from "./siteAccess";
@@ -31,7 +32,8 @@ async function newestAnswers(ctx: { db: QueryCtx["db"] }, keyword: string, locat
 }
 
 /** What the AI says opened: bought the first time, and again once older than the company's days. Ask again buys afresh. */
-export const openAnswers = tenantMutation({
+export const openAnswers = moduleMutation({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups"), again: v.optional(v.boolean()) },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -57,7 +59,8 @@ export const openAnswers = tenantMutation({
 type Who = "YOU" | "RIVAL" | null;
 
 /** Board 4: the question, each assistant's answer with who it names, the figures across the four, and Google's AI Overview searches. */
-export const lookupAnswers = tenantQuery({
+export const lookupAnswers = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { lookupId: v.id("keywordLookups") },
   returns: lookupAnswersShape,
   handler: async (ctx, args) => {

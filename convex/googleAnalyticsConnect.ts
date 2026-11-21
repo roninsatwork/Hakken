@@ -4,7 +4,8 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { adminMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { ADMIN_WRITE_ROLES } from "./authz";
 import { companyHolds, findMySite, requireMySite } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -82,7 +83,9 @@ export function isGoogleAnalyticsConfigured(): boolean {
  * websites only. Hands back the one link the browser follows; the state it
  * carries is the only thing that leaves the server.
  */
-export const beginGoogleAnalyticsConnect = adminMutation({
+export const beginGoogleAnalyticsConnect = moduleMutation({
+  module: MENU_FEATURES.googleAnalytics,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({ authorizeUrl: v.string() }),
   handler: async (ctx, args) => {
@@ -228,7 +231,9 @@ export const completeSignIn = internalMutation({
  * counts; another property than the one the figures came from clears them —
  * two properties' figures are never mixed.
  */
-export const chooseGoogleAnalyticsProperty = adminMutation({
+export const chooseGoogleAnalyticsProperty = moduleMutation({
+  module: MENU_FEATURES.googleAnalytics,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites"), property: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -263,7 +268,9 @@ export const chooseGoogleAnalyticsProperty = adminMutation({
 });
 
 /** The admin wants to change what counts on a connected website: the key events read again, the figures kept. */
-export const changeWhatCounts = adminMutation({
+export const changeWhatCounts = moduleMutation({
+  module: MENU_FEATURES.googleAnalytics,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -490,7 +497,9 @@ function sameHosts(left: readonly string[], right: readonly string[]): boolean {
  * set in Hakken is applied when the figures are read (§4.3), so a change
  * re-prices all history without rewriting it.
  */
-export const saveWhatCounts = adminMutation({
+export const saveWhatCounts = moduleMutation({
+  module: MENU_FEATURES.googleAnalytics,
+  guard: "admin",
   args: {
     siteId: v.id("companyWebsites"),
     events: v.array(v.object({ eventName: v.string(), counted: v.boolean(), hakkenValue: v.union(v.number(), v.null()) })),
@@ -598,7 +607,9 @@ export const saveWhatCounts = adminMutation({
  * disconnected. Search Console stays connected (§3); the Google sign-in is
  * given back only when Search Console does not read with it.
  */
-export const disconnectGoogleAnalytics = adminMutation({
+export const disconnectGoogleAnalytics = moduleMutation({
+  module: MENU_FEATURES.googleAnalytics,
+  guard: "admin",
   args: { siteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -858,7 +869,8 @@ export const statusConnectionValidator = v.object({
  * `canManage` says whether this reader may connect, choose, tick and
  * disconnect. Null for a website that is not one of the caller's company's.
  */
-export const googleAnalyticsStatus = tenantQuery({
+export const googleAnalyticsStatus = moduleQuery({
+  module: [MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: { siteId: v.id("companyWebsites") },
   returns: v.union(v.null(), v.object({
     configured: v.boolean(),

@@ -1,5 +1,6 @@
 import { v, type Infer, type ObjectType } from "convex/values";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { decodePages } from "./holdPageRefs";
 import { titlesOf } from "./pageTitles";
@@ -55,7 +56,8 @@ export const overviewPagePanelsValidator = v.object({
 const overviewPanelsArgs = { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
 type PanelArgs = ObjectType<typeof overviewPanelsArgs>;
 
-export const analyticsOverviewPagePanels = tenantQuery({
+export const analyticsOverviewPagePanels = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: overviewPanelsArgs,
   returns: v.union(v.null(), overviewPagePanelsValidator),
   handler: async (ctx, args) => await readOverviewPagePanels(ctx, args),

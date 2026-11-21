@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import { competitorGapShape, competitorStartsShape } from "./keywordResearchShapes";
 import type { QueryCtx } from "./_generated/server";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { myRivals, requireMySite, type MyRival } from "./siteAccess";
 import { contentGapOf } from "./siteContentGap";
 import { websiteIconUrl } from "./websiteIcons";
@@ -39,7 +40,8 @@ async function gapsByRival(ctx: QueryCtx, site: Site, rivals: MyRival[]): Promis
 }
 
 /** Board 1: each competitor of the website, and how many searches it ranks for that the website doesn't. */
-export const competitorStarts = tenantQuery({
+export const competitorStarts = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: competitorStartsShape,
   handler: async (ctx, args) => {
@@ -59,7 +61,8 @@ export const competitorStarts = tenantQuery({
 });
 
 /** Board 6: one competitor's gap, the most searched first. */
-export const competitorGap = tenantQuery({
+export const competitorGap = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites"), rivalSiteId: v.id("companyWebsites") },
   returns: competitorGapShape,
   handler: async (ctx, args) => {

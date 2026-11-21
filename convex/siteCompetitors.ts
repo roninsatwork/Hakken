@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { seen, seenValidator } from "./utils/hakkenSees";
 import { contentGapSees } from "./utils/sees/competitors";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { companyHolds, listHold, listWebsiteId, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { holdAiSummary, holdQuestionAnswers, holdQuestions } from "./holdLists";
 import { contentGapOf } from "./siteContentGap";
@@ -74,7 +75,8 @@ const RIVAL_READS = 2_500;
  * searches and questions the company measures the site on: who is above whom
  * on the same page from the same place, and how often the answers name each.
  */
-export const listRivals = tenantQuery({
+export const listRivals = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({
     websiteId: v.id("websites"),
@@ -183,7 +185,8 @@ const kindValidator = v.union(
 );
 
 /** Every site DataForSEO found ranking for the same searches, most overlap first. */
-export const listOrganicCompetitors = tenantQuery({
+export const listOrganicCompetitors = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({
     host: v.string(),
@@ -231,7 +234,8 @@ export const listOrganicCompetitors = tenantQuery({
  * their own collected figures, and the competitors DataForSEO found from its
  * whole-domain figures (Phase 2).
  */
-export const marketMap = tenantQuery({
+export const marketMap = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({
     host: v.string(),
@@ -332,7 +336,8 @@ const gapRival = v.object({ siteId: v.id("companyWebsites"), websiteId: v.id("we
  * websites only (Anthony, 2026-10-06): a competitor's is an empty list, and
  * its page says so.
  */
-export const listContentGap = tenantQuery({
+export const listContentGap = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
@@ -405,7 +410,8 @@ export const listContentGap = tenantQuery({
  * ranking for the same searches, that this company does not watch yet.
  * Read-only — adding one is done in admin (D1, D6).
  */
-export const listSuggested = tenantQuery({
+export const listSuggested = moduleQuery({
+  module: MENU_FEATURES.visibility,
   args: { siteId: v.id("companyWebsites") },
   returns: v.array(v.object({
     host: v.string(),

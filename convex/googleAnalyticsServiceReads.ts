@@ -1,7 +1,8 @@
 import { v, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { findMySite, requireMySite, type SiteReader } from "./siteAccess";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { slotKey, splitChannelKey, type ListRow, type PartOnly } from "./googleAnalyticsLists";
@@ -185,7 +186,8 @@ const NOTHING: Omit<ServicesAnswer, "state"> = {
 };
 
 /** Services above its table, and the table: one answer, so the boxes, dots, map, table and eye always agree. */
-export const analyticsServices = tenantQuery({
+export const analyticsServices = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: serviceArgs,
   returns: servicesValidator,
   handler: async (ctx, args) => await readServices(ctx, args),
@@ -373,7 +375,8 @@ export async function readServices(ctx: SiteReader, args: ObjectType<typeof serv
 }
 
 /** Whether to list Services in the menu: a website with a Service-type Classification. A shop keeps Products instead. */
-export const analyticsHasServices = tenantQuery({
+export const analyticsHasServices = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { siteId: v.id("companyWebsites") },
   returns: v.boolean(),
   handler: async (ctx, args) => {
@@ -415,7 +418,8 @@ const serviceDaysArgs = {
 };
 
 /** The month chart's figures: each ticked service's, by channel when asked, and the whole website's. */
-export const analyticsServiceDays = tenantQuery({
+export const analyticsServiceDays = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: serviceDaysArgs,
   returns: serviceDaysValidator,
   handler: async (ctx, args) => await readServiceDays(ctx, args),

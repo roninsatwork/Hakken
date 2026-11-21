@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite, type SiteReader } from "./siteAccess";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { countriesKeptReady } from "./searchConsoleCountries";
@@ -57,7 +58,8 @@ export const conversionsMapValidator = v.object({
   rows: v.array(v.object({ eventName: v.string(), counted: v.boolean(), cells: v.array(cellValidator) })),
 });
 
-export const analyticsConversionsMap = tenantQuery({
+export const analyticsConversionsMap = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: mapArgs,
   returns: conversionsMapValidator,
   handler: async (ctx, args) => await readConversionsMap(ctx, args),
@@ -256,7 +258,8 @@ export const conversionsPagesValidator = v.object({
  * landed, each with its visits and the conversion in both units, the most conversions first. Read from the landing
  * pages the nightly runs keep, by the same column rule as the map, so a square and its list agree.
  */
-export const analyticsConversionsPages = tenantQuery({
+export const analyticsConversionsPages = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...mapArgs, key: v.string(), eventName: v.string() },
   returns: conversionsPagesValidator,
   handler: async (ctx, args) => await readConversionsPages(ctx, args),
@@ -353,7 +356,8 @@ export const conversionsByKindValidator = v.object({
   })),
 });
 
-export const analyticsConversionsByKindChart = tenantQuery({
+export const analyticsConversionsByKindChart = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...mapArgs, eventName: v.string() },
   returns: conversionsByKindValidator,
   handler: async (ctx, args) => await readConversionsByKind(ctx, args),

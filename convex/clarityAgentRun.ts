@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { MENU_FEATURES } from "./utils/coreModules";
+import { companyHasFeature, featureOffCheck } from "./utils/featureSwitchReads";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -117,9 +119,13 @@ export const agentCollections = internalQuery({
     const connected = await ctx.db.query("clarityConnections").withIndex("by_status", (q) => q.eq("status", "CONNECTED")).take(CONNECTIONS_READ);
     const now = Date.now();
     const out: Site[] = [];
+    const featureOff = await featureOffCheck(ctx, MENU_FEATURES.clarity);
     for (const connection of connected.sort((a, b) => (a.lastCollectedAt ?? 0) - (b.lastCollectedAt ?? 0))) {
       // Switched off on the website's Schedules page: kept, not collected (website-schedules-plan.md, WS4).
       if (connection.switchedOff || !connection.tokenCiphertext) continue;
+      // Switched off for this company, for everyone or for it alone: nothing new is fetched, and the figures so far
+      // stay (features-switches-plan-2026-11-21.md, FS8).
+      if (await featureOff(connection.companyId)) continue;
       if (connection.collecting && collectingNow(await ctx.db.get(connection.collecting.runId), now)) continue;
       out.push({ holdId: connection.companyWebsiteId, companyId: connection.companyId, host: await hostOf(ctx, connection.companyWebsiteId) });
     }
@@ -177,6 +183,9 @@ export const runClarityCollectorNow = internalAction({
 async function beginSiteRun(ctx: MutationCtx, agentId: Id<"agents">, site: Site, delayMs: number): Promise<Id<"agentRuns"> | null> {
   const connection = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.holdId)).first();
   if (!connection || connection.status !== "CONNECTED" || connection.switchedOff || !connection.tokenCiphertext) return null;
+  // Microsoft Clarity switched off for this company: no run, not even a first collection on connecting
+  // (features-switches-plan-2026-11-21.md, FS8). Clarity keeps about 3 days, so a longer gap stays empty.
+  if (!(await companyHasFeature(ctx, connection.companyId, MENU_FEATURES.clarity))) return null;
   const now = Date.now();
   const runId = await ctx.db.insert("agentRuns", {
     agentId,

@@ -2,7 +2,8 @@ import { v, type ObjectType } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { beforeValidator, flowValidator, readBeforeConverting, readConversionFlow, readVisitorMap, visitorGroupOf, type BeforeConverting, type ConversionFlow } from "./googleAnalyticsConversionReads";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { websiteIconUrl } from "./websiteIcons";
 import { analyticsStatusValidator } from "./googleAnalyticsSchema";
@@ -544,7 +545,8 @@ const analyticsListPageArgs = { ...listArgs, ...listPageArgs };
  * pages, page groups, All pages — with the screen's What Hakken sees, and a
  * channel's own figures above its sources (§15, screen 5).
  */
-export const analyticsListPage = tenantQuery({
+export const analyticsListPage = moduleQuery({
+  module: [MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: analyticsListPageArgs,
   returns: v.object({
     rows: v.array(shownRowValidator),
@@ -648,7 +650,8 @@ export const DOWNLOAD_PART = 4_000;
  * One part of a list's download, in the order on screen, and how many rows the whole list holds: the browser asks for
  * each part in turn (`readListInParts`). Each row is named by its address, and not given its title: no file holds one.
  */
-export const analyticsListAll = tenantQuery({
+export const analyticsListAll = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
 args: { ...listArgs, part: v.number() },
 returns: v.object({ rows: v.array(shownRowValidator), total: v.number(), live: v.boolean() }),
 handler: async (ctx, { part, ...args }) => {
@@ -668,7 +671,8 @@ const MOST_TOP_ROWS = 10;
  * Overview's and Conversions' short lists (§10, Q14), and the top-ten bars
  * above a list (GA35) — `count` of them, five unless asked.
  */
-export const analyticsTopList = tenantQuery({
+export const analyticsTopList = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { ...listArgs, count: v.optional(v.number()) },
   returns: v.object({ rows: v.array(shownRowValidator), total: v.number(), ...answerValidator }),
   handler: async (ctx, args) => {
@@ -727,7 +731,8 @@ type Moved = { kind: "landing" | "channel"; key: string; label: string; conversi
  * whose conversions and value moved most (GA22) — with What Hakken sees
  * (§14), which weighs them against Search Console's last 30 days.
  */
-export const analyticsOverview = tenantQuery({
+export const analyticsOverview = moduleQuery({
+  module: [MENU_FEATURES.searchConsole, MENU_FEATURES.googleAnalytics],
   args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
   returns: v.object({
     /** The website asked about: What Hakken sees links its Search Console screens by it. */
@@ -823,7 +828,8 @@ export const readOverview = seeing(async (ctx: SiteReader, args: { siteId: Id<"c
  * many, and the change on the span before; for a shop, its purchases (GA7).
  * Each kind's value is kept for Ask Hakken alone.
  */
-export const analyticsConversions = tenantQuery({
+export const analyticsConversions = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
   returns: v.object({
     preparing: v.boolean(),
@@ -920,7 +926,8 @@ export const readConversions = seeing(async (ctx: SiteReader, args: { siteId: Id
  * last month — visits, conversions, value — for the section's first page
  * (§5, screen 1).
  */
-export const analyticsSites = tenantQuery({
+export const analyticsSites = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: {},
   returns: v.array(v.object({
     siteId: v.id("companyWebsites"),

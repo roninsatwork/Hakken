@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { tenantQuery } from "./tenantFunctions";
+import { moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { decodePages, isPageRef } from "./holdPageRefs";
 import { readPeriodUnnamed } from "./searchConsolePeriodReads";
@@ -348,7 +349,8 @@ export const heroPageValidator = v.object({
  * by its path, with Analytics' number and Search Console's address for it.
  * Read for that page alone.
  */
-export const analyticsHeroPage = tenantQuery({
+export const analyticsHeroPage = moduleQuery({
+  module: MENU_FEATURES.googleAnalytics,
   args: { siteId: v.id("companyWebsites"), page: v.string(), ref: v.optional(v.string()), console: v.optional(v.string()) },
   returns: v.object({
     state: v.union(v.literal("NOT_CONNECTED"), v.literal("PREPARING"), v.literal("READY")),

@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { pageKindsOf } from "./insightsPeriodData";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
-import { tenantMutation, tenantQuery } from "./tenantFunctions";
+import { moduleMutation, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { decodePages } from "./holdPageRefs";
@@ -160,7 +161,8 @@ const experimentRow = v.object({
  * Experiments): the newest run's funnel, sources and reviews, and every
  * experiment, for the website chosen or the company's first.
  */
-export const insightsConversion = tenantQuery({
+export const insightsConversion = moduleQuery({
+  module: MENU_FEATURES.insights,
   args: { siteId: v.optional(v.id("companyWebsites")) },
   returns: v.union(v.null(), v.object({
     siteId: v.id("companyWebsites"),
@@ -211,7 +213,8 @@ async function chosenHold(ctx: Parameters<typeof requireMySite>[0] & { companyId
 }
 
 /** The person says a change went live: Hakken keeps the page's 30 days before it, and measures it eight weeks on. */
-export const startExperiment = tenantMutation({
+export const startExperiment = moduleMutation({
+  module: MENU_FEATURES.insights,
   args: { experimentId: v.id("insightExperiments"), state: v.union(v.literal("RUNNING"), v.literal("READY"), v.literal("DROPPED")) },
   returns: v.null(),
   handler: async (ctx, args) => {

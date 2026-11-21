@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { companyFeaturesOff } from "./utils/featureSwitchReads";
 
 describe("OWASP: Broken Access Control - Companies", () => {
   test("SUPER_ADMIN can create companies", async () => {
@@ -449,8 +450,23 @@ describe("OWASP: Broken Access Control - Companies", () => {
         actionType: "UPDATE_COMPANY_MODULES",
         entityId: companyId,
         entityType: "companies",
-        metadata: JSON.stringify({ previousModules: [], newModules: ["calls"] }),
+        metadata: JSON.stringify({ previousModules: [], newModules: ["calls"], previousFeaturesOff: [], newFeaturesOff: [] }),
       });
+    });
+
+    test("a super admin can switch a menu feature off for one company, and leaving the list out keeps it (features-switches-plan FS5)", async () => {
+      const { t, superAdminId, companyId } = await seed();
+      const asAdmin = t.withIdentity({ subject: superAdminId });
+
+      await asAdmin.mutation(api.companies.setCompanyModules, {
+        id: companyId,
+        enabledModules: ["calls"],
+        featuresOff: ["clarity", "notAFeature", "bingWebmaster", "clarity"],
+      });
+      expect(await t.run((ctx) => companyFeaturesOff(ctx, companyId))).toEqual(["bingWebmaster", "clarity"]);
+
+      await asAdmin.mutation(api.companies.setCompanyModules, { id: companyId, enabledModules: [] });
+      expect(await t.run((ctx) => companyFeaturesOff(ctx, companyId))).toEqual(["bingWebmaster", "clarity"]);
     });
 
     test("a company admin cannot grant their own workspace a module", async () => {

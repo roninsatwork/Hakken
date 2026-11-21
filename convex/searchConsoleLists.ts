@@ -3,7 +3,8 @@ import { internalQuery } from "./_generated/server";
 import type { ActionCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { tenantAction, tenantQuery } from "./tenantFunctions";
+import { moduleAction, moduleQuery } from "./tenantFunctions";
+import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { requireMySite } from "./siteAccess";
@@ -447,7 +448,8 @@ export const answerFacts = {
  * dates are not a ready-made period, or the country is not kept ready — the
  * page then asks Google for them (`searchConsoleLiveList`).
  */
-export const searchConsoleListPage = tenantQuery({
+export const searchConsoleListPage = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: { ...listArgs, ...listPageArgs },
   returns: v.object({
     rows: v.array(rowValidator),
@@ -491,7 +493,8 @@ export const searchConsoleListPage = tenantQuery({
  * boxes, 2026-11-18). With a country, its devices and kinds of search
  * appearance; its countries are asked of Google (`live`).
  */
-export const searchConsoleSplitList = tenantQuery({
+export const searchConsoleSplitList = moduleQuery({
+  module: MENU_FEATURES.searchConsole,
   args: listArgs,
   returns: v.object({ rows: v.array(rowValidator), preparing: v.boolean(), summary: v.optional(v.union(summaryValidator, v.null())), ...answerFacts }),
   handler: async (ctx, args) => {
@@ -629,7 +632,8 @@ async function withKeptCounts(
 /** The rules that read a live list's pairs whatever it lists: Shown but not clicked's click rate by place, Pages competing's pages. */
 const PAIR_VIEWS: ReadonlySet<View> = new Set(["lowCtr", "competing"]);
 
-export const searchConsoleLiveList = tenantAction({
+export const searchConsoleLiveList = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,
@@ -764,7 +768,8 @@ const splitRowValidator = v.object({ key: v.string(), clicks: v.number(), impres
  * named: Google will not list a kind beside its pages, so each kind's pages
  * are asked for on their own when the page opens.
  */
-export const searchConsoleAppearancePages = tenantAction({
+export const searchConsoleAppearancePages = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,
@@ -804,7 +809,8 @@ type KeySplitsAnswer = { ok: true; countries: SplitRow[]; devices: SplitRow[] } 
  * devices follow it; its countries are every country still, as on Countries
  * and devices (§16).
  */
-export const searchConsoleKeySplits = tenantAction({
+export const searchConsoleKeySplits = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,
@@ -884,7 +890,8 @@ function cell(value: string | number | null): string {
  * order and with the search on screen. `headers` are the page's own words for
  * its columns, in the reader's language.
  */
-export const exportSearchConsoleList = tenantAction({
+export const exportSearchConsoleList = moduleAction({
+  module: MENU_FEATURES.searchConsole,
   args: {
     ...listArgs,
     headers: v.array(v.string()),
@@ -918,7 +925,8 @@ export const exportSearchConsoleList = tenantAction({
  * where Google still keeps it (phase 9) — in one country, when one is named —
  * asked of Google when its screen opens: nothing is kept per search or page per day.
  */
-export const searchConsoleKeySeries = tenantAction({
+export const searchConsoleKeySeries = moduleAction({
+  module: [MENU_FEATURES.visibility, MENU_FEATURES.searchConsole],
   args: {
     siteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,
