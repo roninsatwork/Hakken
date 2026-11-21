@@ -841,7 +841,7 @@ completed work.
   the catalogue is left.**
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
-- [Ask Hakken from ChatGPT and Claude](./active/ask-hakken-chatgpt-claude-plan-2026-11-21.md).
+- [Ask Hakken from ChatGPT and Claude](./active/ask-hakken-from-ai-chat-apps-plan-2026-11-21.md).
   Plan only, written 21 November 2026. Clients ask about their own websites in
   ChatGPT or Claude through five tools that only read, with Hakken's findings
   beside the figures and a chart in the chat, switched in Features for
