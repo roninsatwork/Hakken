@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { DECISION_MODEL_USE_CASE } from "@/convex/aiModelService";
+import { DECISION_MODEL_USE_CASE, SEES_MODEL_USE_CASE } from "@/convex/aiModelService";
 
 export type ModelStatusFilter = "active" | "inactive";
 export type SyncProviderKey = "google" | "openai" | "anthropic" | "openrouter" | "typesafe";
@@ -149,6 +149,10 @@ export function modelSupportsUseCase(model: { supportedUseCases?: string[] }, us
   if (useCase === DECISION_MODEL_USE_CASE) {
     return (model.supportedUseCases ?? []).includes(useCase) || modelSupportsUseCase(model, "fast-chat");
   }
+  // What Hakken sees: any model that can work as an agent, as the server's rule says (`convex/aiModels.ts`).
+  if (useCase === SEES_MODEL_USE_CASE) {
+    return (model.supportedUseCases ?? []).includes(useCase) || modelSupportsUseCase(model, "agent");
+  }
   return !model.supportedUseCases || model.supportedUseCases.length === 0 || model.supportedUseCases.includes(useCase);
 }
 
@@ -240,6 +244,7 @@ export const MODEL_USE_CASE_DESCRIPTION_KEYS: Record<string, string> = {
   vision: "useCases.vision",
   "tool-calling": "useCases.toolCalling",
   decision: "useCases.decision",
+  [SEES_MODEL_USE_CASE]: "useCases.theEye",
 };
 
 /**

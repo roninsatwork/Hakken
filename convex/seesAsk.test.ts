@@ -8,6 +8,7 @@ import { useFixedDay } from "@/src/test/realTime";
 import { INSIGHTS_LEAD_ROLE } from "./utils/agentRoles";
 import { stillStands } from "./seesAsk";
 import { ANALYTICS_READ } from "./utils/agentTools";
+import { SEES_MODEL_USE_CASE } from "./aiModelService";
 
 /**
  * The eye asks the Insights team (sees-conversion-specialist-plan-2026-10-30.md):
@@ -408,6 +409,41 @@ describe("the eye on every page (sees-every-page-plan-2026-10-31.md, phase 1)", 
     expect(await findingsKept()).toBe(false);
     await finishScheduled(t);
     expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", findings: [] });
+  });
+
+  test("the words are written with the model set for The Eye, and with the writer's own while none is (21 November 2026)", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    const user = t.withIdentity({ subject: userId });
+    const bubble = { says: ["[[conv.purchases.now]] purchases last month, up from [[conv.purchases.before]]."], steps: [{ words: "Find why [[conv.total.now]] conversions hold so few purchases.", link: 0 }] };
+    const writtenWith = () => (stream.mock.calls.at(-1)?.[0] as { model: { modelId: string } }).model.modelId;
+    answers(null, bubble);
+    await user.mutation(api.seesAsk.askSees, ask(siteId));
+    await finishScheduled(t);
+    const own = writtenWith();
+    expect(own).not.toBe("words-model");
+    // Set in Admin → AI models: the next press writes with it.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", { modelId: "words-model", providerKey: "google", providerModelId: "words-model", displayName: "Words", isEnabled: true, isDefault: false, supportedUseCases: ["agent"], lastSyncedAt: 1 });
+      await ctx.db.insert("aiModelDefaults", { scope: "global", useCase: SEES_MODEL_USE_CASE, providerKey: "google", modelId: "words-model", updatedAt: 1 });
+    });
+    await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
+    await finishScheduled(t);
+    expect(writtenWith()).toBe("words-model");
+    // The writer thinks at Low on a page that reads (SEES_THINKING_LEVEL).
+    expect((stream.mock.calls.at(-1)?.[0] as { reasoningEffort?: string }).reasoningEffort).toBe("LOW");
+  });
+
+  test("a page's writer that only writes up thinks at Low too (21 November 2026)", async () => {
+    const t = harness();
+    const { siteId, userId } = await seed(t);
+    await t.run(async (ctx) => { await ctx.db.insert("agents", { name: "INSIGHTS_SEARCH", systemKey: "INSIGHTS_SEARCH", modelId: "test", thinkingMode: false, isActive: true, createdAt: 1, updatedAt: 1 }); });
+    const user = t.withIdentity({ subject: userId });
+    answers(null, { says: ["[[page.rows.door_handles.clicks]] clicks came from door handles."], steps: [] });
+    await user.mutation(api.seesAsk.askSees, keywordsPage(siteId));
+    await finishScheduled(t);
+    expect(generate).toHaveBeenCalled();
+    expect((generate.mock.calls[0][0] as { thinkingLevel?: string }).thinkingLevel).toBe("LOW");
   });
 
   test("words the Editor sends back are written once more, with why, on any page", async () => {

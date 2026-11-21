@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Fact } from "./insightFacts";
-import { CAUSE_TALK, withoutLeadIn, beforeNamed, factsOf, fromSeesKey, namesWithNumbersIn, seesFrom, seesKey, seesPath, spoken, writerFor, withoutNames, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
+import { CAUSE_TALK, MOVED, datesBeforeFor, sentenceSlip, withoutBareContrast, withoutLeadIn, beforeNamed, factsOf, fromSeesKey, namesWithNumbersIn, seesFrom, seesKey, seesPath, spoken, writerFor, withoutNames, withoutTypedUnits, firstAnswerStands } from "./seesAsk";
 import { factsByKey } from "./insightFacts";
 
 /**
@@ -353,6 +353,18 @@ describe("a name the page hands over may hold numbers (eye-code-first-brief-plan
     expect(withoutNames("About 40 of them sit in 30 visits or more, and under 1.6 events for every 100", [group])).toMatch(/40/);
   });
 
+  test("a product's name said in part keeps its numbers as the name's (Products, 21 November 2026)", () => {
+    const names = ["Eurospec Grade 11 Ball Bearing Hinge – Pair-Antique Brass-Square", "Eclipse 1838 Pattern Steel Fixed Pin Butt Hinge – Pair-Self Colour Steel-102mm", "Frelan 5mm Plain Spindle - 100 x 5mm", "Set of 4 Hooks"];
+    for (const said of [
+      "Eurospec Grade 11 Ball Bearing Hinge had [[f1.value]] of added items left in baskets.",
+      "Eclipse 1838 Pattern Steel Butt Hinge rose from [[f4.before]] to [[f4.now]] items bought.",
+      "Your Frelan Plain Spindle 100 fell to [[f5.now]] items bought.",
+    ]) expect(withoutNames(said, names), said).not.toMatch(/\b(11|1838|100)\b/);
+    // A figure typed beside the name is still a figure; so is a number beside a small joining word.
+    expect(withoutNames("Eclipse 1838 Pattern Steel Butt Hinge rose to 200 items.", names)).toMatch(/200/);
+    expect(withoutNames("Hooks rose, with a set of 4 more sold.", names)).toMatch(/4/);
+  });
+
   test("the checker passes a sentence naming the group, and still sends back one that types a figure", () => {
     const facts = factsByKey([{ key: "page.groups.x.visits", value: 1309, unit: "count", source: "analytics", label: "the group's visits" }]);
     const links = [{ label: "Services", href: "/app/analytics/x/services" }];
@@ -414,5 +426,93 @@ describe("the reader is spoken to (Anthony, 17 November 2026, on the Pages eye's
     expect(spoken({ text: "Down from 9,393 earlier." }).text).toBe("Down from 9,393 earlier.");
     const verdict = seesFrom({ says: ["Conversions fell to [[conv.total.now]], from fewer earlier."], steps: [{ words: "Check our funnel.", link: 1 }] }, factsByKey(factsOf(ask)), links, { beforeName: "September" });
     expect(verdict).toMatchObject({ ok: true, says: ["Conversions fell to 28,623, from fewer in September."], steps: [{ words: "Check your funnel." }] });
+  });
+});
+
+/**
+ * The four slips in Neon's first answers on dev, 21 November 2026 (Anthony: "What do we need to do to improve
+ * this", then "Do it"): each caught in code, as the writer is already told not to make them.
+ */
+describe("Neon's slips (21 November 2026)", () => {
+  const finding: Array<[string, Fact]> = [
+    ["f1.value", { key: "f1.value", value: 94.1, unit: "percent", source: "analytics", label: "the hinge's items left in baskets" }],
+    ["f1.mean", { key: "f1.mean", value: 66.7, unit: "percent", source: "analytics", label: "other products' items left in baskets" }],
+    ["f4.now", { key: "f4.now", value: 200, unit: "count", source: "analytics", label: "items bought" }],
+    ["f4.before", { key: "f4.before", value: 0, unit: "count", source: "analytics", label: "items bought the month before" }],
+  ];
+  const facts = new Map([...factsByKey(factsOf(ask)), ...finding]);
+  const first = "Conversions fell to [[conv.total.now]] from [[conv.total.before]].";
+
+  test("a finding that tells the reader what to do is left off past the first sentence, and sends the words back as the first", () => {
+    const told = "Open Insights' Keyword cannibalisation to see which page should own each search.";
+    expect(seesFrom({ says: [first, told], steps: [] }, facts, links)).toEqual({ ok: true, says: ["Conversions fell to 28,623 from 31,880."], steps: [] });
+    expect(seesFrom({ says: [first, told], steps: [] }, facts, links, { salvage: true })).toMatchObject({ ok: true, left: [expect.stringContaining("belongs in the steps")] });
+    expect(seesFrom({ says: ["Check why conversions fell to [[conv.total.now]]."], steps: [] }, facts, links)).toMatchObject({ ok: false, why: expect.stringContaining("belongs in the steps") });
+    // A finding that only starts with such a word in another sense is no order.
+    expect(sentenceSlip("Seen from phones, [[conv.total.now]] conversions came.", ["conv.total.now"], facts)).toBeNull();
+  });
+
+  test("a sentence saying something moved with no figure is left off; one that moves nothing, or has its figure, stands", () => {
+    for (const bare of ["New searches also fell against September, leaving your website showing for fewer searches overall.", "Your buying searches also dropped in clicks, with big terms like door handles sitting on page two."]) {
+      expect(MOVED.test(bare), bare).toBe(true);
+      expect(seesFrom({ says: [first, bare], steps: [] }, facts, links), bare).toEqual({ ok: true, says: ["Conversions fell to 28,623 from 31,880."], steps: [] });
+    }
+    const kept = seesFrom({ says: [first, "Most of them are cupboard handles.", "Purchases rose to [[conv.purchases.now]]."], steps: [] }, facts, links);
+    expect(kept).toMatchObject({ ok: true, says: [expect.any(String), "Most of them are cupboard handles.", "Purchases rose to 1,258."] });
+  });
+
+  test("a part after \"while\" or \"but\" saying something moved with no figure is cut, and the figured part stands", () => {
+    expect(withoutBareContrast("Non-brand clicks fell [[a]] to [[b]] against the month before, while brand clicks rose.")).toBe("Non-brand clicks fell [[a]] to [[b]] against the month before.");
+    expect(withoutBareContrast("Your searches in the top three rose slightly to [[a]], while places four to ten slipped.")).toBe("Your searches in the top three rose slightly to [[a]].");
+    // A part with its own figure, a number typed in it, nothing moving, or nothing figured before it: as written.
+    for (const kept of [
+      "Conversions fell to [[a]], while purchases rose to [[b]].",
+      "[[a]] searches climbed five places or more that day, while only 4 fell.",
+      "Visits fell to [[a]], while phones led the way.",
+      "Organic Search fell in visits, while AI Agency grew.",
+    ]) expect(withoutBareContrast(kept), kept).toBe(kept);
+    expect(seesFrom({ says: ["Conversions fell to [[conv.total.now]] from [[conv.total.before]], while purchases rose."], steps: [] }, facts, links))
+      .toEqual({ ok: true, says: ["Conversions fell to 28,623 from 31,880."], steps: [] });
+  });
+
+  test("a figure said without the one it is set against is left off; said together they stand", () => {
+    const alone = "Other products left [[f1.mean]] of added items in baskets.";
+    expect(seesFrom({ says: [first, alone], steps: [] }, facts, links)).toEqual({ ok: true, says: ["Conversions fell to 28,623 from 31,880."], steps: [] });
+    expect(seesFrom({ says: [first, "Your hinge had [[f1.value]] of added items left in baskets, against [[f1.mean]] for your other products."], steps: [] }, facts, links))
+      .toMatchObject({ ok: true, says: [expect.any(String), "Your hinge had 94.1% of added items left in baskets, against 66.7% for your other products."] });
+    expect(sentenceSlip("Items bought were [[f4.before]] in September.", ["f4.before"], facts)).toContain("set against");
+    expect(sentenceSlip("Items bought rose to [[f4.now]] from [[f4.before]].", ["f4.now", "f4.before"], facts)).toBeNull();
+    // A figure from the dates before with nothing of now's on the page to set it against stands.
+    expect(sentenceSlip("Visits were [[v.before]] in September.", ["v.before"], facts)).toBeNull();
+  });
+
+  test("a press on a menu period is told the month before by name, as one on dates picked by hand is", () => {
+    // On 21 November 2026, Last month is October, and the month before it September.
+    expect(datesBeforeFor({ period: "lastMonth" }, "2026-11-21")).toEqual({ dates: "2026-09-01 to 2026-09-30", name: "September" });
+    // In February, Last month is January and the month before it in another year, so it carries its year.
+    expect(datesBeforeFor({ period: "lastMonth" }, "2026-02-10")).toEqual({ dates: "2025-12-01 to 2025-12-31", name: "December 2025" });
+    // Dates a press carries win over today's.
+    expect(datesBeforeFor({ period: "lastMonth", from: "2026-10-01", to: "2026-10-31" }, "2026-12-15")).toEqual({ dates: "2026-09-01 to 2026-09-30", name: "September" });
+    // Dates that are not one whole month have no name; a press with no dates at all has nothing before.
+    expect(datesBeforeFor({ period: "lastWeek" }, "2026-11-21")?.name).toBeUndefined();
+    expect(datesBeforeFor({ period: "last3Months" }, "2026-11-21")?.name).toBeUndefined();
+    expect(datesBeforeFor({ period: "" }, "2026-11-21")).toBeNull();
+  });
+
+  test("\"the month before\" is said by the month's name, wherever it sits", () => {
+    for (const [said, named] of [
+      ["Non-brand clicks fell 9.9% to 1,704 against the month before.", "Non-brand clicks fell 9.9% to 1,704 against September."],
+      ["Non-brand searches were shown 541,260 times, up 14.9% on the month before.", "Non-brand searches were shown 541,260 times, up 14.9% on September."],
+      ["1,034 items were bought, up from 972 the month before.", "1,034 items were bought, up from 972 in September."],
+      ["Whole-website visits fell 4.7% to 35,739 compared to the month before.", "Whole-website visits fell 4.7% to 35,739 compared to September."],
+      ["940 conversions came from AI assistants, up from 661 conversions in the span before.", "940 conversions came from AI assistants, up from 661 conversions in September."],
+      ["The month before, visits fell to 6,878.", "In September, visits fell to 6,878."],
+    ] as const) expect(spoken({ text: said }, "September").text, said).toBe(named);
+    // A week or some days have no one name, and stay; without a name, "in the span before" is "before that".
+    expect(spoken({ text: "Visits fell to 2,941 from 3,422 the week before." }, "September").text).toBe("Visits fell to 2,941 from 3,422 the week before.");
+    expect(spoken({ text: "Up from 0 visits in the span before." }).text).toBe("Up from 0 visits before that.");
+    expect(spoken({ text: "Down 9.9% on the month before." }).text).toBe("Down 9.9% on the month before.");
+    expect(seesFrom({ says: ["Conversions fell to [[conv.total.now]] from [[conv.total.before]] the month before."], steps: [] }, facts, links, { beforeName: "September" }))
+      .toMatchObject({ ok: true, says: ["Conversions fell to 28,623 from 31,880 in September."] });
   });
 });

@@ -70,6 +70,15 @@ export const TYPESAFE_PROVIDER_KEY = "typesafe";
 export const EMBEDDING_MODEL_USE_CASE = "embedding";
 export const REALTIME_MODEL_USE_CASE = "realtime";
 export const DECISION_MODEL_USE_CASE = "decision";
+/**
+ * The words of What Hakken sees on each page, as the job The Eye (Anthony, 21 November 2026: "hydrogen is the cheaper work horse and neon is
+ * the thinker"). Code finds what matters on the page and the writer writes it up, which a cheaper model may do while the
+ * Insights specialists' own model does their analysis. Empty is a choice, never a gap: each page's specialist then writes
+ * with its own model, as before. So neither Sync nor "Set as Default" ever fills it (`JOBS_EMPTY_BY_CHOICE`).
+ */
+export const SEES_MODEL_USE_CASE = "the-eye";
+/** Jobs whose empty default means "the agent's own model", which only a person sets. */
+export const JOBS_EMPTY_BY_CHOICE: ReadonlySet<string> = new Set([SEES_MODEL_USE_CASE]);
 
 /**
  * Can this model actually hold a spoken conversation?
@@ -121,6 +130,7 @@ export const DEFAULT_MODEL_USE_CASES = [
   REALTIME_MODEL_USE_CASE,
   EMBEDDING_MODEL_USE_CASE,
   DECISION_MODEL_USE_CASE,
+  SEES_MODEL_USE_CASE,
 ] as const;
 
 export type AiModelUseCase = (typeof DEFAULT_MODEL_USE_CASES)[number] | string;
@@ -205,7 +215,7 @@ export const REALTIME_CAPABLE_PROVIDER_KEYS = new Set([
   OPENAI_PROVIDER_KEY,
   GOOGLE_VERTEX_PROVIDER_KEY,
 ]);
-export const AGENT_CAPABLE_USE_CASES = new Set(["agent", "workflow"]);
+export const AGENT_CAPABLE_USE_CASES = new Set(["agent", "workflow", SEES_MODEL_USE_CASE]);
 /**
  * The providers the agent runtime has an adapter for.
  *

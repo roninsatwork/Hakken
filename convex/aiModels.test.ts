@@ -7,6 +7,7 @@ import {
   GOOGLE_VERTEX_EMBEDDING_DIMENSIONS,
   GOOGLE_VERTEX_EMBEDDING_MODEL_ID,
   GOOGLE_VERTEX_PROVIDER_KEY,
+  SEES_MODEL_USE_CASE,
 } from "./aiModelService";
 
 describe("OWASP: Broken Access Control - AI Models", () => {
@@ -715,6 +716,46 @@ describe("OWASP: Broken Access Control - AI Models", () => {
     ).toEqual([
       { useCase: "agent", modelId: "existing-default", providerKey: "google" },
       { useCase: "chat", modelId: "existing-default", providerKey: "google" },
+    ]);
+  });
+
+  test("provider sync leaves a job's chosen default alone and fills no job the main default can't do", async () => {
+    // On dev on 2026-11-21 a sync wrote the main text model over every job's
+    // default, Embeddings, Speech and Live voice among them.
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", {
+        modelId: "main-default",
+        providerKey: "google",
+        providerModelId: "main-default",
+        displayName: "Main Default",
+        isEnabled: true,
+        isDefault: true,
+        lastSyncedAt: 1,
+      });
+      await ctx.db.insert("aiModelDefaults", { scope: "global", useCase: "report", providerKey: "google", modelId: "bigger-model", updatedAt: 1 });
+      await ctx.db.insert("aiModelDefaults", { scope: "global", useCase: "embedding", providerKey: "google", modelId: "embedding-model", updatedAt: 1 });
+    });
+
+    await t.mutation(internal.aiModels.internalBatchUpsert, {
+      providerKey: "google",
+      providerDisplayName: "Google Vertex AI",
+      defaultUseCases: ["chat", "report", "embedding", "speech"],
+      models: [{ modelId: "main-default", providerModelId: "main-default", displayName: "Main Default", supportedUseCases: ["chat", "report"] }],
+    });
+
+    const defaults = await t.run(async (ctx) => (await ctx.db.query("aiModelDefaults").collect())
+      .map((entry) => ({ useCase: entry.useCase, modelId: entry.modelId, updatedAt: entry.updatedAt }))
+      .sort((a, b) => a.useCase.localeCompare(b.useCase)));
+
+    expect(defaults).toEqual([
+      // Empty, and a job the main default does: filled.
+      { useCase: "chat", modelId: "main-default", updatedAt: expect.any(Number) },
+      // Chosen already: untouched.
+      { useCase: "embedding", modelId: "embedding-model", updatedAt: 1 },
+      { useCase: "report", modelId: "bigger-model", updatedAt: 1 },
+      // "speech" is empty but the main default can't speak: left empty.
     ]);
   });
 
@@ -1494,5 +1535,52 @@ describe("the model doors nothing was calling", () => {
       globalUseCases: usage.globalUseCases,
       isPartial: usage.isPartial,
     }).toEqual({ picker: 1, active: 1, globalUseCases: ["chat"], isPartial: false });
+  });
+});
+
+/**
+ * The Eye, the job for the eye's words (Anthony, 21 November 2026: "hydrogen is the cheaper work horse and neon is the
+ * thinker"): a job whose empty default is a choice, leaving each page's writer on its own model, so only a person sets it.
+ */
+describe("the eye's words have a model of their own only when a person sets one", () => {
+  const seed = async (t: ReturnType<typeof convexTest>) => await t.run(async (ctx) => {
+    const adminId = await ctx.db.insert("users", { email: "admin@test.com", role: "SUPER_ADMIN" });
+    await ctx.db.insert("aiModels", { modelId: "workhorse", providerKey: "google", providerModelId: "workhorse", displayName: "Workhorse", isEnabled: true, isDefault: true, supportedUseCases: ["chat", "agent", "report"], lastSyncedAt: 1 });
+    await ctx.db.insert("aiModels", { modelId: "thinker", providerKey: "google", providerModelId: "thinker", displayName: "Thinker", isEnabled: true, isDefault: false, supportedUseCases: ["chat", "agent", "report"], lastSyncedAt: 1 });
+    await ctx.db.insert("aiModels", { modelId: "voice", providerKey: "google", providerModelId: "voice", displayName: "Voice", isEnabled: true, isDefault: false, supportedUseCases: ["speech"], lastSyncedAt: 1 });
+    return adminId;
+  });
+  const seesModel = async (t: ReturnType<typeof convexTest>) => await t.query(internal.aiModels.jobModelIdInternal, { useCase: SEES_MODEL_USE_CASE });
+
+  test("unset, it names no model, never the platform's main default; set, it names the one chosen while it can run", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const client = t.withIdentity({ subject: await seed(t) });
+    expect(await seesModel(t)).toBeNull();
+    await client.mutation(api.aiModels.setGlobalModelDefault, { useCase: SEES_MODEL_USE_CASE, modelId: "thinker" });
+    expect(await seesModel(t)).toBe("thinker");
+    // A model that cannot work as an agent is refused for it.
+    await expect(client.mutation(api.aiModels.setGlobalModelDefault, { useCase: SEES_MODEL_USE_CASE, modelId: "voice" })).rejects.toThrow(/does not support/);
+    // Switched off, the chosen model stops answering, and the writers' own models write again.
+    await t.run(async (ctx) => {
+      const thinker = (await ctx.db.query("aiModels").collect()).find((model) => model.modelId === "thinker")!;
+      await ctx.db.patch(thinker._id, { isEnabled: false });
+    });
+    expect(await seesModel(t)).toBeNull();
+  });
+
+  test("neither a sync nor Set as Default fills it", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const client = t.withIdentity({ subject: await seed(t) });
+    await t.mutation(internal.aiModels.internalBatchUpsert, {
+      providerKey: "google",
+      providerDisplayName: "Google Vertex AI",
+      models: [{ modelId: "workhorse", providerModelId: "workhorse", displayName: "Workhorse", supportedUseCases: ["chat", "agent", "report"] }],
+    });
+    const thinkerId = await t.run(async (ctx) => (await ctx.db.query("aiModels").collect()).find((model) => model.modelId === "thinker")!._id);
+    await client.mutation(api.aiModels.setDefaultModel, { modelId: thinkerId });
+    const jobs = await t.run(async (ctx) => (await ctx.db.query("aiModelDefaults").collect()).map((row) => row.useCase));
+    expect(jobs).toContain("chat");
+    expect(jobs).not.toContain(SEES_MODEL_USE_CASE);
+    expect(await seesModel(t)).toBeNull();
   });
 });

@@ -8730,7 +8730,8 @@
           "embedding": "Turning documents into something searchable. Only embedding models can do this.",
           "vision": "Reading images and screenshots.",
           "toolCalling": "Deciding which tool to use and with what arguments.",
-          "decision": "Answering a yes-or-no, pick-one or how-much question with a certainty, so the platform can act or ask a person. Any model can do it; TypeSafe models measure their certainty rather than estimate it."
+          "decision": "Answering a yes-or-no, pick-one or how-much question with a certainty, so the platform can act or ask a person. Any model can do it; TypeSafe models measure their certainty rather than estimate it.",
+          "theEye": "What the eye writes on each page. The findings are picked out first, and this model writes them up. If there's no platform default and a company hasn't chosen a model, each page's specialist uses its own."
         }
       },
       "catalogue": {

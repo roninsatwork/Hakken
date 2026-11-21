@@ -16,7 +16,7 @@ import { ANALYTICS_READ } from "./utils/agentTools";
 import { findingWords, type Finding } from "./utils/sees/findings";
 import { judgeFindings, judgeLeftOff, judgeWords, judgePoints, prepareSeesJudge } from "./seesJudge";
 import {
-  JUDGE_FORMAT, MOST_COVERED, SEES_FINDINGS_FORMAT, beforeNamed, firstAnswerStands, judgeFrom, namesWithNumbersIn, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
+  JUDGE_FORMAT, MOST_COVERED, SEES_FINDINGS_FORMAT, SEES_THINKING_LEVEL, datesBeforeFor, firstAnswerStands, judgeFrom, namesWithNumbersIn, withoutTypedUnits, SEES_FORMAT, SEES_PAGE_FORMAT, SEES_READS_FORMAT, SEES_SHOP_FORMAT, factsOf, pageParts, seriousFaults, gradeSees, seesAskValidator, seesFrom, writerFor,
   type SeesLink, type SeesVerdict,
 } from "./utils/seesAsk";
 import { CODE_FIRST_ROWS, briefOf, findingNames, findingsBriefOf, pageFacts, usesCodeFirstBrief } from "./utils/sees/pageData";
@@ -24,6 +24,8 @@ import { pageFindings } from "./utils/sees/pageFindings";
 import { OWN_FINDINGS } from "./utils/sees/pageOwnFindings";
 import { seesScreenFor } from "./utils/sees/screens";
 import type { SeesStageNote } from "./utils/sees/stages";
+import { ukDay } from "./utils/calendarPeriods";
+import { SEES_MODEL_USE_CASE } from "./aiModelService";
 
 /** A list's rows in the writer's brief once code has found the figures: enough for the page's setting. */
 /** Fewer sentences than this, with this many findings to say, is too thin to leave the reader with. */
@@ -66,7 +68,7 @@ const LOOK_LIMIT_MS = 2.5 * 60 * 1000;
  * finds what the figures show, the specialist writes them up, the Editor checks. `note` says each stage as it starts,
  * for the panel to show what the press is doing (`utils/sees/stages.ts`); the eval set has no panel, and no notes.
  */
-async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, note: SeesStageNote = async () => {}, options: { codeFirst?: boolean; thinkingLevel?: "MINIMAL" | "LOW" | "MEDIUM" | "HIGH"; briefOnly?: boolean } = {}): Promise<Written> {
+async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, note: SeesStageNote = async () => {}, options: { codeFirst?: boolean; thinkingLevel?: "MINIMAL" | "LOW" | "MEDIUM" | "HIGH"; briefOnly?: boolean; modelId?: string } = {}): Promise<Written> {
   // The code-first brief (eye-code-first-brief-plan-2026-11-07.md): the page's own switch, or a replay's, which measures both ways.
   // Only a page with rules of its own: where only the general rules run, code finds little, and the writer still needs the page's
   // lists to find the rest (Insights' Experiments, 7 November: its main point, conversions up while visits held, went missing).
@@ -89,7 +91,13 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   const chosen: InsightsRole = writerFor(page.screen, trackingFaults);
   lines.push({ heading: "The screen list", detail: `Handed ${page.about} to ${chosen.replace("INSIGHTS_", "").toLowerCase().replace(/_/g, " ")}.` });
   // 2. The specialist reads the website's screens for itself (A1), then writes, with what it was told before (A4).
-  const writer = member(chosen) ?? lead;
+  // The words have a model of their own where Admin → AI models sets one for The Eye (`SEES_MODEL_USE_CASE`):
+  // code finds what matters and the writer writes it up, so a cheaper model may write while the specialist's own does
+  // Insights' analysis. Unset, the specialist's own model writes, as before. A replay may name one, to measure.
+  const specialist = member(chosen) ?? lead;
+  const wordsModelId = options.modelId ?? await ctx.runQuery(internal.aiModels.jobModelIdInternal, { useCase: SEES_MODEL_USE_CASE, companyId: run.companyId });
+  const writer = specialist && wordsModelId ? { ...specialist, requestedModelId: wordsModelId } : specialist;
+  if (wordsModelId) lines.push({ heading: "The screen list", detail: `Written with ${wordsModelId}, the model set for the eye's words.` });
   const memories: Array<{ content: string }> = writer ? await ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, { agentId: writer.agentId, companyId: run.companyId }).catch(() => []) : [];
   const toldBefore = memories.length > 0 ? `What you were told before, which binds you:\n${memories.map((memory) => `- ${memory.content}`).join("\n")}` : "";
   const links = page.links.map((link, number) => ({ number, label: link.label }));
@@ -145,8 +153,9 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
     ...(finding.params.tracking ? { tracking: finding.params.tracking } : {}),
     figures: factLines(findingFacts.filter((fact) => fact.key.startsWith(`f${at + 1}.`))),
   }));
-  // The dates before, by name where they have one, so the words say "in September", never "earlier".
-  const datesBefore = page.from && page.to ? beforeNamed(page.from, page.to, page.period) : null;
+  // The dates before, by name where they have one, so the words say "in September", never "earlier" or "the month
+  // before": on a menu period too, whose dates are worked out from its name (`datesBeforeFor`).
+  const datesBefore = datesBeforeFor(page, ukDay());
   const prompt = JSON.stringify({
     website: page.host, page: page.about, pageParts: pageParts(page.screen), dates: page.from && page.to ? `${page.from} to ${page.to}` : page.period || "as the page shows them",
     ...(datesBefore ? { datesBefore: datesBefore.name ? `${datesBefore.name} (${datesBefore.dates})` : datesBefore.dates } : {}),
@@ -171,8 +180,8 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
   // A replay may try the short brief alone, without what goes with it, to tell which part does what.
   const codeFirst = briefOn && findings.length > 0 && !options.briefOnly;
   const tidy = (answer: unknown) => (codeFirst ? withoutTypedUnits(answer, given) : answer);
-  // How long the writer may think: its own setting, unless a replay sets one to measure.
-  const thinkingLevel = options.thinkingLevel;
+  // How long the writer may think: Low, unless a replay sets another to measure (`SEES_THINKING_LEVEL`).
+  const thinkingLevel = options.thinkingLevel ?? SEES_THINKING_LEVEL;
   const system = [rules, briefFor(chosen, member(chosen)?.instructions), toldBefore, SEES_FORMAT, pageRead ? SEES_PAGE_FORMAT : "", page.shop && analytics ? SEES_SHOP_FORMAT : "", never, readsScreens ? SEES_READS_FORMAT : "", findings.length > 0 ? SEES_FINDINGS_FORMAT : ""].filter(Boolean).join("\n\n");
   // Jev's check on the words, once the Editor's code has passed them: a guess stated as fact, a step that fits any website.
   const figuresForJev = [...facts, ...findingFacts].slice(0, 60).map((fact) => ({ what: fact.label, value: fact.value }));
@@ -203,6 +212,8 @@ async function writeBubble(ctx: ActionCtx, run: InsightsRunArgs, page: Page, not
       firstReads: readsScreens ? firstReadsFor(page) : [],
       limitMs: WRITE_LIMIT_MS,
       onStage: note,
+      // Minimal isn't one of an agent turn's levels: the nearest it takes, as the plain writer's adapter does.
+      thinkingLevel: thinkingLevel === "MINIMAL" ? "LOW" : thinkingLevel,
       check: async (answer, found) => {
         await note("checking");
         const options = { ...noTracking, ...pageNames, ...covering, ...(found.size > 0 || findings.length > 0 ? beyondPage : {}) };
@@ -463,6 +474,8 @@ export const replaySeesAnswers = internalAction({
     thinkingLevel: v.optional(v.union(v.literal("MINIMAL"), v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))),
     /** The brief alone, without the findings-in-order line, the tidy, a kept first answer or the writer's limits. */
     briefOnly: v.optional(v.boolean()),
+    /** A model to write with, to measure one against the words saved (`aiModels.modelId`); the page's own otherwise. */
+    modelId: v.optional(v.string()),
   },
   returns: v.array(v.object({
     answerId: v.id("seesAnswers"), screen: v.string(), period: v.string(),
@@ -480,7 +493,7 @@ export const replaySeesAnswers = internalAction({
       const run: InsightsRunArgs = { runId, companyId: page.companyId, host: page.host, holdId: page.holdId, shop: page.shop };
       let written: Written;
       try {
-        written = await writeBubble(ctx, run, page, undefined, { ...(args.codeFirst === undefined ? {} : { codeFirst: args.codeFirst }), ...(args.thinkingLevel ? { thinkingLevel: args.thinkingLevel } : {}), ...(args.briefOnly ? { briefOnly: true } : {}) });
+        written = await writeBubble(ctx, run, page, undefined, { ...(args.codeFirst === undefined ? {} : { codeFirst: args.codeFirst }), ...(args.thinkingLevel ? { thinkingLevel: args.thinkingLevel } : {}), ...(args.briefOnly ? { briefOnly: true } : {}), ...(args.modelId ? { modelId: args.modelId } : {}) });
       } catch (error) {
         written = { verdict: { ok: false, why: failureSummary(error) }, role: "INSIGHTS_CONVERSION", lines: [] };
       }

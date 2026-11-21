@@ -10,6 +10,8 @@ import * as aiModelShapes from "./utils/aiModelShapes";
 import {
   ANTHROPIC_PROVIDER_KEY,
   DECISION_MODEL_USE_CASE,
+  JOBS_EMPTY_BY_CHOICE,
+  SEES_MODEL_USE_CASE,
   DEFAULT_MODEL_USE_CASES,
   EMBEDDING_MODEL_USE_CASE,
   GOOGLE_VERTEX_EMBEDDING_DIMENSIONS,
@@ -356,6 +358,10 @@ function modelSupportsUseCase(model: Pick<Doc<"aiModels">, "supportedUseCases">,
   // Same rule as the screens: the Decisions job takes any short-text model, never a speech one.
   if (useCase === DECISION_MODEL_USE_CASE) {
     return (model.supportedUseCases ?? []).includes(useCase) || modelSupportsUseCase(model, "fast-chat");
+  }
+  // The eye's words: a model that can work as an agent, as the writer reads screens with tools. Synced catalogues never list it.
+  if (useCase === SEES_MODEL_USE_CASE) {
+    return (model.supportedUseCases ?? []).includes(useCase) || modelSupportsUseCase(model, "agent");
   }
   return !model.supportedUseCases || model.supportedUseCases.length === 0 || model.supportedUseCases.includes(useCase);
 }
@@ -1159,6 +1165,8 @@ export const setDefaultModel = superAdminMutation({
         // per-row path rejects. The screen then showed "No platform default"
         // beside a price for the default that did exist — and touching the row
         // cleared it.
+        // A job whose empty default is a choice is set only on its own row.
+        if (JOBS_EMPTY_BY_CHOICE.has(useCase)) continue;
         const canServe = modelSupportsUseCase(newDefault, useCase)
           && canProviderServeUseCase(newDefault.providerKey, useCase);
         if (!canServe) {
@@ -1352,6 +1360,13 @@ export const internalBatchUpsert = internalMutation({
       .withIndex("by_default", (q) => q.eq("isDefault", true))
       .first();
 
+    // A sync only fills a job that has no default yet, and only with a model
+    // that can do that job, by the same check "Set default" makes. It used to
+    // write the main default over every job's choice. On dev on 2026-11-21 that
+    // put the main text model on Embeddings, Speech and Live voice, jobs a text
+    // model can't do, and the next sync would have done it again and stopped
+    // knowledge search without a sign. A job's default is chosen in Admin and
+    // stays as chosen.
     if (activeDefault) {
       const useCases = args.defaultUseCases ?? DEFAULT_MODEL_USE_CASES;
       for (const useCase of useCases) {
@@ -1359,22 +1374,18 @@ export const internalBatchUpsert = internalMutation({
           .query("aiModelDefaults")
           .withIndex("by_scope_use_case", (q) => q.eq("scope", "global").eq("useCase", useCase))
           .first();
+        if (existingDefault || JOBS_EMPTY_BY_CHOICE.has(useCase)) continue;
 
-        const defaultPatch = {
-          providerKey: activeDefault.providerKey ?? providerKey,
+        const defaultProviderKey = activeDefault.providerKey ?? providerKey;
+        if (!modelSupportsUseCase(activeDefault, useCase) || !canProviderServeUseCase(defaultProviderKey, useCase)) continue;
+
+        await ctx.db.insert("aiModelDefaults", {
+          scope: "global",
+          useCase,
+          providerKey: defaultProviderKey,
           modelId: activeDefault.modelId,
           updatedAt: now,
-        };
-
-        if (existingDefault) {
-          await ctx.db.patch(existingDefault._id, defaultPatch);
-        } else {
-          await ctx.db.insert("aiModelDefaults", {
-            scope: "global",
-            useCase,
-            ...defaultPatch,
-          });
-        }
+        });
       }
     }
     return true;
@@ -1495,6 +1506,20 @@ export const updatePricingConfig = superAdminMutation({
  *
  * `by_model_id` answers the same question in one lookup.
  */
+/**
+ * The model a job's default names, company first, only where one is set and can run: null otherwise, with no fallback to
+ * the platform's main default. The eye asks this for its own job (`SEES_MODEL_USE_CASE`), and null leaves each page's
+ * specialist on its own model.
+ */
+export const jobModelIdInternal = internalQuery({
+  args: { useCase: v.string(), companyId: v.optional(v.id("companies")) },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const model = await getUseCaseDefaultModel(ctx, args, await getDisabledProviderKeys(ctx));
+    return model?.modelId ?? null;
+  },
+});
+
 export const getModelByIdInternal = internalQuery({
   args: { modelId: v.string() },
   handler: async (ctx, args) => {

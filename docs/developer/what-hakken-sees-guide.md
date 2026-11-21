@@ -174,6 +174,18 @@ and the rule that came from it. Every rule is now in the code.
   it happens. Every step says where — the device, channel, kind of page, step or
   product.
 
+**The writer's model and depth** (21 November 2026)
+- The words have a model of their own: The Eye in Admin → AI models → defaults (`SEES_MODEL_USE_CASE`). It is
+  set to Neon on dev. Left empty, with no company choice either, each page's specialist writes with its own model, and
+  since that day the specialists that dig follow the platform's default, Hydrogen. Neither Sync nor "Set as Default"
+  fills it.
+- The writer thinks at Low on both paths (`SEES_THINKING_LEVEL`): code has found and ranked what matters, and the writer
+  only writes it up. On five pages replayed on the same figures, Neon at Low cost 35 cents, against 70 at Medium, 30 on
+  Hydrogen and 40 on Argon. A blind reader found it as good as Medium. Hydrogen was as good on Search Console's pages but
+  came last on both Google Analytics pages: it led Overview with a rise built on a handful of events, and repeated
+  products' whole names on Products.
+- To measure another model or depth, `replaySeesAnswers` takes `modelId` and `thinkingLevel`, and saves nothing over a page.
+
 **The Editor's checks** (`seesFrom` in `convex/utils/seesAsk.ts`)
 - No typed number. Every key named is one the page holds or the agent read.
 - No sentence over 24 words. No supplier named.
@@ -186,6 +198,23 @@ and the rule that came from it. Every rule is now in the code.
 - No sentence saying one figure caused another ("Those gains lifted times shown", "That drop brought visits down"): the
   figures show both happened, never that one made the other (`CAUSE_TALK`; Volatility, 2026-11-20). The writer is told
   the same in `SEES_FORMAT`, and Jev's guess check names it too.
+- Four slips the Neon model made on its first answers (21 November 2026), each caught in code as the writer is already
+  told not to make them. Past the first sentence each is left off and the rest stand, so none costs a rewrite; in the
+  first sentence the words go back (`sentenceSlip`).
+  - A finding that tells the reader what to do ("Open Insights' Keyword cannibalisation to see…"). That's a step.
+  - A sentence saying something moved with no figure ("New searches also fell against September").
+  - A figure said without the one it is set against ("Other products left 66.7% of added items in baskets", an
+    average cut away from the hinge's 94.1%). A finding's `mean` goes with its `value`, `before` with `now`, `shareBefore`
+    with `share`.
+  - A part after "while", "but" or "yet" saying something moved with no figure is cut, and the figured part before it
+    stands ("…to 1,704, while brand clicks rose"; `withoutBareContrast`).
+  "The month before" and "the span before" are said by the month's name where it has one ("up 14.9% on September";
+  `spoken`). "The week before" and "the days before" stay: no one name fits them. A press on a menu period ("Last
+  month") is given the month before by name too (`datesBeforeFor`): until 21 November only one on dates picked by hand
+  was, so the writer's own "say September" rule never reached most presses.
+- A name with a number in it is the name's, never a typed figure, even said in part: "Eurospec Grade 11 Ball Bearing
+  Hinge" for the product's whole name keeps its 11, as a number beside the word the name has it beside ("Grade 11",
+  "Eclipse 1838") is the name's (`withoutNames`). Products' first answer went back for it (21 November 2026).
 - What fails goes back to the agent once, with why, in the same conversation: every fault at once, a crowded sentence
   left off after the first included, so the rewrite knows why a finding went (Volatility, 2026-11-20). After the rewrite a
   sentence one figure over stands, the first one too, if it alone carries a finding not yet said.

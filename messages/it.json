@@ -8730,7 +8730,8 @@
           "embedding": "Trasformare i documenti in qualcosa di ricercabile. Solo i modelli di embedding possono farlo.",
           "vision": "Leggere immagini e screenshot.",
           "toolCalling": "Decidere quale strumento usare e con quali argomenti.",
-          "decision": "Rispondere a una domanda sì-o-no, a scelta singola o di grado con una certezza, così la piattaforma può agire o chiedere a una persona. Qualsiasi modello può farlo; i modelli TypeSafe misurano la certezza invece di stimarla."
+          "decision": "Rispondere a una domanda sì-o-no, a scelta singola o di grado con una certezza, così la piattaforma può agire o chiedere a una persona. Qualsiasi modello può farlo; i modelli TypeSafe misurano la certezza invece di stimarla.",
+          "theEye": "Ciò che l'occhio scrive su ogni pagina. Prima vengono individuate le scoperte, poi questo modello le mette per iscritto. Se non c'è un predefinito di piattaforma e un'azienda non ha scelto un modello, lo specialista di ogni pagina usa il proprio."
         }
       },
       "catalogue": {

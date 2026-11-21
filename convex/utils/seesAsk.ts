@@ -5,7 +5,7 @@ import { fillFacts, namedFacts, type Fact } from "./insightFacts";
 import { typedNumbers } from "./insightEditor";
 import { seesScreenFor, sourceOfSection } from "./sees/screens";
 import { beforeOf } from "../searchConsoleDays";
-import { isCalendarPeriod } from "./calendarPeriods";
+import { isCalendarPeriod, periodBounds } from "./calendarPeriods";
 
 /**
  * What Hakken sees, written by the Insights team when the eye is pressed
@@ -161,6 +161,9 @@ export const SEES_FORMAT = [
   "Start with the page as it is laid out (pageParts): what each part says that matters, a short sentence each where it has something to say; the reader sees the boxes, so never spend a sentence on them alone. Never name the parts (\"on the chart\", \"the map shows\"): say what they show. Then dig into the biggest thing.",
   "Write it as a short story a busy owner reads in under a minute, never a list of figures: what is happening, where it happens, and why it matters. Plain words, short sentences under 20 words, at most two figures in a sentence and eight in the whole bubble: choose the figures that tell the story. Name every figure by its key in double square brackets, like [[conv.purchases.now]], and never type a number: each is filled in from the page. Never a list of names inside a sentence.",
   "Say what got better and what got worse against the span before, wherever the figures hold it.",
+  // Neon's first answers, 21 November 2026: "while brand clicks rose", "Other products left 66.7% of added
+  // items in baskets" (an average cut away from the hinge it was set against), and a finding that told the reader to open a page.
+  "Every change you name has its figure, also after \"while\" or \"but\": never \"brand clicks rose\" with no number. Say a figure and the one it is set against in the same sentence: never an average or the dates before in a sentence of its own. says is only what the figures show; what to do goes in steps.",
   // Anthony, 2026-11-03, on the Visits eye ("this is really poor from the ai"): the writer said visits "held steady on
   // weekdays" with no day on the page, and that people were "likely hitting a dead end".
   "Say only what the figures you were given show. Never guess at a reason, a day, a time or a pattern they do not hold, and never write \"likely\", \"probably\" or \"may be because\": where the figures cannot say why, make finding out a step.",
@@ -229,6 +232,65 @@ const LEADING_PART = /^(in|on|from) the (table|chart|graph|treemap|boxes|box|pan
  */
 const GUESSES = /\b(likely|unlikely|probably|perhaps|possibly|presumably|maybe)\b|\b(may|might|could) (well )?be (because|due|down to|from|caused)\b|\bsuggest(s|ing)? (that )?(shoppers|people|visitors|buyers|users|customers|they)\b/i;
 
+/**
+ * A finding that tells the reader what to do: "Open Insights' Keyword cannibalisation to see which page should own each
+ * search" (Neon, 21 November 2026). What to do is a step, with its own link; a finding says what the figures show.
+ * Measured that day on the eye's 288 saved sentences (dev and `eyeRealAnswers.json`): none starts so.
+ */
+const TELLS_WHAT_TO_DO = /^(?:open|check|review|see|look|compare|find|go|visit|read|inspect|fix|add|test|try|explore|consider|focus|start|remove|update|improve|watch|ask|make sure|use)\b/i;
+/**
+ * Words that say something moved. A sentence saying one with no figure tells the reader nothing they can weigh ("Brand
+ * clicks rose", "New searches also fell against September": Neon, 21 November 2026). Past tense only: "lost" and "gained"
+ * name the searches on New and lost, and present tense describes as often as it moves.
+ */
+export const MOVED = /\b(?:rose|fell|grew|dropped|slipped|climbed|jumped|increased|decreased|doubled|halved|declined|dipped|surged|shrank|sped up|slowed)\b/i;
+/** The part of a sentence set against what comes before it. */
+const CONTRAST = /,\s*(?:while|but|yet|whereas)\s+/i;
+
+/**
+ * A sentence with its last part cut off where that part says something moved with no figure, and the part before names
+ * one: "Non-brand clicks fell 9.9% to 1,704, while brand clicks rose" says the first half (Neon, 21 November 2026). The
+ * writer is told to give every change its figure; this keeps the figured half rather than lose the sentence. Measured that
+ * day on dev's 235 saved sentences: 7 lose such a part ("while events rose even faster", "yet total views fell").
+ */
+export function withoutBareContrast(text: string): string {
+  const at = text.search(CONTRAST);
+  if (at < 0) return text;
+  const before = text.slice(0, at).trimEnd();
+  const after = text.slice(at);
+  if (namedFacts(before).length === 0 || namedFacts(after).length > 0 || /\d/.test(after) || !MOVED.test(after)) return text;
+  return `${before.replace(/[.,;:!?]+$/, "")}.`;
+}
+
+/**
+ * The figures a figure is set against, by the keys findings give them: an average beside its row's value, the dates
+ * before beside now (`before`, `shareBefore`, `wentOnBefore`…).
+ */
+function setAgainst(key: string): string[] {
+  const match = /^(.+)\.(mean|before|[a-z]+Before)$/.exec(key);
+  if (!match) return [];
+  const [, base, field] = match;
+  if (field === "mean") return [`${base}.value`];
+  if (field === "before") return [`${base}.now`, `${base}.value`];
+  return [`${base}.${field.slice(0, -"Before".length)}`];
+}
+
+/**
+ * A slip that leaves a sentence off, past the first: words that belong in a step, a change with no figure, or a figure
+ * said without the one it is set against. "Other products left 66.7% of added items in baskets" was a finding's average
+ * for the other products, cut away from the hinge's 94.1% it was set against (Neon, 21 November 2026). Measured that day
+ * on the 53 real answers kept: none says such a figure alone.
+ */
+export function sentenceSlip(text: string, named: readonly string[], facts: ReadonlyMap<string, Fact>): string | null {
+  if (TELLS_WHAT_TO_DO.test(text)) return "A sentence told the reader what to do, which belongs in the steps";
+  if (named.length === 0 && !/\d/.test(text) && MOVED.test(text)) return "A sentence said something changed without a figure. Say by how much, or leave it out";
+  for (const key of named) {
+    const against = setAgainst(key).filter((other) => facts.has(other));
+    if (against.length > 0 && !against.some((other) => named.includes(other))) return "A sentence said a figure without the one it is set against. Say both in the same sentence";
+  }
+  return null;
+}
+
 /** Words that advise on tracking or on what counts: the bubble's only when tracking health found a fault. */
 const TRACKING_TALK = /\b(double[- ]count\w*|duplicat\w* (tracking|tags?|events?|conversions?|goals?)|stop counting|(un)?count(ing)? [\w ]{1,30} as (a )?conversions?|remove [\w ]{1,30} (tracking|tags?|goals?)|tracking (set ?up|tags?)|as goals?)\b/i;
 
@@ -261,6 +323,14 @@ export const SEES_PAGE_FORMAT = [
   // The Visits eye read "Not sorted yet" as pages people land on and hit a dead end (2026-11-03).
   "A group named \"Not sorted yet\", or marked sorted: false, is pages still to be put in a group: never a finding, a cause or a step.",
 ].join("\n");
+
+/**
+ * How long the eye's writer thinks: Low (21 November 2026, "Is this optimised for best results vs costs"). Code has already
+ * found and ranked what matters, so the writer only writes it up. Measured that day on three Search Console pages, Neon at Low
+ * wrote as well as at Medium, a blind reader judged, for 17 cents against 39, about what Hydrogen cost. A replay may set
+ * another level to measure.
+ */
+export const SEES_THINKING_LEVEL = "LOW" as const;
 
 /** Findings the words must cover, of those code found: the first ones; the panel shows them all. */
 export const MOST_COVERED = 4;
@@ -323,13 +393,42 @@ export function withoutTypedUnits(answer: unknown, facts: ReadonlyMap<string, Pi
  */
 export function withoutNames(text: string, names: readonly string[]): string {
   let out = text;
-  for (const name of [...names].sort((one, other) => other.length - one.length)) {
-    const words = name.split(/[^\p{L}\p{N}.]+/u).map((word) => word.replace(/\.+$/, "")).filter(Boolean);
+  const sorted = [...names].sort((one, other) => other.length - one.length);
+  for (const name of sorted) {
+    const words = nameWords(name);
     if (words.length === 0) continue;
-    const pattern = words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^\\p{L}\\p{N}]+");
-    out = out.replace(new RegExp(`(?<![\\p{L}\\p{N}])${pattern}(?![\\p{L}\\p{N}])`, "giu"), " ");
+    out = out.replace(wordsPattern(words), " ");
+  }
+  // A name said in part: a writer shortens "Eurospec Grade 11 Ball Bearing Hinge – Pair-Antique Brass-Square" to "Eurospec Grade
+  // 11 Ball Bearing Hinge", and the whole name no longer matches. A number beside the word the name has it beside ("Grade 11",
+  // "Eclipse 1838") is the name's, never a figure: read as one, it sent Products' first answer back (Neon, 21 November 2026).
+  // Only a word of three letters or more that is not a small joining word, so "of 4" in a product's name never hides a 4.
+  for (const name of sorted) {
+    const words = nameWords(name);
+    words.forEach((word, at) => {
+      if (!/\d/.test(word)) return;
+      for (const pair of [[words[at - 1], word], [word, words[at + 1]]]) {
+        const beside = pair[0] === word ? pair[1] : pair[0];
+        if (!beside || /\d/.test(beside) || beside.length < 3 || JOINING_WORDS.has(beside.toLowerCase())) continue;
+        out = out.replace(wordsPattern(pair as string[]), " ");
+      }
+    });
   }
   return out;
+}
+
+/** Small words that join a name's parts, never enough beside a number to show it's the name's. */
+const JOINING_WORDS = new Set(["the", "and", "for", "with", "from", "set", "pack", "pair", "per", "each", "only", "inch", "into", "over"]);
+
+/** A name's words, as `withoutNames` matches them. */
+function nameWords(name: string): string[] {
+  return name.split(/[^\p{L}\p{N}.]+/u).map((word) => word.replace(/\.+$/, "")).filter(Boolean);
+}
+
+/** The words in a row, in any case and whatever stands between them, never inside another word. */
+function wordsPattern(words: readonly string[]): RegExp {
+  const pattern = words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[^\\p{L}\\p{N}]+");
+  return new RegExp(`(?<![\\p{L}\\p{N}])${pattern}(?![\\p{L}\\p{N}])`, "giu");
 }
 
 /**
@@ -411,9 +510,24 @@ export function withoutLeadIn(text: string): string {
  */
 export function spoken<T extends { text: string }>(filled: T, beforeName?: string): T {
   let text = filled.text.replace(/\bour\b/g, "your").replace(/\bOur\b/g, "Your");
-  if (beforeName) text = text.replace(/\s+(?:earlier|previously)(?=[.,;:!?]|$)/gi, ` in ${beforeName}`);
+  if (beforeName) {
+    text = text.replace(/\s+(?:earlier|previously)(?=[.,;:!?]|$)/gi, ` in ${beforeName}`);
+    // "The month before" when the month has a name (docs/developer/writing-guide.md, rule 3): 6 of dev's 235 saved
+    // sentences said it, and Neon did too, though the writer is told not to (21 November 2026). "Up 14.9% on September",
+    // "up from 972 in September".
+    text = text.replace(DATES_BEFORE, (whole: string, word: string | undefined, at: number) => {
+      const said = word ? `${word}${beforeName}` : `in ${beforeName}`;
+      return at === 0 ? said.charAt(0).toUpperCase() + said.slice(1) : said;
+    });
+  } else {
+    // Without a name, "in the span before" is "before that": span is the system's word.
+    text = text.replace(/\s+in the (?:span|period) before\b/gi, " before that");
+  }
   return { ...filled, text };
 }
+
+/** The dates before, unnamed, with the word before them that keeps its place when the month's name goes in. */
+const DATES_BEFORE = /(\b(?:on|against|than|over|versus|vs\.?|with|to|from|since)\s+)?(?:\bin\s+)?\b(?:the month before|the previous month|the prior month|a month earlier|the span before|the period before)\b/gi;
 
 /**
  * The dates before a page's dates by their name, where they are one whole month: "September", or "December 2025" in
@@ -427,6 +541,17 @@ export function beforeNamed(from: string, to: string, period?: string): { dates:
   if (before.to !== last) return { dates };
   const month = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(new Date(`${before.from}T00:00:00Z`));
   return { dates, name: before.from.slice(0, 4) === to.slice(0, 4) ? month : `${month} ${before.from.slice(0, 4)}` };
+}
+
+/**
+ * The dates before a press's dates, by name where they have one. A press on a menu period carries its name alone
+ * ("lastMonth"), so its dates are worked out as the screens work them out (`periodBounds`) on the UK day `today`. Until
+ * 21 November 2026 only a press on dates picked by hand was given the name, and most presses are on Last month: the
+ * Neon model's first answers said "the month before" there. Null for a press with no dates at all.
+ */
+export function datesBeforeFor(page: { period: string; from?: string; to?: string }, today: string): { dates: string; name?: string } | null {
+  const shown = page.from && page.to ? { from: page.from, to: page.to } : isCalendarPeriod(page.period) ? periodBounds(page.period, today) : null;
+  return shown ? beforeNamed(shown.from, shown.to, page.period) : null;
 }
 
 export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, links: readonly SeesLink[], options: {
@@ -486,7 +611,7 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
       lastLeftOff = true;
       continue;
     }
-    const cut = withoutLeadIn(line.trim().replace(LEADING_PART, ""));
+    const cut = withoutBareContrast(withoutLeadIn(line.trim().replace(LEADING_PART, "")));
     // A capital to start, but a name that starts small keeps its spelling: never "IOS led the growth".
     const trimmed = /^\p{Ll}+\p{Lu}/u.test(cut) ? cut : cut.charAt(0).toUpperCase() + cut.slice(1);
     if (lastLeftOff && (LEANS_ON_THE_LAST.test(trimmed) || (namedFacts(trimmed).length === 0 && POINTS_BACK.test(trimmed)))) {
@@ -504,6 +629,17 @@ export function seesFrom(answer: unknown, facts: ReadonlyMap<string, Fact>, link
     }
     if (namedFacts(trimmed).length === 0 && says.length === 0) {
       fault(`The first sentence names no figure: "${trimmed}".`);
+      continue;
+    }
+    // Words that belong in a step, a change with no figure, a figure without the one it's set against: in the first
+    // sentence the words go back; a later one is left off and the rest stand, as a crowded one is, so no slip costs a
+    // rewrite, and the writer is told only if the words go back anyway.
+    const slip = sentenceSlip(trimmed, namedFacts(trimmed), facts);
+    if (slip) {
+      const why = `${slip}: "${trimmed}".`;
+      if (says.length === 0) fault(why);
+      else if (salvage) left.push(why);
+      else crowded.push(why);
       continue;
     }
     // Too many figures in the first sentence sends the words back; a later one is left off and the rest stand

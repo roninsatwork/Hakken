@@ -3,7 +3,7 @@
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import { getAgentProviderAdapter } from "./agentProviderRegistry";
-import type { AgentToolDeclaration, RuntimeTurn } from "./agentProviderTypes";
+import type { AgentReasoningEffort, AgentToolDeclaration, RuntimeTurn } from "./agentProviderTypes";
 import { buildToolInteractionTurns, type ExecutedAgentToolCall } from "./agentRuntimeService";
 import { ASK_LIMIT_MS, modelFor, readJson, within, type AskRun } from "./insightsAsk";
 import type { TeamMember } from "./insightsTeam";
@@ -83,6 +83,8 @@ export async function askWithTools(
     limitMs?: number;
     /** Says what the agent is doing as it happens: reading a screen (how many so far), writing, or writing again. */
     onStage?: (stage: "screens" | "writing" | "rewriting", count?: number) => Promise<void>;
+    /** How long the agent may think each turn, where the caller says; the model's own depth otherwise. */
+    thinkingLevel?: AgentReasoningEffort;
   } = {},
 ): Promise<ToolAnswer> {
   const model = await modelFor(ctx, run, member);
@@ -145,6 +147,7 @@ export async function askWithTools(
         turns,
         tools: tools.map((tool) => tool.declaration),
         temperature: 0.2,
+        ...(options.thinkingLevel ? { reasoningEffort: options.thinkingLevel } : {}),
       }, { operation: what }), left);
     } catch (error) {
       failed = true;
