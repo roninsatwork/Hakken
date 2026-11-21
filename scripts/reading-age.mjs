@@ -6,7 +6,8 @@
  * The reading age is the Flesch-Kincaid grade plus five, which is how a school
  * grade becomes an age. It only measures long words and long sentences: a line
  * can pass and still read badly, so it's a floor, never proof that the words are
- * right. The screens redone with Anthony average about 8.
+ * right. The screens redone with Anthony average about 8, and he set the aim at 12 on 2026-11-21
+ * (AIM_READING_AGE in scripts/words-read.mjs).
  */
 
 /** The hardest a line may be. */

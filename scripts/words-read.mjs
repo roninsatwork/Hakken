@@ -25,8 +25,11 @@ import { messagesOf } from "./check-reading-age.mjs";
 import { drawingLines, readOut } from "./reading-age.mjs";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-/** The reading age to aim for. The redone screens average about this (scripts/reading-age.mjs measures it). */
-export const AIM_READING_AGE = 8;
+/**
+ * The reading age to aim for (Anthony, 2026-11-21: "lets go for 12"). The checks still refuse a line over 14
+ * (MOST_READING_AGE in scripts/reading-age.mjs). The redone screens average about 8.
+ */
+export const AIM_READING_AGE = 12;
 /** The redone screens' lines a brief shows. Enough to hear how they talk, short enough to read. */
 export const SAMPLE_SIZE = 24;
 /** The sections the redone screens belong to, as `messages/en.json` names them. */

@@ -109,8 +109,9 @@ Check every line against this list before anyone sees it.
 
 And always:
 
-- **Reading age 14 at most, measured, never judged by feel.** The redone
-  screens average about 8, so aim for that. `scripts/reading-age.mjs` measures it.
+- **Reading age 14 at most, measured, never judged by feel.** Aim for 12.
+  Anthony set that aim on 21 November 2026. The redone screens average
+  about 8. `scripts/reading-age.mjs` measures it.
 - **Copy the redone screens' own phrases.** Look them up in
   `messages/en.json` before you write. Don't invent a menu name or a hint.
 - **Promise nothing the screen or the board can't do.** If a row opens
