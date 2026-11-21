@@ -32,6 +32,8 @@ import {
 } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { curveSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { curveEyeData } from "@/convex/utils/sees/eyeData/searchConsoleChanges";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 /** A row a position: the whole website's figures there, and its click-through rate on mobile and on desktop where they're in. */
@@ -94,21 +96,11 @@ export default function SearchConsoleCtrCurvePage() {
   const dates = usePerformanceDates();
   // The eye's figures: each place named as the reader says it, and the same curve over the span before where it is kept
   // (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6: "the span before's curve").
-  const tw = useTranslations("searchConsole.sees");
+  // Positions, never places, as the screen says them (Low click rate's rule, 20 November 2026): built by the same function a
+  // chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
   const td = useTranslations("searchConsole.places.deviceNames");
   const before = fromLive ? null : (server?.before ?? null);
-  const seesData = useMemo(() => {
-    if (!points) return undefined;
-    // Positions, never places, as the screen says them (Low click rate's rule, 20 November 2026).
-    const placed = (list: CurvePoint[]) => list.map((point) => ({ ...point, name: t("ctrCurve.position", { position: point.position }) }));
-    return {
-      points: placed(points),
-      before: before ? placed(before) : null,
-      // Mobile and desktop at each position, as the chart sets them side by side (20 November 2026).
-      devices: devices ? { mobile: placed(devices.mobile), desktop: placed(devices.desktop) } : null,
-      names: { firstPage: tw("firstPage"), secondPage: tw("secondPage"), topThree: t("ctrCurve.boxes.top3"), fourToTen: t("ctrCurve.boxes.first"), mobile: td("MOBILE"), desktop: td("DESKTOP") },
-    };
-  }, [points, before, devices, t, tw, td]);
+  const seesData = useMemo(() => curveEyeData({ points, before, devices }, wordsReader(t)), [points, before, devices, t]);
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(row.key));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "position", name: nameOf });

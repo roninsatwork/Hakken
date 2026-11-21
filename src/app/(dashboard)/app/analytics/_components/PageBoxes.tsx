@@ -6,6 +6,7 @@ import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { periodBounds, shiftMonths, ukDay } from "@/convex/utils/calendarPeriods";
+import { pageBoxesSeen } from "@/convex/utils/sees/eyeData/googleAnalyticsPage";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
@@ -74,14 +75,9 @@ export function PageBoxes({ answer, page }: { answer: PageAnswer; page: string }
   const product = boxes?.product ?? null;
   const sale = boxes?.sale ?? null;
 
-  // What the eye reads of the boxes: the same figures, named as the boxes name them; one object while they stand.
-  const seen = useMemo(() => (row ? {
-    views: row.views, viewsBefore: answer.viewsBefore ?? null,
-    visits: started?.visits ?? null, visitsBefore: started?.visitsBefore ?? null, websiteVisits: started?.websiteVisits ?? null,
-    ...(product ? { itemsAdded: product.itemsAdded, itemsBought: product.itemsBought, itemsBoughtBefore: product.itemsBoughtBefore, websiteItemsBought: product.websiteItemsBought } : {}),
-    ...(!product && sale ? { boughtRate: sale.startedVisits > 0 ? sale.visits / sale.startedVisits : null, websiteBoughtRate: sale.websiteVisits > 0 ? sale.websiteEventVisits / sale.websiteVisits : null } : {}),
-    ...(!product ? { scrolledToBottomRate: story.read, groupScrolledToBottomRate: story.groupRead } : {}),
-  } : null), [row, answer.viewsBefore, started, product, sale, story.read, story.groupRead]);
+  // What the eye reads of the boxes: the same figures, named as the boxes name them; one object while they stand. Built
+  // by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts).
+  const seen = useMemo(() => pageBoxesSeen(answer, boxes), [answer, boxes]);
   useSeesPart("boxes", seen);
 
   if (!row) return null;

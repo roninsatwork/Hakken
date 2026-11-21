@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { seen, seenValidator } from "./utils/hakkenSees";
 import { contentGapSees } from "./utils/sees/competitors";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -184,10 +184,12 @@ const kindValidator = v.union(
   v.literal("SUPPLIER"), v.literal("OTHER"), v.null(),
 );
 
+const listOrganicCompetitorsArgs = { siteId: v.id("companyWebsites") };
+
 /** Every site DataForSEO found ranking for the same searches, most overlap first. */
 export const listOrganicCompetitors = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: listOrganicCompetitorsArgs,
   returns: v.array(v.object({
     host: v.string(),
     kind: kindValidator,
@@ -200,33 +202,36 @@ export const listOrganicCompetitors = moduleQuery({
     tracked: v.boolean(),
     day: v.union(v.string(), v.null()),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const [found, rivals] = await Promise.all([
-      ctx.db
-        .query("discoveredCompetitors")
-        .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
-        .take(MAX_DISCOVERED),
-      myRivals(ctx, site),
-    ]);
-    const tracked = new Set(rivals.map((rival) => rival.website.host));
-    return found
-      .filter((row) => row.host !== site.website.host)
-      .map((row) => ({
-        host: row.host,
-        kind: row.kind ?? null,
-        intersections: row.intersections,
-        averagePosition: row.averagePosition ?? null,
-        estimatedTraffic: row.estimatedTraffic ?? null,
-        domainKeywords: row.domainKeywords ?? null,
-        domainTraffic: row.domainTraffic ?? null,
-        tracked: tracked.has(row.host),
-        // The day discovery last found it for this hold: the "last checked" column (D12).
-        day: row.lastSeenDay ?? null,
-      }))
-      .sort((left, right) => right.intersections - left.intersections);
-  },
+  handler: async (ctx, args) => await readOrganicCompetitors(ctx, args),
 });
+
+/** listOrganicCompetitors's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readOrganicCompetitors(ctx: SiteReader, args: ObjectType<typeof listOrganicCompetitorsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const [found, rivals] = await Promise.all([
+    ctx.db
+      .query("discoveredCompetitors")
+      .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
+      .take(MAX_DISCOVERED),
+    myRivals(ctx, site),
+  ]);
+  const tracked = new Set(rivals.map((rival) => rival.website.host));
+  return found
+    .filter((row) => row.host !== site.website.host)
+    .map((row) => ({
+      host: row.host,
+      kind: row.kind ?? null,
+      intersections: row.intersections,
+      averagePosition: row.averagePosition ?? null,
+      estimatedTraffic: row.estimatedTraffic ?? null,
+      domainKeywords: row.domainKeywords ?? null,
+      domainTraffic: row.domainTraffic ?? null,
+      tracked: tracked.has(row.host),
+      // The day discovery last found it for this hold: the "last checked" column (D12).
+      day: row.lastSeenDay ?? null,
+    }))
+    .sort((left, right) => right.intersections - left.intersections);
+}
 
 /**
  * The market map: every site in this one's market by how many searches it
@@ -323,6 +328,19 @@ function rivalSorts(rivalId: Id<"websites">): ListSorts<GapListRow, "position" |
 /** A competitor's columns: its Sites page (`siteId`), the website its rankings are filed under, and its name. */
 const gapRival = v.object({ siteId: v.id("companyWebsites"), websiteId: v.id("websites"), host: v.string() });
 
+const listContentGapArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  intent: v.optional(rankIntentValidator),
+  /** Only searches at least this many rivals rank for. */
+  minRivals: v.optional(v.number()),
+  sort: v.optional(v.union(v.literal("keyword"), v.literal("volume"), v.literal("kd"), v.literal("position"), v.literal("traffic"))),
+  /** The competitor a Position or Traffic order is of, by its Sites page. */
+  rivalId: v.optional(v.id("companyWebsites")),
+  direction: sortDirectionArg,
+};
+
 /**
  * Searches the tracked rivals rank for and this site does not, most-searched
  * first, worked out when read from the keyword copies of the site and its
@@ -338,18 +356,7 @@ const gapRival = v.object({ siteId: v.id("companyWebsites"), websiteId: v.id("we
  */
 export const listContentGap = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    intent: v.optional(rankIntentValidator),
-    /** Only searches at least this many rivals rank for. */
-    minRivals: v.optional(v.number()),
-    sort: v.optional(v.union(v.literal("keyword"), v.literal("volume"), v.literal("kd"), v.literal("position"), v.literal("traffic"))),
-    /** The competitor a Position or Traffic order is of, by its Sites page. */
-    rivalId: v.optional(v.id("companyWebsites")),
-    direction: sortDirectionArg,
-  },
+  args: listContentGapArgs,
   returns: v.object({
     ...listPageResult(v.object({
       keyword: v.string(),
@@ -371,39 +378,44 @@ export const listContentGap = moduleQuery({
     competitors: v.array(gapRival),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    if (isTrackedHold(site.hold)) return { ...pageOfList([], args.page, args.rows), competitors: [], seen: seen([]) };
-    const rivals = await myRivals(ctx, site);
-    const competitors = rivals.map((rival) => ({ siteId: rival.hold._id, websiteId: rival.website._id, host: rival.website.displayHost }));
-    const gap = await contentGapOf(ctx, { websiteId: site.website._id, place: site.place }, competitors.map((rival) => rival.websiteId));
-    if (!gap) return { ...preparingPage(args.rows), competitors, seen: seen([]) };
-    const hosts = new Map<string, string>(competitors.map((rival) => [rival.websiteId, rival.host]));
-    const matches = wordStartMatcher(args.search);
-    const minRivals = Math.max(1, args.minRivals ?? 1);
-
-    const list = gap.rows.flatMap((row) => {
-      if (args.intent && row.intent !== args.intent) return [];
-      if (matches && !matches(row.keyword)) return [];
-      if (row.rivals.length < minRivals) return [];
-      const named = row.rivals.map((rival) => ({ ...rival, host: hosts.get(rival.websiteId) ?? "" }));
-      return [{ ...row, rivalsRanking: named.length, rivals: named }];
-    });
-    const name = (row: GapListRow) => row.keyword;
-    const column = args.sort;
-    if (column === "position" || column === "traffic") {
-      // A competitor's order with no competitor tracked to read it from opens on the list's own.
-      const rival = competitors.find((entry) => entry.siteId === args.rivalId);
-      list.sort(rival
-        ? listOrder(rivalSorts(rival.websiteId), column, args.direction, name)
-        : listOrder(GAP_SORTS, "volume", undefined, name));
-    } else {
-      list.sort(listOrder(GAP_SORTS, column ?? "volume", args.direction, name));
-    }
-    // What Hakken sees is of the whole gap, whatever the filters.
-    return { ...pageOfList(list, args.page, args.rows, gap.cut), competitors, seen: contentGapSees(gap.rows, competitors.length) };
-  },
+  handler: async (ctx, args) => await readContentGap(ctx, args),
 });
+
+/** listContentGap's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readContentGap(ctx: SiteReader, args: ObjectType<typeof listContentGapArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  if (isTrackedHold(site.hold)) return { ...pageOfList([], args.page, args.rows), competitors: [], seen: seen([]) };
+  const rivals = await myRivals(ctx, site);
+  const competitors = rivals.map((rival) => ({ siteId: rival.hold._id, websiteId: rival.website._id, host: rival.website.displayHost }));
+  const gap = await contentGapOf(ctx, { websiteId: site.website._id, place: site.place }, competitors.map((rival) => rival.websiteId));
+  if (!gap) return { ...preparingPage(args.rows), competitors, seen: seen([]) };
+  const hosts = new Map<string, string>(competitors.map((rival) => [rival.websiteId, rival.host]));
+  const matches = wordStartMatcher(args.search);
+  const minRivals = Math.max(1, args.minRivals ?? 1);
+
+  const list = gap.rows.flatMap((row) => {
+    if (args.intent && row.intent !== args.intent) return [];
+    if (matches && !matches(row.keyword)) return [];
+    if (row.rivals.length < minRivals) return [];
+    const named = row.rivals.map((rival) => ({ ...rival, host: hosts.get(rival.websiteId) ?? "" }));
+    return [{ ...row, rivalsRanking: named.length, rivals: named }];
+  });
+  const name = (row: GapListRow) => row.keyword;
+  const column = args.sort;
+  if (column === "position" || column === "traffic") {
+    // A competitor's order with no competitor tracked to read it from opens on the list's own.
+    const rival = competitors.find((entry) => entry.siteId === args.rivalId);
+    list.sort(rival
+      ? listOrder(rivalSorts(rival.websiteId), column, args.direction, name)
+      : listOrder(GAP_SORTS, "volume", undefined, name));
+  } else {
+    list.sort(listOrder(GAP_SORTS, column ?? "volume", args.direction, name));
+  }
+  // What Hakken sees is of the whole gap, whatever the filters.
+  return { ...pageOfList(list, args.page, args.rows, gap.cut), competitors, seen: contentGapSees(gap.rows, competitors.length) };
+}
+
+const listSuggestedArgs = { siteId: v.id("companyWebsites") };
 
 /**
  * Competitors worth a look: sites the AI answers keep naming, then sites
@@ -412,7 +424,7 @@ export const listContentGap = moduleQuery({
  */
 export const listSuggested = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: listSuggestedArgs,
   returns: v.array(v.object({
     host: v.string(),
     reason: v.union(v.literal("NAMED_BY_AI"), v.literal("RANKS_FOR_YOUR_SEARCHES")),
@@ -422,34 +434,37 @@ export const listSuggested = moduleQuery({
     /** When it was last seen: named in an answer, or found by discovery. */
     day: v.union(v.string(), v.null()),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // The answers' most-named websites come from the list's summary — one read,
-    // however long the list (docs/plans/active/sites-audit-fixes-plan.md, 3.4).
-    const [summary, discovered, holds] = await Promise.all([
-      holdAiSummary(ctx, listHold(site), site.place),
-      ctx.db
-        .query("discoveredCompetitors")
-        .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
-        .take(MAX_DISCOVERED),
-      companyHolds(ctx, site.hold.companyId),
-    ]);
-    const { named, found } = pickSuggestions(summary?.othersNamed ?? [], discovered, {
-      websiteIds: new Set(holds.map((entry) => entry.website._id)),
-      hosts: new Set(holds.map((entry) => entry.website.host)),
-    });
-    return [
-      ...named.map((entry) => ({
-        host: entry.host, reason: "NAMED_BY_AI" as const, times: entry.times, intersections: null, kind: null, day: entry.lastDay,
-      })),
-      ...found.map((row) => ({
-        host: row.host,
-        reason: "RANKS_FOR_YOUR_SEARCHES" as const,
-        times: null,
-        intersections: row.intersections,
-        kind: row.kind ?? null,
-        day: row.lastSeenDay ?? null,
-      })),
-    ];
-  },
+  handler: async (ctx, args) => await readSuggested(ctx, args),
 });
+
+/** listSuggested's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readSuggested(ctx: SiteReader, args: ObjectType<typeof listSuggestedArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // The answers' most-named websites come from the list's summary — one read,
+  // however long the list (docs/plans/active/sites-audit-fixes-plan.md, 3.4).
+  const [summary, discovered, holds] = await Promise.all([
+    holdAiSummary(ctx, listHold(site), site.place),
+    ctx.db
+      .query("discoveredCompetitors")
+      .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
+      .take(MAX_DISCOVERED),
+    companyHolds(ctx, site.hold.companyId),
+  ]);
+  const { named, found } = pickSuggestions(summary?.othersNamed ?? [], discovered, {
+    websiteIds: new Set(holds.map((entry) => entry.website._id)),
+    hosts: new Set(holds.map((entry) => entry.website.host)),
+  });
+  return [
+    ...named.map((entry) => ({
+      host: entry.host, reason: "NAMED_BY_AI" as const, times: entry.times, intersections: null, kind: null, day: entry.lastDay,
+    })),
+    ...found.map((row) => ({
+      host: row.host,
+      reason: "RANKS_FOR_YOUR_SEARCHES" as const,
+      times: null,
+      intersections: row.intersections,
+      kind: row.kind ?? null,
+      day: row.lastSeenDay ?? null,
+    })),
+  ];
+}

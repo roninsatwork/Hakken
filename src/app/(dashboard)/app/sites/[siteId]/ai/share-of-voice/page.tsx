@@ -21,7 +21,7 @@ import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { shareSees } from "@/convex/utils/sees/aiAnswers";
 import { SiteSees } from "../../../_components/SiteSees";
-import { shareSeen } from "../../../_components/siteSeesData";
+import { shareSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { useSiteSearch } from "../../../_components/useSiteParam";

@@ -4,7 +4,7 @@ import { businessesSees, readSees } from "./utils/sees/aiAnswers";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { answerPlace } from "./seoAiEngines";
-import { listHold, myRivals, requireMySite } from "./siteAccess";
+import { listHold, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { holdQuestions } from "./holdLists";
 import { holdBrandNames } from "./holdProfiles";
 import { citedSourcesOf } from "./siteAnswers";
@@ -101,75 +101,78 @@ export const businessesRecommended = moduleQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const byQuestion = await appAnswers(ctx, site);
-    const host = site.website.host;
-    const names = (await holdBrandNames(ctx, site.hold._id)).map((entry) => normalName(entry.name)).filter((name) => name.length > 2);
-    const isYou = (business: { name: string; host?: string }) => sameHost(business.host, host) || names.some((name) => normalName(business.name).includes(name));
-
-    const latest = [...byQuestion.values()].flatMap((answers) => answers.slice(0, 1));
-    const before = [...byQuestion.values()].flatMap((answers) => answers.slice(1, 2));
-    const rows = new Map<string, { name: string; host: string | null; you: boolean; prompts: Set<string>; places: number[]; rating: number | null; reviews: number | null }>();
-    for (const answer of byQuestion.values()) {
-      answer.forEach((entry, at) => entry.extras.businesses.forEach((business, place) => {
-        const key = business.host ?? normalName(business.name);
-        const row = rows.get(key) ?? { name: business.name, host: business.host ?? null, you: isYou(business), prompts: new Set<string>(), places: [], rating: business.rating ?? null, reviews: business.reviews ?? null };
-        if (at === 0) row.prompts.add(entry.prompt);
-        row.places.push(place + 1);
-        rows.set(key, row);
-      }));
-    }
-
-    // Where each sits on Google Maps for the website's tracked searches, from its first office.
-    const setup = await localSetup(ctx, site);
-    const office = setup.offices[0] ?? null;
-    const boxBy = new Map<string, { box: number; seen: boolean }>();
-    let inBoxYou = 0;
-    if (office) {
-      const checks = await officeChecks(ctx, office, await officeSearches(ctx, site, office, setup.offices), false);
-      const listings = await listingsById(ctx, [...checks.values()].flatMap((check) => check.latest.listingIds));
-      for (const check of checks.values()) {
-        if (check.place >= 1 && check.place <= 3) inBoxYou += 1;
-        check.latest.listingIds.forEach((id, at) => {
-          const listing = listings.get(id);
-          if (!listing) return;
-          for (const key of [listing.websiteHost, normalName(listing.name)].filter((entry): entry is string => Boolean(entry))) {
-            const held = boxBy.get(key) ?? { box: 0, seen: false };
-            held.seen = true;
-            if (at < 3) held.box += 1;
-            boxBy.set(key, held);
-          }
-        });
-      }
-    }
-    const shownYou = (answers: AppAnswer[]) => answers.filter((answer) => answer.extras.businesses.some(isYou)).length;
-    return {
-      questions: [...byQuestion.keys()],
-      answers: latest.length,
-      showingBusinesses: latest.filter((answer) => answer.extras.businesses.length > 0).length,
-      showingYou: shownYou(latest),
-      showingYouBefore: before.length > 0 ? shownYou(before) : null,
-      // The searches where the office is in the map box, while no newest answer shows it.
-      inBoxSkipped: shownYou(latest) === 0 ? inBoxYou : 0,
-      town: office?.town ?? null,
-      rows: [...rows.values()].map((row) => {
-        const map = office ? (boxBy.get(row.host ?? "") ?? boxBy.get(normalName(row.name))) : undefined;
-        return {
-          name: row.name,
-          host: row.host,
-          you: row.you,
-          prompts: [...row.prompts],
-          usualPlace: row.places.length > 0 ? row.places.reduce((sum, place) => sum + place, 0) / row.places.length : null,
-          rating: row.rating,
-          reviews: row.reviews,
-          map: !office ? "UNKNOWN" as const : !map ? "OFF" as const : map.box > 0 ? "BOX" as const : "BELOW" as const,
-          boxSearches: map?.box ?? 0,
-        };
-      }),
-    };
-  }, businessesSees),
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => await readBusinessesRecommended(ctx, args), businessesSees),
 });
+
+/** businessesRecommended's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readBusinessesRecommended(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const byQuestion = await appAnswers(ctx, site);
+  const host = site.website.host;
+  const names = (await holdBrandNames(ctx, site.hold._id)).map((entry) => normalName(entry.name)).filter((name) => name.length > 2);
+  const isYou = (business: { name: string; host?: string }) => sameHost(business.host, host) || names.some((name) => normalName(business.name).includes(name));
+
+  const latest = [...byQuestion.values()].flatMap((answers) => answers.slice(0, 1));
+  const before = [...byQuestion.values()].flatMap((answers) => answers.slice(1, 2));
+  const rows = new Map<string, { name: string; host: string | null; you: boolean; prompts: Set<string>; places: number[]; rating: number | null; reviews: number | null }>();
+  for (const answer of byQuestion.values()) {
+    answer.forEach((entry, at) => entry.extras.businesses.forEach((business, place) => {
+      const key = business.host ?? normalName(business.name);
+      const row = rows.get(key) ?? { name: business.name, host: business.host ?? null, you: isYou(business), prompts: new Set<string>(), places: [], rating: business.rating ?? null, reviews: business.reviews ?? null };
+      if (at === 0) row.prompts.add(entry.prompt);
+      row.places.push(place + 1);
+      rows.set(key, row);
+    }));
+  }
+
+  // Where each sits on Google Maps for the website's tracked searches, from its first office.
+  const setup = await localSetup(ctx, site);
+  const office = setup.offices[0] ?? null;
+  const boxBy = new Map<string, { box: number; seen: boolean }>();
+  let inBoxYou = 0;
+  if (office) {
+    const checks = await officeChecks(ctx, office, await officeSearches(ctx, site, office, setup.offices), false);
+    const listings = await listingsById(ctx, [...checks.values()].flatMap((check) => check.latest.listingIds));
+    for (const check of checks.values()) {
+      if (check.place >= 1 && check.place <= 3) inBoxYou += 1;
+      check.latest.listingIds.forEach((id, at) => {
+        const listing = listings.get(id);
+        if (!listing) return;
+        for (const key of [listing.websiteHost, normalName(listing.name)].filter((entry): entry is string => Boolean(entry))) {
+          const held = boxBy.get(key) ?? { box: 0, seen: false };
+          held.seen = true;
+          if (at < 3) held.box += 1;
+          boxBy.set(key, held);
+        }
+      });
+    }
+  }
+  const shownYou = (answers: AppAnswer[]) => answers.filter((answer) => answer.extras.businesses.some(isYou)).length;
+  return {
+    questions: [...byQuestion.keys()],
+    answers: latest.length,
+    showingBusinesses: latest.filter((answer) => answer.extras.businesses.length > 0).length,
+    showingYou: shownYou(latest),
+    showingYouBefore: before.length > 0 ? shownYou(before) : null,
+    // The searches where the office is in the map box, while no newest answer shows it.
+    inBoxSkipped: shownYou(latest) === 0 ? inBoxYou : 0,
+    town: office?.town ?? null,
+    rows: [...rows.values()].map((row) => {
+      const map = office ? (boxBy.get(row.host ?? "") ?? boxBy.get(normalName(row.name))) : undefined;
+      return {
+        name: row.name,
+        host: row.host,
+        you: row.you,
+        prompts: [...row.prompts],
+        usualPlace: row.places.length > 0 ? row.places.reduce((sum, place) => sum + place, 0) / row.places.length : null,
+        rating: row.rating,
+        reviews: row.reviews,
+        map: !office ? "UNKNOWN" as const : !map ? "OFF" as const : map.box > 0 ? "BOX" as const : "BELOW" as const,
+        boxSearches: map?.box ?? 0,
+      };
+    }),
+  };
+}
 
 export const readNotCited = moduleQuery({
   module: MENU_FEATURES.visibility,
@@ -188,42 +191,45 @@ export const readNotCited = moduleQuery({
     beatsYou: v.union(v.null(), v.object({ host: v.string(), answers: v.number() })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const byQuestion = await appAnswers(ctx, site);
-    const host = site.website.host;
-    const rivals = (await myRivals(ctx, site)).map((rival) => rival.website.host);
-    const whose = (pageHost: string) => (sameHost(pageHost, host) ? "YOURS" as const : rivals.some((rival) => sameHost(pageHost, rival)) ? "RIVAL" as const : "OTHER" as const);
-    const pages = new Map<string, { page: string; url: string; host: string; read: number; cited: number }>();
-    const beats = new Map<string, number>();
-    let questions = 0;
-    for (const answers of byQuestion.values()) {
-      if (answers.length > 0) questions += 1;
-      for (const answer of answers) {
-        const cited = new Set((await citedSourcesOf(ctx, answer.pullId)).map(pathOf));
-        let readYours = false;
-        // Each page once an answer: two addresses of one page (a tracking code apart) are one read.
-        const readOnce = new Map(answer.extras.read.map((url) => [pathOf(url), url]));
-        for (const [page, url] of readOnce) {
-          const pageHost = hostOf(url);
-          const row = pages.get(page) ?? { page, url, host: pageHost, read: 0, cited: 0 };
-          row.read += 1;
-          if (cited.has(page)) row.cited += 1;
-          pages.set(page, row);
-          if (whose(pageHost) === "YOURS") readYours = true;
-        }
-        if (readYours) {
-          for (const page of new Set([...cited].map((entry) => entry.split("/")[0]))) {
-            if (whose(page) !== "YOURS") beats.set(page, (beats.get(page) ?? 0) + 1);
-          }
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => await readNotCitedPages(ctx, args), readSees),
+});
+
+/** readNotCited's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readNotCitedPages(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const byQuestion = await appAnswers(ctx, site);
+  const host = site.website.host;
+  const rivals = (await myRivals(ctx, site)).map((rival) => rival.website.host);
+  const whose = (pageHost: string) => (sameHost(pageHost, host) ? "YOURS" as const : rivals.some((rival) => sameHost(pageHost, rival)) ? "RIVAL" as const : "OTHER" as const);
+  const pages = new Map<string, { page: string; url: string; host: string; read: number; cited: number }>();
+  const beats = new Map<string, number>();
+  let questions = 0;
+  for (const answers of byQuestion.values()) {
+    if (answers.length > 0) questions += 1;
+    for (const answer of answers) {
+      const cited = new Set((await citedSourcesOf(ctx, answer.pullId)).map(pathOf));
+      let readYours = false;
+      // Each page once an answer: two addresses of one page (a tracking code apart) are one read.
+      const readOnce = new Map(answer.extras.read.map((url) => [pathOf(url), url]));
+      for (const [page, url] of readOnce) {
+        const pageHost = hostOf(url);
+        const row = pages.get(page) ?? { page, url, host: pageHost, read: 0, cited: 0 };
+        row.read += 1;
+        if (cited.has(page)) row.cited += 1;
+        pages.set(page, row);
+        if (whose(pageHost) === "YOURS") readYours = true;
+      }
+      if (readYours) {
+        for (const page of new Set([...cited].map((entry) => entry.split("/")[0]))) {
+          if (whose(page) !== "YOURS") beats.set(page, (beats.get(page) ?? 0) + 1);
         }
       }
     }
-    const top = [...beats.entries()].sort((left, right) => right[1] - left[1])[0];
-    return {
-      questions,
-      rows: [...pages.values()].map((row) => ({ ...row, whose: whose(row.host) })),
-      beatsYou: top ? { host: top[0], answers: top[1] } : null,
-    };
-  }, readSees),
-});
+  }
+  const top = [...beats.entries()].sort((left, right) => right[1] - left[1])[0];
+  return {
+    questions,
+    rows: [...pages.values()].map((row) => ({ ...row, whose: whose(row.host) })),
+    beatsYou: top ? { host: top[0], answers: top[1] } : null,
+  };
+}

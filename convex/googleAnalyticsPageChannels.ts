@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { isPageRef } from "./holdPageRefs";
 import { periodRange, slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -100,6 +100,8 @@ const pointValidator = v.object({
   rows: v.array(v.object({ channel: v.string(), visits: v.number(), counts: v.array(v.number()) })),
 });
 
+const explorerArgs = { siteId: v.id("companyWebsites"), page: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) };
+
 /**
  * The page's figures by channel for its "Visits for one conversion" explorer: the dates chosen, the same span just
  * before them, and the same dates 52 weeks before, each a point at the grain held. `everyDevice` when a device is
@@ -107,7 +109,7 @@ const pointValidator = v.object({
  */
 export const analyticsPageChannelExplorer = moduleQuery({
   module: MENU_FEATURES.googleAnalytics,
-  args: { siteId: v.id("companyWebsites"), page: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
+  args: explorerArgs,
   returns: v.object({
     heldFrom: v.union(v.string(), v.null()),
     everyDevice: v.boolean(),
@@ -121,50 +123,53 @@ export const analyticsPageChannelExplorer = moduleQuery({
     before: v.array(pointValidator),
     year: v.array(pointValidator),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    const events = connection ? countedOf(connection).map((event) => event.eventName) : [];
-    const none = { heldFrom: null, everyDevice: args.device !== "", events, channels: [], from: null, to: null, now: [], before: [], year: [] };
-    if (!connection?.newestDay || !isPageRef(args.page)) return none;
-    // The ready-made period's dates, as the page's other charts are drawn over.
-    const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
-    if (!total) return none;
-    // The span it is set against, as its lists were asked, and the same days a year before (calendar-periods-plan.md,
-    // phase 6): drawn a year before for This Year alone, month by month, as the explorer's rule says.
-    const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", "", country));
-    const beforeRange = totalBefore ?? periodRange(args.period, "BEFORE", connection.newestDay) ?? total;
-    const yearRange = periodRange(args.period, "YEAR", connection.newestDay) ?? { from: shiftDay(total.from, -364), to: shiftDay(total.to, -364) };
-    // Analytics names a landing page without its trailing slash, which can be a second number: its days are read from both.
-    const landing = await readFor(ctx, holdId, "landing", args.period, "NOW", "", undefined, country);
-    const twin = landing && landing !== "LIVE" ? await landingKeyOf(ctx, holdId, args.page, landing.rows.map((row) => row.key)) : args.page;
-    const span = async (range: { from: string; to: string }) => await readPageChannelPoints(ctx, connection, [args.page, twin], range.from, range.to, country);
-    const [now, before, year] = [await span(total), await span(beforeRange), await span(yearRange)];
-    const shape = (points: ChannelPoint[]) => points.map((point) => ({
-      day: point.start,
-      lastDay: point.end,
-      rows: [...point.channels.values()].filter((row) => row.visits > 0 || events.some((event) => (row.counts.get(event) ?? 0) > 0)).map((row) => ({
-        channel: row.key,
-        visits: row.visits,
-        counts: events.map((event) => row.counts.get(event) ?? 0),
-      })),
-    }));
-    const visits = new Map<string, number>();
-    for (const [at, points] of [now.points, before.points, year.points].entries()) {
-      for (const point of points) for (const row of point.channels.values()) visits.set(row.key, (visits.get(row.key) ?? 0) + (at === 0 ? row.visits : row.visits / 1e6));
-    }
-    return {
-      heldFrom: now.heldFrom,
-      everyDevice: args.device !== "",
-      events,
-      channels: [...visits.entries()].filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([channel]) => channel),
-      from: total.from,
-      to: total.to,
-      now: shape(now.points),
-      before: shape(before.points),
-      year: shape(year.points),
-    };
-  },
+  handler: async (ctx, args) => await readPageChannelExplorer(ctx, args),
 });
+
+/** The explorer's figures, for the screen and a chat app's question alike: the caller's own website only. */
+export async function readPageChannelExplorer(ctx: SiteReader, args: ObjectType<typeof explorerArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, holdId);
+  const events = connection ? countedOf(connection).map((event) => event.eventName) : [];
+  const none = { heldFrom: null, everyDevice: args.device !== "", events, channels: [], from: null, to: null, now: [], before: [], year: [] };
+  if (!connection?.newestDay || !isPageRef(args.page)) return none;
+  // The ready-made period's dates, as the page's other charts are drawn over.
+  const total = await readSlot(ctx, holdId, slotKey("total", args.period, "NOW", "", country));
+  if (!total) return none;
+  // The span it is set against, as its lists were asked, and the same days a year before (calendar-periods-plan.md,
+  // phase 6): drawn a year before for This Year alone, month by month, as the explorer's rule says.
+  const totalBefore = await readSlot(ctx, holdId, slotKey("total", args.period, "BEFORE", "", country));
+  const beforeRange = totalBefore ?? periodRange(args.period, "BEFORE", connection.newestDay) ?? total;
+  const yearRange = periodRange(args.period, "YEAR", connection.newestDay) ?? { from: shiftDay(total.from, -364), to: shiftDay(total.to, -364) };
+  // Analytics names a landing page without its trailing slash, which can be a second number: its days are read from both.
+  const landing = await readFor(ctx, holdId, "landing", args.period, "NOW", "", undefined, country);
+  const twin = landing && landing !== "LIVE" ? await landingKeyOf(ctx, holdId, args.page, landing.rows.map((row) => row.key)) : args.page;
+  const span = async (range: { from: string; to: string }) => await readPageChannelPoints(ctx, connection, [args.page, twin], range.from, range.to, country);
+  const [now, before, year] = [await span(total), await span(beforeRange), await span(yearRange)];
+  const shape = (points: ChannelPoint[]) => points.map((point) => ({
+    day: point.start,
+    lastDay: point.end,
+    rows: [...point.channels.values()].filter((row) => row.visits > 0 || events.some((event) => (row.counts.get(event) ?? 0) > 0)).map((row) => ({
+      channel: row.key,
+      visits: row.visits,
+      counts: events.map((event) => row.counts.get(event) ?? 0),
+    })),
+  }));
+  const visits = new Map<string, number>();
+  for (const [at, points] of [now.points, before.points, year.points].entries()) {
+    for (const point of points) for (const row of point.channels.values()) visits.set(row.key, (visits.get(row.key) ?? 0) + (at === 0 ? row.visits : row.visits / 1e6));
+  }
+  return {
+    heldFrom: now.heldFrom,
+    everyDevice: args.device !== "",
+    events,
+    channels: [...visits.entries()].filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([channel]) => channel),
+    from: total.from,
+    to: total.to,
+    now: shape(now.points),
+    before: shape(before.points),
+    year: shape(year.points),
+  };
+}

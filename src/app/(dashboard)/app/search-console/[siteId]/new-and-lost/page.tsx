@@ -33,6 +33,8 @@ import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { countryArg, useResultKind, useSearchConsoleCountry, periodArg, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { newLostSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { newLostEyeData } from "@/convex/utils/sees/eyeData/searchConsoleChanges";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { useSearchConsolePeriodWords } from "../../_components/useSearchConsole";
 
 const FIRSTS = { key: "asc", status: "asc", when: "desc", clicks: "desc", impressions: "desc", position: "asc" } as const;
@@ -102,24 +104,14 @@ export default function SearchConsoleNewLostPage() {
   const periods = list.result?.periods ?? [];
   // The eye's figures: the four counts against the span before's, where on Google the new and lost sit, and the chart's
   // days, weeks or months (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6).
-  const tw = useTranslations("searchConsole.sees");
+  // Built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
   const result = list.result;
   const shown = list.pageRows ?? null;
   const step = range.step;
-  const seesData = useMemo(() => (result
-    ? {
-      counts: result.counts,
-      countsBefore: result.countsBefore ?? null,
-      watchedFrom: result.watchedFrom,
-      bands: result.bands ?? null,
-      // Each day, week or month named as the chart names it, so a day that lost far more than the rest is said by its date.
-      // By their first day (`day`) too, so the eye keeps a month's newest days, never its oldest 25.
-      periods: result.periods.map((period) => ({ ...period, day: period.start, name: step === "month" ? formatMonth(period.start.slice(0, 7)) : formatShortDay(period.start) })),
-      rows: shown,
-      picked: true,
-      names: { lostFirstPage: tw("lostFirstPage"), newFirstPage: tw("newFirstPage") },
-    }
-    : undefined), [result, shown, step, tw]);
+  const seesData = useMemo(
+    () => newLostEyeData({ result, rows: shown, step }, wordsReader(t), { shortDay: formatShortDay, month: formatMonth }),
+    [result, shown, step, t],
+  );
   // Each day, week or month dated by its days, so the chart marks the Google updates inside them.
   const steps = periods.map((period) => {
     const dated = datedRow({ day: period.start, lastDay: period.lastDay }, {}, range.step === "month" ? formatMonth(period.start.slice(0, 7)) : formatShortDay(period.start));

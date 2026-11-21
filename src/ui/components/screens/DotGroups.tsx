@@ -1,5 +1,6 @@
 "use client";
 
+import { dotGroupOf } from "@/convex/utils/sees/eyeData/searchConsolePerformance";
 import { SiteScatterChart, type SiteScatterGroup } from "@/src/app/(dashboard)/app/sites/_components/SiteCharts";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_TEAL } from "@/src/ui/components/charts/chartPalette";
 import { ExplorerToolbar, type ExplorerControl } from "./ChartExplorer";
@@ -28,11 +29,8 @@ const GROUPS: ReadonlyArray<{ key: DotGroupKey; colour: string }> = [
   { key: "leftHigh", colour: CHART_SERIES_BLUE },
 ];
 
-/** Which group a dot falls in. A dot on a line counts as past it. */
-export function dotGroupOf(point: Pick<DotPoint, "x" | "y">, split: { x: number; y: number }): DotGroupKey {
-  if (point.x >= split.x) return point.y >= split.y ? "rightHigh" : "rightLow";
-  return point.y >= split.y ? "leftHigh" : "leftLow";
-}
+/** Which group a dot falls in: the function the server uses for a chat app's question, so the two can't disagree. */
+export { dotGroupOf };
 
 /** The chart's groups: each of the four with its dots, and those that say their names as a group of their own, out of the key. */
 export function dotGroupsOf(points: readonly DotPoint[], split: { x: number; y: number }, names: Readonly<Record<DotGroupKey, string>>): SiteScatterGroup[] {

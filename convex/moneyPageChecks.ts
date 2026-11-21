@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
@@ -8,7 +8,7 @@ import { INSPECT_URL, googleDay } from "./utils/pageIndexChecks";
 import { callGoogle } from "./googleApi";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { orphanPagesOf } from "./insightsReading";
 import { changeKindValidator, fingerprintChanges } from "./utils/insightTrack";
 import { readBoundedBody } from "./utils/boundedRequestBody";
@@ -211,6 +211,8 @@ export const checkWebsite = internalAction({
   },
 });
 
+const siteMoneyPagesArgs = { siteId: v.id("companyWebsites") };
+
 /**
  * A website's money pages as the newest weekly check found them, for
  * Visibility's audit and Search Console's Indexing (§4.4): one row a page,
@@ -219,7 +221,7 @@ export const checkWebsite = internalAction({
  */
 export const siteMoneyPages = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: siteMoneyPagesArgs,
   returns: v.union(v.null(), v.object({
     checkedAt: v.union(v.number(), v.null()),
     pages: v.array(v.object({
@@ -235,19 +237,22 @@ export const siteMoneyPages = moduleQuery({
     orphans: v.union(v.number(), v.null()),
     orphanPages: v.array(v.string()),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    if (site.hold.relationship !== "OWNED") return null;
-    const rows = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", site.hold._id)).take(MOST_MONEY_PAGES * 4);
-    const crawl = await ctx.db.query("siteCrawls").withIndex("by_site_day", (q) => q.eq("websiteId", site.hold.websiteId)).order("desc").first();
-    const orphans = crawl ? await orphanPagesOf(ctx, crawl.pullId) : null;
-    const titles = new Map<string, string | null>();
-    for (const row of rows) titles.set(row.page, (await ctx.db.query("holdPages").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", site.hold._id).eq("page", row.page)).first())?.title ?? null);
-    return {
-      checkedAt: rows.length > 0 ? Math.max(...rows.map((row) => row.checkedAt)) : null,
-      pages: rows.sort((a, b) => b.clicks - a.clicks).map(({ page, kind, clicks, indexed, speed, structured }) => ({ page, title: titles.get(page) ?? null, kind, clicks, indexed, speed, structured })),
-      orphans: orphans ? orphans.length : null,
-      orphanPages: (orphans ?? []).slice(0, 20).map((page) => page.page),
-    };
-  },
+  handler: async (ctx, args) => await readSiteMoneyPages(ctx, args),
 });
+
+/** siteMoneyPages's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readSiteMoneyPages(ctx: SiteReader, args: ObjectType<typeof siteMoneyPagesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  if (site.hold.relationship !== "OWNED") return null;
+  const rows = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", site.hold._id)).take(MOST_MONEY_PAGES * 4);
+  const crawl = await ctx.db.query("siteCrawls").withIndex("by_site_day", (q) => q.eq("websiteId", site.hold.websiteId)).order("desc").first();
+  const orphans = crawl ? await orphanPagesOf(ctx, crawl.pullId) : null;
+  const titles = new Map<string, string | null>();
+  for (const row of rows) titles.set(row.page, (await ctx.db.query("holdPages").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", site.hold._id).eq("page", row.page)).first())?.title ?? null);
+  return {
+    checkedAt: rows.length > 0 ? Math.max(...rows.map((row) => row.checkedAt)) : null,
+    pages: rows.sort((a, b) => b.clicks - a.clicks).map(({ page, kind, clicks, indexed, speed, structured }) => ({ page, title: titles.get(page) ?? null, kind, clicks, indexed, speed, structured })),
+    orphans: orphans ? orphans.length : null,
+    orphanPages: (orphans ?? []).slice(0, 20).map((page) => page.page),
+  };
+}

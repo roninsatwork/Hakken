@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { BREAKDOWN_REST } from "@/convex/utils/siteShapes";
+import { linkGroupNameFrom } from "@/convex/utils/sees/eyeData/visibilityBacklinks";
 
 /** Where links come from's breakdowns, as its picker and All backlinks' group filter name them. */
 export const LINK_BREAKDOWNS = ["countries", "tlds", "platforms", "linkTypes", "attributes"] as const;
@@ -18,20 +18,8 @@ export function useLinkGroupName(): (breakdown: LinkBreakdown, key: string) => s
   const t = useTranslations("sites.linkSources");
   const locale = useLocale();
   const regions = useMemo(() => (typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames([locale], { type: "region" }) : null), [locale]);
-  return useCallback((breakdown: LinkBreakdown, key: string) => {
-    if (key === BREAKDOWN_REST) return t("rest");
-    if (key === "(none)" || key === "") return t("unknown");
-    if (breakdown === "countries" && key === "WW") return t("worldwide");
-    if (breakdown === "countries" && /^[A-Z]{2}$/.test(key)) {
-      try {
-        return regions?.of(key) ?? key;
-      } catch {
-        return key;
-      }
-    }
-    if (breakdown === "tlds") return `.${key}`;
-    return key.replace(/[_-]/g, " ");
-  }, [regions, t]);
+  // The words are shared with a chat app's question, which names the groups in English (`linkGroupNameFrom`).
+  return useMemo(() => linkGroupNameFrom(t, regions), [regions, t]);
 }
 
 /** A group as All backlinks' address carries it, `<breakdown>:<key>`, read back; null when it is not one. */

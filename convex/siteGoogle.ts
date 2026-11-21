@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { pointsBetween } from "./positionHistory";
@@ -151,6 +151,8 @@ export async function readListSearches(ctx: SiteReader, args: { siteId: Id<"comp
       || left.keyword.localeCompare(right.keyword));
 }
 
+const searchPositionsArgs = { siteId: v.id("companyWebsites"), keywords: v.array(v.string()), from: v.string(), to: v.string(), step: stepValidator };
+
 /**
  * Where the site stood on each of these searches between two days, a point
  * for each day, week or month of the step chosen (2026-10-04: it was always
@@ -159,7 +161,7 @@ export async function readListSearches(ctx: SiteReader, args: { siteId: Id<"comp
  */
 export const searchPositions = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), keywords: v.array(v.string()), from: v.string(), to: v.string(), step: stepValidator },
+  args: searchPositionsArgs,
   returns: v.array(v.object({
     keyword: v.string(),
     points: v.array(v.object({ day: v.string(), lastDay: v.string(), position: v.union(v.number(), v.null()) })),
@@ -169,41 +171,44 @@ export const searchPositions = moduleQuery({
      */
     weeklyBefore: v.union(v.string(), v.null()),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // A search on this company's own list reads every check of it. Any other
-    // search the site ranks for reads only what the site's own keyword lists
-    // recorded — facts DataForSEO sends about the website to whoever asks —
-    // and never a one-by-one check: those, "checked, not found" rows among
-    // them, exist only because some company tracks the search, so showing them
-    // would say that someone does (docs/plans/active/sites-audit-fixes-plan.md,
-    // 1.2 and F1). A fan-out query this company gave its first check is its own
-    // asking, so its checks are read as a tracked search's are.
-    const holdId = listHold(site);
-    const dailyFrom = dailyPositionsKeptFrom(site.today);
-    const weeklyBefore = args.step === "day" && args.from < dailyFrom ? dailyFrom : null;
-    const charted: Array<{ keyword: string; tracked: boolean }> = [];
-    for (const keyword of args.keywords.slice(0, MAX_CHARTED)) {
-      if ((await holdSearch(ctx, holdId, keyword)) || (await holdFirstCheck(ctx, holdId, keyword))) {
-        charted.push({ keyword, tracked: true });
-        continue;
-      }
-      const ranked = await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_keyword", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("keyword", keyword))
-        .first();
-      if (ranked) charted.push({ keyword, tracked: false });
-    }
-    return await Promise.all(charted.map(async ({ keyword, tracked }) => {
-      // A day holds one point (`positionHistory.ts`), oldest first.
-      const read = await pointsBetween(ctx, { websiteId: site.website._id, keyword, locationCode: site.place }, args.from, args.to, DAYS_PER_SEARCH);
-      const points = tracked ? read : read.filter((point) => point.kind === "LIST");
-      // Each day, week or month at its last day's position.
-      const bySteps = new Map<string, { day: string; lastDay: string; position: number | null }>();
-      for (const point of points) {
-        bySteps.set(bucketOf(point.day, args.step), { day: bucketOf(point.day, args.step), lastDay: point.day, position: point.position });
-      }
-      return { keyword, points: [...bySteps.values()], weeklyBefore };
-    }));
-  },
+  handler: async (ctx, args) => await readSearchPositions(ctx, args),
 });
+
+/** searchPositions's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readSearchPositions(ctx: SiteReader, args: ObjectType<typeof searchPositionsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // A search on this company's own list reads every check of it. Any other
+  // search the site ranks for reads only what the site's own keyword lists
+  // recorded — facts DataForSEO sends about the website to whoever asks —
+  // and never a one-by-one check: those, "checked, not found" rows among
+  // them, exist only because some company tracks the search, so showing them
+  // would say that someone does (docs/plans/active/sites-audit-fixes-plan.md,
+  // 1.2 and F1). A fan-out query this company gave its first check is its own
+  // asking, so its checks are read as a tracked search's are.
+  const holdId = listHold(site);
+  const dailyFrom = dailyPositionsKeptFrom(site.today);
+  const weeklyBefore = args.step === "day" && args.from < dailyFrom ? dailyFrom : null;
+  const charted: Array<{ keyword: string; tracked: boolean }> = [];
+  for (const keyword of args.keywords.slice(0, MAX_CHARTED)) {
+    if ((await holdSearch(ctx, holdId, keyword)) || (await holdFirstCheck(ctx, holdId, keyword))) {
+      charted.push({ keyword, tracked: true });
+      continue;
+    }
+    const ranked = await ctx.db
+      .query("siteKeywordRanks")
+      .withIndex("by_site_keyword", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("keyword", keyword))
+      .first();
+    if (ranked) charted.push({ keyword, tracked: false });
+  }
+  return await Promise.all(charted.map(async ({ keyword, tracked }) => {
+    // A day holds one point (`positionHistory.ts`), oldest first.
+    const read = await pointsBetween(ctx, { websiteId: site.website._id, keyword, locationCode: site.place }, args.from, args.to, DAYS_PER_SEARCH);
+    const points = tracked ? read : read.filter((point) => point.kind === "LIST");
+    // Each day, week or month at its last day's position.
+    const bySteps = new Map<string, { day: string; lastDay: string; position: number | null }>();
+    for (const point of points) {
+      bySteps.set(bucketOf(point.day, args.step), { day: bucketOf(point.day, args.step), lastDay: point.day, position: point.position });
+    }
+    return { keyword, points: [...bySteps.values()], weeklyBefore };
+  }));
+}

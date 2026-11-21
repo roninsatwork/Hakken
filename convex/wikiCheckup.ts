@@ -531,12 +531,20 @@ export const getKindRotaInternal = internalQuery({
     const out: RotaPage[] = [];
     const limit = Math.max(0, Math.min(200, args.limit));
     if (limit === 0) return out;
-    const indexFor = {
-      CONTRADICTIONS: "by_company_kind_contradiction",
-      SOURCES: "by_company_kind_verified",
-      REFILE: "by_company_kind_refile",
-      TAGS: "by_company_kind_tag",
-    } as const;
+    // Each rota's pages by the stamp it keeps, each index named where it's read (indexUse.test.ts finds them so).
+    const pagesByStamp = (kind: Doc<"wikiPages">["kind"], take: number) => {
+      const pages = ctx.db.query("wikiPages");
+      switch (args.rota) {
+        case "CONTRADICTIONS":
+          return pages.withIndex("by_company_kind_contradiction", (q) => q.eq("companyId", args.companyId).eq("kind", kind)).take(take);
+        case "SOURCES":
+          return pages.withIndex("by_company_kind_verified", (q) => q.eq("companyId", args.companyId).eq("kind", kind)).take(take);
+        case "REFILE":
+          return pages.withIndex("by_company_kind_refile", (q) => q.eq("companyId", args.companyId).eq("kind", kind)).take(take);
+        case "TAGS":
+          return pages.withIndex("by_company_kind_tag", (q) => q.eq("companyId", args.companyId).eq("kind", kind)).take(take);
+      }
+    };
     const stampOf = (page: Doc<"wikiPages">): number | undefined => {
       switch (args.rota) {
         case "CONTRADICTIONS":
@@ -561,10 +569,7 @@ export const getKindRotaInternal = internalQuery({
           .take(100);
     const perKind: RotaPage[][] = [];
     for (const kind of args.kinds) {
-      const byStamp = await ctx.db
-        .query("wikiPages")
-        .withIndex(indexFor[args.rota], (q) => q.eq("companyId", args.companyId).eq("kind", kind))
-        .take(args.full ? limit * 2 + 10 : 200);
+      const byStamp = await pagesByStamp(kind, args.full ? limit * 2 + 10 : 200);
       const seen = new Set<string>();
       const rows = [...byStamp, ...recentlyChanged.filter((page) => page.kind === kind)].filter((page) => {
         if (seen.has(page._id)) return false;

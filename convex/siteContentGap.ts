@@ -61,7 +61,7 @@ export function rankingNow(rows: KeywordCopyRow[], latestCheckDay: string | null
  * not built yet. A rival with no copy yet adds nothing until it has one.
  */
 export async function contentGapOf(
-  ctx: QueryCtx,
+  ctx: { db: QueryCtx["db"] },
   site: { websiteId: Id<"websites">; place: number },
   rivalIds: readonly Id<"websites">[],
 ): Promise<{ rows: GapRow[]; cut: number | null } | null> {

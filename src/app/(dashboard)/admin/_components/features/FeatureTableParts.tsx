@@ -2,19 +2,20 @@
 
 import { useTranslations } from "next-intl";
 
-import { MENU_FEATURES, type MenuFeature } from "@/convex/utils/coreModules";
+import { MENU_FEATURES, OUTSIDE_MENU_FEATURES, type SwitchedFeature } from "@/convex/utils/coreModules";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
 
 /**
- * The client menu as both Features pages list it, in menu order
+ * The client menu as both Features pages list it, in menu order, then the
+ * features with no page in the menu (Ask Hakken in ChatGPT and Claude)
  * (features-switches-plan-2026-11-21.md): System Settings → Features and a
  * company's Features tab. `feature` is null for the four that are always on.
  * Names are the menu's own words (`sidebar.*`), so the pages and the menu
  * can't call a section two things.
  */
-const MENU_ROWS: readonly { id: string; feature: MenuFeature | null; name: string; description: string }[] = [
+const MENU_ROWS: readonly { id: string; feature: SwitchedFeature | null; name: string; description: string }[] = [
   { id: "dashboard", feature: null, name: "dashboard", description: "dashboard" },
   { id: "askPlatform", feature: null, name: "askPlatform", description: "askPlatform" },
   { id: "insights", feature: MENU_FEATURES.insights, name: "insights", description: "insights" },
@@ -31,22 +32,27 @@ const MENU_ROWS: readonly { id: string; feature: MenuFeature | null; name: strin
 export type FeatureRow = {
   id: string;
   /** The switch, or null for a feature that is always on. */
-  feature: MenuFeature | null;
+  feature: SwitchedFeature | null;
   name: string;
   description: string;
 };
 
-/** The 11 menu rows with their words, for the platform's page and a company's. */
+/** The 11 menu rows and the features outside the menu, with their words, for the platform's page and a company's. */
 export function useMenuFeatureRows(): FeatureRow[] {
   const tSidebar = useTranslations("sidebar");
   const t = useTranslations("admin.features.descriptions");
+  const tNames = useTranslations("admin.features.names");
   const { platformName } = useSystemSettings();
-  return MENU_ROWS.map((row) => ({
-    id: row.id,
-    feature: row.feature,
-    name: tSidebar(row.name, { platformName }),
-    description: t(row.description),
-  }));
+  return [
+    ...MENU_ROWS.map((row) => ({
+      id: row.id,
+      feature: row.feature,
+      name: tSidebar(row.name, { platformName }),
+      description: t(row.description),
+    })),
+    // Features with no page in the menu, last (Anthony, 2026-11-21: "this should be in the table"), named MCP ("the feature should be called MCP").
+    { id: OUTSIDE_MENU_FEATURES.chatApps, feature: OUTSIDE_MENU_FEATURES.chatApps, name: tNames("chatApps", { platformName }), description: t("chatApps") },
+  ];
 }
 
 /** The name and "What it does" columns, cut to one line with the whole on hover, as the lean table rule asks. */

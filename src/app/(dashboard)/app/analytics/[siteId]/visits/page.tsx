@@ -2,12 +2,12 @@
 
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
-import type { FunctionReturnType } from "convex/server";
 import { Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { NO_PAGE_KIND, OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
 import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
+import { visitorGroupsForEye, visitsSeesData } from "@/convex/utils/sees/eyeData/googleAnalyticsVisits";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { formatNumber } from "../../../sites/_components/siteFormat";
@@ -20,7 +20,7 @@ import { useVisitorName } from "../../_components/useVisitorName";
 import { BeforeLine, PerVisitLine } from "../../_components/AnalyticsFigures";
 import { formatPerVisit } from "../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsStatus } from "../../_components/useAnalytics";
-import { PageKindsCard, VisitsLineCard, WhoVisitsCard, eyeName, useSpanWords } from "../../_components/VisitsCharts";
+import { PageKindsCard, VisitsLineCard, WhoVisitsCard, useSpanWords } from "../../_components/VisitsCharts";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 
 /** The table's lists, in the order the switch offers them (§18.2 board 15). */
@@ -64,24 +64,6 @@ export default function AnalyticsVisitsPage() {
   );
 }
 
-type VisitsAnswer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsVisitorReads.analyticsVisitors>>;
-
-/** What the eye reads from the page's own read: the boxes as visits now and before. The days, bars and treemap hand theirs. */
-function seesData(answer: VisitsAnswer | null | undefined, list: ListPageAnswer | undefined, names: { new: string; returning: string; website: string }) {
-  if (!answer?.figures) return answer === undefined ? undefined : null;
-  const { figures } = answer;
-  return {
-    // Named as the eye says it: "The whole website: visits up 6.8%".
-    visits: { name: names.website, visits: figures.visits, visitsBefore: figures.visitsBefore },
-    newAndReturning: [
-      { name: names.new, visits: figures.newVisits, visitsBefore: figures.newVisitsBefore },
-      { name: names.returning, visits: figures.returningVisits, visitsBefore: figures.returningVisitsBefore },
-    ],
-    visitsAPerson: figures.people > 0 ? Math.round((figures.visits / figures.people) * 10) / 10 : null,
-    ...(list ? { table: list } : {}),
-  };
-}
-
 function VisitsHead({ view, onView, list }: { view: VisitorList; onView: (next: VisitorList) => void; list: ListPageAnswer | undefined }) {
   const t = useTranslations("googleAnalytics.visitors");
   const args = useAnalyticsArgs();
@@ -94,15 +76,14 @@ function VisitsHead({ view, onView, list }: { view: VisitorList; onView: (next: 
   const newName = t("newVisits");
   const returningName = t("returningVisits");
   const websiteName = t("eyeWebsite");
-  const data = useMemo(() => seesData(answer, list, { new: newName, returning: returningName, website: websiteName }), [answer, list, newName, returningName, websiteName]);
+  // What the eye reads from the page's own read: the boxes and the table. The days, bars and treemap hand theirs. Built by
+  // the same functions a chat app's question builds them with (chatAppEyes/googleAnalytics.ts), so the two can't disagree.
+  const data = useMemo(() => visitsSeesData(answer, list, { new: newName, returning: returningName, website: websiteName }), [answer, list, newName, returningName, websiteName]);
   // Every list the page can show, each group's visits now and before, so the eye can find what moved in any of them.
   const groups = useQuery(api.googleAnalyticsVisitorReads.analyticsVisitorGroups, status?.connection?.newestDay ? args : "skip");
   const tn = useTranslations("googleAnalytics.visitors.names");
   // New, returning, male and female in the reader's words, so the eye's findings name them as the page does.
-  const seenGroups = useMemo(() => (groups ? Object.fromEntries(groups.map((one) => [one.list, one.rows.map((row) => ({
-    name: (one.list === "visitorType" || one.list === "gender") && tn.has(row.key.toLowerCase()) ? tn(row.key.toLowerCase()) : eyeName(one.list, row.key),
-    visits: row.visits, visitsBefore: row.visitsBefore, engaged: row.engaged,
-  }))])) : null), [groups, tn]);
+  const seenGroups = useMemo(() => visitorGroupsForEye(groups, (key) => (tn.has(key) ? tn(key) : null)), [groups, tn]);
   useSeesPart("visitorGroups", seenGroups);
   // Where the team's "Do first" steps may send the reader: the screens where what the eye finds is looked into.
   const hrefFor = useAnalyticsHref(args.siteId);

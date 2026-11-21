@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { aiEngineValidator, AI_ENGINES } from "./seoAiEngines";
@@ -118,7 +117,7 @@ export const overviewExtras = moduleQuery({
 
 /** overviewExtras's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
 // A full query context: `discoveredTotal` reads through one.
-export async function readOverviewExtras(ctx: SiteReader & QueryCtx, args: { siteId: Id<"companyWebsites"> }) {
+export async function readOverviewExtras(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
   const site = await requireMySite(ctx, args.siteId);
   const websiteId = site.website._id;
   const place = site.place;

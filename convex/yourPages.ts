@@ -1,9 +1,9 @@
-import { v, type Infer } from "convex/values";
+import { v, type Infer, type ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { YOUR_PAGES_COPY, YOUR_PAGES_FIELDS, requestHoldPages } from "./holdPages";
 import { readPageKinds } from "./pageKinds";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { readListCopy } from "./siteListCopies";
 import { listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { moduleMutation, moduleQuery } from "./tenantFunctions";
@@ -150,7 +150,7 @@ export const NOT_SORTED = "none";
  * null when the list has not been built yet. Shared by the screen and its
  * download (`siteExports.ts`).
  */
-export async function yourPagesList(ctx: QueryCtx, holdId: Id<"companyWebsites">): Promise<{
+export async function yourPagesList(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">): Promise<{
   rows: PageRow[];
   summary: YourPagesSummary;
   groupBy: "CLASSIFICATION" | "KIND";
@@ -219,21 +219,23 @@ export function yourPagesOrder(sort: Sort | undefined, direction: "asc" | "desc"
   return listOrder(SORTS, sort ?? "clicks", direction, (row: PageRow) => row.page);
 }
 
+const listYourPagesArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  filter: v.optional(filterValidator),
+  group: v.optional(v.string()),
+  sort: v.optional(v.union(v.literal("page"), v.literal("group"), v.literal("file"), v.literal("clicks"))),
+  direction: sortDirectionArg,
+};
+
 /**
  * One page of Your pages: every page once, searched by its address (word
  * starts), narrowed to a figure or a gap and to a group, in a heading's order.
  */
 export const listYourPages = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    filter: v.optional(filterValidator),
-    group: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("page"), v.literal("group"), v.literal("file"), v.literal("clicks"))),
-    direction: sortDirectionArg,
-  },
+  args: listYourPagesArgs,
   returns: v.object({
     ...listPageResult(rowValidator).fields,
     /** False on a competitor's hold: Your pages is the company's own websites'. */
@@ -243,30 +245,33 @@ export const listYourPages = moduleQuery({
     /** The Group filter's choices: the company's classifications, or Hakken's kinds while it has none. */
     groups: v.array(v.object({ value: v.string(), label: v.string() })),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const none = { summary: null, groupBy: "KIND" as const, groups: [] };
-    if (isTrackedHold(site.hold)) return { ...pageOfList<never>([], args.page, args.rows), own: false, ...none };
-    const list = await yourPagesList(ctx, args.siteId);
-    if (!list) return { ...preparingPage(args.rows), own: true, ...none };
-    const matches = wordStartMatcher(args.search);
-    const filter = args.filter as PageFilter | undefined;
-    const narrowed = list.rows
-      .filter((row) => (!matches || matches(row.page))
-        && (!filter || inGap({ sitemapFile: row.file, crawled: row.crawled, shown: row.shown, ranks: row.ranks }, filter))
-        && (!args.group || (list.groupBy === "CLASSIFICATION" ? row.groupId === args.group : row.kind === args.group)))
-      .sort(yourPagesOrder(args.sort, args.direction));
-    const shown = pageOfList(narrowed, args.page, args.rows);
-    return {
-      ...shown,
-      rows: shown.rows.map(screenRow),
-      own: true,
-      summary: list.summary,
-      groupBy: list.groupBy,
-      groups: list.groups,
-    };
-  },
+  handler: async (ctx, args) => await readListYourPages(ctx, args),
 });
+
+/** listYourPages's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListYourPages(ctx: SiteReader, args: ObjectType<typeof listYourPagesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const none = { summary: null, groupBy: "KIND" as const, groups: [] };
+  if (isTrackedHold(site.hold)) return { ...pageOfList<never>([], args.page, args.rows), own: false, ...none };
+  const list = await yourPagesList(ctx, args.siteId);
+  if (!list) return { ...preparingPage(args.rows), own: true, ...none };
+  const matches = wordStartMatcher(args.search);
+  const filter = args.filter as PageFilter | undefined;
+  const narrowed = list.rows
+    .filter((row) => (!matches || matches(row.page))
+      && (!filter || inGap({ sitemapFile: row.file, crawled: row.crawled, shown: row.shown, ranks: row.ranks }, filter))
+      && (!args.group || (list.groupBy === "CLASSIFICATION" ? row.groupId === args.group : row.kind === args.group)))
+    .sort(yourPagesOrder(args.sort, args.direction));
+  const shown = pageOfList(narrowed, args.page, args.rows);
+  return {
+    ...shown,
+    rows: shown.rows.map(screenRow),
+    own: true,
+    summary: list.summary,
+    groupBy: list.groupBy,
+    groups: list.groups,
+  };
+}
 
 /**
  * The first visit to Your pages, before its list was ever built — a website

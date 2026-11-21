@@ -1,7 +1,7 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { heldTo, listOrder, listPageArgs, listPageSeenResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { paidKeywordsSees } from "./utils/sees/paid";
 import { moduleQuery } from "./tenantFunctions";
@@ -102,6 +102,16 @@ const PAID_SORTS: ListSorts<Doc<"sitePaidKeywords">, "keyword" | "position" | "v
   traffic: { value: (row) => row.traffic, first: "desc" },
 };
 
+const listPaidKeywordsArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  sort: v.optional(v.union(
+    v.literal("keyword"), v.literal("position"), v.literal("volume"), v.literal("traffic"),
+  )),
+  direction: sortDirectionArg,
+};
+
 /**
  * The searches the site advertises on: most visits first unless a heading
  * asks otherwise. A list is one answer's worth, replaced whole when a newer
@@ -113,15 +123,7 @@ const PAID_SORTS: ListSorts<Doc<"sitePaidKeywords">, "keyword" | "position" | "v
  */
 export const listPaidKeywords = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    sort: v.optional(v.union(
-      v.literal("keyword"), v.literal("position"), v.literal("volume"), v.literal("traffic"),
-    )),
-    direction: sortDirectionArg,
-  },
+  args: listPaidKeywordsArgs,
   returns: listPageSeenResult(v.object({
     _id: v.id("sitePaidKeywords"),
     keyword: v.string(),
@@ -132,33 +134,36 @@ export const listPaidKeywords = moduleQuery({
     traffic: v.union(v.number(), v.null()),
     day: v.string(),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const read = await ctx.db
-      .query("sitePaidKeywords")
-      .withIndex("by_site_traffic", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place))
-      .order("desc")
-      .take(LIST_LIMIT + 1);
-    const { rows: held, cut } = heldTo(read, LIST_LIMIT);
-    const matches = wordStartMatcher(args.search);
-    const list = held
-      .filter((row) => !matches || matches(row.keyword, row.page))
-      .sort(listOrder(PAID_SORTS, args.sort ?? "traffic", args.direction, (row) => row.keyword));
-    const page = pageOfList(list, args.page, args.rows, cut);
-    return {
-      ...page,
-      rows: page.rows.map((row) => ({
-        _id: row._id,
-        keyword: row.keyword,
-        position: row.position ?? null,
-        url: row.url ?? null,
-        page: row.page,
-        volume: row.volume ?? null,
-        traffic: row.traffic ?? null,
-        day: row.day,
-      })),
-      // What Hakken sees is of every search advertised on, whatever the search box holds.
-      seen: paidKeywordsSees(held.map((row) => ({ keyword: row.keyword, traffic: row.traffic ?? null, volume: row.volume ?? null }))),
-    };
-  },
+  handler: async (ctx, args) => await readListPaidKeywords(ctx, args),
 });
+
+/** listPaidKeywords's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListPaidKeywords(ctx: SiteReader, args: ObjectType<typeof listPaidKeywordsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const read = await ctx.db
+    .query("sitePaidKeywords")
+    .withIndex("by_site_traffic", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place))
+    .order("desc")
+    .take(LIST_LIMIT + 1);
+  const { rows: held, cut } = heldTo(read, LIST_LIMIT);
+  const matches = wordStartMatcher(args.search);
+  const list = held
+    .filter((row) => !matches || matches(row.keyword, row.page))
+    .sort(listOrder(PAID_SORTS, args.sort ?? "traffic", args.direction, (row) => row.keyword));
+  const page = pageOfList(list, args.page, args.rows, cut);
+  return {
+    ...page,
+    rows: page.rows.map((row) => ({
+      _id: row._id,
+      keyword: row.keyword,
+      position: row.position ?? null,
+      url: row.url ?? null,
+      page: row.page,
+      volume: row.volume ?? null,
+      traffic: row.traffic ?? null,
+      day: row.day,
+    })),
+    // What Hakken sees is of every search advertised on, whatever the search box holds.
+    seen: paidKeywordsSees(held.map((row) => ({ keyword: row.keyword, traffic: row.traffic ?? null, volume: row.volume ?? null }))),
+  };
+}

@@ -13,7 +13,7 @@
  */
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import { type MenuFeature, menuFeaturesOn, normalizeFeaturesOff } from "./coreModules";
+import { type MenuFeature, type OutsideMenuFeature, type SwitchedFeature, menuFeaturesOn, normalizeSwitchesOff } from "./coreModules";
 
 type ReadCtx = Pick<QueryCtx, "db"> | Pick<MutationCtx, "db">;
 
@@ -22,14 +22,14 @@ async function switchesRow(ctx: ReadCtx, companyId: Id<"companies"> | undefined)
   return await ctx.db.query("featureSwitches").withIndex("by_company", (q) => q.eq("companyId", companyId)).first();
 }
 
-/** The features switched off for every company. */
-export async function featuresOffForEveryone(ctx: ReadCtx): Promise<MenuFeature[]> {
-  return normalizeFeaturesOff((await switchesRow(ctx, undefined))?.featuresOff);
+/** The features switched off for every company: the menu's, then those outside it. */
+export async function featuresOffForEveryone(ctx: ReadCtx): Promise<SwitchedFeature[]> {
+  return normalizeSwitchesOff((await switchesRow(ctx, undefined))?.featuresOff);
 }
 
-/** The features switched off on one company's own Features tab. */
-export async function companyFeaturesOff(ctx: ReadCtx, companyId: Id<"companies">): Promise<MenuFeature[]> {
-  return normalizeFeaturesOff((await switchesRow(ctx, companyId))?.featuresOff);
+/** The features switched off on one company's own Features tab: the menu's, then those outside it. */
+export async function companyFeaturesOff(ctx: ReadCtx, companyId: Id<"companies">): Promise<SwitchedFeature[]> {
+  return normalizeSwitchesOff((await switchesRow(ctx, companyId))?.featuresOff);
 }
 
 /** The menu features a company has: all seven, less what is off for everyone and for it. */
@@ -37,6 +37,17 @@ export async function menuFeaturesFor(ctx: ReadCtx, companyId: Id<"companies"> |
   if (!companyId) return [];
   const [own, everyone] = await Promise.all([companyFeaturesOff(ctx, companyId), featuresOffForEveryone(ctx)]);
   return menuFeaturesOn(own, everyone);
+}
+
+/** Whether one company has a feature that isn't in the menu: on unless it's off for everyone or for the company. */
+export async function companyHasOutsideFeature(
+  ctx: ReadCtx,
+  companyId: Id<"companies"> | null | undefined,
+  feature: OutsideMenuFeature,
+): Promise<boolean> {
+  if (!companyId) return false;
+  const [own, everyone] = await Promise.all([companyFeaturesOff(ctx, companyId), featuresOffForEveryone(ctx)]);
+  return !own.includes(feature) && !everyone.includes(feature);
 }
 
 /** Whether one company has one feature. */
@@ -56,8 +67,8 @@ export async function writeFeaturesOff(
   ctx: Pick<MutationCtx, "db">,
   companyId: Id<"companies"> | undefined,
   featuresOff: readonly string[],
-): Promise<MenuFeature[]> {
-  const off = normalizeFeaturesOff(featuresOff);
+): Promise<SwitchedFeature[]> {
+  const off = normalizeSwitchesOff(featuresOff);
   const row = await switchesRow(ctx, companyId);
   if (off.length === 0) {
     if (row) await ctx.db.delete(row._id);
@@ -70,9 +81,9 @@ export async function writeFeaturesOff(
 }
 
 /** Every company's own list, for the System Settings page's counts. */
-export async function everyCompanyFeaturesOff(ctx: ReadCtx): Promise<{ companyId: Id<"companies">; featuresOff: MenuFeature[] }[]> {
+export async function everyCompanyFeaturesOff(ctx: ReadCtx): Promise<{ companyId: Id<"companies">; featuresOff: SwitchedFeature[] }[]> {
   const rows = await ctx.db.query("featureSwitches").take(10_000);
-  return rows.flatMap((row) => (row.companyId ? [{ companyId: row.companyId, featuresOff: normalizeFeaturesOff(row.featuresOff) }] : []));
+  return rows.flatMap((row) => (row.companyId ? [{ companyId: row.companyId, featuresOff: normalizeSwitchesOff(row.featuresOff) }] : []));
 }
 
 /**

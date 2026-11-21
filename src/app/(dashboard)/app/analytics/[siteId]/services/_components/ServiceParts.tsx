@@ -6,10 +6,15 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { SERVICE_GROUPS, SPLIT_PICKS, perHundredOf, serviceSplit, type ServiceGroup, type SplitPick } from "@/convex/utils/serviceGroups";
+import { SERVICE_GROUPS, SPLIT_PICKS, type ServiceGroup, type SplitPick } from "@/convex/utils/serviceGroups";
+import {
+  SERVICE_ACROSS, SERVICE_AGAINST, SERVICE_COUNTS, SERVICE_DOINGS, SERVICE_LINES, SERVICE_SHOWS, serviceDaysArgs, serviceFigureOf, serviceGroupsFrom,
+  serviceMonthLines, serviceMonthPicks, servicesBoxed, servicesDotsForEye, servicesEachStepForEye, servicesMapForEye,
+  type ServiceAcross, type ServiceAgainst, type ServiceCount, type ServiceDoing, type ServiceLines, type ServiceShow,
+} from "@/convex/utils/sees/eyeData/googleAnalyticsServices";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import type { ExplorerControl } from "@/src/ui/components/screens/ChartExplorer";
-import { DaysChart, type DaysLine, type DaysPoint } from "@/src/ui/components/screens/DaysChart";
+import { DaysChart } from "@/src/ui/components/screens/DaysChart";
 import { DotGroups } from "@/src/ui/components/screens/DotGroups";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { MapCard } from "@/src/ui/components/screens/MapCard";
@@ -32,15 +37,10 @@ import { useSpanInWords, useSpanWords } from "@/src/app/(dashboard)/app/analytic
 export type ServicesAnswer = FunctionReturnType<typeof api.googleAnalyticsServiceReads.analyticsServices>;
 export type Service = ServicesAnswer["services"][number];
 
-/** Services ticked on the month chart as it opens: the busiest five. */
-const FIRST_TICKED = 5;
-/** The map's boxes at most, the busiest first, as on All pages and Campaigns. */
-const MAP_SERVICES = 40;
-
-const ACROSS = ["visits", "started", "views"] as const;
-export type Across = (typeof ACROSS)[number];
-const DOINGS = ["events", "stayed", "scrolled"] as const;
-export type Doing = (typeof DOINGS)[number];
+const ACROSS = SERVICE_ACROSS;
+export type Across = ServiceAcross;
+const DOINGS = SERVICE_DOINGS;
+export type Doing = ServiceDoing;
 
 /** The whole page's read: the boxes, dots, map, table and eye all read this one answer. */
 export function useServices() {
@@ -56,21 +56,8 @@ export function useServiceSpans(answer: ServicesAnswer | undefined) {
   return { words: useSpanWords(span, before), inWords: useSpanInWords(span, before) };
 }
 
-/** A service's figures through the channels ticked: all of its own with every channel, else the visits that started on it from them. */
-export function throughChannels(service: Service, channels: readonly string[], ticked: readonly string[]) {
-  if (!service.byChannel || ticked.length === channels.length) return { visits: service.now.visits, engaged: service.now.engaged, events: service.now.events, visitsBefore: service.before.visits, eventsBefore: service.before.events };
-  const out = { visits: 0, engaged: 0, events: 0, visitsBefore: 0, eventsBefore: 0 };
-  channels.forEach((channel, at) => {
-    if (!ticked.includes(channel)) return;
-    const figures = service.byChannel![at];
-    out.visits += figures[0];
-    out.engaged += figures[1];
-    out.events += figures[2];
-    out.visitsBefore += figures[3];
-    out.eventsBefore += figures[5];
-  });
-  return out;
-}
+/** A service's figures through the channels ticked: shared with a chat app's question (`eyeData/googleAnalyticsServices.ts`). */
+export { throughChannels } from "@/convex/utils/sees/eyeData/googleAnalyticsServices";
 
 /**
  * The dots' menus and the groups they make, shared by the boxes, the dots, the map and the table: change one and the others
@@ -86,37 +73,20 @@ export function useServiceGroups(answer: ServicesAnswer | undefined) {
   const [group, setGroup] = useSiteParam<ServiceGroup | "">("group", "", ["", ...SERVICE_GROUPS]);
   const [tickedChannels, setTickedChannels] = useSiteTicks("dotChannels");
   return useMemo(() => {
-    const channels = answer?.channels ?? [];
-    const known = (answer?.classifications ?? []).some((one) => one.id === classification);
-    const services = (answer?.services ?? []).filter((service) => !known || service.kind === classification);
-    // Only visits split by channel: page views and scrolling to the bottom aren't.
-    const canChannel = channels.length > 0 && across !== "views" && doing !== "scrolled";
-    const ticked = canChannel ? (tickedChannels ?? channels).filter((channel) => channels.includes(channel)) : channels;
-    const through = (service: Service) => throughChannels(service, channels, ticked);
-    const xOf = (service: Service) => (across === "views" ? service.now.views : across === "started" && ticked.length === channels.length ? service.started : through(service).visits);
-    const yOf = (service: Service) => {
-      if (doing === "scrolled") return perHundredOf(service.now.scrolled, service.now.visits);
-      const figures = through(service);
-      return perHundredOf(doing === "events" ? figures.events : figures.engaged, figures.visits);
-    };
-    const website = answer?.website;
-    const websiteLine = !website ? 0 : doing === "events" ? perHundredOf(website.events, website.visits) : doing === "stayed" ? perHundredOf(website.engaged, website.visits) : perHundredOf(website.pageScrolled, website.pageVisits);
-    const split = serviceSplit(services, (service) => ({ x: xOf(service), y: yOf(service) }), websiteLine, { across: acrossPick, up: upPick });
     const unit = t(`groups.units.${across}`);
     const per = t(`groups.per.${doing}`);
-    const acrossWords = (more: boolean) => t(`groups.across.${across === "views" ? "views" : "visits"}.${more ? "more" : "fewer"}`, { count: split.split.x });
-    const upWords = (more: boolean) => t(more ? "groups.upMore" : "groups.upFewer", { rate: split.split.y.toFixed(1), per });
+    const acrossWords = (more: boolean, split: { x: number }) => t(`groups.across.${across === "views" ? "views" : "visits"}.${more ? "more" : "fewer"}`, { count: split.x });
+    const upWords = (more: boolean, split: { y: number }) => t(more ? "groups.upMore" : "groups.upFewer", { rate: split.y.toFixed(1), per });
     // Named by their figures alone (Anthony, 2026-11-07: "Dont call them busy or quiet jsut show the facts in the numbers").
-    const names = Object.fromEntries(SERVICE_GROUPS.map((key) => [key, t("groups.name", {
-      across: acrossWords(key === "rightHigh" || key === "rightLow"),
-      up: upWords(key === "rightHigh" || key === "leftHigh"),
-    })])) as Record<ServiceGroup, string>;
-    const groupOf = new Map<string, ServiceGroup>();
-    for (const key of SERVICE_GROUPS) for (const service of split.groups[key]) groupOf.set(service.key, key);
-    const inGroup = (service: Service) => !group || groupOf.get(service.key) === group;
+    const nameOf = (key: ServiceGroup, split: { x: number; y: number }) => t("groups.name", {
+      across: acrossWords(key === "rightHigh" || key === "rightLow", split),
+      up: upWords(key === "rightHigh" || key === "leftHigh", split),
+    });
+    // Built by the same function a chat app's question builds the groups with (chatAppEyes/googleAnalytics.ts).
+    const figures = serviceGroupsFrom(answer, { classification, across, doing, acrossPick, upPick, group, tickedChannels }, nameOf);
     return {
-      services, channels, ticked, canChannel, through, xOf, yOf, websiteLine, split, names, groupOf, inGroup, unit,
-      across, doing, acrossPick, upPick, group, classification: known ? classification : "",
+      ...figures, unit,
+      across, doing, acrossPick, upPick, group,
       setAcross, setDoing, setAcrossPick, setUpPick, setGroup, setTickedChannels, setClassification,
     };
   }, [answer, classification, across, doing, acrossPick, upPick, group, tickedChannels, t, setAcross, setDoing, setAcrossPick, setUpPick, setGroup, setTickedChannels, setClassification]);
@@ -171,24 +141,12 @@ export function ServiceBoxes({ groups }: { groups: ServiceGroups }) {
   );
 }
 
-type Show = "visits" | "events" | "rate" | "views";
-const SHOWS: readonly Show[] = ["visits", "events", "rate", "views"];
-type Lines = "service" | "channel" | "one";
-const LINES: readonly Lines[] = ["service", "channel", "one"];
-type Against = "nothing" | "before" | "website";
-const AGAINST: readonly Against[] = ["nothing", "before", "website"];
-
-/** A run of figures as a line's points: [visits, page views, events] for a service, [visits, events] for a channel. */
-function pointsOf(points: ReadonlyArray<{ day: string; lastDay?: string }>, series: readonly number[][] | null | undefined, at: number): DaysPoint[] {
-  return points.map((point, index) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: series?.[index]?.[at] ?? 0 }));
-}
-
-/** Figures added up across several runs of the same points. */
-function added(runs: ReadonlyArray<readonly number[][] | null | undefined>, length: number, width: number): number[][] {
-  const out = Array.from({ length }, () => Array.from({ length: width }, () => 0));
-  for (const run of runs) run?.forEach((figures, index) => figures.forEach((value, at) => { if (out[index]) out[index][at] += value; }));
-  return out;
-}
+type Show = ServiceShow;
+const SHOWS = SERVICE_SHOWS;
+type Lines = ServiceLines;
+const LINES = SERVICE_LINES;
+type Against = ServiceAgainst;
+const AGAINST = SERVICE_AGAINST;
 
 /**
  * Visits to each service each day, week or month, following the page's step menu (Anthony, 2026-11-07: "add this chart to way 4 as
@@ -207,17 +165,10 @@ export function ServiceMonthCard({ answer, groups }: { answer: ServicesAnswer; g
   const [against, setAgainst] = useSiteParam<Against>("against", "nothing", AGAINST);
   const [pickedServices, setServices] = useSiteTicks("services");
   const [pickedChannels, setChannels] = useSiteTicks("channels");
-  const byVisits = useMemo(() => [...groups.services].filter((service) => service.now.visits > 0).sort((left, right) => right.now.visits - left.now.visits), [groups.services]);
-  const tickedServices = (pickedServices ?? byVisits.slice(0, FIRST_TICKED).map((service) => service.key)).filter((key) => byVisits.some((service) => service.key === key));
-  const channels = answer.channels;
-  // Channels split visits and events: never page views, and never one device.
-  const canChannel = channels.length > 0 && show !== "views";
-  const tickedChannels = canChannel ? (pickedChannels ?? channels).filter((channel) => channels.includes(channel)) : channels;
-  const everyChannel = tickedChannels.length === channels.length;
-  const linesBy: Lines = !canChannel && lines === "channel" ? "service" : lines;
-  const wantChannels = canChannel && (!everyChannel || linesBy === "channel");
-  const chosen = byVisits.filter((service) => tickedServices.includes(service.key));
-  const read = useQuery(api.googleAnalyticsServiceReads.analyticsServiceDays, chosen.length > 0 ? { ...args, services: chosen.map((service) => ({ key: service.key, refs: service.refs })), channels: wantChannels } : "skip");
+  // The menus' picks, worked out as a chat app's question works them out (chatAppEyes/googleAnalytics.ts).
+  const picks = serviceMonthPicks(answer, groups.services, { show, lines, pickedServices, pickedChannels });
+  const { byVisits, tickedServices, channels, canChannel, tickedChannels, everyChannel, linesBy, chosen } = picks;
+  const read = useQuery(api.googleAnalyticsServiceReads.analyticsServiceDays, chosen.length > 0 ? { ...args, ...serviceDaysArgs(picks) } : "skip");
   const beforePoints = read?.before?.points ?? null;
   const tickedKey = tickedServices.join(",");
   const channelsKey = tickedChannels.join(",");
@@ -225,44 +176,16 @@ export function ServiceMonthCard({ answer, groups }: { answer: ServicesAnswer; g
   const websiteName = t("website");
   const beforeName = (name: string) => t("lineBefore", { name, before: inWords.before });
   const comparing = against === "before" && beforePoints !== null && beforePoints.length > 0;
-  // Every line, worked out once for these figures and menus: the chart draws them, and the eye reads them.
-  const { main, drawn } = useMemo(() => {
-    const points = read?.points ?? [];
-    const seriesOf = new Map((read?.services ?? []).map((one) => [one.key, one]));
-    /** One group's figures over the points: services' own, or their channels ticked, or one channel's. */
-    const groupRuns = (keys: readonly string[], onlyChannel: string | null, which: "now" | "before") => {
-      const length = which === "now" ? points.length : beforePoints?.length ?? 0;
-      if (!wantChannels && onlyChannel === null) return { figures: added(keys.map((key) => seriesOf.get(key)?.[which]), length, 3), channel: false };
-      const runs = keys.flatMap((key) => (seriesOf.get(key)?.channels ?? []).filter((one) => (onlyChannel ? one.channel === onlyChannel : tickedChannels.includes(one.channel))).map((one) => one[which]));
-      return { figures: added(runs, length, 2), channel: true };
-    };
-    const lineOf = (key: string, name: string, colour: string, runs: { figures: number[][]; channel: boolean }, onPoints: ReadonlyArray<{ day: string; lastDay?: string }>, extra: Partial<DaysLine> = {}): DaysLine => {
-      const eventsAt = runs.channel ? 1 : 2;
-      const at = show === "visits" ? 0 : show === "views" ? 1 : eventsAt;
-      return {
-        key, name, colour, ...extra,
-        points: pointsOf(onPoints, runs.figures, at),
-        ...(show === "rate" ? { per: pointsOf(onPoints, runs.figures, 0) } : {}),
-      };
-    };
-    const drawnGroups: Array<{ key: string; name: string; colour: string; keys: string[]; channel: string | null }> = linesBy === "service"
-      ? chosen.map((service) => ({ key: `s:${service.key}`, name: service.name, colour: CHANNEL_LINE_COLOURS[byVisits.indexOf(service) % CHANNEL_LINE_COLOURS.length], keys: [service.key], channel: null }))
-      : linesBy === "channel"
-        ? tickedChannels.map((channel) => ({ key: `c:${channel}`, name: channel, colour: CHANNEL_LINE_COLOURS[channels.indexOf(channel) % CHANNEL_LINE_COLOURS.length], keys: chosen.map((service) => service.key), channel }))
-        : [{ key: "one", name: these, colour: CHART_SERIES_ORANGE, keys: chosen.map((service) => service.key), channel: null }];
-    const mainLines = drawnGroups.map((one) => lineOf(one.key, one.name, one.colour, groupRuns(one.keys, one.channel, "now"), points, show === "rate" ? { gaps: true } : {}));
-    const under = comparing ? drawnGroups.map((one) => lineOf(`${one.key}:before`, beforeName(one.name), one.colour, groupRuns(one.keys, one.channel, "before"), beforePoints!, { dashed: true, under: true, gaps: true })) : [];
-    const websiteRuns = (): { figures: number[][]; channel: boolean } => {
-      if (!wantChannels || everyChannel) return { figures: read?.website.now ?? [], channel: false };
-      return { figures: added((read?.website.channels ?? []).filter((one) => tickedChannels.includes(one.channel)).map((one) => one.now), points.length, 2), channel: true };
-    };
-    const website = against === "website" && read ? [lineOf("website", websiteName, CHART_COMPARATOR_GREY, websiteRuns(), points, { dashed: true, ...(show === "rate" ? { gaps: true } : {}) })] : [];
-    return { main: mainLines, drawn: [...mainLines, ...under, ...website] };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the ticks decide by their keys; `beforeName` is new each draw and follows `inWords.before`.
-  }, [read, show, linesBy, tickedKey, channelsKey, wantChannels, everyChannel, against, comparing, these, websiteName, inWords.before]);
+  // Every line, worked out once for these figures and menus: the chart draws them, and the eye reads them. Built by the same
+  // function a chat app's question builds them with (chatAppEyes/googleAnalytics.ts).
+  const { main, drawn } = useMemo(
+    () => serviceMonthLines(read, picks, { show, against, comparing }, { these, website: websiteName, before: beforeName }, { lines: CHANNEL_LINE_COLOURS, one: CHART_SERIES_ORANGE, website: CHART_COMPARATOR_GREY }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the ticks decide by their keys; `picks` and `beforeName` are new each draw and follow them and `inWords.before`.
+    [read, show, linesBy, tickedKey, channelsKey, picks.wantChannels, everyChannel, against, comparing, these, websiteName, inWords.before],
+  );
 
   // What the eye and Ask Hakken's redraw read: each line's figure for each step, as the chart adds them up.
-  const seen = useMemo(() => (read && read.state === "ready" ? { show, lines: linesBy, steps: stepRows(main, step) } : undefined), [read, show, linesBy, main, step]);
+  const seen = useMemo(() => servicesEachStepForEye(read, show, linesBy, main, step), [read, show, linesBy, main, step]);
   useSeesPart("servicesEachStep", seen);
 
   const when = against === "before" && comparing ? t("hintAgainst", { now: words.now, before: inWords.before }) : against === "website" ? t("hintWebsite", { now: words.now }) : t("hint", { now: words.now });
@@ -306,34 +229,6 @@ export function ServiceMonthCard({ answer, groups }: { answer: ServicesAnswer; g
   );
 }
 
-/** Each step's figure for each line, added up as the chart adds them, by the line's name: for the eye, never an average. */
-function stepRows(lines: readonly DaysLine[], step: "day" | "week" | "month") {
-  const rows = new Map<string, Record<string, number | string>>();
-  const pers = new Map<string, Map<string, number>>();
-  for (const line of lines) {
-    line.points.forEach((point, at) => {
-      const key = step === "day" ? point.day : step === "week" ? weekOf(point.day) : point.day.slice(0, 7);
-      // Named by its grain (day, week or month), so the eye reads the list as dates and keeps the newest.
-      const row = rows.get(key) ?? rows.set(key, { [step]: key }).get(key)!;
-      row[line.name] = Number(row[line.name] ?? 0) + point.value;
-      if (line.per) {
-        const held = pers.get(key) ?? pers.set(key, new Map()).get(key)!;
-        held.set(line.name, (held.get(line.name) ?? 0) + (line.per[at]?.value ?? 0));
-      }
-    });
-  }
-  // A figure for every 100 visits is worked out once each step is added up.
-  for (const [key, held] of pers) for (const [name, visits] of held) rows.get(key)![name] = perHundredOf(Number(rows.get(key)![name] ?? 0), visits);
-  return [...rows.values()];
-}
-
-/** A day's week, by its Monday. */
-function weekOf(day: string): string {
-  const date = new Date(`${day}T00:00:00Z`);
-  const back = (date.getUTCDay() + 6) % 7;
-  return new Date(date.getTime() - back * 86_400_000).toISOString().slice(0, 10);
-}
-
 /**
  * Which services get visits, and which get people in touch (Anthony, 2026-11-07: "keep this chart i like it"): each dot a service,
  * further right the more visits, higher up the more events for every 100. Its menus move the lines, and the boxes and the table
@@ -349,13 +244,8 @@ export function ServiceDotsCard({ groups, host }: { groups: ServiceGroups; host:
     const best = [...shown].filter((service) => groups.xOf(service) >= groups.split.split.x).sort((left, right) => groups.yOf(right) - groups.yOf(left)).slice(0, 4);
     return new Set([...busiest, ...best].map((service) => service.key));
   }, [shown, groups]);
-  const seen = useMemo(() => ({
-    count: groups.across,
-    show: groups.doing,
-    lineAcross: groups.split.split.x,
-    lineUp: groups.split.split.y,
-    services: shown.map((service) => ({ name: service.name, across: groups.xOf(service), forEvery100: groups.yOf(service), group: groups.names[groups.groupOf.get(service.key)!] })),
-  }), [shown, groups]);
+  // Built by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts).
+  const seen = useMemo(() => servicesDotsForEye(groups, groups.across, groups.doing), [groups]);
   useSeesPart("servicesDots", seen);
   const lines = groups.split;
   const countWord = t(`count.${groups.across}`);
@@ -394,9 +284,9 @@ export function ServiceDotsCard({ groups, host }: { groups: ServiceGroups; host:
   );
 }
 
-type Count = "visits" | "views" | "events";
-const COUNTS: readonly Count[] = ["visits", "views", "events"];
-const figureOf = (service: Service, count: Count, which: "now" | "before") => service[which][count === "views" ? "views" : count];
+type Count = ServiceCount;
+const COUNTS = SERVICE_COUNTS;
+const figureOf = serviceFigureOf;
 
 /**
  * All your services (Anthony, 2026-11-07: "this is nice too"): each a box, the bigger the more it had, orange if it went up and grey
@@ -407,8 +297,7 @@ export function ServiceMapCard({ answer, groups, host, onOpen }: { answer: Servi
   const { inWords } = useServiceSpans(answer);
   const [count, setCount] = useSiteParam<Count>("count", "visits", COUNTS);
   const [colour, setColour] = useSiteParam<Count>("colour", "visits", COUNTS);
-  const all = useMemo(() => groups.services.filter((service) => figureOf(service, count, "now") > 0 && groups.inGroup(service)).sort((left, right) => figureOf(right, count, "now") - figureOf(left, count, "now")), [groups, count]);
-  const boxed = useMemo(() => all.slice(0, MAP_SERVICES), [all]);
+  const { all, boxed } = useMemo(() => servicesBoxed(groups, count), [groups, count]);
   const byKey = new Map(boxed.map((service) => [service.key, service]));
   const boxes: PageMapBox[] = boxed.map((service) => ({
     id: service.key,
@@ -427,7 +316,7 @@ export function ServiceMapCard({ answer, groups, host, onOpen }: { answer: Servi
       ...(answer.hasBefore ? [{ value: formatNumber(service.before.events), label: t("in.events", { when: inWords.before }) }] : []),
     ],
   }));
-  const seen = useMemo(() => ({ count, colour, services: boxed.map((service) => ({ name: service.name, [count]: figureOf(service, count, "now"), [`${count}Before`]: answer.hasBefore ? figureOf(service, count, "before") : null })) }), [boxed, count, colour, answer.hasBefore]);
+  const seen = useMemo(() => servicesMapForEye(boxed, count, colour, answer.hasBefore), [boxed, count, colour, answer.hasBefore]);
   useSeesPart("servicesMap", seen);
   const groupOptions = [{ value: "", label: t("everyService") }, ...SERVICE_GROUPS.map((key) => ({ value: key, label: groups.names[key] }))];
   return (

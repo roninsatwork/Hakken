@@ -25,24 +25,12 @@ import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { BeforeAfter } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { newestUpdateFacts, updatesSees } from "@/convex/utils/sees/searchConsole";
+import { updateRowsOf, updatesEyeData, type UpdateRow } from "@/convex/utils/sees/eyeData/searchConsoleChanges";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
-type Update = {
-  key: string;
-  title: string;
-  startedOn: string;
-  finishedOn: string | null;
-  state: "done" | "rolling" | "waiting";
-  beforeClicks: number | null;
-  afterClicks: number | null;
-  change: number | null;
-  beforePosition: number | null;
-  afterPosition: number | null;
-  moved: number | null;
-  /** Volatility the 14 days before it began → while it rolled out (search-console-volatility-plan.md §2.2). */
-  volatilityBefore: number | null;
-  volatilityDuring: number | null;
-};
+/** An update as the table lists it (`updateRowsOf`). */
+type Update = UpdateRow;
 
 const SORTS: SiteSortColumns<Update, "title" | "dates" | "clicks" | "change" | "position" | "volatility"> = {
   title: { value: (row) => row.title, first: "asc" },
@@ -57,8 +45,6 @@ const SORTS: SiteSortColumns<Update, "title" | "dates" | "clicks" | "change" | "
 const formatScore = (value: number) => value.toFixed(1);
 
 /** An update's volatility where the days it is read from are kept; one asked of Google has none. */
-const volatilityOf = (update: object): { before: number | null; during: number | null } | undefined =>
-  "volatility" in update ? (update as { volatility?: { before: number | null; during: number | null } }).volatility : undefined;
 const titleOf = (row: Update) => row.title;
 
 /** The chart as drawn: clicks alone, with its one tick box. */
@@ -94,21 +80,8 @@ export default function SearchConsoleUpdatesPage() {
   const days = useSiteFiguresFor(held ? { siteId, searchType: kind, ...dates } : null);
   // Google out of reach for the updates, or for the days the chart draws.
   const chartProblem = problem ?? days.problem;
-  const rows: Update[] | undefined = answer?.updates.map((update) => ({
-    key: update.id,
-    title: update.title,
-    startedOn: update.startedOn,
-    finishedOn: update.finishedOn,
-    state: update.state,
-    beforeClicks: update.before?.clicks ?? null,
-    afterClicks: update.after?.clicks ?? null,
-    change: update.before && update.after ? update.after.clicks - update.before.clicks : null,
-    beforePosition: update.before?.position ?? null,
-    afterPosition: update.after?.position ?? null,
-    moved: update.before && update.after ? update.before.position - update.after.position : null,
-    volatilityBefore: volatilityOf(update)?.before ?? null,
-    volatilityDuring: volatilityOf(update)?.during ?? null,
-  }));
+  // Each update as the table lists it, as a chat app's question lists it too (`updateRowsOf`).
+  const rows: Update[] | undefined = answer ? updateRowsOf(answer.updates) : undefined;
   // What Hakken sees: the server's for the days it keeps; for a country asked of Google, the same rules on its answer.
   const seen = kept?.live ? (answer && status?.connection?.newestDay ? updatesSees(newestUpdateFacts(answer.updates), status.connection.newestDay) : null) : kept && "seen" in kept ? kept.seen : undefined;
   const matches = wordStartMatcher(term.toLowerCase());
@@ -118,9 +91,9 @@ export default function SearchConsoleUpdatesPage() {
   const host = status?.host ?? "";
   // The eye's figures: every update in the dates with its days before and after, and the dates' own days and totals
   // against the span before, so a move with no update in the dates reads as the website's own.
-  const tw = useTranslations("searchConsole.sees");
+  // Built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
   const dayFigures = days.figures ?? null;
-  const seesData = useMemo(() => (rows ? { updates: rows, days: dayFigures, names: { beforeIt: tw("beforeIt") } } : undefined), [rows, dayFigures, tw]);
+  const seesData = useMemo(() => updatesEyeData({ rows, days: dayFigures }, wordsReader(t)), [rows, dayFigures, t]);
   const notYet = (row: Update) => <span className="whitespace-nowrap text-[12px] text-muted">{(row.state === "rolling" ? t("updates.notFinished") : t("updates.waiting", { days: status?.limits.updateWindowDays ?? "…" }))}</span>;
 
   return (

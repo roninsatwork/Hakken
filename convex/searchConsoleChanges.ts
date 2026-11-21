@@ -661,12 +661,17 @@ export const searchConsoleBrandWords = moduleQuery({
   args: { siteId: v.id("companyWebsites") },
   returns: v.object({ names: v.array(v.string()), profileHref: v.union(v.string(), v.null()) }),
   handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const names = (await holdBrandNames(ctx, site.hold._id)).map((brand) => brand.name);
+    const { site, names } = await readBrandWords(ctx, args);
     const team = ctx.user.role === "SUPER_ADMIN";
     return { names, profileHref: team ? `/admin/companies/${site.hold.companyId}/websites/site/${site.hold._id}/profile` : null };
   },
 });
+
+/** The website's brand words: Brand and non-brand's read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readBrandWords(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  return { site, names: (await holdBrandNames(ctx, site.hold._id)).map((brand) => brand.name) };
+}
 
 /**
  * Click rate by position (drawn as "15 · Click rate by position"): how often

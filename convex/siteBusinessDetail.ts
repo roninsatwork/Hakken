@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { myRivals, requireMySite } from "./siteAccess";
+import { myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { holdBrandNames } from "./holdProfiles";
 import { appAnswers, normalName, sameHost } from "./siteAiApps";
 import { questionsOf, readings } from "./siteBrandRadar";
@@ -73,9 +73,11 @@ const placeOf = (named: ReadonlyArray<{ key: string; at: number }>, key: string)
   return at >= 0 ? at + 1 : null;
 };
 
+const businessDetailArgs = { siteId: v.id("companyWebsites"), business: v.string() };
+
 export const businessDetail = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), business: v.string() },
+  args: businessDetailArgs,
   returns: v.object({
     found: v.boolean(),
     name: v.string(),
@@ -110,156 +112,159 @@ export const businessDetail = moduleQuery({
     posts: v.array(v.object({ day: v.string(), kind: activityKindValidator, text: v.union(v.string(), v.null()), from: v.union(v.number(), v.null()), to: v.union(v.number(), v.null()) })),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { setup, listing, host, rival } = await findBusiness(ctx, site, args.business);
-    const now = Date.now();
-    const since30 = new Date(now - 30 * DAY_MS).toISOString().slice(0, 10);
-    const own = site.website.host;
-    const office = setup.offices[0] ?? null;
-    const name = listing?.name ?? rival?.website.displayHost ?? host ?? args.business;
-
-    // Google's AI (Brand radar): the questions naming it, where it came and where you did.
-    const { readings: all } = await readings(ctx, site);
-    const its = host ? all.find((reading) => !reading.you && sameHost(reading.website.host, host)) : undefined;
-    const mine = all.find((reading) => reading.you);
-    const lastMentions = (reading: typeof its) => {
-      if (!reading?.months) return null;
-      const mentions = unpackColumn(reading.months.mentions);
-      return mentions.at(-1) ?? null;
-    };
-    const named = new Map<string, Array<{ key: string; at: number }>>();
-    for (const reading of all) {
-      if (!reading.part) continue;
-      for (const entry of questionsOf(reading.part)) {
-        if (entry.firstAt === null) continue;
-        const list = named.get(entry.question.toLowerCase()) ?? [];
-        list.push({ key: reading.website.host, at: entry.firstAt });
-        named.set(entry.question.toLowerCase(), list);
-      }
-    }
-    const questions = its?.part ? questionsOf(its.part).filter((entry) => entry.firstAt !== null).map((entry) => {
-      const order = named.get(entry.question.toLowerCase()) ?? [];
-      return {
-        question: entry.question,
-        volume: entry.volume,
-        it: placeOf(order, its.website.host),
-        you: mine ? placeOf(order, mine.website.host) : null,
-        page: entry.pages.find((url) => isOnHost(hostOfUrl(url), its.website.host)) ?? null,
-      };
-    }) : [];
-
-    // ChatGPT's app: each question's newest answer that showed it, where, and where you came.
-    const brandNames = (await holdBrandNames(ctx, site.hold._id)).map((entry) => normalName(entry.name)).filter((entry) => entry.length > 2);
-    const isYou = (card: { name: string; host?: string }) => sameHost(card.host, own) || brandNames.some((brand) => normalName(card.name).includes(brand));
-    const isIt = (card: { name: string; host?: string; address?: string }) => (card.host
-      ? Boolean(host && sameHost(card.host, host))
-      : Boolean(listing && normalName(card.name) === normalName(listing.name) && listing.town && (card.address ?? "").toLowerCase().includes(listing.town.toLowerCase())));
-    const answers = [];
-    let latest = 0;
-    let shownYou = 0;
-    for (const list of (await appAnswers(ctx, site)).values()) {
-      const answer = list[0];
-      if (!answer) continue;
-      latest += 1;
-      const cards = answer.extras.businesses;
-      const at = cards.findIndex(isIt);
-      const you = cards.findIndex(isYou);
-      if (you >= 0) shownYou += 1;
-      if (at >= 0) answers.push({ question: answer.prompt, answerId: answer.textId, day: answer.day, it: at + 1, you: you >= 0 ? you + 1 : null });
-    }
-
-    // Google Maps: its place and yours on the office's searches.
-    const map = [];
-    if (office && listing) {
-      const searches = await officeSearches(ctx, site, office, setup.offices);
-      const checks = await officeChecks(ctx, office, searches, false);
-      const volumes = await searchVolumesOf(ctx, site, [...checks.keys()]);
-      for (const [search, check] of checks) {
-        const it = check.latest.listingIds.indexOf(listing._id) + 1;
-        map.push({ search, volume: volumes.get(search) ?? null, it: it > 0 ? it : null, you: check.place > 0 ? check.place : null });
-      }
-    }
-
-    // Reviews: its Google profile's figures beside your first office's.
-    const reviewFigures = listing ? reviewFiguresOf(await readReviews(ctx, listing._id), now) : null;
-    const yourFigures = office ? reviewFiguresOf(await readReviews(ctx, office._id), now) : null;
-
-    // Pages naming it (Web mentions reads the rivals watched) and yours, the last 30 days.
-    const mentionRows = rival ? (await shownMentionsOf(ctx, rival.website._id)) ?? [] : [];
-    const yourMentions = await shownMentionsOf(ctx, site.website._id);
-
-    // What it posted and changed on its profile.
-    const posts = listing ? [
-      ...(await readListingActivity(ctx, listing._id)).filter((line) => line.kind !== "QUESTION").map((line) => ({ day: line.day, kind: line.kind as typeof activityKindValidator.type, text: line.text, from: null, to: null })),
-      ...weekLines(await readListingWeeks(ctx, listing._id)).map((line) => ({ day: line.day, kind: line.kind, text: null, from: line.from, to: line.to })),
-    ].sort((left, right) => right.day.localeCompare(left.day)) : [];
-
-    const km = listing?.latitude !== undefined && listing.longitude !== undefined && office?.latitude !== undefined && office.longitude !== undefined
-      ? distanceKm(office.latitude, office.longitude, listing.latitude, listing.longitude)
-      : null;
-    const figures = {
-      named: lastMentions(its),
-      namedYou: lastMentions(mine),
-      shown: answers.length,
-      shownYou,
-      answers: latest,
-      rating: listing?.rating ?? null,
-      reviews: listing?.reviews ?? null,
-      ratingYou: office?.rating ?? null,
-      reviewsYou: office?.reviews ?? null,
-      mentions: rival ? mentionRows.filter((row) => row.day >= since30).length : null,
-      mentionsYou: yourMentions ? yourMentions.filter((row) => row.day >= since30).length : null,
-      daysToAnswer: reviewFigures?.daysToAnswer ?? null,
-      daysToAnswerYou: yourFigures?.daysToAnswer ?? null,
-    };
-
-    // What Hakken sees: where it is ahead of you, its biggest lead, and what to do first.
-    const lead = questions.filter((row) => row.you === null).sort((left, right) => right.volume - left.volume)[0];
-    const yourPages = new Set((mine?.part?.pages ?? []).map(hostOfUrl));
-    const place = its?.part ? [...new Set(its.part.pages.map(hostOfUrl))].find((page) => ["DIRECTORY", "REVIEWS"].includes(siteKindOf(page)) && !yourPages.has(page)) : undefined;
-    const answersFaster = figures.daysToAnswer !== null && figures.daysToAnswerYou !== null && figures.daysToAnswer + 1 <= figures.daysToAnswerYou;
-    const moreReviews = figures.reviews !== null && figures.reviewsYou !== null && figures.reviews >= figures.reviewsYou * 1.5 && figures.reviews - figures.reviewsYou >= 10;
-    const watchedListing = Boolean(listing && setup.rivals.some((entry) => entry._id === listing._id));
-    const says: Array<SeenPhrase | null> = [
-      figures.named !== null && figures.namedYou !== null
-        ? { code: figures.named > figures.namedYou ? "aheadInAi" : "behindInAi", text: name, a: figures.named, b: figures.namedYou }
-        : null,
-      lead ? { code: "biggestLead", text: lead.question, a: lead.volume } : null,
-      latest > 0 && figures.shown > figures.shownYou ? { code: "chatgptAhead", a: figures.shown, b: figures.shownYou, c: latest } : null,
-      moreReviews ? { code: "moreReviews", a: figures.reviews!, b: figures.reviewsYou!, c: Math.round((figures.rating ?? 0) * 10) } : null,
-      answersFaster ? { code: "answersFaster", a: Math.round(figures.daysToAnswer!), b: Math.round(figures.daysToAnswerYou!) } : null,
-      !rival && !listing ? { code: "nothingKnown", text: name } : null,
-      !rival && watchedListing ? { code: "mapOnly", text: name } : null,
-      !rival && listing && !watchedListing ? { code: "notWatched", text: name } : null,
-    ];
-    const steps: Array<SeenStep | null> = [
-      lead ? { code: "answerQuestion", text: lead.question, link: "seeQuestion", to: toRecord("question", lead.question) } : null,
-      place ? { code: "getListedOn", text: place, link: "seeWebsite", to: toRecord("website", place) } : null,
-      moreReviews ? { code: "askForReviews", a: figures.reviews! - figures.reviewsYou!, link: "yourReviews", to: toPage("reviews") } : null,
-      answersFaster ? { code: "answerReviews", link: "yourReviews", to: toPage("reviews") } : null,
-    ];
-
-    return {
-      found: Boolean(listing || rival || its),
-      name,
-      host,
-      category: listing?.category ?? null,
-      town: listing?.town ?? null,
-      km,
-      profileUrl: listing ? listingAddress(listing) : null,
-      rivalId: rival?.hold._id ?? null,
-      watched: Boolean(rival) || watchedListing,
-      figures,
-      questions,
-      answers,
-      map,
-      mentions: mentionRows.map(({ about: _about, strength: _strength, ...row }) => row),
-      posts,
-      seen: seen(says, steps),
-    };
-  },
+  handler: async (ctx, args) => await readBusinessDetail(ctx, args),
 });
+
+/** businessDetail's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readBusinessDetail(ctx: SiteReader, args: ObjectType<typeof businessDetailArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { setup, listing, host, rival } = await findBusiness(ctx, site, args.business);
+  const now = Date.now();
+  const since30 = new Date(now - 30 * DAY_MS).toISOString().slice(0, 10);
+  const own = site.website.host;
+  const office = setup.offices[0] ?? null;
+  const name = listing?.name ?? rival?.website.displayHost ?? host ?? args.business;
+
+  // Google's AI (Brand radar): the questions naming it, where it came and where you did.
+  const { readings: all } = await readings(ctx, site);
+  const its = host ? all.find((reading) => !reading.you && sameHost(reading.website.host, host)) : undefined;
+  const mine = all.find((reading) => reading.you);
+  const lastMentions = (reading: typeof its) => {
+    if (!reading?.months) return null;
+    const mentions = unpackColumn(reading.months.mentions);
+    return mentions.at(-1) ?? null;
+  };
+  const named = new Map<string, Array<{ key: string; at: number }>>();
+  for (const reading of all) {
+    if (!reading.part) continue;
+    for (const entry of questionsOf(reading.part)) {
+      if (entry.firstAt === null) continue;
+      const list = named.get(entry.question.toLowerCase()) ?? [];
+      list.push({ key: reading.website.host, at: entry.firstAt });
+      named.set(entry.question.toLowerCase(), list);
+    }
+  }
+  const questions = its?.part ? questionsOf(its.part).filter((entry) => entry.firstAt !== null).map((entry) => {
+    const order = named.get(entry.question.toLowerCase()) ?? [];
+    return {
+      question: entry.question,
+      volume: entry.volume,
+      it: placeOf(order, its.website.host),
+      you: mine ? placeOf(order, mine.website.host) : null,
+      page: entry.pages.find((url) => isOnHost(hostOfUrl(url), its.website.host)) ?? null,
+    };
+  }) : [];
+
+  // ChatGPT's app: each question's newest answer that showed it, where, and where you came.
+  const brandNames = (await holdBrandNames(ctx, site.hold._id)).map((entry) => normalName(entry.name)).filter((entry) => entry.length > 2);
+  const isYou = (card: { name: string; host?: string }) => sameHost(card.host, own) || brandNames.some((brand) => normalName(card.name).includes(brand));
+  const isIt = (card: { name: string; host?: string; address?: string }) => (card.host
+    ? Boolean(host && sameHost(card.host, host))
+    : Boolean(listing && normalName(card.name) === normalName(listing.name) && listing.town && (card.address ?? "").toLowerCase().includes(listing.town.toLowerCase())));
+  const answers = [];
+  let latest = 0;
+  let shownYou = 0;
+  for (const list of (await appAnswers(ctx, site)).values()) {
+    const answer = list[0];
+    if (!answer) continue;
+    latest += 1;
+    const cards = answer.extras.businesses;
+    const at = cards.findIndex(isIt);
+    const you = cards.findIndex(isYou);
+    if (you >= 0) shownYou += 1;
+    if (at >= 0) answers.push({ question: answer.prompt, answerId: answer.textId, day: answer.day, it: at + 1, you: you >= 0 ? you + 1 : null });
+  }
+
+  // Google Maps: its place and yours on the office's searches.
+  const map = [];
+  if (office && listing) {
+    const searches = await officeSearches(ctx, site, office, setup.offices);
+    const checks = await officeChecks(ctx, office, searches, false);
+    const volumes = await searchVolumesOf(ctx, site, [...checks.keys()]);
+    for (const [search, check] of checks) {
+      const it = check.latest.listingIds.indexOf(listing._id) + 1;
+      map.push({ search, volume: volumes.get(search) ?? null, it: it > 0 ? it : null, you: check.place > 0 ? check.place : null });
+    }
+  }
+
+  // Reviews: its Google profile's figures beside your first office's.
+  const reviewFigures = listing ? reviewFiguresOf(await readReviews(ctx, listing._id), now) : null;
+  const yourFigures = office ? reviewFiguresOf(await readReviews(ctx, office._id), now) : null;
+
+  // Pages naming it (Web mentions reads the rivals watched) and yours, the last 30 days.
+  const mentionRows = rival ? (await shownMentionsOf(ctx, rival.website._id)) ?? [] : [];
+  const yourMentions = await shownMentionsOf(ctx, site.website._id);
+
+  // What it posted and changed on its profile.
+  const posts = listing ? [
+    ...(await readListingActivity(ctx, listing._id)).filter((line) => line.kind !== "QUESTION").map((line) => ({ day: line.day, kind: line.kind as typeof activityKindValidator.type, text: line.text, from: null, to: null })),
+    ...weekLines(await readListingWeeks(ctx, listing._id)).map((line) => ({ day: line.day, kind: line.kind, text: null, from: line.from, to: line.to })),
+  ].sort((left, right) => right.day.localeCompare(left.day)) : [];
+
+  const km = listing?.latitude !== undefined && listing.longitude !== undefined && office?.latitude !== undefined && office.longitude !== undefined
+    ? distanceKm(office.latitude, office.longitude, listing.latitude, listing.longitude)
+    : null;
+  const figures = {
+    named: lastMentions(its),
+    namedYou: lastMentions(mine),
+    shown: answers.length,
+    shownYou,
+    answers: latest,
+    rating: listing?.rating ?? null,
+    reviews: listing?.reviews ?? null,
+    ratingYou: office?.rating ?? null,
+    reviewsYou: office?.reviews ?? null,
+    mentions: rival ? mentionRows.filter((row) => row.day >= since30).length : null,
+    mentionsYou: yourMentions ? yourMentions.filter((row) => row.day >= since30).length : null,
+    daysToAnswer: reviewFigures?.daysToAnswer ?? null,
+    daysToAnswerYou: yourFigures?.daysToAnswer ?? null,
+  };
+
+  // What Hakken sees: where it is ahead of you, its biggest lead, and what to do first.
+  const lead = questions.filter((row) => row.you === null).sort((left, right) => right.volume - left.volume)[0];
+  const yourPages = new Set((mine?.part?.pages ?? []).map(hostOfUrl));
+  const place = its?.part ? [...new Set(its.part.pages.map(hostOfUrl))].find((page) => ["DIRECTORY", "REVIEWS"].includes(siteKindOf(page)) && !yourPages.has(page)) : undefined;
+  const answersFaster = figures.daysToAnswer !== null && figures.daysToAnswerYou !== null && figures.daysToAnswer + 1 <= figures.daysToAnswerYou;
+  const moreReviews = figures.reviews !== null && figures.reviewsYou !== null && figures.reviews >= figures.reviewsYou * 1.5 && figures.reviews - figures.reviewsYou >= 10;
+  const watchedListing = Boolean(listing && setup.rivals.some((entry) => entry._id === listing._id));
+  const says: Array<SeenPhrase | null> = [
+    figures.named !== null && figures.namedYou !== null
+      ? { code: figures.named > figures.namedYou ? "aheadInAi" : "behindInAi", text: name, a: figures.named, b: figures.namedYou }
+      : null,
+    lead ? { code: "biggestLead", text: lead.question, a: lead.volume } : null,
+    latest > 0 && figures.shown > figures.shownYou ? { code: "chatgptAhead", a: figures.shown, b: figures.shownYou, c: latest } : null,
+    moreReviews ? { code: "moreReviews", a: figures.reviews!, b: figures.reviewsYou!, c: Math.round((figures.rating ?? 0) * 10) } : null,
+    answersFaster ? { code: "answersFaster", a: Math.round(figures.daysToAnswer!), b: Math.round(figures.daysToAnswerYou!) } : null,
+    !rival && !listing ? { code: "nothingKnown", text: name } : null,
+    !rival && watchedListing ? { code: "mapOnly", text: name } : null,
+    !rival && listing && !watchedListing ? { code: "notWatched", text: name } : null,
+  ];
+  const steps: Array<SeenStep | null> = [
+    lead ? { code: "answerQuestion", text: lead.question, link: "seeQuestion", to: toRecord("question", lead.question) } : null,
+    place ? { code: "getListedOn", text: place, link: "seeWebsite", to: toRecord("website", place) } : null,
+    moreReviews ? { code: "askForReviews", a: figures.reviews! - figures.reviewsYou!, link: "yourReviews", to: toPage("reviews") } : null,
+    answersFaster ? { code: "answerReviews", link: "yourReviews", to: toPage("reviews") } : null,
+  ];
+
+  return {
+    found: Boolean(listing || rival || its),
+    name,
+    host,
+    category: listing?.category ?? null,
+    town: listing?.town ?? null,
+    km,
+    profileUrl: listing ? listingAddress(listing) : null,
+    rivalId: rival?.hold._id ?? null,
+    watched: Boolean(rival) || watchedListing,
+    figures,
+    questions,
+    answers,
+    map,
+    mentions: mentionRows.map(({ about: _about, strength: _strength, ...row }) => row),
+    posts,
+    seen: seen(says, steps),
+  };
+}
 
 /** The distance between two points on the map, in kilometres. */
 function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {

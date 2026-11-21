@@ -10,7 +10,7 @@ import { isE2EAuthRuntimeEnabled } from "@/src/lib/e2eAuthEnvironment";
 
 const isSignInPage = createRouteMatcher(["/login"]);
 const isLandingPage = createRouteMatcher(["/"]);
-const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/app(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/admin(.*)", "/app(.*)", "/oauth/authorize(.*)"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
 /**

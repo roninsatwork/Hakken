@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -8,6 +8,7 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { kindTone, type PageKindsView } from "../../_components/usePageKinds";
 import { formatDay } from "./siteFormat";
+import { featureNameFrom } from "@/convex/utils/sees/eyeData/visibility";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 /**
@@ -104,7 +105,8 @@ export function TrendCell({ trend, label }: { trend: number[]; label: string }) 
 export function useFeatureLabel(): (feature: string) => string {
   const t = useTranslations("sites.common.features");
   // The same function while the words are: a page builds the eye's figures with it once, not on every draw.
-  return useCallback((feature: string) => (t.has(feature) ? t(feature) : feature.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase())), [t]);
+  // The rule a chat app's question names them by too (chatAppEyes/visibility.ts).
+  return useMemo(() => featureNameFrom(t), [t]);
 }
 
 /** The features on a search's results page: how many, and which, on hover and for a screen reader. */

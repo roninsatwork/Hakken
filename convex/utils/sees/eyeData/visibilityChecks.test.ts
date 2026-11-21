@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { newestOfEach } from "./newestOfEach";
+import { newestOfEach } from "./visibilityChecks";
 
 /**
  * The Overview's headline never shows a dash for a figure it holds: the

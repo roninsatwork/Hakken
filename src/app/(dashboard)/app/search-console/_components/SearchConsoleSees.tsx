@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
 import { seenAdvice, type Seen, type SeenPhrase, type SeenTarget } from "@/convex/utils/hakkenSees";
-import { useSpanName } from "../../analytics/_components/VisitsCharts";
+import { searchConsoleSeesWords, spanNameOf, withSeesWords, wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { formatNumber, formatShortDay } from "../../sites/_components/siteFormat";
 import { useSearchConsoleHref, useSearchConsolePeriodWords, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 import { useNoteAdvice } from "../../_components/useNoteAdvice";
@@ -45,37 +45,19 @@ export function SearchConsoleSees({ screen, eye, seen, data, links }: {
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const periodWords = useSearchConsolePeriodWords(range.period);
   useNoteAdvice(siteId, `searchConsole.seen.${screen}`, seen);
-  const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
   // The dates and the span before by their names where they have one ("October", "September"), as the redone boxes say
   // them (writing-guide.md, "Name the dates"). With only "The month before" and "The 28 days before" to go on, the eye's
   // first press on Demand by Classification sent the reader to "the 28 days before" for Last month (18 November 2026).
-  const spanName = useSpanName();
-  const nowName = spanName({ from: range.from, to: range.to });
-  const beforeName = spanName(range.before);
-  const words = useMemo(() => ({
-    before: beforeName ?? capital(periodWords.before),
-    ...(nowName ? { now: nowName } : {}),
-    website: tw("website"),
-    clicks: tw("clicks"),
-    shown: tw("shown"),
-    weekends: tw("weekends"),
-    weekdays: tw("weekdays"),
-    recent: tw("recent"),
-    earlier: tw("earlier"),
-    before7: tw("week7Before"),
-    // The newest days, weeks or months of a chart against those before them, by the chart's step.
-    "recent.7": tw("recentSteps.day"),
-    "recent.4": tw("recentSteps.week"),
-    "recent.3": tw("recentSteps.month"),
-    "earlier.7": tw("earlierSteps.day"),
-    "earlier.4": tw("earlierSteps.week"),
-    "earlier.3": tw("earlierSteps.month"),
-    "average.7": tw("averageSteps.day"),
-    "average.4": tw("averageSteps.week"),
-    "average.3": tw("averageSteps.month"),
-  }), [beforeName, nowName, periodWords.before, tw]);
+  const locale = useLocale();
+  const nowName = spanNameOf({ from: range.from, to: range.to }, locale);
+  const beforeName = spanNameOf(range.before, locale);
+  // Built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
+  const words = useMemo(
+    () => searchConsoleSeesWords({ sees: wordsReader(tw), before: periodWords.before, nowName, beforeName }),
+    [beforeName, nowName, periodWords.before, tw],
+  );
   // The same figures keep the same object, so the eye works them out again only when they change.
-  const worded = useMemo(() => (data && typeof data === "object" && !Array.isArray(data) ? { ...(data as Record<string, unknown>), words } : data), [data, words]);
+  const worded = useMemo(() => withSeesWords(data, words), [data, words]);
   const page = worded !== undefined && worded !== null
     ? {
       screen: `searchConsole.${eye ?? screen}`,

@@ -22,7 +22,7 @@ import { CUT_COLUMN } from "../../sites/_components/SiteCells";
 import { formatPosition, formatRate } from "../../search-console/_components/searchConsoleFormat";
 import { BingGate } from "./BingNotices";
 import { BingRecordFigures, BingSees, useBingEyeNames } from "./BingParts";
-import { recordSeen } from "./bingSeesData";
+import { recordSeen } from "@/convex/utils/sees/eyeData/bing";
 import { BingRecordChart } from "./BingCharts";
 import { pathOf } from "./BingListTable";
 import { FEW_IMPRESSIONS, useBingHref, useBingSiteId, useBingStatus, usePeriod } from "./useBing";

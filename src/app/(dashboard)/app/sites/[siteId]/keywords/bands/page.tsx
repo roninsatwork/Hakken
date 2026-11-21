@@ -25,7 +25,7 @@ import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFo
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
-import { bandsSees } from "../_components/keywordSees";
+import { bandsSees } from "@/convex/utils/sees/eyeData/visibilityKeywords";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";

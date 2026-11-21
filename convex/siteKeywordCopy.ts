@@ -81,7 +81,7 @@ export type KeywordCopy = {
 };
 
 /** A site's keyword copy from one place, or null while it has none yet. */
-export async function readKeywordCopy(ctx: QueryCtx, websiteId: Id<"websites">, locationCode: number): Promise<KeywordCopy | null> {
+export async function readKeywordCopy(ctx: { db: QueryCtx["db"] }, websiteId: Id<"websites">, locationCode: number): Promise<KeywordCopy | null> {
   const copy = await readListCopy(ctx, "keywords", keywordsCopyKey(websiteId, locationCode), KEYWORD_COPY_FIELDS);
   if (!copy) return null;
   const rankingDay = typeof copy.meta.rankingDay === "string" ? copy.meta.rankingDay : null;

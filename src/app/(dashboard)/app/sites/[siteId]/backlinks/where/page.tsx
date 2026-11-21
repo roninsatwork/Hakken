@@ -18,7 +18,7 @@ import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteChar
 import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { whereLinksSees } from "@/convex/utils/sees/backlinks";
-import { whereSees } from "../_components/linkSees";
+import { whereSees } from "@/convex/utils/sees/eyeData/visibilityBacklinks";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";

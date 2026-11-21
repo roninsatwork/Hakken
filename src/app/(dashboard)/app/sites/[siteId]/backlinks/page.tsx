@@ -17,8 +17,8 @@ import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { backlinksSummarySees } from "@/convex/utils/sees/backlinks";
 import { SiteSees } from "../../_components/SiteSees";
-import { summarySees } from "./_components/linkSees";
-import { newestOfEach } from "../newestOfEach";
+import { summarySees } from "@/convex/utils/sees/eyeData/visibilityBacklinks";
+import { newestOfEach } from "@/convex/utils/sees/eyeData/visibilityChecks";
 
 type Measure = "referringDomains" | "backlinks" | "domainRank";
 const MEASURES: Measure[] = ["referringDomains", "backlinks", "domainRank"];

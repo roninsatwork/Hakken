@@ -43,6 +43,7 @@ function answer(telegram: unknown) {
     "users:getMe": { _id: "users_1", role: "USER", name: "Jo Hughes" },
     "readerPreferences:getMyEmailPreferences": { language: "en", choices },
     "telegram:myTelegram": telegram,
+    "chatAppPasses:myChatApps": { switchedOn: true, companyName: "Period House Group", apps: [{ app: "chatgpt", linked: null }, { app: "claude", linked: null }] },
   }));
 }
 
@@ -113,9 +114,13 @@ describe("Integrations", () => {
   it("every app a person can link, one row each, as drawn", async () => {
     where.search = "tab=integrations";
     const { container } = render(<ProfileTabs />);
-    await screen.findByText("Not linked");
+    // ChatGPT and Claude first, then Telegram (ask-hakken-from-ai-chat-apps-plan-2026-11-21.md, board 2).
+    expect(await screen.findAllByText("Not linked")).toHaveLength(3);
     await expectApprovedLook(container.querySelector(".animate-in") ?? container, "outbox-and-preferences", "ProfileIntegrations", "Integrations");
-    fireEvent.click(screen.getByRole("button", { name: "Link" }));
+    const links = screen.getAllByRole("button", { name: "Link" });
+    fireEvent.click(links[0]);
+    expect(push).toHaveBeenCalledWith("/app/profile/integrations/chatgpt");
+    fireEvent.click(links[2]);
     expect(push).toHaveBeenCalledWith("/app/profile/integrations/telegram");
   });
 
@@ -128,11 +133,13 @@ describe("Integrations", () => {
     await expectApprovedLook(container.querySelector(".animate-in") ?? container, "outbox-and-preferences", "ProfileIntegrationsLinked", "Integrations, linked");
   });
 
-  it("lists no app that is not set up for the platform yet", async () => {
+  it("lists Telegram only once it is set up for the platform", async () => {
     where.search = "tab=integrations";
     answer({ bot: null, linked: null, code: null });
     render(<ProfileTabs />);
-    expect(await screen.findByText("No apps to link yet.")).toBeInTheDocument();
+    expect(await screen.findByText("ChatGPT")).toBeInTheDocument();
+    expect(screen.getByText("Claude")).toBeInTheDocument();
+    expect(screen.queryByText("Telegram")).not.toBeInTheDocument();
   });
 });
 

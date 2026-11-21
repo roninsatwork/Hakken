@@ -7,7 +7,7 @@ import { UNKNOWN } from "./searchConsoleFacts";
 import { getActiveCompanyId } from "./authz";
 import { moduleAction, moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { askGoogle } from "./searchConsoleLiveAsks";
 import { piecesOf } from "./searchConsoleLongLists";
@@ -326,11 +326,14 @@ export const searchConsoleLookMonths = moduleQuery({
   module: MENU_FEATURES.searchConsole,
   args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, country: v.optional(v.string()) },
   returns: v.object({ months: v.array(monthValidator), notReady: v.boolean() }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    return await readLookMonths(ctx, site.hold, args);
-  },
+  handler: async (ctx, args) => await readLookMonthsFor(ctx, args),
 });
+
+/** Rich results' months for the caller's own website: the screen's read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readLookMonthsFor(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; searchType: SearchType; country?: string }) {
+  const site = await requireMySite(ctx, args.siteId);
+  return await readLookMonths(ctx, site.hold, args);
+}
 
 /** Rich results' months for a website: the screen's read, and Ask Hakken's. */
 export async function readLookMonths(ctx: { db: QueryCtx["db"] }, hold: Doc<"companyWebsites">, args: { searchType: SearchType; country?: string }): Promise<{ months: Array<typeof monthValidator.type>; notReady: boolean }> {

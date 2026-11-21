@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { FileSearch } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { reasonOf, reasonSlug, type ReasonKind } from "@/convex/utils/indexingReasons";
+import { reasonSlug, type ReasonKind } from "@/convex/utils/indexingReasons";
 import { EXAMPLE_COLUMNS, type PageShown, type ReasonBox, type ReasonPage } from "@/convex/utils/indexingFigures";
 import { DAYS_KEPT, dayAfter, restDoneBy } from "@/convex/utils/pageIndexChecks";
 import { ukDay } from "@/convex/utils/calendarPeriods";
@@ -26,6 +26,8 @@ import { hasFigures, type LiveProblemKind } from "./SearchConsoleNotices";
 import { useLiveAsk, useRecordHref } from "./searchConsoleRecords";
 import { countryArg, periodArg, useSearchConsoleCountry, useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 import type { IndexingBoxes as Boxes, IndexingRow, ReasonNames } from "./indexingSees";
+import { reasonNamesOf } from "@/convex/utils/sees/eyeData/searchConsoleIndexing";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 /**
  * Search Console → Indexing's parts (search-console-indexing-v1-plan-2026-11-18.md; the canvas's V1, drawn on the
@@ -57,11 +59,8 @@ function useMonthName(): (day: string) => string {
 /** A reason in the reader's words: Google's term, its short name, its plain line and its Source; Google's own words for one not on the list. */
 export function useReasonNames(): (words: string) => ReasonNames {
   const t = useTranslations("searchConsole.indexing");
-  return useCallback((words: string) => {
-    const reason = reasonOf(words);
-    if (!reason) return { name: words, short: words, means: "", source: "–" };
-    return { name: t(`reasons.${reason.key}.words`), short: t(`reasons.${reason.key}.short`), means: t(`reasons.${reason.key}.means`), source: t(`sources.${reason.source}`) };
-  }, [t]);
+  // The names a chat app's question names them by too (`reasonNamesOf`).
+  return useMemo(() => reasonNamesOf(wordsReader(t)), [t]);
 }
 
 /** What the reads are asked: the dates and the country chosen. Null until the website's connection is read. */

@@ -1,9 +1,9 @@
-import { v, type Infer } from "convex/values";
+import { v, type Infer, type ObjectType } from "convex/values";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { askedPlace, listHold, myRivals, requireMySite } from "./siteAccess";
+import { askedPlace, listHold, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { holdQuestion, holdQuestions, holdSearches } from "./holdLists";
 import { holdBrandNames } from "./holdProfiles";
 import { aiEngineValidator, fanOutPlace, fanOutSourceValidator, type AiEngine } from "./seoAiEngines";
@@ -83,81 +83,84 @@ export const listAngles = moduleQuery({
     tracking: v.union(v.null(), v.object({ count: v.number(), limit: v.number() })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = listHold(site);
-    const own = !isTrackedHold(site.hold);
-    if (!holdId) return { rows: [], cut: null, own, wordings: 0, built: false, audit: null, tracking: null };
-    const { anglesShown, fanOutTrackedPerSite } = await readFanOutLimits(ctx, site.hold.companyId, holdId);
-
-    const [questions, searches, list, rows] = await Promise.all([
-      holdQuestions(ctx, holdId, MAX_LIST),
-      holdSearches(ctx, holdId, MAX_LIST),
-      ctx.db.query("fanOutAngleLists").withIndex("by_hold", (q) => q.eq("holdId", holdId)).unique(),
-      ctx.db
-        .query("fanOutAngles")
-        .withIndex("by_hold_seen", (q) => q.eq("holdId", holdId))
-        .order("desc")
-        .take(anglesShown + 1),
-    ]);
-    // A question removed since the angles were built takes its angles with it.
-    const asked = new Set(questions.map((question) => question.prompt));
-    // Tracked means checked every run: a search paused on Tracked keywords is not.
-    const tracked = new Set(searches.filter((search) => search.isActive).map((search) => search.keyword));
-    const kept = rows.slice(0, anglesShown).filter((row) => asked.has(row.prompt));
-
-    const judgments = new Map<string, { verdict: "ANSWERED" | "NONE" | "OFF_TOPIC" | "UNSURE"; page: string | null; url: string | null }>();
-    if (own) {
-      for (const angle of new Set(kept.map((row) => row.angle))) {
-        const held = await ctx.db
-          .query("fanOutPageJudgments")
-          .withIndex("by_hold_angle", (q) => q.eq("holdId", holdId).eq("angle", angle))
-          .unique();
-        if (held) judgments.set(angle, { verdict: held.verdict, page: held.page ?? null, url: held.url ?? null });
-      }
-    }
-
-    const shaped = await Promise.all(kept.map(async (row) => {
-      const lead = row.wordings[0];
-      const intent = lead
-        ? await ctx.db.query("seoKeywordIntents").withIndex("by_keyword", (q) => q.eq("keyword", lead.query)).unique()
-        : null;
-      return {
-        key: `${row.prompt}::${row.angle}`,
-        angle: row.angle,
-        prompt: row.prompt,
-        query: lead?.query ?? row.angle,
-        queryText: lead?.queryText ?? row.angle,
-        otherWordings: row.wordings.slice(1).map((wording) => wording.queryText),
-        intent: intent?.intent ?? null,
-        engines: row.engines,
-        timesSeen: row.timesSeen,
-        lastSeenDay: row.lastSeenDay,
-        position: own && row.position ? { value: row.position.value, from: row.position.from, day: row.position.day } : null,
-        page: own ? judgments.get(row.angle) ?? null : null,
-        tracked: row.wordings.some((wording) => tracked.has(wording.query)),
-      };
-    }));
-
-    const crawl = own
-      ? await ctx.db
-        .query("siteCrawls")
-        .withIndex("by_site_day", (q) => q.eq("websiteId", site.website._id))
-        .order("desc")
-        .first()
-      : null;
-
-    return {
-      rows: shaped,
-      cut: rows.length > anglesShown || list?.cut ? shaped.length : null,
-      own,
-      wordings: shaped.reduce((sum, row) => sum + 1 + row.otherWordings.length, 0),
-      built: Boolean(list && list.rebuiltAt > 0),
-      audit: crawl ? { pagesCrawled: crawl.pagesCrawled, maxPages: crawl.maxPages ?? null } : null,
-      tracking: own ? { count: tickedCount(searches), limit: fanOutTrackedPerSite } : null,
-    };
-  }, anglesSees),
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => await readListAngles(ctx, args), anglesSees),
 });
+
+/** listAngles's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListAngles(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = listHold(site);
+  const own = !isTrackedHold(site.hold);
+  if (!holdId) return { rows: [], cut: null, own, wordings: 0, built: false, audit: null, tracking: null };
+  const { anglesShown, fanOutTrackedPerSite } = await readFanOutLimits(ctx, site.hold.companyId, holdId);
+
+  const [questions, searches, list, rows] = await Promise.all([
+    holdQuestions(ctx, holdId, MAX_LIST),
+    holdSearches(ctx, holdId, MAX_LIST),
+    ctx.db.query("fanOutAngleLists").withIndex("by_hold", (q) => q.eq("holdId", holdId)).unique(),
+    ctx.db
+      .query("fanOutAngles")
+      .withIndex("by_hold_seen", (q) => q.eq("holdId", holdId))
+      .order("desc")
+      .take(anglesShown + 1),
+  ]);
+  // A question removed since the angles were built takes its angles with it.
+  const asked = new Set(questions.map((question) => question.prompt));
+  // Tracked means checked every run: a search paused on Tracked keywords is not.
+  const tracked = new Set(searches.filter((search) => search.isActive).map((search) => search.keyword));
+  const kept = rows.slice(0, anglesShown).filter((row) => asked.has(row.prompt));
+
+  const judgments = new Map<string, { verdict: "ANSWERED" | "NONE" | "OFF_TOPIC" | "UNSURE"; page: string | null; url: string | null }>();
+  if (own) {
+    for (const angle of new Set(kept.map((row) => row.angle))) {
+      const held = await ctx.db
+        .query("fanOutPageJudgments")
+        .withIndex("by_hold_angle", (q) => q.eq("holdId", holdId).eq("angle", angle))
+        .unique();
+      if (held) judgments.set(angle, { verdict: held.verdict, page: held.page ?? null, url: held.url ?? null });
+    }
+  }
+
+  const shaped = await Promise.all(kept.map(async (row) => {
+    const lead = row.wordings[0];
+    const intent = lead
+      ? await ctx.db.query("seoKeywordIntents").withIndex("by_keyword", (q) => q.eq("keyword", lead.query)).unique()
+      : null;
+    return {
+      key: `${row.prompt}::${row.angle}`,
+      angle: row.angle,
+      prompt: row.prompt,
+      query: lead?.query ?? row.angle,
+      queryText: lead?.queryText ?? row.angle,
+      otherWordings: row.wordings.slice(1).map((wording) => wording.queryText),
+      intent: intent?.intent ?? null,
+      engines: row.engines,
+      timesSeen: row.timesSeen,
+      lastSeenDay: row.lastSeenDay,
+      position: own && row.position ? { value: row.position.value, from: row.position.from, day: row.position.day } : null,
+      page: own ? judgments.get(row.angle) ?? null : null,
+      tracked: row.wordings.some((wording) => tracked.has(wording.query)),
+    };
+  }));
+
+  const crawl = own
+    ? await ctx.db
+      .query("siteCrawls")
+      .withIndex("by_site_day", (q) => q.eq("websiteId", site.website._id))
+      .order("desc")
+      .first()
+    : null;
+
+  return {
+    rows: shaped,
+    cut: rows.length > anglesShown || list?.cut ? shaped.length : null,
+    own,
+    wordings: shaped.reduce((sum, row) => sum + 1 + row.otherWordings.length, 0),
+    built: Boolean(list && list.rebuiltAt > 0),
+    audit: crawl ? { pagesCrawled: crawl.pagesCrawled, maxPages: crawl.maxPages ?? null } : null,
+    tracking: own ? { count: tickedCount(searches), limit: fanOutTrackedPerSite } : null,
+  };
+}
 
 const stanceValidator = v.union(v.literal("RECOMMENDED"), v.literal("NAMED"), v.literal("WARNED_AGAINST"), v.literal("NOT_NAMED"));
 
@@ -259,6 +262,8 @@ const pageJudgmentValidator = v.object({
   url: v.union(v.string(), v.null()),
 });
 
+const keywordAngleArgs = { siteId: v.id("companyWebsites"), keyword: v.string() };
+
 /**
  * One search as a fan-out query, for the page it opens (Anthony, 2026-09-29:
  * the Fan-out queries table keeps four columns, "we can do this on the page it
@@ -270,7 +275,7 @@ const pageJudgmentValidator = v.object({
  */
 export const keywordAngle = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), keyword: v.string() },
+  args: keywordAngleArgs,
   returns: v.union(v.null(), v.object({
     questions: v.array(v.string()),
     engines: v.array(fanOutSourceValidator),
@@ -285,38 +290,41 @@ export const keywordAngle = moduleQuery({
     /** The site's own names, to pick out in the answers. */
     names: v.array(v.string()),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = listHold(site);
-    if (!holdId) return null;
-    const keyword = args.keyword.trim().toLowerCase();
-    const angle = angleOf(keyword);
-    const questions = await holdQuestions(ctx, holdId, MAX_LIST);
-    const found = await anglesOfSearch(ctx, holdId, new Set(questions.map((question) => question.prompt)), keyword);
-    if (found.length === 0) return null;
-
-    const intent = await ctx.db.query("seoKeywordIntents").withIndex("by_keyword", (q) => q.eq("keyword", keyword)).unique();
-    const judged = isTrackedHold(site.hold)
-      ? null
-      : await ctx.db.query("fanOutPageJudgments").withIndex("by_hold_angle", (q) => q.eq("holdId", holdId).eq("angle", angle)).unique();
-    const answers = await answersThatRanIt(ctx, site, holdId, [...new Set(found.map((row) => row.prompt))], keyword);
-    const others = new Set<string>();
-    for (const row of found) {
-      for (const wording of row.wordings) if (wording.query !== keyword) others.add(wording.queryText);
-    }
-    return {
-      questions: [...new Set(found.map((row) => row.prompt))],
-      engines: [...new Set(found.flatMap((row) => row.engines))],
-      timesSeen: found.reduce((sum, row) => sum + row.timesSeen, 0),
-      lastSeenDay: found.map((row) => row.lastSeenDay).sort().at(-1) ?? "",
-      otherWordings: [...others],
-      intent: intent?.intent ?? null,
-      page: judged ? { verdict: judged.verdict, page: judged.page ?? null, url: judged.url ?? null } : null,
-      answers,
-      names: answers.length > 0 ? (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name) : [],
-    };
-  },
+  handler: async (ctx, args) => await readKeywordAngle(ctx, args),
 });
+
+/** keywordAngle's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readKeywordAngle(ctx: SiteReader, args: ObjectType<typeof keywordAngleArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = listHold(site);
+  if (!holdId) return null;
+  const keyword = args.keyword.trim().toLowerCase();
+  const angle = angleOf(keyword);
+  const questions = await holdQuestions(ctx, holdId, MAX_LIST);
+  const found = await anglesOfSearch(ctx, holdId, new Set(questions.map((question) => question.prompt)), keyword);
+  if (found.length === 0) return null;
+
+  const intent = await ctx.db.query("seoKeywordIntents").withIndex("by_keyword", (q) => q.eq("keyword", keyword)).unique();
+  const judged = isTrackedHold(site.hold)
+    ? null
+    : await ctx.db.query("fanOutPageJudgments").withIndex("by_hold_angle", (q) => q.eq("holdId", holdId).eq("angle", angle)).unique();
+  const answers = await answersThatRanIt(ctx, site, holdId, [...new Set(found.map((row) => row.prompt))], keyword);
+  const others = new Set<string>();
+  for (const row of found) {
+    for (const wording of row.wordings) if (wording.query !== keyword) others.add(wording.queryText);
+  }
+  return {
+    questions: [...new Set(found.map((row) => row.prompt))],
+    engines: [...new Set(found.flatMap((row) => row.engines))],
+    timesSeen: found.reduce((sum, row) => sum + row.timesSeen, 0),
+    lastSeenDay: found.map((row) => row.lastSeenDay).sort().at(-1) ?? "",
+    otherWordings: [...others],
+    intent: intent?.intent ?? null,
+    page: judged ? { verdict: judged.verdict, page: judged.page ?? null, url: judged.url ?? null } : null,
+    answers,
+    names: answers.length > 0 ? (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name) : [],
+  };
+}
 
 /**
  * Choice reads at most, over all of a website's tracked fan-out queries, to
@@ -339,6 +347,8 @@ const trackedFanOutRowValidator = v.object({
   timesSeen: v.union(v.number(), v.null()),
 });
 
+const listTrackedFanOutArgs = { siteId: v.id("companyWebsites") };
+
 /**
  * The Sites Tracked fan-out queries page (Anthony, 2026-10-03): the fan-out
  * queries the company has ticked to check on Google every run — its tracked
@@ -356,7 +366,7 @@ const trackedFanOutRowValidator = v.object({
  */
 export const listTrackedFanOut = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: listTrackedFanOutArgs,
   returns: v.object({
     rows: v.array(trackedFanOutRowValidator),
     /** The site open is the company's own: its ticks can be taken off. */
@@ -364,60 +374,63 @@ export const listTrackedFanOut = moduleQuery({
     /** The company's own site: how many fan-out queries it tracks, and its limit. Null for a competitor. */
     tracking: v.union(v.null(), v.object({ count: v.number(), limit: v.number() })),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = listHold(site);
-    const own = !isTrackedHold(site.hold);
-    if (!holdId) return { rows: [], own, tracking: null };
+  handler: async (ctx, args) => await readTrackedFanOut(ctx, args),
+});
 
-    const [questions, searches, limits] = await Promise.all([
-      holdQuestions(ctx, holdId, MAX_LIST),
-      holdSearches(ctx, holdId, MAX_LIST),
-      own ? readFanOutLimits(ctx, site.hold.companyId, holdId) : Promise.resolve(null),
-    ]);
-    const asked = new Set(questions.map((question) => question.prompt));
-    // Ticked and running: the same searches `tickedCount` counts.
-    const ticked = searches.filter((search) => search.isActive && search.addedFrom === "AI_SEARCH");
-    const found = await Promise.all(ticked.map((search) => anglesOfSearch(ctx, holdId, asked, search.keyword)));
+/** listTrackedFanOut's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readTrackedFanOut(ctx: SiteReader, args: ObjectType<typeof listTrackedFanOutArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = listHold(site);
+  const own = !isTrackedHold(site.hold);
+  if (!holdId) return { rows: [], own, tracking: null };
 
-    let choiceReads = 0;
-    const rows: Array<Infer<typeof trackedFanOutRowValidator>> = [];
-    for (const [index, search] of ticked.entries()) {
-      const angles = found[index];
-      if (angles.length > 0) {
-        const wording = angles.flatMap((row) => row.wordings).find((entry) => entry.query === search.keyword);
-        rows.push({
-          keyword: search.keyword,
-          queryText: wording?.queryText ?? search.keyword,
-          prompt: angles[0].prompt,
-          engines: [...new Set(angles.flatMap((row) => row.engines))],
-          timesSeen: angles.reduce((sum, row) => sum + row.timesSeen, 0),
-        });
-        continue;
-      }
-      // One the company added itself: the question whose list holds it.
-      let choice: Doc<"fanOutQueryChoices"> | null = null;
-      for (const question of questions) {
-        if (choiceReads >= CHOICE_READS) break;
-        choiceReads += 1;
-        const held = await ctx.db
-          .query("fanOutQueryChoices")
-          .withIndex("by_hold_prompt_query", (q) => q.eq("holdId", holdId).eq("prompt", question.prompt).eq("query", search.keyword))
-          .first();
-        if (held && held.own && !held.removed) {
-          choice = held;
-          break;
-        }
-      }
+  const [questions, searches, limits] = await Promise.all([
+    holdQuestions(ctx, holdId, MAX_LIST),
+    holdSearches(ctx, holdId, MAX_LIST),
+    own ? readFanOutLimits(ctx, site.hold.companyId, holdId) : Promise.resolve(null),
+  ]);
+  const asked = new Set(questions.map((question) => question.prompt));
+  // Ticked and running: the same searches `tickedCount` counts.
+  const ticked = searches.filter((search) => search.isActive && search.addedFrom === "AI_SEARCH");
+  const found = await Promise.all(ticked.map((search) => anglesOfSearch(ctx, holdId, asked, search.keyword)));
+
+  let choiceReads = 0;
+  const rows: Array<Infer<typeof trackedFanOutRowValidator>> = [];
+  for (const [index, search] of ticked.entries()) {
+    const angles = found[index];
+    if (angles.length > 0) {
+      const wording = angles.flatMap((row) => row.wordings).find((entry) => entry.query === search.keyword);
       rows.push({
         keyword: search.keyword,
-        queryText: choice?.queryText ?? search.keyword,
-        prompt: choice?.prompt ?? null,
-        engines: [],
-        timesSeen: null,
+        queryText: wording?.queryText ?? search.keyword,
+        prompt: angles[0].prompt,
+        engines: [...new Set(angles.flatMap((row) => row.engines))],
+        timesSeen: angles.reduce((sum, row) => sum + row.timesSeen, 0),
       });
+      continue;
     }
+    // One the company added itself: the question whose list holds it.
+    let choice: Doc<"fanOutQueryChoices"> | null = null;
+    for (const question of questions) {
+      if (choiceReads >= CHOICE_READS) break;
+      choiceReads += 1;
+      const held = await ctx.db
+        .query("fanOutQueryChoices")
+        .withIndex("by_hold_prompt_query", (q) => q.eq("holdId", holdId).eq("prompt", question.prompt).eq("query", search.keyword))
+        .first();
+      if (held && held.own && !held.removed) {
+        choice = held;
+        break;
+      }
+    }
+    rows.push({
+      keyword: search.keyword,
+      queryText: choice?.queryText ?? search.keyword,
+      prompt: choice?.prompt ?? null,
+      engines: [],
+      timesSeen: null,
+    });
+  }
 
-    return { rows, own, tracking: limits ? { count: tickedCount(searches), limit: limits.fanOutTrackedPerSite } : null };
-  },
-});
+  return { rows, own, tracking: limits ? { count: tickedCount(searches), limit: limits.fanOutTrackedPerSite } : null };
+}

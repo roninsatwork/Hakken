@@ -34,12 +34,15 @@ import {
 } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { appearanceSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { appearanceEyeData, appearanceRowsOf, type AppearanceRow } from "@/convex/utils/sees/eyeData/searchConsoleChanges";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 /**
  * A kind of rich result; `counted` false when its pages are not counted (past the kinds counted), as against still coming
  * (`pages` null). `change` its clicks up or down since the period before, where that's kept.
  */
-type Kind = { key: string; name: string; clicks: number; impressions: number; ctr: number; position: number; pages: number | null; counted: boolean; previousClicks: number | null; change: number | null };
+/** A kind of rich result as the table lists it (`appearanceRowsOf`). */
+type Kind = AppearanceRow;
 const SORTS: SiteSortColumns<Kind, "key" | "clicks" | "change" | "impressions" | "position" | "pages"> = {
   key: { value: (row) => row.name, first: "asc" },
   clicks: { value: (row) => row.clicks, first: "desc" },
@@ -93,21 +96,8 @@ export default function SearchConsoleAppearancePage() {
   const pages = useLiveAsk(api.searchConsoleLists.searchConsoleAppearancePages, held && !countedReady && kinds.length > 0 ? { ...dates, kinds, ...countryArg(country) } : null);
   const pagesOf = new Map(pages.answer?.ok ? pages.answer.pages.map((entry) => [entry.kind, entry.pages]) : []);
   const known = (key: string) => (t.has(`appearance.names.${key}`) ? t(`appearance.names.${key}`) : null);
-  const rows: Kind[] | undefined = appearances?.map((row) => {
-    const counted = countedReady ? (row.count ?? 0) >= 0 : pages.answer === undefined || pagesOf.has(row.key);
-    return {
-      key: row.key,
-      name: appearanceName(row.key, known),
-      previousClicks: row.previousClicks ?? null,
-      change: row.previousClicks === null || row.previousClicks === undefined ? null : row.clicks - row.previousClicks,
-      clicks: row.clicks,
-      impressions: row.impressions,
-      ctr: row.ctr,
-      position: row.position,
-      pages: !counted ? null : countedReady ? row.count : (pagesOf.get(row.key) ?? null),
-      counted,
-    };
-  });
+  // Each kind as the table lists it, as a chat app's question lists it too (`appearanceRowsOf`).
+  const rows: Kind[] | undefined = appearanceRowsOf(appearances, countedReady, pages.answer === undefined ? undefined : pagesOf, wordsReader(t));
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(row.name));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "clicks", name: nameOf });
@@ -128,14 +118,7 @@ export default function SearchConsoleAppearancePage() {
           <SearchConsoleSees
             screen="appearance"
             seen={rows ? appearanceSees(rows.length, [...rows].sort((left, right) => right.clicks - left.clicks)[0] ? { name: [...rows].sort((left, right) => right.clicks - left.clicks)[0].name } : null) : null}
-            data={rows && performance ? {
-              kinds: rows.map((row) => ({ name: row.name, clicks: row.clicks, previousClicks: row.previousClicks, impressions: row.impressions, position: row.position, pages: row.pages })),
-              totals: performance.totals ?? null,
-              previous: performance.previous ?? null,
-              months: months ? months.months.map((month) => ({ ...month, name: formatMonth(month.month.slice(0, 7)) })) : null,
-              pagesShown,
-              names: { plain: t("appearance.months.plain"), rich: t("appearance.title") },
-            } : undefined}
+            data={appearanceEyeData({ rows, performance, months, pagesShown }, wordsReader(t), { month: formatMonth })}
           />
           <ResultKindSwitch />
           <LookBoxes looks={rows} all={all} against={when.inBefore} pagesShown={pagesShown} />

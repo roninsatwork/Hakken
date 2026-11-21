@@ -1,10 +1,10 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { listHold, requireMySite, SITE_PAGE_MAX } from "./siteAccess";
+import { listHold, requireMySite, SITE_PAGE_MAX, type SiteReader } from "./siteAccess";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { keywordStanding, readKeywordCopy, type KeywordCopyRow } from "./siteKeywordCopy";
 import { pagesCopyKey, readListCopy } from "./siteListCopies";
@@ -143,7 +143,7 @@ function keywordRow(row: Rank, host: string) {
 }
 
 /** The rows of one page of a keyword table, read in full: one read by id per row on screen. */
-async function fullKeywordRows(ctx: QueryCtx, shown: readonly KeywordCopyRow[], host: string) {
+async function fullKeywordRows(ctx: { db: QueryCtx["db"] }, shown: readonly KeywordCopyRow[], host: string) {
   const rows = await Promise.all(shown.map((row) => ctx.db.get(row.id)));
   // A row removed since the copy was built (a purge) is simply not shown.
   return rows.flatMap((row) => (row ? [keywordRow(row, host)] : []));
@@ -168,6 +168,32 @@ const KEYWORD_SORTS: ListSorts<KeywordCopyRow, "keyword" | "position" | "change"
   lastSeen: { value: (row) => row.day, first: "desc" },
 };
 
+const listKeywordsArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  band: v.optional(rankBandValidator),
+  intent: v.optional(rankIntentValidator),
+  status: v.optional(rankStatusValidator),
+  /** Only the searches still held from a check before the latest (T9). */
+  older: v.optional(v.boolean()),
+  /** Only the searches one of the site's pages ranks with: its path. (`page` is the page of the table.) */
+  path: v.optional(v.string()),
+  /** How hard the search is, as a band of DataForSEO's difficulty. */
+  kdBand: v.optional(kdBandValidator),
+  sort: v.optional(v.union(
+    v.literal("keyword"), v.literal("position"), v.literal("change"), v.literal("volume"),
+    v.literal("cpc"), v.literal("traffic"), v.literal("lastSeen"),
+  )),
+  /**
+   * Which way: each column's own first — the keyword A to Z, top position,
+   * the biggest rise, most searched, dearest clicks, most visits, the newest
+   * seen — unless a heading pressed again asks for the other. Always over
+   * the whole list, before the page is cut.
+   */
+  direction: sortDirectionArg,
+};
+
 /**
  * Every keyword the site ranks for, best first, most-searched, most visits or
  * dearest clicks first — or those on one page, in one band, of one intent,
@@ -179,59 +205,38 @@ const KEYWORD_SORTS: ListSorts<KeywordCopyRow, "keyword" | "position" | "change"
  */
 export const listKeywords = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    band: v.optional(rankBandValidator),
-    intent: v.optional(rankIntentValidator),
-    status: v.optional(rankStatusValidator),
-    /** Only the searches still held from a check before the latest (T9). */
-    older: v.optional(v.boolean()),
-    /** Only the searches one of the site's pages ranks with: its path. (`page` is the page of the table.) */
-    path: v.optional(v.string()),
-    /** How hard the search is, as a band of DataForSEO's difficulty. */
-    kdBand: v.optional(kdBandValidator),
-    sort: v.optional(v.union(
-      v.literal("keyword"), v.literal("position"), v.literal("change"), v.literal("volume"),
-      v.literal("cpc"), v.literal("traffic"), v.literal("lastSeen"),
-    )),
-    /**
-     * Which way: each column's own first — the keyword A to Z, top position,
-     * the biggest rise, most searched, dearest clicks, most visits, the newest
-     * seen — unless a heading pressed again asks for the other. Always over
-     * the whole list, before the page is cut.
-     */
-    direction: sortDirectionArg,
-  },
+  args: listKeywordsArgs,
   returns: listPageSeenResult(keywordRowValidator),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const copy = await readKeywordCopy(ctx, site.website._id, site.place);
-    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
-    const matches = wordStartMatcher(args.search);
-    const list = copy.rows.filter((row) => {
-      const standing = keywordStanding(row, copy.latestCheckDay);
-      if (args.status === "LOST") {
-        if (standing !== "lost") return false;
-      } else if (args.older) {
-        if (standing !== "older" || (args.status && row.status !== args.status)) return false;
-      } else if (standing !== "current" || (args.status && row.status !== args.status)) {
-        return false;
-      }
-      return (!args.band || row.band === args.band)
-        && (!args.intent || row.intent === args.intent)
-        && (args.path === undefined || row.page === args.path)
-        && (!args.kdBand || row.kdBand === args.kdBand)
-        // The keyword only, never its page (Anthony, 2026-09-30): Top pages searches pages.
-        && (!matches || matches(row.keyword));
-    }).sort(listOrder(KEYWORD_SORTS, args.sort ?? "position", args.direction, byKeyword));
-    const page = pageOfList(list, args.page, args.rows);
-    // What Hakken sees is of every search ranked for now, whatever the filters.
-    const current = copy.rows.filter((row) => keywordStanding(row, copy.latestCheckDay) === "current");
-    return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host), seen: keywordsSees(current) };
-  },
+  handler: async (ctx, args) => await readListKeywords(ctx, args),
 });
+
+/** listKeywords's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListKeywords(ctx: SiteReader, args: ObjectType<typeof listKeywordsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const copy = await readKeywordCopy(ctx, site.website._id, site.place);
+  if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
+  const matches = wordStartMatcher(args.search);
+  const list = copy.rows.filter((row) => {
+    const standing = keywordStanding(row, copy.latestCheckDay);
+    if (args.status === "LOST") {
+      if (standing !== "lost") return false;
+    } else if (args.older) {
+      if (standing !== "older" || (args.status && row.status !== args.status)) return false;
+    } else if (standing !== "current" || (args.status && row.status !== args.status)) {
+      return false;
+    }
+    return (!args.band || row.band === args.band)
+      && (!args.intent || row.intent === args.intent)
+      && (args.path === undefined || row.page === args.path)
+      && (!args.kdBand || row.kdBand === args.kdBand)
+      // The keyword only, never its page (Anthony, 2026-09-30): Top pages searches pages.
+      && (!matches || matches(row.keyword));
+  }).sort(listOrder(KEYWORD_SORTS, args.sort ?? "position", args.direction, byKeyword));
+  const page = pageOfList(list, args.page, args.rows);
+  // What Hakken sees is of every search ranked for now, whatever the filters.
+  const current = copy.rows.filter((row) => keywordStanding(row, copy.latestCheckDay) === "current");
+  return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host), seen: keywordsSees(current) };
+}
 
 /**
  * Where these keywords stood on an earlier day: the "compare with" column.
@@ -295,6 +300,16 @@ const MOVE_SORTS: ListSorts<KeywordCopyRow, "keyword" | "fromTo" | "change" | "v
   volume: { value: (row) => row.volume, first: "desc" },
 };
 
+const listMovesArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  /** `LEFT`: held at the check before and not at the latest, on a list held in part (§4.C). */
+  status: v.union(v.literal("UP"), v.literal("DOWN"), v.literal("NEW"), v.literal("LOST"), v.literal("LEFT")),
+  search: v.optional(v.string()),
+  sort: v.optional(v.union(v.literal("keyword"), v.literal("fromTo"), v.literal("change"), v.literal("volume"))),
+  direction: sortDirectionArg,
+};
+
 /**
  * Wins and losses: the searches that moved at the latest check — the same
  * moves the side menu counts (T10), for both are read from the site
@@ -305,33 +320,28 @@ const MOVE_SORTS: ListSorts<KeywordCopyRow, "keyword" | "fromTo" | "change" | "v
  */
 export const listMoves = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    /** `LEFT`: held at the check before and not at the latest, on a list held in part (§4.C). */
-    status: v.union(v.literal("UP"), v.literal("DOWN"), v.literal("NEW"), v.literal("LOST"), v.literal("LEFT")),
-    search: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("keyword"), v.literal("fromTo"), v.literal("change"), v.literal("volume"))),
-    direction: sortDirectionArg,
-  },
+  args: listMovesArgs,
   returns: listPageSeenResult(keywordRowValidator),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const copy = await readKeywordCopy(ctx, site.website._id, site.place);
-    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
-    const matches = wordStartMatcher(args.search);
-    const opening = args.status === "UP" || args.status === "DOWN" ? "change" : "keyword";
-    const moved = (row: KeywordCopyRow) => (args.status === "LEFT"
-      ? copy.previousCheckDay !== null && row.day >= copy.previousCheckDay && keywordStanding(row, copy.latestCheckDay) === "older"
-      : row.status === args.status && row.day === copy.rankingDay);
-    const list = copy.rows
-      .filter((row) => moved(row) && (!matches || matches(row.keyword, row.page)))
-      .sort(listOrder(MOVE_SORTS, args.sort ?? opening, args.direction, byKeyword));
-    const page = pageOfList(list, args.page, args.rows);
-    // What Hakken sees is of every move at the newest check, whichever tab is open.
-    return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host), seen: movesSees(copy.rows, copy.rankingDay ?? "") };
-  },
+  handler: async (ctx, args) => await readListMoves(ctx, args),
 });
+
+/** listMoves's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListMoves(ctx: SiteReader, args: ObjectType<typeof listMovesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const copy = await readKeywordCopy(ctx, site.website._id, site.place);
+  if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
+  const matches = wordStartMatcher(args.search);
+  const opening = args.status === "UP" || args.status === "DOWN" ? "change" : "keyword";
+  const moved = (row: KeywordCopyRow) => (args.status === "LEFT"
+    ? copy.previousCheckDay !== null && row.day >= copy.previousCheckDay && keywordStanding(row, copy.latestCheckDay) === "older"
+    : row.status === args.status && row.day === copy.rankingDay);
+  const list = copy.rows
+    .filter((row) => moved(row) && (!matches || matches(row.keyword, row.page)))
+    .sort(listOrder(MOVE_SORTS, args.sort ?? opening, args.direction, byKeyword));
+  const page = pageOfList(list, args.page, args.rows);
+  // What Hakken sees is of every move at the newest check, whichever tab is open.
+  return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host), seen: movesSees(copy.rows, copy.rankingDay ?? "") };
+}
 
 /** A page as Top pages' compact copy holds it: every column the table sorts by. */
 type PageCopyRow = {
@@ -357,6 +367,17 @@ const PAGE_SORTS: ListSorts<PageCopyRow, "page" | "traffic" | "keywords" | "best
   linking: { value: (row) => row.referringDomains, first: "desc" },
 };
 
+const listPagesArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  section: v.optional(v.string()),
+  /** A page type; or, once the website has classifications, a classification's id or Not sorted. */
+  pageType: v.optional(v.string()),
+  sort: v.optional(v.union(v.literal("page"), v.literal("traffic"), v.literal("keywords"), v.literal("best"), v.literal("linking"))),
+  direction: sortDirectionArg,
+};
+
 /**
  * The pages the site ranks with, most keywords first unless a heading asks
  * otherwise — in one folder, of one type, or matching a search (word starts,
@@ -369,96 +390,92 @@ const PAGE_SORTS: ListSorts<PageCopyRow, "page" | "traffic" | "keywords" | "best
  */
 export const listPages = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    section: v.optional(v.string()),
-    /** A page type; or, once the website has classifications, a classification's id or Not sorted. */
-    pageType: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("page"), v.literal("traffic"), v.literal("keywords"), v.literal("best"), v.literal("linking"))),
-    direction: sortDirectionArg,
-  },
+  args: listPagesArgs,
   returns: listPageSeenResult(pageRowValidator),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const place = site.place;
-    const [copy, pageKinds] = await Promise.all([
-      readListCopy(ctx, "pages", pagesCopyKey(websiteId, place), PAGE_COPY_FIELDS),
-      readPageKinds(ctx, site.hold._id),
-    ]);
-    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
-    const matches = wordStartMatcher(args.search);
-    const kindOf = (row: PageCopyRow) => (pageKinds ? pageKinds.kindOf(row.path) : row.pageType);
-    const pagesHeld: PageCopyRow[] = copy.rows.map(([id, path, section, pageType, keywords, traffic, bestPosition, referringDomains]) => ({
-      id: id as Id<"sitePageRanks">,
-      path: path as string,
-      section: section as string,
-      pageType: pageType as string,
-      keywords: keywords as number,
-      traffic: traffic as number | null,
-      bestPosition: bestPosition as number | null,
-      referringDomains: referringDomains as number | null,
-    }));
-    const name = (row: PageCopyRow) => row.path;
-    const list = pagesHeld
-      .filter((row) => (!args.section || row.section === args.section)
-        && (!args.pageType || kindOf(row) === args.pageType)
-        // The address only, never its keywords (Anthony, 2026-09-30): Keywords searches those.
-        && (!matches || matches(row.path)))
-      .sort(listOrder(PAGE_SORTS, args.sort ?? "keywords", args.direction, name));
-    const shown = pageOfList(list, args.page, args.rows);
-    const result = {
-      page: (await Promise.all(shown.rows.map((row) => ctx.db.get(row.id)))).flatMap((row) => (row ? [row] : [])),
-    };
-
-    // Which engines cite each page on screen, by its path so every form of
-    // its address counts: one short read per row, counting only the answers
-    // to the questions this site is measured on (D17).
-    const asked = new Set((await askedQuestions(ctx, listHold(site), place, QUESTIONS_FOR_CITED_PAGES))
-      .map((entry) => `${entry.prompt}\u0000${entry.engine}\u0000${entry.locationCode}`));
-    const page = await Promise.all(result.page.map(async (row) => {
-      const citedRows = (await ctx.db
-        .query("siteCitedPages")
-        .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("page", row.page))
-        .take(CITED_ROWS_PER_PAGE))
-        .filter((entry) => asked.has(`${entry.prompt}\u0000${entry.engine}\u0000${entry.locationCode}`));
-      const cited = citedRows.length === 0 ? null : {
-        engines: [...new Set(citedRows.map((entry) => entry.engine))].sort(),
-        times: citedRows.reduce((sum, entry) => sum + entry.times, 0),
-      };
-      return {
-        _id: row._id,
-        page: row.page,
-        url: addressOf(row, site.website.host) ?? row.page,
-        section: row.section,
-        keywords: row.keywords,
-        bestPosition: row.bestPosition,
-        top3: row.top3,
-        topKeyword: row.topKeyword,
-        topKeywordVolume: row.topKeywordVolume,
-        firstSeenDay: row.firstSeenDay,
-        day: row.day,
-        aiEngines: cited?.engines ?? [],
-        aiTimes: cited?.times ?? 0,
-        traffic: row.traffic ?? null,
-        trafficValue: row.trafficValue ?? null,
-        pageRank: row.pageRank ?? null,
-        referringDomains: row.referringDomains ?? null,
-        backlinks: row.backlinks ?? null,
-        pageType: row.pageType ?? "UNJUDGED",
-        kind: pageKinds ? pageKinds.kindOf(row.page) : (row.pageType ?? "UNJUDGED"),
-      };
-    }));
-    return { ...shown, rows: page, seen: pagesSees(pagesHeld) };
-  },
+  handler: async (ctx, args) => await readListPages(ctx, args),
 });
+
+/** listPages's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListPages(ctx: SiteReader, args: ObjectType<typeof listPagesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId = site.website._id;
+  const place = site.place;
+  const [copy, pageKinds] = await Promise.all([
+    readListCopy(ctx, "pages", pagesCopyKey(websiteId, place), PAGE_COPY_FIELDS),
+    readPageKinds(ctx, site.hold._id),
+  ]);
+  if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
+  const matches = wordStartMatcher(args.search);
+  const kindOf = (row: PageCopyRow) => (pageKinds ? pageKinds.kindOf(row.path) : row.pageType);
+  const pagesHeld: PageCopyRow[] = copy.rows.map(([id, path, section, pageType, keywords, traffic, bestPosition, referringDomains]) => ({
+    id: id as Id<"sitePageRanks">,
+    path: path as string,
+    section: section as string,
+    pageType: pageType as string,
+    keywords: keywords as number,
+    traffic: traffic as number | null,
+    bestPosition: bestPosition as number | null,
+    referringDomains: referringDomains as number | null,
+  }));
+  const name = (row: PageCopyRow) => row.path;
+  const list = pagesHeld
+    .filter((row) => (!args.section || row.section === args.section)
+      && (!args.pageType || kindOf(row) === args.pageType)
+      // The address only, never its keywords (Anthony, 2026-09-30): Keywords searches those.
+      && (!matches || matches(row.path)))
+    .sort(listOrder(PAGE_SORTS, args.sort ?? "keywords", args.direction, name));
+  const shown = pageOfList(list, args.page, args.rows);
+  const result = {
+    page: (await Promise.all(shown.rows.map((row) => ctx.db.get(row.id)))).flatMap((row) => (row ? [row] : [])),
+  };
+
+  // Which engines cite each page on screen, by its path so every form of
+  // its address counts: one short read per row, counting only the answers
+  // to the questions this site is measured on (D17).
+  const asked = new Set((await askedQuestions(ctx, listHold(site), place, QUESTIONS_FOR_CITED_PAGES))
+    .map((entry) => `${entry.prompt}\u0000${entry.engine}\u0000${entry.locationCode}`));
+  const page = await Promise.all(result.page.map(async (row) => {
+    const citedRows = (await ctx.db
+      .query("siteCitedPages")
+      .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("page", row.page))
+      .take(CITED_ROWS_PER_PAGE))
+      .filter((entry) => asked.has(`${entry.prompt}\u0000${entry.engine}\u0000${entry.locationCode}`));
+    const cited = citedRows.length === 0 ? null : {
+      engines: [...new Set(citedRows.map((entry) => entry.engine))].sort(),
+      times: citedRows.reduce((sum, entry) => sum + entry.times, 0),
+    };
+    return {
+      _id: row._id,
+      page: row.page,
+      url: addressOf(row, site.website.host) ?? row.page,
+      section: row.section,
+      keywords: row.keywords,
+      bestPosition: row.bestPosition,
+      top3: row.top3,
+      topKeyword: row.topKeyword,
+      topKeywordVolume: row.topKeywordVolume,
+      firstSeenDay: row.firstSeenDay,
+      day: row.day,
+      aiEngines: cited?.engines ?? [],
+      aiTimes: cited?.times ?? 0,
+      traffic: row.traffic ?? null,
+      trafficValue: row.trafficValue ?? null,
+      pageRank: row.pageRank ?? null,
+      referringDomains: row.referringDomains ?? null,
+      backlinks: row.backlinks ?? null,
+      pageType: row.pageType ?? "UNJUDGED",
+      kind: pageKinds ? pageKinds.kindOf(row.page) : (row.pageType ?? "UNJUDGED"),
+    };
+  }));
+  return { ...shown, rows: page, seen: pagesSees(pagesHeld) };
+}
+
+const listSectionsArgs = { siteId: v.id("companyWebsites") };
 
 /** The site's folders: pages, keywords and page-one results in each. */
 export const listSections = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: listSectionsArgs,
   returns: v.object({
     rows: v.array(v.object({
       section: v.string(),
@@ -473,32 +490,37 @@ export const listSections = moduleQuery({
     cut: v.union(v.number(), v.null()),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // One past the limit, to know whether there are more.
-    const read = await ctx.db
-      .query("siteSections")
-      .withIndex("by_site_keywords", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place))
-      .order("desc")
-      .take(MAX_SECTIONS + 1);
-    const rows = read.slice(0, MAX_SECTIONS).map((row) => ({
-      section: row.section,
-      pages: row.pages,
-      keywords: row.keywords,
-      top3: row.top3,
-      volumeSum: row.volumeSum,
-      traffic: row.traffic ?? null,
-      day: row.day ?? null,
-    }));
-    return { rows, cut: read.length > MAX_SECTIONS ? rows.length : null };
-  }, (result) => sectionsSees(result.rows)),
+  handler: async (ctx, args) => await readListSections(ctx, args),
 });
+
+/** listSections's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readListSections = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  // One past the limit, to know whether there are more.
+  const read = await ctx.db
+    .query("siteSections")
+    .withIndex("by_site_keywords", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place))
+    .order("desc")
+    .take(MAX_SECTIONS + 1);
+  const rows = read.slice(0, MAX_SECTIONS).map((row) => ({
+    section: row.section,
+    pages: row.pages,
+    keywords: row.keywords,
+    top3: row.top3,
+    volumeSum: row.volumeSum,
+    traffic: row.traffic ?? null,
+    day: row.day ?? null,
+  }));
+  return { rows, cut: read.length > MAX_SECTIONS ? rows.length : null };
+}, (result) => sectionsSees(result.rows));
 
 /** A search's figures for the eye: where it stood and stands, and what it brings. */
 const movedSearch = v.object({ keyword: v.string(), position: v.number(), before: v.number(), volume: v.union(v.number(), v.null()), traffic: v.union(v.number(), v.null()) });
 const searchesShape = v.object({ searches: v.number(), traffic: v.number(), volume: v.number() });
 /** Places a reader knows, for a move worth weighing: the top hundred. */
 const PLACES_KNOWN = 100;
+
+const keywordFiguresArgs = { siteId: v.id("companyWebsites") };
 
 /**
  * Every search the site ranks for now, summed for the eye on Keywords (ask-hakken-every-chart-page-plan-2026-11-03.md,
@@ -509,7 +531,7 @@ const PLACES_KNOWN = 100;
  */
 export const keywordFigures = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: keywordFiguresArgs,
   returns: v.union(v.null(), v.object({
     day: v.union(v.string(), v.null()),
     searches: v.number(),
@@ -531,50 +553,55 @@ export const keywordFigures = moduleQuery({
     /** The search bringing the most estimated visitors: how much of them all rests on one search. */
     topSearch: v.union(v.null(), v.object({ keyword: v.string(), position: v.number(), volume: v.union(v.number(), v.null()), traffic: v.number() })),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const copy = await readKeywordCopy(ctx, site.website._id, site.place);
-    if (!copy) return null;
-    const current = copy.rows.filter((row) => keywordStanding(row, copy.latestCheckDay) === "current" && row.position !== null);
-    const sum = (rows: readonly KeywordCopyRow[]) => ({
-      searches: rows.length,
-      traffic: Math.round(rows.reduce((total, row) => total + (row.traffic ?? 0), 0)),
-      volume: rows.reduce((total, row) => total + (row.volume ?? 0), 0),
-    });
-    const before = (row: KeywordCopyRow) => (row.position ?? 0) + row.change;
-    const moved = current.filter((row) => (row.status === "UP" || row.status === "DOWN") && row.change !== 0 && row.position! <= PLACES_KNOWN && before(row) <= PLACES_KNOWN);
-    const weight = (row: KeywordCopyRow) => Math.min(10, Math.abs(row.change)) * Math.sqrt(row.volume ?? 0);
-    const shape = (row: KeywordCopyRow) => ({ keyword: row.keyword, position: row.position!, before: before(row), volume: row.volume, traffic: row.traffic === null ? null : Math.round(row.traffic) });
-    const intents = new Map<string, { intent: string; searches: number; traffic: number }>();
-    for (const row of current) {
-      const held = intents.get(row.intent) ?? { intent: row.intent, searches: 0, traffic: 0 };
-      held.searches += 1;
-      held.traffic += row.traffic ?? 0;
-      intents.set(row.intent, held);
-    }
-    return {
-      day: copy.latestCheckDay ?? copy.rankingDay,
-      ...sum(current),
-      top3: current.filter((row) => row.position! <= 3).length,
-      pageOne: current.filter((row) => row.position! <= 10).length,
-      statuses: {
-        NEW: sum(current.filter((row) => row.status === "NEW")),
-        UP: sum(current.filter((row) => row.status === "UP")),
-        DOWN: sum(current.filter((row) => row.status === "DOWN")),
-        SAME: sum(current.filter((row) => row.status === "SAME")),
-      },
-      intoPageOne: sum(current.filter((row) => row.status === "UP" && row.position! <= 10 && before(row) > 10)),
-      outOfPageOne: sum(current.filter((row) => row.status === "DOWN" && row.position! > 10 && before(row) <= 10)),
-      intents: [...intents.values()].map((one) => ({ ...one, traffic: Math.round(one.traffic) })).sort((left, right) => right.traffic - left.traffic),
-      climbs: moved.filter((row) => row.change > 0).sort((left, right) => weight(right) - weight(left)).slice(0, 3).map(shape),
-      drops: moved.filter((row) => row.change < 0).sort((left, right) => weight(right) - weight(left)).slice(0, 3).map(shape),
-      topSearch: (() => {
-        const top = [...current].sort((left, right) => (right.traffic ?? 0) - (left.traffic ?? 0))[0];
-        return top && (top.traffic ?? 0) > 0 ? { keyword: top.keyword, position: top.position!, volume: top.volume, traffic: Math.round(top.traffic ?? 0) } : null;
-      })(),
-    };
-  },
+  handler: async (ctx, args) => await readKeywordFigures(ctx, args),
 });
+
+/** keywordFigures's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readKeywordFigures(ctx: SiteReader, args: ObjectType<typeof keywordFiguresArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const copy = await readKeywordCopy(ctx, site.website._id, site.place);
+  if (!copy) return null;
+  const current = copy.rows.filter((row) => keywordStanding(row, copy.latestCheckDay) === "current" && row.position !== null);
+  const sum = (rows: readonly KeywordCopyRow[]) => ({
+    searches: rows.length,
+    traffic: Math.round(rows.reduce((total, row) => total + (row.traffic ?? 0), 0)),
+    volume: rows.reduce((total, row) => total + (row.volume ?? 0), 0),
+  });
+  const before = (row: KeywordCopyRow) => (row.position ?? 0) + row.change;
+  const moved = current.filter((row) => (row.status === "UP" || row.status === "DOWN") && row.change !== 0 && row.position! <= PLACES_KNOWN && before(row) <= PLACES_KNOWN);
+  const weight = (row: KeywordCopyRow) => Math.min(10, Math.abs(row.change)) * Math.sqrt(row.volume ?? 0);
+  const shape = (row: KeywordCopyRow) => ({ keyword: row.keyword, position: row.position!, before: before(row), volume: row.volume, traffic: row.traffic === null ? null : Math.round(row.traffic) });
+  const intents = new Map<string, { intent: string; searches: number; traffic: number }>();
+  for (const row of current) {
+    const held = intents.get(row.intent) ?? { intent: row.intent, searches: 0, traffic: 0 };
+    held.searches += 1;
+    held.traffic += row.traffic ?? 0;
+    intents.set(row.intent, held);
+  }
+  return {
+    day: copy.latestCheckDay ?? copy.rankingDay,
+    ...sum(current),
+    top3: current.filter((row) => row.position! <= 3).length,
+    pageOne: current.filter((row) => row.position! <= 10).length,
+    statuses: {
+      NEW: sum(current.filter((row) => row.status === "NEW")),
+      UP: sum(current.filter((row) => row.status === "UP")),
+      DOWN: sum(current.filter((row) => row.status === "DOWN")),
+      SAME: sum(current.filter((row) => row.status === "SAME")),
+    },
+    intoPageOne: sum(current.filter((row) => row.status === "UP" && row.position! <= 10 && before(row) > 10)),
+    outOfPageOne: sum(current.filter((row) => row.status === "DOWN" && row.position! > 10 && before(row) <= 10)),
+    intents: [...intents.values()].map((one) => ({ ...one, traffic: Math.round(one.traffic) })).sort((left, right) => right.traffic - left.traffic),
+    climbs: moved.filter((row) => row.change > 0).sort((left, right) => weight(right) - weight(left)).slice(0, 3).map(shape),
+    drops: moved.filter((row) => row.change < 0).sort((left, right) => weight(right) - weight(left)).slice(0, 3).map(shape),
+    topSearch: (() => {
+      const top = [...current].sort((left, right) => (right.traffic ?? 0) - (left.traffic ?? 0))[0];
+      return top && (top.traffic ?? 0) > 0 ? { keyword: top.keyword, position: top.position!, volume: top.volume, traffic: Math.round(top.traffic ?? 0) } : null;
+    })(),
+  };
+}
+
+const pageFiguresArgs = { siteId: v.id("companyWebsites") };
 
 /**
  * Every page the site ranks with, summed for the eye on Top pages: the page bringing the most estimated visitors and its
@@ -584,7 +611,7 @@ export const keywordFigures = moduleQuery({
  */
 export const pageFigures = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: pageFiguresArgs,
   returns: v.union(v.null(), v.object({
     pages: v.number(),
     searches: v.number(),
@@ -597,33 +624,36 @@ export const pageFigures = moduleQuery({
     top: v.union(v.null(), v.object({ page: v.string(), traffic: v.number(), searches: v.number() })),
     kinds: v.array(v.object({ kind: v.string(), classified: v.boolean(), sorted: v.boolean(), pages: v.number(), searches: v.number(), traffic: v.number() })),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const [copy, pageKinds] = await Promise.all([
-      readListCopy(ctx, "pages", pagesCopyKey(site.website._id, site.place), PAGE_COPY_FIELDS),
-      readPageKinds(ctx, site.hold._id),
-    ]);
-    if (!copy) return null;
-    const rows = copy.rows.map(([, path, , pageType, keywords, traffic]) => ({ path: path as string, pageType: pageType as string, keywords: keywords as number, traffic: (traffic as number | null) ?? 0 }));
-    const kinds = new Map<string, { kind: string; classified: boolean; sorted: boolean; pages: number; searches: number; traffic: number }>();
-    for (const row of rows) {
-      const kind = pageKinds ? pageKinds.kindOf(row.path) : row.pageType;
-      const held = kinds.get(kind) ?? { kind, classified: pageKinds !== null, sorted: kind !== NOT_SORTED_KIND, pages: 0, searches: 0, traffic: 0 };
-      held.pages += 1;
-      held.searches += row.keywords;
-      held.traffic += row.traffic;
-      kinds.set(kind, held);
-    }
-    const top = [...rows].sort((left, right) => right.traffic - left.traffic)[0];
-    return {
-      pages: rows.length,
-      searches: rows.reduce((total, row) => total + row.keywords, 0),
-      traffic: Math.round(rows.reduce((total, row) => total + row.traffic, 0)),
-      quietPages: rows.filter((row) => row.traffic < 1).length,
-      topFiveTraffic: Math.round([...rows].sort((left, right) => right.traffic - left.traffic).slice(0, 5).reduce((total, row) => total + row.traffic, 0)),
-      oneSearchPages: rows.filter((row) => row.keywords === 1).length,
-      top: top ? { page: top.path, traffic: Math.round(top.traffic), searches: top.keywords } : null,
-      kinds: [...kinds.values()].map((one) => ({ ...one, traffic: Math.round(one.traffic) })).sort((left, right) => right.traffic - left.traffic),
-    };
-  },
+  handler: async (ctx, args) => await readPageFigures(ctx, args),
 });
+
+/** pageFigures's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readPageFigures(ctx: SiteReader, args: ObjectType<typeof pageFiguresArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const [copy, pageKinds] = await Promise.all([
+    readListCopy(ctx, "pages", pagesCopyKey(site.website._id, site.place), PAGE_COPY_FIELDS),
+    readPageKinds(ctx, site.hold._id),
+  ]);
+  if (!copy) return null;
+  const rows = copy.rows.map(([, path, , pageType, keywords, traffic]) => ({ path: path as string, pageType: pageType as string, keywords: keywords as number, traffic: (traffic as number | null) ?? 0 }));
+  const kinds = new Map<string, { kind: string; classified: boolean; sorted: boolean; pages: number; searches: number; traffic: number }>();
+  for (const row of rows) {
+    const kind = pageKinds ? pageKinds.kindOf(row.path) : row.pageType;
+    const held = kinds.get(kind) ?? { kind, classified: pageKinds !== null, sorted: kind !== NOT_SORTED_KIND, pages: 0, searches: 0, traffic: 0 };
+    held.pages += 1;
+    held.searches += row.keywords;
+    held.traffic += row.traffic;
+    kinds.set(kind, held);
+  }
+  const top = [...rows].sort((left, right) => right.traffic - left.traffic)[0];
+  return {
+    pages: rows.length,
+    searches: rows.reduce((total, row) => total + row.keywords, 0),
+    traffic: Math.round(rows.reduce((total, row) => total + row.traffic, 0)),
+    quietPages: rows.filter((row) => row.traffic < 1).length,
+    topFiveTraffic: Math.round([...rows].sort((left, right) => right.traffic - left.traffic).slice(0, 5).reduce((total, row) => total + row.traffic, 0)),
+    oneSearchPages: rows.filter((row) => row.keywords === 1).length,
+    top: top ? { page: top.path, traffic: Math.round(top.traffic), searches: top.keywords } : null,
+    kinds: [...kinds.values()].map((one) => ({ ...one, traffic: Math.round(one.traffic) })).sort((left, right) => right.traffic - left.traffic),
+  };
+}

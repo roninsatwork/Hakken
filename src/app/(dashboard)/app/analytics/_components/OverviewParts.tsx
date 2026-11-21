@@ -8,11 +8,11 @@ import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { bestFor, biggestChange } from "@/convex/utils/channelPicks";
-import { endingsOf, isFirstStep, isShop, serviceSteps, shopSteps, squaresOutOf } from "@/convex/utils/conversionSteps";
+import { endingsOf, isShop, serviceSteps, shopSteps, squaresOutOf } from "@/convex/utils/conversionSteps";
 import { outOfTotal } from "@/convex/utils/outOfTotal";
 import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import { OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
-import { overviewFigures } from "@/convex/utils/sees/overviewFigures";
+import { firstStepOf, overviewEyeData } from "@/convex/utils/sees/eyeData/googleAnalyticsOverview";
 import { CHART_COMPARATOR_GREY, CHART_ENGAGEMENT_NONE, CHART_ENGAGEMENT_RAMP, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_SLATE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
 import { DaysChart, type DaysLine, type DaysPoint } from "@/src/ui/components/screens/DaysChart";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
@@ -252,12 +252,6 @@ function busiestOf(split: SplitAnswer | undefined): string[] {
     .map((event) => event.name);
 }
 
-/** Auto Setup's say on a first step, over the rule on its name, where it has one. */
-function firstStepOf(status: AnalyticsStatus) {
-  const said = new Map((status.connection?.events ?? []).map((event) => [event.eventName, event.firstStep]));
-  return (name: string) => said.get(name) ?? isFirstStep(name);
-}
-
 const SHOP_STAGES = [
   { key: "left", colour: CHART_ENGAGEMENT_NONE },
   { key: "looked", colour: CHART_ENGAGEMENT_RAMP[0] },
@@ -326,7 +320,7 @@ export function OverviewSquaresCard({ reads, status }: { reads: OverviewReads; s
   const stepsOf = (figures: Figures, list: SplitAnswer["events"]) => {
     if (shop) return shopSteps(figures, list.map((event) => event.name));
     const kept = list.flatMap((event, at) => (event.counted ? [{ name: event.name, did: figures.did[at] ?? 0 }] : []));
-    return serviceSteps({ ...figures, did: kept.map((one) => one.did) }, kept.map((one) => one.name), firstStepOf(status));
+    return serviceSteps({ ...figures, did: kept.map((one) => one.did) }, kept.map((one) => one.name), firstStepOf(status.connection?.events));
   };
   const stages = shop ? SHOP_STAGES : SERVICE_STAGES;
   const start = shop ? Math.min(Number(startChoice) || 0, stages.length - 2) : 0;
@@ -439,22 +433,14 @@ export function useOverviewEye(reads: OverviewReads, status: AnalyticsStatus) {
   const pages = useQuery(api.googleAnalyticsReads.analyticsListPage, ready ? { ...args, list: "landing", sort: "visits", direction: "desc", page: 1, rows: 25, leaveOut: true } : "skip");
   const health = status.connection?.health;
   const { overview, splits, shop, cells } = reads;
-  return useMemo(() => {
-    if (!overview) return overview;
-    const eventCodes = Object.fromEntries((splits.channel?.events ?? []).map((event) => [eventName(event.name), event.name]));
-    return {
-      ...overviewFigures({
-        shop, cells, now: overview.now, before: overview.before, chart, daysBefore, splits,
-        pages: pages?.rows, rowName: (split, row) => nameOf(split, row), eventName, firstStep: firstStepOf(status),
-      }),
-      eventCodes,
-      locale,
-      health,
-      names,
-    };
-    // The words change only with the language, which reloads the page.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overview, chart, daysBefore, splits, pages, health, names, shop, cells, locale]);
+  // Built by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts), so the two can't disagree.
+  return useMemo(() => overviewEyeData(
+    { overview, chart, daysBefore, splits, pages: pages?.rows, shop, cells, health, firstStep: firstStepOf(status.connection?.events) },
+    { names, rowName: (split, row) => nameOf(split, row), eventName, locale },
+  ),
+  // The words change only with the language, which reloads the page.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [overview, chart, daysBefore, splits, pages, health, names, shop, cells, locale]);
 }
 
 const SPLIT_PAGE: Record<Split, string> = { channel: "channels", kind: "all-pages", device: "visits", visitorType: "visits" };

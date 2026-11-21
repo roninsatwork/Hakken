@@ -1,8 +1,8 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { bucketOf, checkStarts, stepValidator, type CheckStarts } from "./siteFigures";
 import { listDayComplete, listDayReach, pagesByDay, type ListPageFigures } from "./siteSummaries";
 import { moduleQuery } from "./tenantFunctions";
@@ -133,9 +133,11 @@ const checkFields = {
   rankedLeft: counted,
 };
 
+const siteChecksArgs = { siteId: v.id("companyWebsites"), from: v.string(), to: v.string(), step: stepValidator };
+
 export const siteChecks = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string(), step: stepValidator },
+  args: siteChecksArgs,
   returns: v.object({
     /**
      * The checks in the dates, a day, week or month a row: its newest
@@ -155,52 +157,55 @@ export const siteChecks = moduleQuery({
     /** The site's newest check, in the dates or not: the one Wins and losses lists. */
     newest: v.union(v.null(), v.object({ day: v.string(), ...checkFields })),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const [starts, days, newestRows] = await Promise.all([
-      checkStarts(ctx, websiteId, site.place),
-      ctx.db
-        .query("siteDaySummaries")
-        .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place).gte("day", args.from).lte("day", args.to))
-        .take(DAYS_READ),
-      ctx.db
-        .query("siteDaySummaries")
-        .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place))
-        .order("desc")
-        .take(NEWEST_READ),
-    ]);
-    const newestRow = newestRows.find((row) => row.keywords !== undefined) ?? null;
-    const inDates = await coverageIn(ctx, websiteId, site.place, args.from, args.to);
-    const newestCoverage = newestRow && (newestRow.day < args.from || newestRow.day > args.to)
-      ? await coverageIn(ctx, websiteId, site.place, newestRow.day, newestRow.day)
-      : inDates;
-
-    const steps = new Map<string, Check & { lastDay: string; checks: number; start: "FIRST" | "FIRST_LIST" | null }>();
-    for (const row of days) {
-      const check = checkOf(row, starts, inDates);
-      if (!check) continue;
-      const key = bucketOf(check.day, args.step);
-      const start = check.kind === "FIRST" || check.kind === "FIRST_LIST" ? check.kind : null;
-      const held = steps.get(key);
-      if (!held) {
-        steps.set(key, { ...check, day: key, lastDay: check.day, checks: 1, start });
-        continue;
-      }
-      // Days arrive oldest first: the newest check says what the step was.
-      held.lastDay = check.day;
-      held.checks += 1;
-      held.kind = check.kind;
-      held.checked = check.checked;
-      held.held = check.held;
-      held.complete = check.complete;
-      held.start = held.start ?? start;
-      for (const move of MOVES) {
-        if (check[move] !== null) held[move] = (held[move] ?? 0) + check[move];
-      }
-    }
-
-    const newest = newestRow ? checkOf(newestRow, starts, newestCoverage) : null;
-    return { steps: [...steps.values()], newest };
-  },
+  handler: async (ctx, args) => await readSiteChecks(ctx, args),
 });
+
+/** siteChecks's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readSiteChecks(ctx: SiteReader, args: ObjectType<typeof siteChecksArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId = site.website._id;
+  const [starts, days, newestRows] = await Promise.all([
+    checkStarts(ctx, websiteId, site.place),
+    ctx.db
+      .query("siteDaySummaries")
+      .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place).gte("day", args.from).lte("day", args.to))
+      .take(DAYS_READ),
+    ctx.db
+      .query("siteDaySummaries")
+      .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place))
+      .order("desc")
+      .take(NEWEST_READ),
+  ]);
+  const newestRow = newestRows.find((row) => row.keywords !== undefined) ?? null;
+  const inDates = await coverageIn(ctx, websiteId, site.place, args.from, args.to);
+  const newestCoverage = newestRow && (newestRow.day < args.from || newestRow.day > args.to)
+    ? await coverageIn(ctx, websiteId, site.place, newestRow.day, newestRow.day)
+    : inDates;
+
+  const steps = new Map<string, Check & { lastDay: string; checks: number; start: "FIRST" | "FIRST_LIST" | null }>();
+  for (const row of days) {
+    const check = checkOf(row, starts, inDates);
+    if (!check) continue;
+    const key = bucketOf(check.day, args.step);
+    const start = check.kind === "FIRST" || check.kind === "FIRST_LIST" ? check.kind : null;
+    const held = steps.get(key);
+    if (!held) {
+      steps.set(key, { ...check, day: key, lastDay: check.day, checks: 1, start });
+      continue;
+    }
+    // Days arrive oldest first: the newest check says what the step was.
+    held.lastDay = check.day;
+    held.checks += 1;
+    held.kind = check.kind;
+    held.checked = check.checked;
+    held.held = check.held;
+    held.complete = check.complete;
+    held.start = held.start ?? start;
+    for (const move of MOVES) {
+      if (check[move] !== null) held[move] = (held[move] ?? 0) + check[move];
+    }
+  }
+
+  const newest = newestRow ? checkOf(newestRow, starts, newestCoverage) : null;
+  return { steps: [...steps.values()], newest };
+}

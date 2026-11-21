@@ -22,6 +22,8 @@ import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { countryArg, useSearchConsoleCountry } from "../../_components/useSearchConsole";
 import { useChartPeriods } from "../../_components/useChartPeriods";
+import { volatilityEyeData } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 const CHIPS: readonly ChipId[] = ["brand", "way"];
 const TONE: Record<"NORMAL" | "HIGH" | "VERY_HIGH", StatusTone> = { NORMAL: "success", HIGH: "warning", VERY_HIGH: "danger" };
@@ -80,23 +82,9 @@ export default function SearchConsoleVolatilityPage() {
   // The eye's figures: the four boxes' (with the same days' times shown), the keywords on screen and the chart, each
   // part named as the page names it; "Do first" may open the search that moved most (section 6 of
   // ask-hakken-every-chart-page-plan-2026-11-03.md).
-  const tw = useTranslations("searchConsole.sees");
+  // Built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
   const shownRows = list.table.pageRows ?? null;
-  const latestDay = latest?.day ?? null;
-  const seesData = useMemo(() => (facts
-    ? {
-      volatility: facts,
-      rows: shownRows,
-      picked: true,
-      // By their first day (`day`), so the eye keeps the newest of a long chart, never its oldest.
-      chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null,
-      names: {
-        latest: latestDay ? formatShortDay(latestDay) : tv("latestDayNone"),
-        up: tv("up"), down: tv("down"),
-        usual: tw("usual"), last7: tw("last7"), week7Before: tw("week7Before"), climbed5: tw("climbed5"), fell5: tw("fell5"), beforeIt: tw("beforeIt"), dayBefore: tw("dayBefore"),
-      },
-    }
-    : undefined), [facts, shownRows, periods, latestDay, tv, tw]);
+  const seesData = useMemo(() => volatilityEyeData({ facts, rows: shownRows, periods }, wordsReader(t), { shortDay: formatShortDay }), [facts, shownRows, periods, t]);
   const moved = shownRows?.find((row) => row.clicks > 0 && row.positionChange !== null);
   const seesLinks = useMemo(() => (moved ? [{ label: moved.key, href: recordHref("keywords/keyword", moved.key) }] : []), [moved, recordHref]);
   return (

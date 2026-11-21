@@ -6,6 +6,7 @@ import type { FunctionReturnType } from "convex/server";
 import { HandCoins } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { eventEyeData } from "@/convex/utils/sees/eyeData/googleAnalyticsConversions";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -76,7 +77,7 @@ export function ConversionScreen({ status, event, answer }: { status: AnalyticsS
         title={name}
         description={t("countedDescription", { google: event })}
       />
-      <AnalyticsSees screen="event" seen={answer.seen} currency={currency} ask={ask} data={{ conversion: answer }} />
+      <AnalyticsSees screen="event" seen={answer.seen} currency={currency} ask={ask} data={eventEyeData(answer)} />
 
       <FigureRow columns={3}>
         <Figure label={label} emphasis value={formatNumber(figures.times)} detail={<BeforeLine now={figures.times} before={figures.timesBefore} />} />

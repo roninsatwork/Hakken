@@ -4,7 +4,7 @@ import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { ACTIVITY_KINDS } from "./localSchema";
 import { listingRowOf, listingRowValidator, readListingActivity, readListingWeeks } from "./localListings";
 import { MAP_BOX, listingsById, localSetup, officeChecks, officeSearches, openOffice } from "./localReads";
@@ -22,9 +22,11 @@ import { calendarPeriodValidator, periodSpan, ukDay, type CalendarPeriod } from 
 
 const officeOptionValidator = v.object({ listingId: v.id("listings"), name: v.string(), town: v.union(v.string(), v.null()) });
 
+const localMarketArgs = { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) };
+
 export const localMarket = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
+  args: localMarketArgs,
   returns: v.object({
     offices: v.array(officeOptionValidator),
     km: v.number(),
@@ -40,39 +42,42 @@ export const localMarket = moduleQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { offices, rivals, limits } = await localSetup(ctx, site);
-    const office = openOffice(offices, args.officeId);
-    const options = offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
-    const km = limits?.localMarketKm ?? 10;
-    if (!office?.point || !office.categoryIds?.[0]) return { offices: options, km, day: null, total: null, rows: [] };
-    const part = await ctx.db
-      .query("localMarketParts")
-      .withIndex("by_market", (q) => q.eq("category", office.categoryIds![0]).eq("point", office.point!).eq("km", km))
-      .unique();
-    if (!part) return { offices: options, km, day: null, total: null, rows: [] };
-
-    const checks = await officeChecks(ctx, office, await officeSearches(ctx, site, office, offices), false);
-    const boxes = [...checks.values()].map((check) => check.latest.listingIds.slice(0, MAP_BOX));
-    const listings = await listingsById(ctx, part.listingIds);
-    const metres = unpackColumn(part.metres);
-    const watched = new Set(rivals.map((rival) => rival._id as string));
-    const rows = part.listingIds.flatMap((id, at) => {
-      const listing = listings.get(id);
-      if (!listing) return [];
-      return [{
-        ...listingRowOf(listing),
-        metres: id === office._id ? null : metres[at] ?? null,
-        mapBox: boxes.filter((box) => box.includes(id)).length,
-        you: id === office._id,
-        watched: watched.has(id),
-      }];
-    });
-    if (!rows.some((row) => row.you)) rows.unshift({ ...listingRowOf(office), metres: null, mapBox: boxes.filter((box) => box.includes(office._id)).length, you: true, watched: false });
-    return { offices: options, km, day: part.day, total: part.total, rows };
-  }, localMarketSees),
+  handler: async (ctx, args) => await readLocalMarket(ctx, args),
 });
+
+/** localMarket's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readLocalMarket = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const { offices, rivals, limits } = await localSetup(ctx, site);
+  const office = openOffice(offices, args.officeId);
+  const options = offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
+  const km = limits?.localMarketKm ?? 10;
+  if (!office?.point || !office.categoryIds?.[0]) return { offices: options, km, day: null, total: null, rows: [] };
+  const part = await ctx.db
+    .query("localMarketParts")
+    .withIndex("by_market", (q) => q.eq("category", office.categoryIds![0]).eq("point", office.point!).eq("km", km))
+    .unique();
+  if (!part) return { offices: options, km, day: null, total: null, rows: [] };
+
+  const checks = await officeChecks(ctx, office, await officeSearches(ctx, site, office, offices), false);
+  const boxes = [...checks.values()].map((check) => check.latest.listingIds.slice(0, MAP_BOX));
+  const listings = await listingsById(ctx, part.listingIds);
+  const metres = unpackColumn(part.metres);
+  const watched = new Set(rivals.map((rival) => rival._id as string));
+  const rows = part.listingIds.flatMap((id, at) => {
+    const listing = listings.get(id);
+    if (!listing) return [];
+    return [{
+      ...listingRowOf(listing),
+      metres: id === office._id ? null : metres[at] ?? null,
+      mapBox: boxes.filter((box) => box.includes(id)).length,
+      you: id === office._id,
+      watched: watched.has(id),
+    }];
+  });
+  if (!rows.some((row) => row.you)) rows.unshift({ ...listingRowOf(office), metres: null, mapBox: boxes.filter((box) => box.includes(office._id)).length, you: true, watched: false });
+  return { offices: options, km, day: part.day, total: part.total, rows };
+}, localMarketSees);
 
 /** What a rival's activity line says happened: a post, an offer, a change to its profile. */
 export const activityKindValidator = v.union(
@@ -96,9 +101,11 @@ export function weekLines(weeks: Awaited<ReturnType<typeof readListingWeeks>>) {
   return lines;
 }
 
+const rivalActivityArgs = { siteId: v.id("companyWebsites"), period: calendarPeriodValidator };
+
 export const rivalActivity = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), period: calendarPeriodValidator },
+  args: rivalActivityArgs,
   returns: v.object({
     rivals: v.array(v.object({ listingId: v.id("listings"), name: v.string() })),
     figures: v.object({
@@ -130,51 +137,54 @@ export const rivalActivity = moduleQuery({
     period: calendarPeriodValidator,
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { offices, rivals } = await localSetup(ctx, site);
-    // The figures count over the date menu's period, to today (calendar-periods-plan.md, item 11.1); the lines are every one held.
-    const today = ukDay();
-    const span = periodSpan(args.period, today, today) ?? { from: today, to: today, whole: false };
-    const inPeriod = (day: string) => day >= span.from && day <= span.to;
-    const lines = [];
-    const questions = [];
-    const recent = { rivalPosts: 0, yourPosts: 0, offers: 0, profileChanges: 0, openQuestions: 0 };
-    const offerNames = new Set<string>();
-    for (const [listing, yours] of [...offices.map((office) => [office, true] as const), ...rivals.map((rival) => [rival, false] as const)]) {
-      for (const line of await readListingActivity(ctx, listing._id)) {
-        if (line.kind === "QUESTION") {
-          questions.push({ text: line.text, listingId: listing._id, name: listing.name, town: listing.town ?? null, yours, day: line.day, answeredDay: line.answeredDay ?? null });
-          if (yours && !line.answeredDay) recent.openQuestions += 1;
-          continue;
-        }
-        const posted = line.kind === "POST" || line.kind === "OFFER" || line.kind === "EVENT";
-        if (inPeriod(line.day) && posted) {
-          if (yours) recent.yourPosts += 1;
-          else recent.rivalPosts += 1;
-        }
-        if (yours) continue;
-        if (inPeriod(line.day) && line.kind === "OFFER") {
-          recent.offers += 1;
-          offerNames.add(listing.name);
-        }
-        if (inPeriod(line.day) && !posted) recent.profileChanges += 1;
-        lines.push({ day: line.day, listingId: listing._id, name: listing.name, kind: line.kind, text: line.text, from: null, to: null });
+  handler: async (ctx, args) => await readRivalActivity(ctx, args),
+});
+
+/** rivalActivity's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readRivalActivity = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: CalendarPeriod }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const { offices, rivals } = await localSetup(ctx, site);
+  // The figures count over the date menu's period, to today (calendar-periods-plan.md, item 11.1); the lines are every one held.
+  const today = ukDay();
+  const span = periodSpan(args.period, today, today) ?? { from: today, to: today, whole: false };
+  const inPeriod = (day: string) => day >= span.from && day <= span.to;
+  const lines = [];
+  const questions = [];
+  const recent = { rivalPosts: 0, yourPosts: 0, offers: 0, profileChanges: 0, openQuestions: 0 };
+  const offerNames = new Set<string>();
+  for (const [listing, yours] of [...offices.map((office) => [office, true] as const), ...rivals.map((rival) => [rival, false] as const)]) {
+    for (const line of await readListingActivity(ctx, listing._id)) {
+      if (line.kind === "QUESTION") {
+        questions.push({ text: line.text, listingId: listing._id, name: listing.name, town: listing.town ?? null, yours, day: line.day, answeredDay: line.answeredDay ?? null });
+        if (yours && !line.answeredDay) recent.openQuestions += 1;
+        continue;
+      }
+      const posted = line.kind === "POST" || line.kind === "OFFER" || line.kind === "EVENT";
+      if (inPeriod(line.day) && posted) {
+        if (yours) recent.yourPosts += 1;
+        else recent.rivalPosts += 1;
       }
       if (yours) continue;
-      for (const line of weekLines(await readListingWeeks(ctx, listing._id))) {
-        if (inPeriod(line.day)) recent.profileChanges += 1;
-        lines.push({ day: line.day, listingId: listing._id, name: listing.name, kind: line.kind, text: null, from: line.from, to: line.to });
+      if (inPeriod(line.day) && line.kind === "OFFER") {
+        recent.offers += 1;
+        offerNames.add(listing.name);
       }
+      if (inPeriod(line.day) && !posted) recent.profileChanges += 1;
+      lines.push({ day: line.day, listingId: listing._id, name: listing.name, kind: line.kind, text: line.text, from: null, to: null });
     }
-    lines.sort((left, right) => right.day.localeCompare(left.day));
-    questions.sort((left, right) => Number(right.yours) - Number(left.yours) || right.day.localeCompare(left.day));
-    return {
-      rivals: rivals.map((rival: Doc<"listings">) => ({ listingId: rival._id, name: rival.name })),
-      figures: { ...recent, offerNames: [...offerNames] },
-      lines,
-      questions,
-      period: args.period,
-    };
-  }, rivalActivitySees),
-});
+    if (yours) continue;
+    for (const line of weekLines(await readListingWeeks(ctx, listing._id))) {
+      if (inPeriod(line.day)) recent.profileChanges += 1;
+      lines.push({ day: line.day, listingId: listing._id, name: listing.name, kind: line.kind, text: null, from: line.from, to: line.to });
+    }
+  }
+  lines.sort((left, right) => right.day.localeCompare(left.day));
+  questions.sort((left, right) => Number(right.yours) - Number(left.yours) || right.day.localeCompare(left.day));
+  return {
+    rivals: rivals.map((rival: Doc<"listings">) => ({ listingId: rival._id, name: rival.name })),
+    figures: { ...recent, offerNames: [...offerNames] },
+    lines,
+    questions,
+    period: args.period,
+  };
+}, rivalActivitySees);

@@ -5,8 +5,8 @@ import { firstOfEachList, isNumber, isRow, moved, named, partOf, round1, rowsOf,
 // ===========================================================================================================================
 // Backlinks and Keywords: the first half of Visibility's pages (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10).
 // One builder's block, 2026-11-03: its rules and helpers live inside `linksAndKeywords`, so the two halves of this file
-// never share a name. What each page hands its eye is built in one place, beside its screens
-// (`backlinks/_components/linkSees.ts`, `keywords/_components/keywordSees.ts`), and every rule is run on every period
+// never share a name. What each page hands its eye is built in one place, for its screens and a chat app's question
+// (`eyeData/visibilityBacklinks.ts`, `eyeData/visibilityKeywords.ts`), and every rule is run on every period
 // the date menu offers in `visibilityLinksKeywordsPeriods.test.ts`.
 // ===========================================================================================================================
 

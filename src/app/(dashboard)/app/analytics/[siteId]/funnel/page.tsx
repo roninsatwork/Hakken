@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { LogIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { funnelFigures } from "@/convex/utils/landingFlowFigures";
+import { funnelEyeData } from "@/convex/utils/sees/eyeData/googleAnalyticsFunnel";
 import { pageName } from "@/convex/utils/pageNames";
 import { AnalyticsListScreen, type ListPageAnswer } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
@@ -79,14 +79,12 @@ function FunnelSees({ answer, currency, flow }: { answer: ListPageAnswer | undef
   const website = useWebsiteForEye();
   const panels = useQuery(api.googleAnalyticsOverviewReads.analyticsOverviewPagePanels, status?.connection?.newestDay ? args : "skip");
   const left = panels?.landing?.left ?? null;
-  // The chart's figures, whatever is ticked: the same read Ask Hakken has.
-  const funnel = useMemo(() => (flow?.held ? funnelFigures(flow, { shop: t("shop"), notSorted: t("notSorted"), otherPages: t("otherPages"), otherGroups: (count) => t("otherGroups", { count }), pageNotKnown: t("pageNotKnown") }) : null), [flow, t]);
-  const data = useMemo(() => (answer ? {
-    ...answer, names, ...(website ? { website } : {}),
-    // As a percentage already, so `pageData.ts` turns it round once only.
-    ...(left !== null ? { landingAll: { leftPercent: Math.round(left * 1000) / 10 } } : {}),
-    ...(funnel ? { funnel } : {}),
-  } : answer), [answer, names, website, left, funnel]);
+  // The chart's figures, whatever is ticked: the same read Ask Hakken has. Built by the same function a chat app's
+  // question builds them with (chatAppEyes/googleAnalytics.ts), so the two can't disagree.
+  const data = useMemo(() => funnelEyeData(
+    { answer, names, website, left, flow },
+    { shop: t("shop"), notSorted: t("notSorted"), otherPages: t("otherPages"), otherGroups: (count) => t("otherGroups", { count }), pageNotKnown: t("pageNotKnown") },
+  ), [answer, names, website, left, flow, t]);
   // Where "Do first" may send the reader: the pages people leave most, and where their figures are looked into.
   const worst = flow?.busy?.top ?? [];
   const links = useMemo(() => [

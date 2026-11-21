@@ -21,7 +21,7 @@ import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { featuresSees } from "@/convex/utils/sees/google";
 import { SiteSees } from "../../../_components/SiteSees";
-import { featuresSeen } from "../../../_components/siteSeesData";
+import { featuresSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";

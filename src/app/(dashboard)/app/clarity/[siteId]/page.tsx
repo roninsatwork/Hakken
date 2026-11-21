@@ -49,7 +49,8 @@ import {
   useSourceName,
   useWaitingWords,
 } from "../_components/ClarityParts";
-import { overviewSees, pageLinks } from "../_components/claritySees";
+import { overviewSees } from "@/convex/utils/sees/eyeData/clarity";
+import { pageLinks } from "../_components/claritySees";
 import { RecordingsList } from "../_components/RecordingsList";
 import { useClarityArgs, useClarityPageHref, useClarityQuery, useClaritySiteId, useClarityStatus, useClarityChosen } from "../_components/useClarity";
 

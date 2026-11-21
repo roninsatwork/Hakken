@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import type { Id } from "./_generated/dataModel";
@@ -133,6 +133,8 @@ export async function readShareOfVoice(ctx: SiteReader, args: { siteId: Id<"comp
   });
 }
 
+const listCitedPagesArgs = { siteId: v.id("companyWebsites") };
+
 /**
  * The site's pages the engines link to in their answers, most cited first —
  * from the answers to the questions it is measured on only (D17). A bounded
@@ -141,7 +143,7 @@ export async function readShareOfVoice(ctx: SiteReader, args: { siteId: Id<"comp
  */
 export const listCitedPages = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: listCitedPagesArgs,
   returns: v.object({
     ...listWithCut(v.object({
       url: v.string(),
@@ -153,10 +155,13 @@ export const listCitedPages = moduleQuery({
     })).fields,
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const coverage = { cut: false };
-    const rows = await citedPagesOf(ctx, site.website._id, listHold(site), site.place, QUESTIONS_FOR_CITED_PAGES, coverage);
-    return { rows, cut: coverage.cut ? rows.length : null, seen: citedSees(rows) };
-  },
+  handler: async (ctx, args) => await readListCitedPages(ctx, args),
 });
+
+/** listCitedPages's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListCitedPages(ctx: SiteReader, args: ObjectType<typeof listCitedPagesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const coverage = { cut: false };
+  const rows = await citedPagesOf(ctx, site.website._id, listHold(site), site.place, QUESTIONS_FOR_CITED_PAGES, coverage);
+  return { rows, cut: coverage.cut ? rows.length : null, seen: citedSees(rows) };
+}

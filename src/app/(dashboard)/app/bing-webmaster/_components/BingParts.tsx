@@ -7,9 +7,9 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
-import { formatNumber } from "../../sites/_components/siteFormat";
+import { bingEyeNamesFrom, type BingEyeNames } from "@/convex/utils/sees/eyeData/bing";
+import { formatDay, formatNumber, formatShortDay } from "../../sites/_components/siteFormat";
 import { formatPosition, formatRate } from "../../search-console/_components/searchConsoleFormat";
-import type { BingEyeNames } from "./bingSeesData";
 import { useBingDates } from "./useBing";
 
 /**
@@ -54,8 +54,9 @@ export function BingSees({ says, steps = [], screen, data, links }: {
 }
 
 /**
- * The words the eye's rules name things by, from the section's own translations (`bingSeesData.ts`): Bing and Google as
- * the charts name them, the span before, the period chosen, a week, and the boxes' own labels.
+ * The words the eye's rules name things by, from the section's own translations: Bing and Google as the charts name
+ * them, the span before, the period chosen, a week, and the boxes' own labels. Built by the same function a chat app's
+ * question builds them with in English (`convex/utils/sees/eyeData/bing.ts`), so the two can't call a thing two names.
  */
 export function useBingEyeNames(): BingEyeNames {
   const tc = useTranslations("bingWebmaster.chart");
@@ -63,26 +64,8 @@ export function useBingEyeNames(): BingEyeNames {
   const tv = useTranslations("bingWebmaster.versus");
   const tp = useTranslations("common.periods");
   const { chosen } = useBingDates();
-  return useMemo(() => ({
-    bing: tc("bing"),
-    google: tc("google"),
-    // "The month before", "The same days last week": the span before as the dates menu says it, starting a sentence.
-    before: capital(tp(`before.${chosen}`)),
-    period: chosen === "custom" ? tp("customName") : tp(chosen),
-    weekOf: (day: string) => te("weekOf", { day }),
-    topThree: te("topThree"),
-    bingHigher: tv("bingHigher"),
-    googleHigher: tv("googleHigher"),
-    onlyBing: tv("onlyBing"),
-    inGoogleNotBing: te("inGoogleNotBing"),
-    averageDay: te("averageDay"),
-    home: te("home"),
-    lastSixWeeks: te("lastSixWeeks"),
-    sixWeeksBefore: te("sixWeeksBefore"),
-  }), [tc, te, tv, tp, chosen]);
+  return useMemo(() => bingEyeNamesFrom({ chart: tc, eye: te, versus: tv, periods: tp }, chosen, { day: formatDay, shortDay: formatShortDay }), [tc, te, tv, tp, chosen]);
 }
-
-const capital = (words: string) => words.charAt(0).toLocaleUpperCase() + words.slice(1);
 
 type Totals = { clicks: number; impressions: number };
 

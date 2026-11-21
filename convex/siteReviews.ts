@@ -292,70 +292,73 @@ export const whatCustomersSay = moduleQuery({
     perReplyUsd: v.union(v.number(), v.null()),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { setup, office, listings } = await ownListings(ctx, site, args.officeId);
-    const reviews: Array<StoredReview & { listing: Doc<"listings"> }> = [];
-    for (const listing of listings) for (const review of await readReviews(ctx, listing._id)) reviews.push({ ...review, listing });
-    const year = new Date().toISOString().slice(0, 4);
-    const byTopic = new Map<string, { praise: number; complaints: number; complaintsThisYear: number }>();
-    for (const review of reviews) {
-      for (const mark of marksOf(review.topics)) {
-        const held = byTopic.get(mark.topic) ?? { praise: 0, complaints: 0, complaintsThisYear: 0 };
-        if (mark.praise) held.praise += 1;
-        else {
-          held.complaints += 1;
-          if (review.day.startsWith(year)) held.complaintsThisYear += 1;
-        }
-        byTopic.set(mark.topic, held);
-      }
-    }
-    // What rivals' reviews talk about, from Google's own topics on their profiles.
-    const rivals = office ? rivalsOf(office, setup.rivals, setup.rivalOffice) : setup.rivals;
-    const rivalTopics = new Map<string, { total: number; top: { name: string; reviews: number } | null }>();
-    for (const rival of rivals) {
-      for (const entry of rival.profile?.topics ?? []) {
-        const held = rivalTopics.get(entry.topic) ?? { total: 0, top: null };
-        held.total += entry.reviews;
-        if (!held.top || entry.reviews > held.top.reviews) held.top = { name: rival.name, reviews: entry.reviews };
-        rivalTopics.set(entry.topic, held);
-      }
-    }
-    const ownTopics = new Set(listings.flatMap((listing) => (listing.profile?.topics ?? []).map((entry) => entry.topic)));
-    const names = [...new Set([...byTopic.keys(), ...ownTopics])];
-    const topics = names.map((topic) => ({
-      topic,
-      ...(byTopic.get(topic) ?? { praise: 0, complaints: 0, complaintsThisYear: 0 }),
-      rivalsPraised: rivalTopics.get(topic)?.total ?? 0,
-      topRival: rivalTopics.get(topic)?.top ?? null,
-    }));
-    const starsOf = (listing: Doc<"listings">, you: boolean) => ({
-      listingId: listing._id, name: listing.name, you, counts: listing.profile?.starCounts ?? [], rating: listing.rating ?? null,
-    });
-    const googleOwn = listings.filter((listing) => listing.source === "GOOGLE");
-    const drafts = setup.hold
-      ? await ctx.db.query("reviewReplyDrafts").withIndex("by_hold", (q) => q.eq("companyWebsiteId", setup.hold!._id)).take(200)
-      : [];
-    const draftOf = new Map(drafts.map((draft) => [`${draft.listingId}|${draft.reviewId}`, draft.text]));
-    const waiting = reviews.filter((review) => !review.replyDay).sort((left, right) => right.day.localeCompare(left.day));
-    return {
-      offices: setup.offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null })),
-      read: reviews.filter((review) => review.topics !== undefined).length,
-      unread: reviews.filter((review) => review.text && review.topics === undefined).length,
-      topics,
-      stars: [...googleOwn.map((listing) => starsOf(listing, true)), ...rivals.map((listing) => starsOf(listing, false))],
-      waiting: waiting.length,
-      drafts: waiting.flatMap((review) => {
-        const reply = draftOf.get(`${review.listing._id}|${review.id}`);
-        return reply && review.text ? [{
-          listingId: review.listing._id, reviewId: review.id, source: review.listing.source, town: review.listing.town ?? null,
-          day: review.day, stars: review.stars, name: review.name ?? null, text: review.text, reply,
-        }] : [];
-      }).slice(0, 20),
-      perReplyUsd: await perReplyUsd(ctx),
-    };
-  }, customersSaySees),
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => await readWhatCustomersSay(ctx, args), customersSaySees),
 });
+
+/** whatCustomersSay's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readWhatCustomersSay(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { setup, office, listings } = await ownListings(ctx, site, args.officeId);
+  const reviews: Array<StoredReview & { listing: Doc<"listings"> }> = [];
+  for (const listing of listings) for (const review of await readReviews(ctx, listing._id)) reviews.push({ ...review, listing });
+  const year = new Date().toISOString().slice(0, 4);
+  const byTopic = new Map<string, { praise: number; complaints: number; complaintsThisYear: number }>();
+  for (const review of reviews) {
+    for (const mark of marksOf(review.topics)) {
+      const held = byTopic.get(mark.topic) ?? { praise: 0, complaints: 0, complaintsThisYear: 0 };
+      if (mark.praise) held.praise += 1;
+      else {
+        held.complaints += 1;
+        if (review.day.startsWith(year)) held.complaintsThisYear += 1;
+      }
+      byTopic.set(mark.topic, held);
+    }
+  }
+  // What rivals' reviews talk about, from Google's own topics on their profiles.
+  const rivals = office ? rivalsOf(office, setup.rivals, setup.rivalOffice) : setup.rivals;
+  const rivalTopics = new Map<string, { total: number; top: { name: string; reviews: number } | null }>();
+  for (const rival of rivals) {
+    for (const entry of rival.profile?.topics ?? []) {
+      const held = rivalTopics.get(entry.topic) ?? { total: 0, top: null };
+      held.total += entry.reviews;
+      if (!held.top || entry.reviews > held.top.reviews) held.top = { name: rival.name, reviews: entry.reviews };
+      rivalTopics.set(entry.topic, held);
+    }
+  }
+  const ownTopics = new Set(listings.flatMap((listing) => (listing.profile?.topics ?? []).map((entry) => entry.topic)));
+  const names = [...new Set([...byTopic.keys(), ...ownTopics])];
+  const topics = names.map((topic) => ({
+    topic,
+    ...(byTopic.get(topic) ?? { praise: 0, complaints: 0, complaintsThisYear: 0 }),
+    rivalsPraised: rivalTopics.get(topic)?.total ?? 0,
+    topRival: rivalTopics.get(topic)?.top ?? null,
+  }));
+  const starsOf = (listing: Doc<"listings">, you: boolean) => ({
+    listingId: listing._id, name: listing.name, you, counts: listing.profile?.starCounts ?? [], rating: listing.rating ?? null,
+  });
+  const googleOwn = listings.filter((listing) => listing.source === "GOOGLE");
+  const drafts = setup.hold
+    ? await ctx.db.query("reviewReplyDrafts").withIndex("by_hold", (q) => q.eq("companyWebsiteId", setup.hold!._id)).take(200)
+    : [];
+  const draftOf = new Map(drafts.map((draft) => [`${draft.listingId}|${draft.reviewId}`, draft.text]));
+  const waiting = reviews.filter((review) => !review.replyDay).sort((left, right) => right.day.localeCompare(left.day));
+  return {
+    offices: setup.offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null })),
+    read: reviews.filter((review) => review.topics !== undefined).length,
+    unread: reviews.filter((review) => review.text && review.topics === undefined).length,
+    topics,
+    stars: [...googleOwn.map((listing) => starsOf(listing, true)), ...rivals.map((listing) => starsOf(listing, false))],
+    waiting: waiting.length,
+    drafts: waiting.flatMap((review) => {
+      const reply = draftOf.get(`${review.listing._id}|${review.id}`);
+      return reply && review.text ? [{
+        listingId: review.listing._id, reviewId: review.id, source: review.listing.source, town: review.listing.town ?? null,
+        day: review.day, stars: review.stars, name: review.name ?? null, text: review.text, reply,
+      }] : [];
+    }).slice(0, 20),
+    perReplyUsd: await perReplyUsd(ctx),
+  };
+}
 
 /** Drafted replies averaged for the cost line. */
 const REPLIES_PRICED = 20;

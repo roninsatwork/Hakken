@@ -23,7 +23,7 @@ import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFo
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
-import { newLostSees } from "../_components/keywordSees";
+import { newLostSees } from "@/convex/utils/sees/eyeData/visibilityKeywords";
 import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSiteListPage, useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSort, useSiteSortedList } from "../../../_components/useSiteSort";

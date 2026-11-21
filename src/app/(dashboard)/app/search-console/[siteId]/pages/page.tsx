@@ -12,6 +12,8 @@ import { type ChipId, figureColumns, pageColumn, useSearchConsoleList, type List
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { MOST_TICKED, TickedDaysCard, useListOpening, useTickedDays, useTickedRows } from "../../_components/TickedDays";
 import { pagesSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { pagesEyeData } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 /**
  * The drawing's Section chip ("Top level", "/hub/") was one website's own folders; a Page type chip from Sites stands
@@ -49,21 +51,15 @@ export default function SearchConsolePagesPage() {
   // The eye's figures: the list's, the country's clicks from the boxes (the gap Google leaves, said once), and the ticked
   // pages' clicks against the span before, by the names the chart says; and the names the page says things by, each
   // Classification's among them (pages not sorted yet are never named).
+  // Built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
   const choices = list.pageKinds.choices;
-  const names = useMemo(() => ({
-    // "Your pages", not "All your pages": the pages share out only what Google ties to one, and an answer read "All your
-    // pages" as the whole website (18 November 2026).
-    allPages: t("pages.eye.yourPages"), clicked: t("pages.eye.clicked"), half: t("pages.eye.half"), home: t("pages.chart.homePage"),
-    hidden: t("performance.squares.groups.hidden"),
-    kinds: Object.fromEntries((choices ?? []).map((choice) => [choice.id, choice.name])),
-  }), [t, choices]);
   const countryClicks = site.problem ? null : (site.figures?.totals?.clicks ?? null);
-  const seesData = useMemo(() => (list.pageData ? {
-    ...list.pageData,
-    ...(countryClicks !== null ? { website: { clicks: countryClicks } } : {}),
-    ticked: ticked.filter((row) => row.clicks !== null).map((row) => ({ name: nameOf(row.key), clicks: row.clicks, previousClicks: row.previousClicks })),
-    names,
-  } : undefined), [list.pageData, countryClicks, ticked, nameOf, names]);
+  const seesData = useMemo(() => pagesEyeData({
+    page: list.pageData,
+    countryClicks,
+    ticked: ticked.map((row) => ({ name: nameOf(row.key), clicks: row.clicks, previousClicks: row.previousClicks })),
+    kinds: choices,
+  }, wordsReader(t)), [list.pageData, countryClicks, ticked, nameOf, choices, t]);
 
   return (
     <SearchConsoleListScreen

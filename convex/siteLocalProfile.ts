@@ -5,7 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { listingRowOf, listingRowValidator, readListingWeeks, type ListingWeek } from "./localListings";
 import {
   MAP_BOX,
@@ -157,9 +157,11 @@ async function officeMap(ctx: Reader, office: Doc<"listings">, searches: string[
   return { searches, checks, boxes: boxesOf(checks) };
 }
 
+const businessProfileArgs = { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) };
+
 export const businessProfile = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
+  args: businessProfileArgs,
   returns: v.object({
     offices: v.array(officeOptionValidator),
     office: v.union(v.null(), v.object({
@@ -177,76 +179,81 @@ export const businessProfile = moduleQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { offices, rivals, rivalOffice } = await localSetup(ctx, site);
-    const office = openOffice(offices, args.officeId);
-    const options = offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
-    if (!office) return { offices: options, office: null };
-
-    const mine = rivalsOf(office, rivals, rivalOffice);
-    const { checks, boxes } = await officeMap(ctx, office, await officeSearches(ctx, site, office, offices));
-    const also = office.profile?.alsoSearched ?? [];
-    const alsoListings = new Map<string, Doc<"listings">>();
-    for (const entry of also) {
-      const listing = await ctx.db.query("listings").withIndex("by_source_key", (q) => q.eq("source", "GOOGLE").eq("key", entry.key)).unique();
-      if (listing) alsoListings.set(entry.key, listing);
-    }
-    const boxListings = await listingsById(ctx, [...boxes.values()].flat());
-    const inBoxCount = (listingId: Id<"listings"> | undefined) => (listingId ? [...boxes.values()].filter((ids) => ids.includes(listingId)).length : 0);
-    const watched = new Set(rivals.map((rival) => rival._id as string));
-    const known = [...alsoListings.values()].filter((listing) => listing.profile);
-    const rivalPhotos = averageOf(mine.map((rival) => rival.photos));
-    const weeks = await readListingWeeks(ctx, office._id);
-    // Each topic's average stars, across the office's reviews its AI read (Reviews, `reviewJudging.ts`).
-    const topicStars = starsByTopic(await readReviews(ctx, office._id));
-
-    const alsoRows = [
-      { listing: office, entry: { key: office.key, name: office.name, rating: office.rating, reviews: office.reviews }, you: true },
-      ...also.map((entry) => ({ listing: alsoListings.get(entry.key), entry, you: false })),
-    ].map(({ listing, entry, you }) => ({
-      key: entry.key,
-      listingId: listing?._id ?? null,
-      name: listing?.name ?? entry.name,
-      websiteHost: listing?.websiteHost ?? null,
-      category: listing?.category ?? null,
-      rating: listing?.rating ?? entry.rating ?? null,
-      reviews: listing?.reviews ?? entry.reviews ?? null,
-      photos: listing?.photos ?? null,
-      booking: listing?.profile ? Boolean(listing.profile.bookingUrl) : null,
-      mapBox: inBoxCount(listing?._id),
-      you,
-      watched: Boolean(listing && watched.has(listing._id)),
-    }));
-
-    return {
-      offices: options,
-      office: {
-        row: listingRowOf(office),
-        readAt: office.profileReadAt ?? null,
-        figures: {
-          rivalsRating: averageOf(mine.map((rival) => rival.rating)),
-          reviewsGained: reviewsGained(weeks, Date.now()),
-          mapBox: mapBoxOf(checks),
-          rivalsPhotos: rivalPhotos === null ? null : Math.round(rivalPhotos),
-        },
-        details: profileDetails({
-          office,
-          siteHost: site.website.host,
-          boxCategory: boxCategoryOf(boxes, boxListings, office._id),
-          alsoBooking: { withLink: known.filter((listing) => listing.profile?.bookingUrl).length, known: known.length },
-          rivalPhotos,
-        }),
-        alsoLookAt: alsoRows,
-        topics: (office.profile?.topics ?? []).map((entry) => ({ ...entry, stars: topicStars.get(entry.topic) ?? null })),
-      },
-    };
-  }, businessProfileSees),
+  handler: async (ctx, args) => await readBusinessProfile(ctx, args),
 });
+
+/** businessProfile's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readBusinessProfile = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const { offices, rivals, rivalOffice } = await localSetup(ctx, site);
+  const office = openOffice(offices, args.officeId);
+  const options = offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
+  if (!office) return { offices: options, office: null };
+
+  const mine = rivalsOf(office, rivals, rivalOffice);
+  const { checks, boxes } = await officeMap(ctx, office, await officeSearches(ctx, site, office, offices));
+  const also = office.profile?.alsoSearched ?? [];
+  const alsoListings = new Map<string, Doc<"listings">>();
+  for (const entry of also) {
+    const listing = await ctx.db.query("listings").withIndex("by_source_key", (q) => q.eq("source", "GOOGLE").eq("key", entry.key)).unique();
+    if (listing) alsoListings.set(entry.key, listing);
+  }
+  const boxListings = await listingsById(ctx, [...boxes.values()].flat());
+  const inBoxCount = (listingId: Id<"listings"> | undefined) => (listingId ? [...boxes.values()].filter((ids) => ids.includes(listingId)).length : 0);
+  const watched = new Set(rivals.map((rival) => rival._id as string));
+  const known = [...alsoListings.values()].filter((listing) => listing.profile);
+  const rivalPhotos = averageOf(mine.map((rival) => rival.photos));
+  const weeks = await readListingWeeks(ctx, office._id);
+  // Each topic's average stars, across the office's reviews its AI read (Reviews, `reviewJudging.ts`).
+  const topicStars = starsByTopic(await readReviews(ctx, office._id));
+
+  const alsoRows = [
+    { listing: office, entry: { key: office.key, name: office.name, rating: office.rating, reviews: office.reviews }, you: true },
+    ...also.map((entry) => ({ listing: alsoListings.get(entry.key), entry, you: false })),
+  ].map(({ listing, entry, you }) => ({
+    key: entry.key,
+    listingId: listing?._id ?? null,
+    name: listing?.name ?? entry.name,
+    websiteHost: listing?.websiteHost ?? null,
+    category: listing?.category ?? null,
+    rating: listing?.rating ?? entry.rating ?? null,
+    reviews: listing?.reviews ?? entry.reviews ?? null,
+    photos: listing?.photos ?? null,
+    booking: listing?.profile ? Boolean(listing.profile.bookingUrl) : null,
+    mapBox: inBoxCount(listing?._id),
+    you,
+    watched: Boolean(listing && watched.has(listing._id)),
+  }));
+
+  return {
+    offices: options,
+    office: {
+      row: listingRowOf(office),
+      readAt: office.profileReadAt ?? null,
+      figures: {
+        rivalsRating: averageOf(mine.map((rival) => rival.rating)),
+        reviewsGained: reviewsGained(weeks, Date.now()),
+        mapBox: mapBoxOf(checks),
+        rivalsPhotos: rivalPhotos === null ? null : Math.round(rivalPhotos),
+      },
+      details: profileDetails({
+        office,
+        siteHost: site.website.host,
+        boxCategory: boxCategoryOf(boxes, boxListings, office._id),
+        alsoBooking: { withLink: known.filter((listing) => listing.profile?.bookingUrl).length, known: known.length },
+        rivalPhotos,
+      }),
+      alsoLookAt: alsoRows,
+      topics: (office.profile?.topics ?? []).map((entry) => ({ ...entry, stars: topicStars.get(entry.topic) ?? null })),
+    },
+  };
+}, businessProfileSees);
+
+const everyOfficeArgs = { siteId: v.id("companyWebsites") };
 
 export const everyOffice = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: everyOfficeArgs,
   returns: v.object({
     offices: v.array(v.object({
       ...listingRowValidator.fields,
@@ -266,47 +273,50 @@ export const everyOffice = moduleQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { offices, rivals, rivalOffice } = await localSetup(ctx, site);
-    const searchesOf = await searchesByOffice(ctx, site, offices);
-    const maps: Array<Awaited<ReturnType<typeof officeMap>>> = [];
-    for (const office of offices) maps.push(await officeMap(ctx, office, searchesOf.get(office._id) ?? []));
-    // Every business in any office's map box, read once for all of them.
-    const boxListings = await listingsById(ctx, maps.flatMap((map) => [...map.boxes.values()].flat()));
-    const rows = [];
-    for (const [at, office] of offices.entries()) {
-      const { checks, boxes } = maps[at];
-      const mine = rivalsOf(office, rivals, rivalOffice);
-      const details = profileDetails({
-        office,
-        siteHost: site.website.host,
-        boxCategory: boxCategoryOf(boxes, boxListings, office._id),
-        alsoBooking: { withLink: 0, known: 0 },
-        rivalPhotos: averageOf(mine.map((rival) => rival.photos)),
-      });
-      rows.push({
-        ...listingRowOf(office),
-        answered: office.reviewsHeld ? (office.reviewsAnswered ?? 0) / office.reviewsHeld : null,
-        mapBox: mapBoxOf(checks),
-        toFix: details.filter((detail) => detail.verdict === "FIX").length,
-        reviewsGained: reviewsGained(await readListingWeeks(ctx, office._id), Date.now()),
-      });
-    }
-    const keywords = [...new Set(maps.flatMap((map) => map.searches))];
-    const volumes = await searchVolumesOf(ctx, site, keywords);
-    return {
-      offices: rows,
-      searches: keywords.map((keyword) => ({
-        keyword,
-        volume: volumes.get(keyword) ?? null,
-        places: maps.map((map) => (map.searches.includes(keyword) ? map.checks.get(keyword)?.place ?? null : null)),
-        top: [...new Set(maps.flatMap((map) => {
-          const first = map.boxes.get(keyword)?.[0];
-          const name = first ? boxListings.get(first)?.name : undefined;
-          return name ? [name] : [];
-        }))],
-      })),
-    };
-  }, everyOfficeSees),
+  handler: async (ctx, args) => await readEveryOffice(ctx, args),
 });
+
+/** everyOffice's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readEveryOffice = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const { offices, rivals, rivalOffice } = await localSetup(ctx, site);
+  const searchesOf = await searchesByOffice(ctx, site, offices);
+  const maps: Array<Awaited<ReturnType<typeof officeMap>>> = [];
+  for (const office of offices) maps.push(await officeMap(ctx, office, searchesOf.get(office._id) ?? []));
+  // Every business in any office's map box, read once for all of them.
+  const boxListings = await listingsById(ctx, maps.flatMap((map) => [...map.boxes.values()].flat()));
+  const rows = [];
+  for (const [at, office] of offices.entries()) {
+    const { checks, boxes } = maps[at];
+    const mine = rivalsOf(office, rivals, rivalOffice);
+    const details = profileDetails({
+      office,
+      siteHost: site.website.host,
+      boxCategory: boxCategoryOf(boxes, boxListings, office._id),
+      alsoBooking: { withLink: 0, known: 0 },
+      rivalPhotos: averageOf(mine.map((rival) => rival.photos)),
+    });
+    rows.push({
+      ...listingRowOf(office),
+      answered: office.reviewsHeld ? (office.reviewsAnswered ?? 0) / office.reviewsHeld : null,
+      mapBox: mapBoxOf(checks),
+      toFix: details.filter((detail) => detail.verdict === "FIX").length,
+      reviewsGained: reviewsGained(await readListingWeeks(ctx, office._id), Date.now()),
+    });
+  }
+  const keywords = [...new Set(maps.flatMap((map) => map.searches))];
+  const volumes = await searchVolumesOf(ctx, site, keywords);
+  return {
+    offices: rows,
+    searches: keywords.map((keyword) => ({
+      keyword,
+      volume: volumes.get(keyword) ?? null,
+      places: maps.map((map) => (map.searches.includes(keyword) ? map.checks.get(keyword)?.place ?? null : null)),
+      top: [...new Set(maps.flatMap((map) => {
+        const first = map.boxes.get(keyword)?.[0];
+        const name = first ? boxListings.get(first)?.name : undefined;
+        return name ? [name] : [];
+      }))],
+    })),
+  };
+}, everyOfficeSees);

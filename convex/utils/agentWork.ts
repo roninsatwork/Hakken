@@ -31,7 +31,11 @@ export type AgentWork = { what: AgentWorkKind; when: AgentRunKind; timer?: Agent
 
 const scheduled = (what: AgentWorkKind): AgentWork => ({ what, when: "schedule" });
 const INSIGHTS_TEAM: AgentWork = { what: "insights", when: "team" };
-const DAILY_SWEEP = (cron: string): AgentWork => ({ what: "wiki", when: "schedule", timer: { cron, every: { hours: 24 } } });
+/**
+ * The wiki's nightly check-up (wiki-sonae-catch-up-plan-2026-11-21.md, phase 2): one round a night that replaced the
+ * four wiki sweeps, so the members who swept now work inside it.
+ */
+const NIGHTLY_CHECKUP: AgentWork = { what: "wiki", when: "schedule", timer: { cron: "wiki-daily-checkup", daily: { hourUTC: 2, minuteUTC: 0 } } };
 
 export const AGENT_WORK: Readonly<Record<string, AgentWork>> = {
   // Collecting data: each on its row of the Schedules page.
@@ -80,10 +84,11 @@ export const AGENT_WORK: Readonly<Record<string, AgentWork>> = {
   WIKI_DISTILLER: { what: "wiki", when: "event", trigger: "imported" },
   WIKI_REVIEWER: { what: "wiki", when: "event", trigger: "sensitive" },
   WIKI_FILING_CLERK: { what: "wiki", when: "event", trigger: "answered" },
-  WIKI_CONTRADICTION_FINDER: DAILY_SWEEP("wiki-contradiction-sweep"),
-  WIKI_FRESHNESS_CHECKER: DAILY_SWEEP("wiki-freshness-sweep"),
-  WIKI_LINKER: DAILY_SWEEP("wiki-tending-sweep"),
-  WIKI_TIDIER: DAILY_SWEEP("wiki-tending-sweep"),
+  WIKI_CHECKUP: NIGHTLY_CHECKUP,
+  WIKI_CONTRADICTION_FINDER: NIGHTLY_CHECKUP,
+  WIKI_FRESHNESS_CHECKER: NIGHTLY_CHECKUP,
+  WIKI_LINKER: NIGHTLY_CHECKUP,
+  WIKI_TIDIER: NIGHTLY_CHECKUP,
   WIKI_EXAMINER: { what: "wiki", when: "schedule", timer: { cron: "wiki-exam-growth", monthly: { day: 1, hourUTC: 8, minuteUTC: 0 } } },
   // The platform's own: never run on their own.
   PLATFORM_AI: { what: "platform", when: "never" },

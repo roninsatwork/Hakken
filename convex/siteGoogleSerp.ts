@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
@@ -222,13 +222,15 @@ export async function readListFeatures(ctx: SiteReader, args: { siteId: Id<"comp
   };
 }
 
+const listQuestionsArgs = { siteId: v.id("companyWebsites") };
+
 /**
  * "People also ask" questions and related searches from the site's searches'
  * results pages, each once, with the searches it came up on.
  */
 export const listQuestions = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: listQuestionsArgs,
   returns: v.object({
     ...listWithCut(v.object({
       text: v.string(),
@@ -238,31 +240,34 @@ export const listQuestions = moduleQuery({
     })).fields,
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const found = new Map<string, { text: string; kind: "QUESTION" | "RELATED"; searches: string[]; day: string }>();
-    let cut = false;
-    for (const { keyword, page } of await latestPages(ctx, site)) {
-      if (!page) continue;
-      const add = (text: string, kind: "QUESTION" | "RELATED") => {
-        const key = `${kind}:${text.toLowerCase()}`;
-        const held = found.get(key);
-        if (held) {
-          if (!held.searches.includes(keyword)) held.searches.push(keyword);
-          if (page.day > held.day) held.day = page.day;
-        } else if (found.size < QUESTIONS_KEPT) {
-          found.set(key, { text, kind, searches: [keyword], day: page.day });
-        } else {
-          cut = true;
-        }
-      };
-      for (const question of page.questions) add(question, "QUESTION");
-      for (const related of page.related) add(related, "RELATED");
-    }
-    const rows = [...found.values()].sort((left, right) =>
-      right.searches.length - left.searches.length
-      || left.kind.localeCompare(right.kind)
-      || left.text.localeCompare(right.text));
-    return { rows, cut: cut ? rows.length : null, seen: questionsSees(rows) };
-  },
+  handler: async (ctx, args) => await readListQuestions(ctx, args),
 });
+
+/** listQuestions's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListQuestions(ctx: SiteReader, args: ObjectType<typeof listQuestionsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const found = new Map<string, { text: string; kind: "QUESTION" | "RELATED"; searches: string[]; day: string }>();
+  let cut = false;
+  for (const { keyword, page } of await latestPages(ctx, site)) {
+    if (!page) continue;
+    const add = (text: string, kind: "QUESTION" | "RELATED") => {
+      const key = `${kind}:${text.toLowerCase()}`;
+      const held = found.get(key);
+      if (held) {
+        if (!held.searches.includes(keyword)) held.searches.push(keyword);
+        if (page.day > held.day) held.day = page.day;
+      } else if (found.size < QUESTIONS_KEPT) {
+        found.set(key, { text, kind, searches: [keyword], day: page.day });
+      } else {
+        cut = true;
+      }
+    };
+    for (const question of page.questions) add(question, "QUESTION");
+    for (const related of page.related) add(related, "RELATED");
+  }
+  const rows = [...found.values()].sort((left, right) =>
+    right.searches.length - left.searches.length
+    || left.kind.localeCompare(right.kind)
+    || left.text.localeCompare(right.text));
+  return { rows, cut: cut ? rows.length : null, seen: questionsSees(rows) };
+}

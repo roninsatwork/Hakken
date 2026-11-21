@@ -53,7 +53,10 @@ export async function readPageKindViews(ctx: SiteReader, args: { siteId: (typeof
   const country = await keptCountry(ctx, site.hold, args.country);
   const connection = await connectionOf(ctx, holdId);
   if (!connection?.newestDay) return null;
-  const list = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country);
+  // Views only, never each row's key events: a year of every page read whole ran All pages' Classification read out of
+  // Convex's 64MB on Last 12 months (More Handles, 2026-11-21), as `PartOnly` says of long lists.
+  const viewsOnly = { events: new Set<string>() };
+  const list = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country, viewsOnly);
   if (list === "LIVE") return { waiting: true, sorted: false, kinds: [], views: 0, unplaced: 0 };
   if (!list) return null;
   const kinds = await readPageKinds(ctx, holdId);
@@ -77,7 +80,7 @@ export async function readPageKindViews(ctx: SiteReader, args: { siteId: (typeof
     by.set(kind, one);
   });
   if (args.against) {
-    const before = await readFor(ctx, holdId, "page", args.period, "BEFORE", args.device, undefined, country);
+    const before = await readFor(ctx, holdId, "page", args.period, "BEFORE", args.device, undefined, country, viewsOnly);
     const earlier = before && before !== "LIVE" ? before.rows.filter((row) => row.views > 0) : [];
     const was = await decodePages(ctx, holdId, earlier.map((row) => row.key));
     earlier.forEach((row, at) => {

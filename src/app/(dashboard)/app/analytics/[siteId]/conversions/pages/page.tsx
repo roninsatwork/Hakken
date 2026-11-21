@@ -7,7 +7,7 @@ import type { FunctionReturnType } from "convex/server";
 import { FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import type { ConversionColumns } from "@/convex/googleAnalyticsConversionsMap";
+import { conversionPagesEyeData, squareColumnsOf } from "@/convex/utils/sees/eyeData/googleAnalyticsConversions";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -23,7 +23,7 @@ import { AnalyticsSees } from "../../../_components/AnalyticsSees";
 import { FigureCell, PageLink, TextFigure } from "../../../_components/AnalyticsCells";
 import { formatPercent, pathOf } from "../../../_components/analyticsFormat";
 import { backTarget } from "../../../_components/analyticsBack";
-import { COLUMNS, useColumnName } from "../../../_components/ConversionsCards";
+import { useColumnName } from "../../../_components/ConversionsCards";
 import { useEventName } from "../../../_components/useEventName";
 import { useEyeNames } from "../../../_components/useEyeFigures";
 import { periodWord, useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
@@ -68,7 +68,7 @@ function Body({ status }: { status: AnalyticsStatus }) {
   const pageHref = usePageHref();
   const nameOf = useEventName();
   const event = params.get("event") ?? "";
-  const by = (COLUMNS as readonly string[]).includes(params.get("by") ?? "") ? (params.get("by") as ConversionColumns) : "kind";
+  const by = squareColumnsOf(params.get("by"));
   const key = params.get("key") ?? "";
   const back = backTarget(params.get("from"));
   const answer = useQuery(api.googleAnalyticsConversionsMap.analyticsConversionsPages, status.connection?.newestDay && event ? { ...args, columns: by, key, eventName: event } : "skip");
@@ -76,9 +76,10 @@ function Body({ status }: { status: AnalyticsStatus }) {
   const columnName = useColumnName(by, [{ kind: key, name: answer?.name ?? null }], choices?.main ?? null);
   const [search, setSearch, term] = useSiteSearch();
   const rows = answer?.rows;
-  // What the eye reads: the square's pages, with the names its findings use, in the reader's words.
+  // What the eye reads: the square's pages, with the names its findings use, in the reader's words. Built by the same
+  // function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts), so the two can't disagree.
   const eyeNames = useEyeNames();
-  const seesData = useMemo(() => (answer ? { ...answer, names: eyeNames } : answer), [answer, eyeNames]);
+  const seesData = useMemo(() => conversionPagesEyeData(answer, eyeNames), [answer, eyeNames]);
   const nameFor = (row: Row) => (row.address === "(not set)" ? t("noPage") : row.title ?? pathOf(row.address));
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(nameFor(row)) || matches(pathOf(row.address)));

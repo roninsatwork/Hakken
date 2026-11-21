@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -222,11 +222,14 @@ export const bingPerformance = moduleQuery({
     /** The span before: its days, Bing's totals and Google's; null where Bing's days don't reach back to it. */
     before: v.union(v.null(), v.object({ from: v.string(), to: v.string(), totals: totalsValidator, google: v.union(v.null(), totalsValidator) })),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    return await readPerformance(ctx, site.hold._id, args.period);
-  },
+  handler: async (ctx, args) => await readBingPerformance(ctx, args),
 });
+
+/** Performance's figures for one of the caller's websites: its screen and a chat app's question read them alike. */
+export async function readBingPerformance(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: BingPeriodArg }) {
+  const site = await requireMySite(ctx, args.siteId);
+  return await readPerformance(ctx, site.hold._id, args.period);
+}
 
 // ---------------------------------------------------------------------------
 // The keyword and page lists
@@ -499,27 +502,30 @@ export const bingListPage = moduleQuery({
     /** Pages only: the website's classifications, A to Z, and Not sorted — the filter's choices. */
     kinds: v.array(v.object({ id: v.string(), name: v.union(v.string(), v.null()) })),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { siteId: _siteId, page: asked, rows: size, ...ask } = args;
-    const choices = args.list === "page" ? (await readPageKinds(ctx, site.hold._id))?.choices ?? [] : [];
-    const list = await readList(ctx, site.hold._id, ask);
-    const page = pageOfList(list.rows, asked, size);
-    return {
-      rows: await shownRows(ctx, site.hold._id, args.list, page.rows, list.names),
-      total: page.total,
-      page: page.page,
-      pages: page.pages,
-      size: page.size,
-      cut: null,
-      preparing: list.preparing,
-      from: list.from,
-      to: list.to,
-      summary: { ...list.summary, ...(await summaryRows(ctx, site.hold._id, args.list, list)) },
-      kinds: choices.length > 0 ? [...choices.map((choice) => ({ id: choice.id, name: choice.name })), { id: NOT_SORTED_KIND, name: null }] : [],
-    };
-  },
+  handler: async (ctx, args) => await readBingListPage(ctx, args),
 });
+
+/** A page of a list for one of the caller's websites (`bingListPage`): its screen and a chat app's question read it alike. */
+export async function readBingListPage(ctx: SiteReader, args: ObjectType<typeof listArgs> & { page: number; rows: number }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { siteId: _siteId, page: asked, rows: size, ...ask } = args;
+  const choices = args.list === "page" ? (await readPageKinds(ctx, site.hold._id))?.choices ?? [] : [];
+  const list = await readList(ctx, site.hold._id, ask);
+  const page = pageOfList(list.rows, asked, size);
+  return {
+    rows: await shownRows(ctx, site.hold._id, args.list, page.rows, list.names),
+    total: page.total,
+    page: page.page,
+    pages: page.pages,
+    size: page.size,
+    cut: null,
+    preparing: list.preparing,
+    from: list.from,
+    to: list.to,
+    summary: { ...list.summary, ...(await summaryRows(ctx, site.hold._id, args.list, list)) },
+    kinds: choices.length > 0 ? [...choices.map((choice) => ({ id: choice.id, name: choice.name })), { id: NOT_SORTED_KIND, name: null }] : [],
+  };
+}
 
 /** Every row of a list, named, in the order on screen: its download. */
 export const bingListAll = moduleQuery({
@@ -613,11 +619,14 @@ export const bingListSeen = moduleQuery({
     shareLow: v.union(v.null(), seenPickValidator),
     kinds: v.array(v.object({ name: v.string(), sorted: v.boolean(), rows: v.number(), clicks: v.number(), clicksBefore: orNull(v.number()), impressions: v.number(), googleClicks: v.number() })),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    return await readListSeen(ctx, site.hold._id, args.list, args.period);
-  },
+  handler: async (ctx, args) => await readBingListSeen(ctx, args),
 });
+
+/** A list read whole for the eye, for one of the caller's websites (`bingListSeen`). */
+export async function readBingListSeen(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; list: "query" | "page"; period: BingPeriodArg }) {
+  const site = await requireMySite(ctx, args.siteId);
+  return await readListSeen(ctx, site.hold._id, args.list, args.period);
+}
 
 // ---------------------------------------------------------------------------
 // A keyword's or a page's own screen
@@ -641,51 +650,54 @@ export const bingRecord = moduleQuery({
     /** Its figures on Bing the span before; null where the span before isn't built. */
     before: v.optional(v.union(v.null(), v.object({ from: v.string(), to: v.string(), clicks: v.number(), impressions: v.number(), position: orNull(v.number()) }))),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const number = args.list === "page" ? pageNumberOf(args.ref) : Number(args.ref);
-    if (!Number.isInteger(number) || number < 0) return null;
-    const key = args.list === "query"
-      ? (await bingKeywordsAt(ctx, holdId, [number])).get(number) ?? null
-      : (await decodePages(ctx, holdId, [pageRefOf(number)]))[0] ?? null;
-    if (!key || key.startsWith("~")) return null;
-    // Its last 26 weeks, a week at a time: which weeks are held comes from each week's first part.
-    const held = await ctx.db
-      .query("bingWeeks")
-      .withIndex("by_hold_list_part_week", (q) => q.eq("companyWebsiteId", holdId).eq("list", args.list).eq("part", 0))
-      .order("desc")
-      .take(RECORD_WEEKS);
-    const byWeek = new Map<string, BingRow[]>();
-    for (const { week } of held) {
-      const parts = await ctx.db
-        .query("bingWeeks")
-        .withIndex("by_hold_list_week_part", (q) => q.eq("companyWebsiteId", holdId).eq("list", args.list).eq("week", week))
-        .take(100);
-      const mine = parts.flatMap(rowsOfBingPart).filter((row) => row.key === number);
-      if (mine.length > 0) byWeek.set(week, mine);
-    }
-    const weeks = [...byWeek.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([week, rows]) => {
-      const [row] = addUpRows([rows]);
-      return { week, clicks: row.clicks, impressions: row.impressions, position: row.impressions > 0 && row.positionSum > 0 ? row.positionSum / row.impressions : null };
-    });
-    // Its figures beside Google's for the menu's period, as the list it was opened from.
-    const parts = await periodParts(ctx, holdId, args.list, args.period ?? OPENING_PERIOD);
-    const row = rowsOfParts(parts).find((entry) => entry.number === number);
-    const [figures] = row ? await shownRows(ctx, holdId, args.list, [row], new Map([[number, key]])) : [null];
-    const title = args.list === "page" ? (await titlesOf(ctx, holdId, [key])).get(key) ?? null : null;
-    // The same keyword or page the span before, as its list's span before keeps it (ask-hakken-every-chart-page-plan-
-    // 2026-11-03.md, section 7: held, never read): nothing there is no clicks then.
-    const built = await periodParts(ctx, holdId, args.list, args.period ?? OPENING_PERIOD, "BEFORE");
-    // Only a whole span before: Last 12 months' holds only the weeks still kept (`beforeIsWhole`).
-    const beforeParts = built[0] && parts[0] && beforeIsWhole(parts[0], built[0]) ? built : [];
-    const then = beforeParts.flatMap(rowsOfBingPart).find((entry) => entry.key === number);
-    const before = beforeParts[0]
-      ? { from: beforeParts[0].from, to: beforeParts[0].to, clicks: then?.clicks ?? 0, impressions: then?.impressions ?? 0, position: then ? positionOfRow(then) : null }
-      : null;
-    return { key, title, weeks, figures: figures ?? null, from: parts[0]?.from ?? null, to: parts[0]?.to ?? null, before };
-  },
+  handler: async (ctx, args) => await readBingRecord(ctx, args),
 });
+
+/** One keyword or page for one of the caller's websites (`bingRecord`): its screen and a chat app's question read it alike. */
+export async function readBingRecord(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; list: "query" | "page"; ref: string; period?: BingPeriodArg }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const number = args.list === "page" ? pageNumberOf(args.ref) : Number(args.ref);
+  if (!Number.isInteger(number) || number < 0) return null;
+  const key = args.list === "query"
+    ? (await bingKeywordsAt(ctx, holdId, [number])).get(number) ?? null
+    : (await decodePages(ctx, holdId, [pageRefOf(number)]))[0] ?? null;
+  if (!key || key.startsWith("~")) return null;
+  // Its last 26 weeks, a week at a time: which weeks are held comes from each week's first part.
+  const held = await ctx.db
+    .query("bingWeeks")
+    .withIndex("by_hold_list_part_week", (q) => q.eq("companyWebsiteId", holdId).eq("list", args.list).eq("part", 0))
+    .order("desc")
+    .take(RECORD_WEEKS);
+  const byWeek = new Map<string, BingRow[]>();
+  for (const { week } of held) {
+    const parts = await ctx.db
+      .query("bingWeeks")
+      .withIndex("by_hold_list_week_part", (q) => q.eq("companyWebsiteId", holdId).eq("list", args.list).eq("week", week))
+      .take(100);
+    const mine = parts.flatMap(rowsOfBingPart).filter((row) => row.key === number);
+    if (mine.length > 0) byWeek.set(week, mine);
+  }
+  const weeks = [...byWeek.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([week, rows]) => {
+    const [row] = addUpRows([rows]);
+    return { week, clicks: row.clicks, impressions: row.impressions, position: row.impressions > 0 && row.positionSum > 0 ? row.positionSum / row.impressions : null };
+  });
+  // Its figures beside Google's for the menu's period, as the list it was opened from.
+  const parts = await periodParts(ctx, holdId, args.list, args.period ?? OPENING_PERIOD);
+  const row = rowsOfParts(parts).find((entry) => entry.number === number);
+  const [figures] = row ? await shownRows(ctx, holdId, args.list, [row], new Map([[number, key]])) : [null];
+  const title = args.list === "page" ? (await titlesOf(ctx, holdId, [key])).get(key) ?? null : null;
+  // The same keyword or page the span before, as its list's span before keeps it (ask-hakken-every-chart-page-plan-
+  // 2026-11-03.md, section 7: held, never read): nothing there is no clicks then.
+  const built = await periodParts(ctx, holdId, args.list, args.period ?? OPENING_PERIOD, "BEFORE");
+  // Only a whole span before: Last 12 months' holds only the weeks still kept (`beforeIsWhole`).
+  const beforeParts = built[0] && parts[0] && beforeIsWhole(parts[0], built[0]) ? built : [];
+  const then = beforeParts.flatMap(rowsOfBingPart).find((entry) => entry.key === number);
+  const before = beforeParts[0]
+    ? { from: beforeParts[0].from, to: beforeParts[0].to, clicks: then?.clicks ?? 0, impressions: then?.impressions ?? 0, position: then ? positionOfRow(then) : null }
+    : null;
+  return { key, title, weeks, figures: figures ?? null, from: parts[0]?.from ?? null, to: parts[0]?.to ?? null, before };
+}
 
 const liveRowValidator = v.object({ key: v.string(), clicks: v.number(), impressions: v.number(), position: v.union(v.number(), v.null()) });
 
@@ -694,12 +706,15 @@ export const bingLiveRows = moduleQuery({
   module: MENU_FEATURES.bingWebmaster,
   args: { siteId: v.id("companyWebsites"), ask: v.string() },
   returns: v.union(v.null(), v.array(liveRowValidator)),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const row = await ctx.db.query("bingLive").withIndex("by_hold_ask", (q) => q.eq("companyWebsiteId", site.hold._id).eq("ask", args.ask)).first();
-    return row?.rows ?? null;
-  },
+  handler: async (ctx, args) => await readBingLiveRows(ctx, args),
 });
+
+/** The rows Bing gave a record's screen, as held (`bingLiveRows`): only what was saved, never an ask of Bing. */
+export async function readBingLiveRows(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; ask: string }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const row = await ctx.db.query("bingLive").withIndex("by_hold_ask", (q) => q.eq("companyWebsiteId", site.hold._id).eq("ask", args.ask)).first();
+  return row?.rows ?? null;
+}
 
 export const liveTarget = internalQuery({
   args: { siteId: v.id("companyWebsites"), companyId: v.id("companies") },
@@ -836,11 +851,14 @@ export const bingCrawling = moduleQuery({
     /** The span before: its totals and the pages in Bing's index on its last day; null where Bing's days don't reach back to it. */
     before: v.union(v.null(), v.object({ from: v.string(), to: v.string(), totals: crawlTotalsValidator, inIndex: v.number() })),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    return await readCrawling(ctx, site.hold._id, args.period);
-  },
+  handler: async (ctx, args) => await readBingCrawling(ctx, args),
 });
+
+/** Crawling and indexing's figures for one of the caller's websites (`bingCrawling`). */
+export async function readBingCrawling(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; period: BingPeriodArg }) {
+  const site = await requireMySite(ctx, args.siteId);
+  return await readCrawling(ctx, site.hold._id, args.period);
+}
 
 // ---------------------------------------------------------------------------
 // Month by month, for Insights' Executive summary (BW13)

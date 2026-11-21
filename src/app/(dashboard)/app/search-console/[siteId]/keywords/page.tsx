@@ -12,6 +12,8 @@ import { figureColumns, keywordColumn, useSearchConsoleList, type ChipId, type L
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { useSearchConsoleCountry } from "../../_components/useSearchConsole";
 import { keywordsSees } from "@/convex/utils/sees/searchConsoleScreens";
+import { keywordsEyeData } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 /** Intent beside the drawn chips: Types opens Keywords narrowed to one. */
 const CHIPS: readonly ChipId[] = ["tracked", "band", "intent", "device"];
@@ -41,18 +43,14 @@ export default function SearchConsoleKeywordsPage() {
   const kept = country ? connection?.countriesNewest.find((held) => held.country === country) : undefined;
   const heldFrom = country ? (kept?.daysFrom ?? null) : (connection?.daysFrom ?? null);
   // The eye's figures: the list's, every click the website had, the ticked keywords' clicks against the span before, and the
-  // names the page says things by (as Position bands and Brand and non-brand name them), in the reader's words.
-  const names = useMemo(() => ({
-    "1-3": t("bands.top3"), "4-10": t("filters.bands.4-10"), "11-20": t("filters.bands.11-20"), "21-50": t("filters.bands.21-50"), "51+": t("filters.bands.51+"),
-    brand: t("filters.brandYes"), other: t("filters.brandNo"), hidden: t("performance.squares.groups.hidden"),
-  }), [t]);
+  // names the page says things by, in the reader's words: built by the same function a chat app's question builds them
+  // with (chatAppEyes/searchConsole.ts), so the two can't disagree.
   const totalClicks = figures?.totals?.clicks ?? null;
-  const seesData = useMemo(() => (list.pageData ? {
-    ...list.pageData,
-    ...(totalClicks !== null ? { website: { clicks: totalClicks } } : {}),
-    ticked: ticked.filter((keyword) => keyword.clicks !== null).map((keyword) => ({ name: keyword.key, clicks: keyword.clicks, previousClicks: keyword.previousClicks })),
-    names,
-  } : undefined), [list.pageData, totalClicks, ticked, names]);
+  const seesData = useMemo(() => keywordsEyeData({
+    page: list.pageData,
+    websiteClicks: totalClicks,
+    ticked: ticked.map((keyword) => ({ name: keyword.key, clicks: keyword.clicks, previousClicks: keyword.previousClicks })),
+  }, wordsReader(t)), [list.pageData, totalClicks, ticked, t]);
 
   return (
     <SearchConsoleListScreen

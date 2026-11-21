@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { bandMovesSees, bandsSees } from "./utils/sees/organic";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { checkStarts } from "./siteFigures";
 import { keywordStanding, readKeywordCopy, type KeywordCopy } from "./siteKeywordCopy";
 import { heldTo, listWithCut } from "./siteListPages";
@@ -62,16 +62,18 @@ function bandMovesIn(copy: KeywordCopy, isStart: boolean): BandMove[] {
  * The keyword copy, and what its newest check was when it had nothing before
  * it to move from: the site's first check, or its whole list's first.
  */
-async function readNewest(ctx: QueryCtx, websiteId: Id<"websites">, place: number) {
+async function readNewest(ctx: { db: QueryCtx["db"] }, websiteId: Id<"websites">, place: number) {
   const [copy, starts] = await Promise.all([readKeywordCopy(ctx, websiteId, place), checkStarts(ctx, websiteId, place)]);
   const day = copy?.rankingDay ?? null;
   const start = day === null ? null : day === starts.firstCheck ? "FIRST" as const : day === starts.firstList ? "FIRST_LIST" as const : null;
   return { copy, start };
 }
 
+const bandMovesArgs = { siteId: v.id("companyWebsites") };
+
 export const bandMoves = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: bandMovesArgs,
   returns: v.object({
     /** The newest check, and the one before it the moves are counted from. */
     rankingDay: v.union(v.string(), v.null()),
@@ -95,57 +97,66 @@ export const bandMoves = moduleQuery({
     }),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const { copy, start } = await readNewest(ctx, websiteId, site.place);
-    const bands = { p01_03: 0, p04_10: 0, p11_20: 0, p21_50: 0, p51_up: 0 };
-    if (!copy?.rankingDay) {
-      return { rankingDay: null, previousDay: null, start: null, bands, moves: [], closest: { rows: [], total: 0 } };
-    }
-    const rankingDay = copy.rankingDay;
-
-    const current = copy.rows.filter((row) => row.position !== null && keywordStanding(row, copy.latestCheckDay) === "current");
-    for (const row of current) bands[bandForPosition(row.position as number) as Band] += 1;
-
-    const counts = new Map<string, { from: Band | "none"; to: Band; count: number }>();
-    for (const move of bandMovesIn(copy, start !== null)) {
-      const key = `${move.from}>${move.to}`;
-      const held = counts.get(key) ?? { from: move.from, to: move.to, count: 0 };
-      held.count += 1;
-      counts.set(key, held);
-    }
-
-    const closest = current
-      .filter((row) => (row.position as number) >= CLOSEST_FROM && (row.position as number) <= CLOSEST_TO)
-      .sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1) || left.keyword.localeCompare(right.keyword));
-
-    const before = await ctx.db
-      .query("siteDaySummaries")
-      .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place).lt("day", rankingDay))
-      .order("desc")
-      .take(DAYS_BEFORE_READ);
-    return {
-      rankingDay,
-      previousDay: before.find((row) => row.keywords !== undefined)?.day ?? null,
-      start,
-      bands,
-      moves: [...counts.values()],
-      closest: {
-        rows: closest.slice(0, CLOSEST_KEPT).map((row) => ({
-          keyword: row.keyword, position: row.position as number, volume: row.volume, traffic: row.traffic, page: row.page,
-        })),
-        total: closest.length,
-      },
-    };
-  }, bandsSees),
+  handler: async (ctx, args) => await readBandMoves(ctx, args),
 });
+
+/** bandMoves's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readBandMoves = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId = site.website._id;
+  const { copy, start } = await readNewest(ctx, websiteId, site.place);
+  const bands = { p01_03: 0, p04_10: 0, p11_20: 0, p21_50: 0, p51_up: 0 };
+  if (!copy?.rankingDay) {
+    return { rankingDay: null, previousDay: null, start: null, bands, moves: [], closest: { rows: [], total: 0 } };
+  }
+  const rankingDay = copy.rankingDay;
+
+  const current = copy.rows.filter((row) => row.position !== null && keywordStanding(row, copy.latestCheckDay) === "current");
+  for (const row of current) bands[bandForPosition(row.position as number) as Band] += 1;
+
+  const counts = new Map<string, { from: Band | "none"; to: Band; count: number }>();
+  for (const move of bandMovesIn(copy, start !== null)) {
+    const key = `${move.from}>${move.to}`;
+    const held = counts.get(key) ?? { from: move.from, to: move.to, count: 0 };
+    held.count += 1;
+    counts.set(key, held);
+  }
+
+  const closest = current
+    .filter((row) => (row.position as number) >= CLOSEST_FROM && (row.position as number) <= CLOSEST_TO)
+    .sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1) || left.keyword.localeCompare(right.keyword));
+
+  const before = await ctx.db
+    .query("siteDaySummaries")
+    .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place).lt("day", rankingDay))
+    .order("desc")
+    .take(DAYS_BEFORE_READ);
+  return {
+    rankingDay,
+    previousDay: before.find((row) => row.keywords !== undefined)?.day ?? null,
+    start,
+    bands,
+    moves: [...counts.values()],
+    closest: {
+      rows: closest.slice(0, CLOSEST_KEPT).map((row) => ({
+        keyword: row.keyword, position: row.position as number, volume: row.volume, traffic: row.traffic, page: row.page,
+      })),
+      total: closest.length,
+    },
+  };
+}, bandsSees);
 
 /**
  * Moved searches sent at once, the most searched first: more than any site
  * has shown at one check, and the page says the list is longer past it.
  */
 const MOVED_KEPT = 5_000;
+
+const listBandMovesArgs = {
+  siteId: v.id("companyWebsites"),
+  from: v.optional(fromValidator),
+  to: v.optional(bandValidator),
+};
 
 /**
  * The searches that changed band at the newest check, the most searched
@@ -154,11 +165,7 @@ const MOVED_KEPT = 5_000;
  */
 export const listBandMoves = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    from: v.optional(fromValidator),
-    to: v.optional(bandValidator),
-  },
+  args: listBandMovesArgs,
   returns: v.object({
     ...listWithCut(v.object({
       keyword: v.string(),
@@ -173,13 +180,16 @@ export const listBandMoves = moduleQuery({
     day: v.union(v.string(), v.null()),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { copy, start } = await readNewest(ctx, site.website._id, site.place);
-    if (!copy) return { rows: [], cut: null, day: null, seen: bandMovesSees([]) };
-    const list = bandMovesIn(copy, start !== null)
-      .filter((row) => (args.from === undefined || row.from === args.from) && (args.to === undefined || row.to === args.to))
-      .sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1) || left.keyword.localeCompare(right.keyword));
-    return { ...heldTo(list, MOVED_KEPT), day: copy.rankingDay, seen: bandMovesSees(list) };
-  },
+  handler: async (ctx, args) => await readListBandMoves(ctx, args),
 });
+
+/** listBandMoves's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListBandMoves(ctx: SiteReader, args: ObjectType<typeof listBandMovesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { copy, start } = await readNewest(ctx, site.website._id, site.place);
+  if (!copy) return { rows: [], cut: null, day: null, seen: bandMovesSees([]) };
+  const list = bandMovesIn(copy, start !== null)
+    .filter((row) => (args.from === undefined || row.from === args.from) && (args.to === undefined || row.to === args.to))
+    .sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1) || left.keyword.localeCompare(right.keyword));
+  return { ...heldTo(list, MOVED_KEPT), day: copy.rankingDay, seen: bandMovesSees(list) };
+}

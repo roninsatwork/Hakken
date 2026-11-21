@@ -30,6 +30,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../_components/us
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { SEARCH_VERDICTS, SEARCH_VERDICT_TONES, STANDING_SORTS, type SearchVerdict } from "../../../_components/searchStanding";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { trackedFanOutRows } from "@/convex/utils/sees/eyeData/visibility";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 type Standing = FunctionReturnType<typeof api.siteGoogle.listSearches>[number];
@@ -86,17 +87,9 @@ export default function SiteTrackedFanOutPage() {
   const own = fanOut?.own ?? false;
   const tracking = fanOut?.tracking ?? null;
 
-  const rows = useMemo<Row[] | undefined>(() => {
-    if (!standings || !fanOut) return undefined;
-    const byKeyword = new Map(fanOut.rows.map((row) => [row.keyword, row]));
-    // Running searches that came from a fan-out query: the ones ticked to check every run.
-    return standings
-      .filter((row) => row.fromFanOut && row.isActive)
-      .map((row) => {
-        const found = byKeyword.get(row.keyword);
-        return { ...row, queryText: found?.queryText ?? row.keyword, prompt: found?.prompt ?? null, engines: found?.engines ?? [], timesSeen: found?.timesSeen ?? null };
-      });
-  }, [standings, fanOut]);
+  // Running searches that came from a fan-out query, the ones ticked to check every run: built as a chat app's question
+  // builds them (chatAppEyes/visibility.ts), so the two can't disagree.
+  const rows = useMemo<Row[] | undefined>(() => (standings && fanOut ? trackedFanOutRows(standings, fanOut) : undefined), [standings, fanOut]);
 
   const term = settled.toLowerCase();
   const matches = wordStartMatcher(term);

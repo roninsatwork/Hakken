@@ -21,7 +21,7 @@ import { formatDay, formatNumber, movement, toCsv } from "../../../_components/s
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
-import { searchSees } from "../_components/keywordSees";
+import { searchSees } from "@/convex/utils/sees/eyeData/visibilityKeywords";
 import { isPartHeld } from "../../../_components/SiteCoverage";
 import { heldIcon } from "../../../_components/siteGroups";
 import { MarkedHost } from "../../../_components/SiteMark";

@@ -9,9 +9,8 @@ import { Change, ChangeLine } from "@/src/ui/components/screens/Change";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatDateTime } from "@/src/lib/dates";
 import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
-import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import type { PageKindsView } from "../../_components/usePageKinds";
-import { sourceNameOf, type ClaritySeesWords } from "./claritySees";
+import { clarityDeviceName, claritySeesWordsFrom, sourceNameOf, type ClaritySeesWords } from "@/convex/utils/sees/eyeData/clarity";
 import { useClarityStatus, type ClarityChosen } from "./useClarity";
 import { unitOf } from "@/convex/utils/calendarPeriods";
 
@@ -73,9 +72,8 @@ export const wayOf = (by: number | null) => (by === null || by === 0 ? "same" : 
 
 /** A device as Clarity names it, in words a person uses. */
 export function useDeviceName(): (device: string) => string {
-  const t = useTranslations("clarity.devices");
   // "Any": a large website's page asked for without its devices ("Large websites").
-  return (device) => (device === "PC" || device === "Mobile" || device === "Tablet" || device === "Any" ? t(device) : t("Other"));
+  return clarityDeviceName(useTranslations("clarity.devices"));
 }
 
 /**
@@ -186,29 +184,18 @@ export function useBeforeName(): (chosen: ClarityChosen, capital?: boolean) => s
 }
 
 /**
- * The words a Clarity screen hands its eye beside its figures (`claritySees.ts`; ask-hakken-every-chart-page-plan-2026-11-03.md,
- * section 8): every name as the screen itself says it. `kinds`: the screen's page groups, where it shows them; pages
- * not sorted yet go unnamed, as Hakken's housekeeping is never news.
+ * The words a Clarity screen hands its eye beside its figures (ask-hakken-every-chart-page-plan-2026-11-03.md, section 8):
+ * every name as the screen itself says it. `kinds`: the screen's page groups, where it shows them; pages not sorted yet
+ * go unnamed, as Hakken's housekeeping is never news. Built by the same function a chat app's question builds them with
+ * in English (`convex/utils/sees/eyeData/clarity.ts`), so the two can't call a thing two names.
  */
 export function useClaritySeesWords(chosen: ClarityChosen, kinds?: PageKindsView): ClaritySeesWords {
-  const t = useTranslations("clarity.common");
+  const common = useTranslations("clarity.common");
   const sources = useTranslations("clarity.sources");
-  const deviceName = useDeviceName();
-  const sourceName = useSourceName();
-  const beforeName = useBeforeName();
-  return {
-    website: t("eye.website"),
-    before: beforeName(chosen, true),
-    device: deviceName,
-    source: sourceName,
-    ownSource: sources("own"),
-    group: (kind, name) => name ?? (kind === NOT_SORTED_KIND || !kinds ? null : kinds.label(kind)),
-    low: t("eye.low"),
-    otherSources: t("eye.otherSources"),
-    day: formatDay,
-    days: t("eye.days", { from: "{from}", to: "{to}" }),
-    where: (browser, device) => t("browserOn", { browser, device: deviceName(device).toLowerCase() }),
-  };
+  const devices = useTranslations("clarity.devices");
+  const periods = useTranslations("common.periods");
+  const status = useClarityStatus();
+  return claritySeesWordsFrom({ common, sources, devices, periods }, chosen, { host: status?.host ?? "", day: formatDay, ...(kinds ? { kindName: kinds.label } : {}) });
 }
 
 /** Clarity has sent none of the period yet (rule 9): one line, with its newest day, in place of empty figures. */

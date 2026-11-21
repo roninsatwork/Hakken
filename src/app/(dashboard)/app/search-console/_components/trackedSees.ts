@@ -1,4 +1,7 @@
 import { shiftDay } from "../../sites/_components/siteRange";
+import type { TickedUpdate } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+
+export type { TickedUpdate };
 
 /**
  * What Tracked keywords and Tracked pages hand their eye (search-console-tracked-way-1-plan-2026-11-18.md), worked out
@@ -8,9 +11,6 @@ import { shiftDay } from "../../sites/_components/siteRange";
 
 /** A ticked row's own days, as the chart holds them: the dates' and the span before's. */
 type TickedDays = { key: string; days: ReadonlyArray<{ day: string; clicks: number }> | null; daysBefore: ReadonlyArray<{ day: string; clicks: number }>; failed: boolean };
-
-/** The ticked rows' clicks either side of a Google update, by the names the chart says them. */
-export type TickedUpdate = { title: string; startedOn: string; finishedOn: string; rows: Array<{ name: string; before: number; after: number }> };
 
 /**
  * The newest Google update that finished inside the dates, with its days after inside them too, and each ticked row's
@@ -39,25 +39,5 @@ export function tickedUpdateOf(
   return rows.length > 0 ? { title: done.title, startedOn: done.startedOn, finishedOn: done.finishedOn, rows } : null;
 }
 
-/**
- * The figures a tracked screen hands its eye: the list's own (its summary, with `trackedList`, and the rows on screen),
- * every click the country had, for the tracked rows' share of them; the rows ticked onto the chart against the span
- * before; the ticked rows either side of the newest finished Google update; and the names the page says things by.
- */
-export function trackedPageData<Page extends object>({ page, countryClicks, ticked, update, names }: {
-  page: Page;
-  countryClicks: number | null;
-  ticked: ReadonlyArray<{ name: string; clicks: number | null; previousClicks: number | null }>;
-  update: TickedUpdate | null;
-  names: Record<string, string>;
-}) {
-  return {
-    ...page,
-    ...(countryClicks !== null ? { website: { clicks: countryClicks } } : {}),
-    ticked: ticked.filter((row) => row.clicks !== null),
-    // Only an update the ticked rows had clicks either side of: two noughts were written up as "0 clicks a day before and 0
-    // after the September spam update" (18 November 2026).
-    ...(update && update.rows.some((row) => row.before + row.after > 0) ? { update } : {}),
-    names,
-  };
-}
+/** What a tracked screen hands its eye: built on the server too since 21 November 2026, so it lives with the server's figures. */
+export { trackedPageData } from "@/convex/utils/sees/eyeData/searchConsoleLists";

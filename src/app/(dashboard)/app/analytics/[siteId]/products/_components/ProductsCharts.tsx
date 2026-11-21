@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { PRODUCT_CHART_VIEWS } from "@/convex/utils/sees/analyticsProducts";
+import { eventFigures, productsChartForEye, type ProductChartView, type ShopChoice } from "@/convex/utils/sees/eyeData/googleAnalyticsProducts";
 import { BarsCard } from "@/src/ui/components/screens/BarsCard";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
@@ -19,16 +19,8 @@ import { periodWord, useAnalyticsArgs, usePeriod } from "@/src/app/(dashboard)/a
  * and items only, never money.
  */
 
-export type ShopChoice = { steps: string[]; sale: string | null };
+export type { ShopChoice };
 type Answer = NonNullable<FunctionReturnType<typeof api.googleAnalyticsProductReads.analyticsProducts>>;
-
-/** An event's visits now and the period before, by its Google name, from the page's events list. */
-export function eventFigures(answer: Answer) {
-  const held = new Map(answer.events.map((event) => [event.eventName, event]));
-  // A step picked that recorded nothing in these dates is nought, against nought when the period before is held.
-  const compared = answer.events.some((event) => event.visitsBefore !== null) || answer.journey.sale?.visitsBefore !== null;
-  return (eventName: string) => held.get(eventName) ?? { eventName, visits: 0, visitsBefore: compared ? 0 : null };
-}
 
 /**
  * Bought or left behind: for each step the shop picked, its visits split into those that ended with the sale and those
@@ -86,7 +78,7 @@ export function BoughtOrLeftChart({ answer, choice, onPick, host }: {
   );
 }
 
-const VIEWS = ["left", "sold", "more", "less"] as const;
+const VIEWS = ["left", "sold", "more", "less"] as const satisfies readonly ProductChartView[];
 type View = (typeof VIEWS)[number];
 
 /**
@@ -103,21 +95,9 @@ export function ProductsChart({ categories, host }: { categories: readonly strin
   const [category, setCategory] = useSiteParam<string>("chartCategory", "");
   const answer = useQuery(api.googleAnalyticsProductReads.analyticsProductChart, { ...args, ...(category ? { category } : {}) });
   const before = tf(`before.${periodWord(period)}`);
-  // The eye is handed Selling more and Selling less, whichever view is on screen, with each product's items bought now
-  // and before, so code finds what moved (page-screen-redo-plan-2026-11-03.md, step 3); and the view on screen. Ten
-  // products picked from the whole list (`picked`) are no whole: never "holds most of the list".
-  const seen = useMemo(() => {
-    if (!answer) return undefined;
-    const listed = (list: typeof answer.more) => ({
-      picked: true,
-      rows: list.map((row) => ({ name: row.name, itemsBought: row.itemsBought, itemsBoughtBefore: row.itemsBoughtBefore, itemsAdded: row.itemsAdded, itemsLeft: row.itemsLeft })),
-    });
-    return {
-      view: PRODUCT_CHART_VIEWS[view],
-      ...(answer.compared ? { sellingMore: listed(answer.more), sellingLess: listed(answer.less) } : {}),
-      ...(view === "left" ? { leftMost: listed(answer.left) } : view === "sold" ? { soldMost: listed(answer.sold) } : {}),
-    };
-  }, [answer, view]);
+  // The eye is handed Selling more and Selling less, whichever view is on screen, and the view on screen: built as a chat
+  // app's question builds it (`googleAnalyticsProducts.ts`), so the two can't disagree.
+  const seen = useMemo(() => productsChartForEye(answer, view), [answer, view]);
   useSeesPart("productsChart", seen);
   const periodName = tf(`periods.${periodWord(period)}`);
   const compares = view === "more" || view === "less";

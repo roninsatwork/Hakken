@@ -4,7 +4,7 @@
  * (docs/plans/active/usage-credits-plan.md). Pure: no database.
  */
 
-export type CreditKind = "rankings" | "aiAnswers" | "keywordResearch" | "siteAudit" | "backlinks" | "assistant" | "taskAlerts" | "taskReports" | "taskResearch" | "sees";
+export type CreditKind = "rankings" | "aiAnswers" | "keywordResearch" | "siteAudit" | "backlinks" | "assistant" | "taskAlerts" | "taskReports" | "taskResearch" | "sees" | "chatApps";
 
 export type CreditPrice = { credits: number; per: number };
 
@@ -36,6 +36,10 @@ export const DEFAULT_CREDIT_PRICES: Record<CreditKind, CreditPrice> = {
   // presses on More Handles cost 2.3 to 11.1 cents, 7.8 on average (from 15 earlier in November, some at 50), which at
   // the 80% margin is 39 cents: eight credits at $0.05 each.
   sees: { credits: 8, per: 1 },
+  // A question ChatGPT or Claude asked through Hakken's MCP door (ask-hakken-from-ai-chat-apps-plan-2026-11-21.md;
+  // Anthony, 2026-11-21: "The mcp needs to use credits per message as well"). The tools read saved figures and ask no
+  // model, so the real cost is a few database reads: a placeholder of one credit a question until the cost audit.
+  chatApps: { credits: 1, per: 1 },
 };
 
 /**

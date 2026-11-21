@@ -220,11 +220,14 @@ export const analyticsProductChart = moduleQuery({
     /** Whether the period before is held: without it, Selling more and Selling less have nothing to compare. */
     compared: v.boolean(),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    return await productChart(ctx, site.hold, args);
-  },
+  handler: async (ctx, args) => await readProductChart(ctx, args),
 });
+
+/** The products chart's read, for the screen and a chat app's question alike: the caller's own website only. */
+export async function readProductChart(ctx: SiteReader, args: ObjectType<typeof chartArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  return await productChart(ctx, site.hold, args);
+}
 
 export async function productChart(ctx: Reader, hold: Doc<"companyWebsites">, args: Omit<ObjectType<typeof chartArgs>, "siteId"> & { siteId?: Id<"companyWebsites"> }) {
   const empty = { left: [], sold: [], more: [], less: [], compared: false };
@@ -323,13 +326,16 @@ export const analyticsProductList = moduleQuery({
     live: v.boolean(),
     preparing: v.boolean(),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { page, rows: size, ...filters } = args;
-    const list = await shownProductList(ctx, site.hold, filters);
-    return { ...pageOfList(list.rows, page, size), cut: null, live: list.live, preparing: list.preparing };
-  },
+  handler: async (ctx, args) => await readProductList(ctx, args),
 });
+
+/** One page of the products table, for the screen and a chat app's question alike: the caller's own website only. */
+export async function readProductList(ctx: SiteReader, args: ObjectType<typeof listArgs> & ObjectType<typeof listPageArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { page, rows: size, ...filters } = args;
+  const list = await shownProductList(ctx, site.hold, filters);
+  return { ...pageOfList(list.rows, page, size), cut: null, live: list.live, preparing: list.preparing };
+}
 
 /** Every product or category, in the order on screen: its download. */
 export const analyticsProductListAll = moduleQuery({

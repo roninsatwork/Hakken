@@ -25,7 +25,7 @@ import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { sideBySideSees } from "@/convex/utils/sees/competitors";
 import { SiteSees } from "../../_components/SiteSees";
-import { sideBySideSeen } from "../../_components/siteSeesData";
+import { sideBySideSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { useSiteSearch } from "../../_components/useSiteParam";

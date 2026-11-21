@@ -27,7 +27,8 @@ import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { Judged, Moved, wayOf, WatchLink, mono, percent, quiet, tooFew, useBeforeWords, useClaritySeesWords, useCountedWords, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
-import { errorsSees, pageLinks } from "../../_components/claritySees";
+import { errorsSees } from "@/convex/utils/sees/eyeData/clarity";
+import { pageLinks } from "../../_components/claritySees";
 import { useClarityArgs, useClarityPageHref, useClarityStatus, useClarityChosen } from "../../_components/useClarity";
 
 type ErrorRow = FunctionReturnType<typeof api.clarityScreens.clarityErrors>["pages"][number];

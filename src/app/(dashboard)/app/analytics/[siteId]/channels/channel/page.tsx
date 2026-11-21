@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { SearchX } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { AI_ASSISTANTS_CHANNEL, DESCRIBED_CHANNELS, GOOGLE_AI_CHANNEL } from "@/convex/utils/aiAssistants";
+import { channelEyeData, channelTitle } from "@/convex/utils/sees/eyeData/googleAnalyticsChannel";
 import { Change } from "@/src/ui/components/screens/Change";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
@@ -59,10 +60,12 @@ export default function AnalyticsChannelPage() {
   const days = useQuery(api.googleAnalyticsChannelReads.analyticsChannelDays, ready ? { ...args, channel } : "skip");
   const kindName = useKindName(top?.kinds);
   const kinds = new Set((top?.kinds ?? []).map((kind) => kind.kind));
-  const title = assistants ? t("assistantsTitle") : channel;
-  // What the eye reads: the channel's own read and its days, with the names its findings use, the channel by its title.
+  const assistantsTitle = t("assistantsTitle");
+  const title = channelTitle(channel, assistantsTitle);
+  // What the eye reads: the channel's own read and its days, with the names its findings use, the channel by its title. Built
+  // by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts), so the two can't disagree.
   const eyeNames = useEyeNames();
-  const seesData = useMemo(() => ({ figures: top, days, names: { ...eyeNames, channel: title } }), [top, days, eyeNames, title]);
+  const seesData = useMemo(() => channelEyeData({ top, days }, { names: eyeNames, title: channelTitle(channel, assistantsTitle) }), [top, days, eyeNames, channel, assistantsTitle]);
   return (
     <div className="flex flex-col gap-6">
       <DetailHeader

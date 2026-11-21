@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { seenValidator } from "./utils/hakkenSees";
 import { answerSees } from "./utils/sees/aiAnswers";
 import type { Id } from "./_generated/dataModel";
 import { aiCitationOperationId, AI_MODE_ENGINE, aiEngineValidator, answerPlace } from "./seoAiEngines";
-import { listHold, requireMySite } from "./siteAccess";
+import { listHold, requireMySite, type SiteReader } from "./siteAccess";
 import { holdBrandNames } from "./holdProfiles";
 import { holdQuestion } from "./holdLists";
 import { moduleQuery } from "./tenantFunctions";
@@ -24,9 +24,11 @@ import { readSearchPhrase } from "./websiteCanonical";
  */
 const askedAsValidator = v.union(v.literal("APP"), v.literal("MODEL"), v.literal("PAGE"));
 
+const answerShownArgs = { siteId: v.id("companyWebsites"), answerId: answerIdValidator };
+
 export const answerShown = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), answerId: answerIdValidator },
+  args: answerShownArgs,
   returns: v.union(v.null(), v.object({
     askedAs: askedAsValidator,
     /** The question's answer from each of its assistants on the same day: null where one gave none. */
@@ -44,64 +46,67 @@ export const answerShown = moduleQuery({
     searches: v.array(v.object({ query: v.string(), text: v.string(), position: v.union(v.number(), v.null()), tracked: v.boolean() })),
     seen: seenValidator,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const found = await answerById(ctx, args.answerId);
-    const row = found?.text ?? found?.answer;
-    if (!found || !row) return null;
-    const question = await holdQuestion(ctx, listHold(site), row.prompt);
-    if (!question || !question.engines.includes(row.engine) || row.locationCode !== answerPlace(row.engine, site.place)) return null;
-
-    const askedAsOf = async (pullId: Id<"seoDataPulls">) => {
-      const operationId = (await ctx.db.get(pullId))?.operationId ?? "";
-      return operationId.startsWith("ai_app_") ? "APP" as const : operationId === aiCitationOperationId(AI_MODE_ENGINE) ? "PAGE" as const : "MODEL" as const;
-    };
-    const askedAs = await askedAsOf(row.pullId);
-    const others = [];
-    for (const engine of question.engines) {
-      const index = await ctx.db
-        .query("aiAnswerIndex")
-        .withIndex("by_question", (q) => q.eq("prompt", row.prompt).eq("engine", engine).eq("locationCode", answerPlace(engine, site.place)).eq("day", row.day))
-        .first();
-      others.push({ engine, answerId: (index?.textId ?? null) as Id<"aiAnswerTexts"> | null, askedAs: index ? await askedAsOf(index.pullId) : "MODEL" as const });
-    }
-    const websiteId = site.website._id;
-    const named = found.answer?.named ?? [];
-    const host = site.website.host;
-    const ownHost = (candidate: string | null | undefined) => Boolean(candidate && (candidate === host || candidate.endsWith(`.${host}`)));
-    const names = (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name.toLowerCase());
-    const extras = await ctx.db.query("aiAnswerExtras").withIndex("by_pull", (q) => q.eq("pullId", row.pullId)).first();
-    const cited = new Set((found.text?.sources ?? []).map((url) => url.replace(/\/$/, "")));
-    const hostOf = (url: string) => {
-      try {
-        return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-      } catch {
-        return url;
-      }
-    };
-    const searches = [];
-    for (const raw of extras?.searches ?? []) {
-      const phrase = readSearchPhrase(raw);
-      const [rank, tracked] = await Promise.all([
-        ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place).eq("keyword", phrase.keyword)).first(),
-        ctx.db.query("websiteKeywords").withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", site.hold._id).eq("keyword", phrase.keyword)).first(),
-      ]);
-      searches.push({ query: phrase.keyword, text: phrase.text, position: rank?.position ?? null, tracked: tracked?.isActive === true });
-    }
-    const shown = {
-      askedAs,
-      others,
-      named: { place: named.includes(websiteId) ? named.indexOf(websiteId) + 1 : null, of: named.length },
-      businesses: (extras?.businesses ?? []).map((business) => ({
-        name: business.name,
-        host: business.host ?? null,
-        rating: business.rating ?? null,
-        reviews: business.reviews ?? null,
-        you: ownHost(business.host) || names.some((name) => name.length > 2 && business.name.toLowerCase().includes(name)),
-      })),
-      read: (extras?.read ?? []).map((url) => ({ url, host: hostOf(url), yours: ownHost(hostOf(url)), cited: cited.has(url.replace(/\/$/, "")) })),
-      searches,
-    };
-    return { ...shown, seen: answerSees(shown) };
-  },
+  handler: async (ctx, args) => await readAnswerShown(ctx, args),
 });
+
+/** answerShown's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readAnswerShown(ctx: SiteReader, args: ObjectType<typeof answerShownArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const found = await answerById(ctx, args.answerId);
+  const row = found?.text ?? found?.answer;
+  if (!found || !row) return null;
+  const question = await holdQuestion(ctx, listHold(site), row.prompt);
+  if (!question || !question.engines.includes(row.engine) || row.locationCode !== answerPlace(row.engine, site.place)) return null;
+
+  const askedAsOf = async (pullId: Id<"seoDataPulls">) => {
+    const operationId = (await ctx.db.get(pullId))?.operationId ?? "";
+    return operationId.startsWith("ai_app_") ? "APP" as const : operationId === aiCitationOperationId(AI_MODE_ENGINE) ? "PAGE" as const : "MODEL" as const;
+  };
+  const askedAs = await askedAsOf(row.pullId);
+  const others = [];
+  for (const engine of question.engines) {
+    const index = await ctx.db
+      .query("aiAnswerIndex")
+      .withIndex("by_question", (q) => q.eq("prompt", row.prompt).eq("engine", engine).eq("locationCode", answerPlace(engine, site.place)).eq("day", row.day))
+      .first();
+    others.push({ engine, answerId: (index?.textId ?? null) as Id<"aiAnswerTexts"> | null, askedAs: index ? await askedAsOf(index.pullId) : "MODEL" as const });
+  }
+  const websiteId = site.website._id;
+  const named = found.answer?.named ?? [];
+  const host = site.website.host;
+  const ownHost = (candidate: string | null | undefined) => Boolean(candidate && (candidate === host || candidate.endsWith(`.${host}`)));
+  const names = (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name.toLowerCase());
+  const extras = await ctx.db.query("aiAnswerExtras").withIndex("by_pull", (q) => q.eq("pullId", row.pullId)).first();
+  const cited = new Set((found.text?.sources ?? []).map((url) => url.replace(/\/$/, "")));
+  const hostOf = (url: string) => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    } catch {
+      return url;
+    }
+  };
+  const searches = [];
+  for (const raw of extras?.searches ?? []) {
+    const phrase = readSearchPhrase(raw);
+    const [rank, tracked] = await Promise.all([
+      ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", site.place).eq("keyword", phrase.keyword)).first(),
+      ctx.db.query("websiteKeywords").withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", site.hold._id).eq("keyword", phrase.keyword)).first(),
+    ]);
+    searches.push({ query: phrase.keyword, text: phrase.text, position: rank?.position ?? null, tracked: tracked?.isActive === true });
+  }
+  const shown = {
+    askedAs,
+    others,
+    named: { place: named.includes(websiteId) ? named.indexOf(websiteId) + 1 : null, of: named.length },
+    businesses: (extras?.businesses ?? []).map((business) => ({
+      name: business.name,
+      host: business.host ?? null,
+      rating: business.rating ?? null,
+      reviews: business.reviews ?? null,
+      you: ownHost(business.host) || names.some((name) => name.length > 2 && business.name.toLowerCase().includes(name)),
+    })),
+    read: (extras?.read ?? []).map((url) => ({ url, host: hostOf(url), yours: ownHost(hostOf(url)), cited: cited.has(url.replace(/\/$/, "")) })),
+    searches,
+  };
+  return { ...shown, seen: answerSees(shown) };
+}

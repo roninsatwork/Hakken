@@ -22,7 +22,7 @@ import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { mentionsSees } from "@/convex/utils/sees/aiAnswers";
 import { SiteSees } from "../../../_components/SiteSees";
-import { aiMentionsSeen } from "../../../_components/siteSeesData";
+import { aiMentionsSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";

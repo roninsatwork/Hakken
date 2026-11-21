@@ -151,14 +151,23 @@ export const pageKindChoices = tenantQuery({
   returns: v.union(v.null(), v.array(v.object({ id: v.id("pageClassifications"), name: v.string(), type: classificationTypeValidator }))),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    if (isTrackedHold(site.hold)) return null;
-    const classifications = await ctx.db
-      .query("pageClassifications")
-      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id))
-      .take(CLASSIFICATIONS_READ);
-    if (classifications.length === 0) return null;
-    return classifications
-      .map((classification) => ({ id: classification._id, name: classification.name, type: classification.type }))
-      .sort((left, right) => left.name.localeCompare(right.name));
+    return await pageKindChoicesOf(ctx, site.hold);
   },
 });
+
+/**
+ * A website's Classifications, A to Z by name, for its screens' choices and labels. Null for none, and for a
+ * competitor's website, which has none of its own. Read by the screens' query and by a chat app's question
+ * (`chatAppEyes/searchConsole.ts`), so the two can't drift.
+ */
+export async function pageKindChoicesOf(ctx: Reader, hold: Doc<"companyWebsites">) {
+  if (isTrackedHold(hold)) return null;
+  const classifications = await ctx.db
+    .query("pageClassifications")
+    .withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id))
+    .take(CLASSIFICATIONS_READ);
+  if (classifications.length === 0) return null;
+  return classifications
+    .map((classification) => ({ id: classification._id, name: classification.name, type: classification.type }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}

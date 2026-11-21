@@ -10,7 +10,7 @@ import { Blocks, Info } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { COMPANY_MODULES } from "@/convex/utils/companyModules";
-import { normalizeFeaturesOff, type MenuFeature } from "@/convex/utils/coreModules";
+import { normalizeSwitchesOff, type SwitchedFeature } from "@/convex/utils/coreModules";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -43,7 +43,7 @@ type CompanyFeaturesContentProps = {
 
 /** A row of the table: one of the 11 menu items, or one of Tasks, Calls, Reception and Wiki. */
 type Row =
-  | { kind: "menu"; id: string; feature: MenuFeature | null; name: string; description: string }
+  | { kind: "menu"; id: string; feature: SwitchedFeature | null; name: string; description: string }
   | { kind: "module"; id: string; name: string; description: string };
 
 /**
@@ -87,7 +87,7 @@ export function CompanyFeaturesContent({
   //
   // The page renders this only once the company has loaded, so a company with
   // no list of its own is adopted as an empty one, not waited for.
-  const savedOff = normalizeFeaturesOff(featuresOff);
+  const savedOff = normalizeSwitchesOff(featuresOff);
   const serverKey = `${(enabledModules ?? []).join("\u0000")}|${savedOff.join("\u0000")}`;
   const [seenServerKey, setSeenServerKey] = useState<string | null>(null);
   if (serverKey !== seenServerKey) {
@@ -103,7 +103,7 @@ export function CompanyFeaturesContent({
         : [...previous, key]
     );
   };
-  const toggleFeature = (feature: MenuFeature) => {
+  const toggleFeature = (feature: SwitchedFeature) => {
     setOff((previous) => (previous.includes(feature) ? previous.filter((key) => key !== feature) : [...previous, feature]));
   };
 
@@ -123,7 +123,7 @@ export function CompanyFeaturesContent({
     selected.length === (enabledModules ?? []).length &&
     selected.every((key) => (enabledModules ?? []).includes(key)) &&
     off.length === savedOff.length &&
-    off.every((key) => savedOff.includes(key as MenuFeature));
+    off.every((key) => savedOff.includes(key as SwitchedFeature));
 
   const handleSave = async () => {
     setIsSaving(true);

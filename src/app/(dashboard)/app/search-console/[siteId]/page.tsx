@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { LineChart } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -37,37 +36,18 @@ export default function SearchConsolePerformancePage() {
   );
   const totals = performance?.totals ?? null;
   const reads = usePerformanceReads();
-  const splits = usePerformanceEye(reads, performance && !problem ? performance : undefined);
   // Brand searches against the rest, the dates and the span before, for the eye alone (ask-hakken-every-chart-page-plan-
   // 2026-11-03.md, section 6: "the brand split"): from the chart's own days, the lightest read that keeps them.
   const brandAsk = status && hasFigures(status) && range.period !== "custom" ? { siteId, searchType: kind, ...countryArg(country), step: range.step } : null;
   const brandNow = useQuery(api.searchConsolePeriods.searchConsoleChartFigures, brandAsk ? { ...brandAsk, from: range.from, to: range.to } : "skip");
-  const { from: beforeFrom, to: beforeTo } = range.before;
-  const brandBefore = useQuery(api.searchConsolePeriods.searchConsoleChartFigures, brandAsk ? { ...brandAsk, from: beforeFrom, to: beforeTo } : "skip");
-  const seesData = useMemo(() => {
-    if (!performance || problem) return undefined;
-    const split = (figures: typeof brandNow) => (figures && !figures.notReady && !figures.preparing && !figures.notBuilt
-      ? { brandClicks: figures.periods.reduce((sum, period) => sum + period.brandClicks, 0), nonBrandClicks: figures.periods.reduce((sum, period) => sum + period.otherClicks, 0), days: figures.periods.reduce((sum, period) => sum + period.days, 0) }
-      : null);
-    const [now, before] = [split(brandNow), split(brandBefore)];
-    const beforeDays = Math.round((Date.parse(`${beforeTo}T00:00:00Z`) - Date.parse(`${beforeFrom}T00:00:00Z`)) / 86_400_000) + 1;
-    // The span before's days draw the chart's grey line only: the eye has their totals in `previous`.
-    const { daysBefore: _drawnOnly, ...figures } = performance;
-    return {
-      ...figures,
-      dates: { from: range.from, to: range.to, days: range.days, beforeDays },
-      // Only where the chart holds every day of both spans: a book waiting on its rebuild holds fewer.
-      ...(now && before ? { brandDays: { now, before } } : {}),
-      // The charts' own figures (search-console-performance-way-3-plan-2026-11-17.md), as the page says them.
-      ...(splits ? { splits } : {}),
-      names: {
-        brand: t("filters.brandYes"),
-        other: t("filters.brandNo"),
-        hidden: t("performance.squares.groups.hidden"),
-        allPages: t("performance.eye.allPages"),
-      },
-    };
-  }, [performance, problem, brandNow, brandBefore, range.from, range.to, range.days, beforeFrom, beforeTo, splits, t]);
+  const brandBefore = useQuery(api.searchConsolePeriods.searchConsoleChartFigures, brandAsk ? { ...brandAsk, from: range.before.from, to: range.before.to } : "skip");
+  // The eye's figures: the boxes, the day chart, the brand split and the charts' own (`performanceEyeData`).
+  const seesData = usePerformanceEye(
+    reads,
+    performance && !problem ? performance : undefined,
+    { brandNow, brandBefore },
+    { from: range.from, to: range.to, days: range.days, before: range.before },
+  );
   // Google's sixteen months still coming in for the country read, and where its days start until then
   // (search-console-first-collection-plan.md, SF5): the website's own run fills them straight after its 90 days.
   const kept = country ? status?.connection?.countriesNewest.find((held) => held.country === country) : undefined;

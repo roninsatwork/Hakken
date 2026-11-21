@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { pageChannelsSeen } from "@/convex/utils/sees/eyeData/googleAnalyticsPage";
 import { ChartExplorer } from "@/src/ui/components/screens/ChartExplorer";
 import { whole, yearComparable } from "@/src/ui/components/screens/chartExplorerRule";
 import { CHART_SERIES_AMBER, CHART_SERIES_ROSE, CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
@@ -76,19 +77,9 @@ export function ConversionExplorerCard({ page, opening = "conversions" }: { page
   const year = bucketsOf(answer?.year ?? [], step, events.length);
   const drawn = linesOf({ measure, kinds: pickedKinds, channels: pickedChannels, lines });
   // What the eye reads of the chart (page-screen-redo-plan-2026-11-03.md, step 2): each channel's visits that started
-  // here over the dates, and the span before's, whatever is ticked.
-  const seen = useMemo(() => {
-    if (!answer) return null;
-    const kinds = answer.events ?? [];
-    const nowAll = bucketsOf(answer.now ?? [], step, kinds.length);
-    const beforeAll = bucketsOf(answer.before ?? [], step, kinds.length);
-    return {
-      channels: (answer.channels ?? []).map((channel) => {
-        const line = { key: `c:${channel}`, channels: [channel], kinds };
-        return { name: channel, visits: sumsOf(line, nowAll, kinds).visits, visitsBefore: answer.before ? sumsOf(line, beforeAll, kinds).visits : null };
-      }),
-    };
-  }, [answer, step]);
+  // here over the dates, and the span before's, whatever is ticked. Built by the same function a chat app's question
+  // builds it with (chatAppEyes/googleAnalytics.ts).
+  const seen = useMemo(() => pageChannelsSeen(answer), [answer]);
   useSeesPart("visitorsByChannel", seen);
   const compared = against === "before" ? before : against === "year" ? year : null;
   const rows = rowsOf(now, compared, drawn, measure, events);

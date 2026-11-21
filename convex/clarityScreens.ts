@@ -3,7 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { CLARITY_RECORDING_DAYS_KEPT, clarityDays, readClarityPeriod, readPageRows, type ClarityPeriodRead, clarityPeriodArgValidator, claritySpanOf, periodKeyOf, type ClarityPeriodArg } from "./clarity";
 import { ukDay } from "./utils/calendarPeriods";
 import { classifierFor } from "./googleAnalyticsChannelReads";
@@ -305,8 +305,13 @@ export const clarityOverview = moduleQuery({
     stuck: v.object({ quickBackPage: v.union(v.null(), v.object({ page: v.string(), visits: v.number(), pageVisits: v.number() })) }),
     recordings: v.object({ total: v.number(), top: v.array(recordingValidator) }),
   }),
-  handler: async (ctx, args) => await overviewOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args),
+  handler: async (ctx, args) => await readClarityOverview(ctx, args),
 });
+
+/** The Overview for one of the caller's websites (`clarityOverview`): its screen and a chat app's question read it alike. */
+export async function readClarityOverview(ctx: SiteReader, args: ScreenRead & { siteId: HoldId }) {
+  return await overviewOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args);
+}
 
 /** The Overview's figures for a hold the caller holds (`clarityOverview`). */
 export async function overviewOf(ctx: Reader, holdId: HoldId, args: ScreenRead) {
@@ -415,8 +420,13 @@ export const clarityPagesList = moduleQuery({
     }),
     groups: v.array(groupLineValidator),
   }),
-  handler: async (ctx, args) => await pagesListOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args),
+  handler: async (ctx, args) => await readClarityPagesList(ctx, args),
 });
+
+/** Pages' list for one of the caller's websites (`clarityPagesList`): its screen and a chat app's question read it alike. */
+export async function readClarityPagesList(ctx: SiteReader, args: ScreenRead & PageListRead & { siteId: HoldId; page: number; rows: number }) {
+  return await pagesListOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args);
+}
 
 /** Pages' list for a hold the caller holds (`clarityPagesList`): the page of rows asked for, and what the screen says above it. */
 export async function pagesListOf(ctx: Reader, holdId: HoldId, args: ScreenRead & PageListRead & { page: number; rows: number }) {
@@ -501,8 +511,13 @@ export const clarityPage = moduleQuery({
     sources: v.union(v.null(), v.object({ days: v.number(), rows: v.array(splitLineValidator), cutDays: v.number() })),
     recordings: v.array(recordingValidator),
   }),
-  handler: async (ctx, args) => await pageOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args),
+  handler: async (ctx, args) => await readClarityPage(ctx, args),
 });
+
+/** A page's own figures for one of the caller's websites (`clarityPage`): its screen and a chat app's question read them alike. */
+export async function readClarityPage(ctx: SiteReader, args: ScreenRead & { siteId: HoldId; page: string }) {
+  return await pageOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args);
+}
 
 /** A page's own figures for a hold the caller holds (`clarityPage`). */
 export async function pageOf(ctx: Reader, holdId: HoldId, args: ScreenRead & { page: string }) {
@@ -568,8 +583,13 @@ export const clarityErrors = moduleQuery({
      */
     errorPages: v.union(v.null(), v.object({ now: v.number(), before: v.number(), gained: v.number(), lost: v.number() })),
   }),
-  handler: async (ctx, args) => await errorsOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args),
+  handler: async (ctx, args) => await readClarityErrors(ctx, args),
 });
+
+/** Errors' figures for one of the caller's websites (`clarityErrors`): its screen and a chat app's question read them alike. */
+export async function readClarityErrors(ctx: SiteReader, args: ScreenRead & { siteId: HoldId }) {
+  return await errorsOf(ctx, (await requireMySite(ctx, args.siteId)).hold._id, args);
+}
 
 /** Errors' figures for a hold the caller holds (`clarityErrors`). */
 export async function errorsOf(ctx: Reader, holdId: HoldId, args: ScreenRead) {

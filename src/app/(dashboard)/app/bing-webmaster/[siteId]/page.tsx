@@ -9,7 +9,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { BingGate } from "../_components/BingNotices";
 import { BingFigures, BingSees, formatCtr, formatShare, useBingEyeNames } from "../_components/BingParts";
-import { performanceSeen } from "../_components/bingSeesData";
+import { performanceSeen } from "@/convex/utils/sees/eyeData/bing";
 import { BingClicksChart, BingShareChart, BingVersusChart } from "../_components/BingCharts";
 import { useBingHref, useBingSiteId, useBingStatus, useBingDates, useStep, type BingStatus } from "../_components/useBing";
 
@@ -45,7 +45,7 @@ function PerformanceBody({ status }: { status: BingStatus }) {
   const { period } = useBingDates();
   const [step] = useStep(period);
   const figures = useQuery(api.bingWebmasterReads.bingPerformance, { siteId, period });
-  // The eye reads the same answer with the span before, each week named in the reader's words (bingSeesData.ts).
+  // The eye reads the same answer with the span before, each week named in the reader's words (eyeData/bing.ts, built the same for a chat app).
   const names = useBingEyeNames();
   const seen = useMemo(() => performanceSeen(figures, names), [figures, names]);
   const bing = figures?.totals ?? null;

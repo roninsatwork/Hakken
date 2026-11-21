@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
-import en from "@/messages/en.json";
-import { errorsSees, overviewSees, pageSees, pagesSees, sourceNameOf, type ClaritySeesWords } from "@/src/app/(dashboard)/app/clarity/_components/claritySees";
+import { clarityAnswerOf as answerOf, clarityWordsFor as wordsFor } from "@/src/test/clarityRonins";
+import { errorsSees, overviewSees, pageSees, pagesSees } from "./eyeData/clarity";
 import { formatDay } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
 import { findingWords, type Finding } from "./findings";
 import { pageDataFor } from "./pageData";
@@ -21,43 +21,14 @@ const pageFixture = readFixture("roninsClarityPage");
  * Clarity keeps fewer days than Google Analytics: Ronins' begin on 11 October 2026, so only This week and Last week have
  * a span before (26 October; 19 to 25 October). On the other five there is none, and no finding may claim a change;
  * Last 3, 6 and 12 months hold the same 22 days. Ronins' errors are few — six visits in those 22 days, none this week —
- * so Errors says what is there and nothing more: on a span with no error it says nothing at all.
+ * so Errors says what is there and nothing more: on a span with no error it says nothing at all. The answers and the
+ * screens' English words are read through `src/test/clarityRonins.ts`, as the chat app's builders' test reads them.
  */
 
 type Period = "thisWeek" | "lastWeek" | "thisMonth" | "lastMonth" | "last3Months" | "last6Months" | "last12Months";
 const PERIODS: readonly Period[] = ["thisWeek", "lastWeek", "thisMonth", "lastMonth", "last3Months", "last6Months", "last12Months"];
 /** The periods Clarity holds a span before for, on Ronins' figures. */
 const WITH_BEFORE: readonly Period[] = ["thisWeek", "lastWeek"];
-
-type Stored = Record<string, unknown> & { sameAs?: string; expected?: number; period?: Record<string, unknown> };
-/** A period's answer as stored: the long periods hold the 3 months' days, with their own "days expected". */
-function answerOf(fixture: Record<string, unknown>, period: Period): never {
-  const stored = fixture[period] as Stored;
-  if (!stored.sameAs) return stored as never;
-  const same = fixture[stored.sameAs] as Stored;
-  return { ...same, period: { ...same.period, expected: stored.expected } } as never;
-}
-
-const capital = (words: string) => `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
-const DEVICES = en.clarity.devices as Record<string, string>;
-
-/** The screens' own English words, as `useClaritySeesWords` builds them. */
-function wordsFor(period: Period): ClaritySeesWords {
-  const device = (code: string) => DEVICES[code] ?? DEVICES.Other;
-  return {
-    website: en.clarity.common.eye.website,
-    before: capital(en.common.periods.before[period]),
-    device,
-    source: (source) => sourceNameOf(source, "www.agency.test", { direct: en.clarity.sources.direct, own: en.clarity.sources.own }),
-    ownSource: en.clarity.sources.own,
-    group: (kind, name) => name ?? (kind === "NOT_SORTED" ? null : kind),
-    low: en.clarity.common.eye.low,
-    otherSources: en.clarity.common.eye.otherSources,
-    day: formatDay,
-    days: en.clarity.common.eye.days,
-    where: (browser, code) => en.clarity.common.browserOn.replace("{browser}", browser).replace("{device}", device(code).toLowerCase()),
-  };
-}
 
 function said(screen: string, data: unknown): { findings: Finding[]; words: string[] } {
   expectEyeHolds(screen, data);

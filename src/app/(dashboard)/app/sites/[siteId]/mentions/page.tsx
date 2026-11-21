@@ -27,7 +27,7 @@ import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { WORTH_ASKING } from "@/convex/utils/sees/mentions";
 import { SiteSees } from "../../_components/SiteSees";
-import { webMentionsSeen } from "../../_components/siteSeesData";
+import { webMentionsSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";

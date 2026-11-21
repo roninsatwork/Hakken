@@ -4567,6 +4567,10 @@
             "title": "Contatori Rate-limit",
             "description": "Contatori a vita breve dietro i limiti di frequenza delle azioni AI. Nulla li legge oltre la loro finestra."
           },
+          "chatAppHistory": {
+            "title": "Domande da ChatGPT e Claude",
+            "description": "Cosa hanno chiesto ChatGPT e Claude, più gli accessi scaduti e i collegamenti mai consentiti."
+          },
           "analyticsSnapshots": {
             "title": "Snapshot Analitici",
             "description": "Rollup giornalieri di utilizzo per piattaforma, azienda e utente. Il default supera l'anno per preservare i confronti anno su anno."
@@ -7275,7 +7279,8 @@
         "taskAlerts": "Per {per, plural, =1 {controllo} other {# controlli}}: lo sguardo giornaliero di un avviso ai suoi dati",
         "taskReports": "Per {per, plural, =1 {report inviato} other {# report inviati}}",
         "taskResearch": "Per {per, plural, =1 {domanda approfondita} other {# domande approfondite}}",
-        "sees": "Per {per, plural, =1 {clic} other {# clic}} sull'occhio"
+        "sees": "Per {per, plural, =1 {clic} other {# clic}} sull'occhio",
+        "chatApps": "Per {per, plural, =1 {domanda} other {# domande}}"
       },
       "was": "era {credits} · non salvato",
       "costFrom": "Dati di {month}",
@@ -7713,7 +7718,11 @@
         "clarity": "Quanto scorrono le persone su ogni pagina, e dove si bloccano o tornano indietro.",
         "readingRoom": "Notizie, persone da seguire e guide utili.",
         "hakkenTasks": "Gli avvisi e i report che le persone chiedono.",
-        "usage": "Dove vanno i crediti dell'azienda."
+        "usage": "Dove vanno i crediti dell'azienda.",
+        "chatApps": "Le persone chiedono dei loro siti in ChatGPT o Claude."
+      },
+      "names": {
+        "chatApps": "MCP"
       }
     }
   },
@@ -9146,7 +9155,7 @@
       "integrations": {
         "tab": "Integrazioni",
         "title": "App che puoi collegare",
-        "description": "Collega {platformName} alle app che usi già, per ricevere notizie e fargli domande anche lì.",
+        "description": "Collega le app che usi già, per chiedere dei tuoi siti da lì.",
         "columns": {
           "app": "App",
           "what": "Cosa fa",
@@ -9161,9 +9170,69 @@
         "apps": {
           "telegram": {
             "name": "Telegram",
-            "what": "Ricevi avvisi e report come messaggi, e chiedi qualsiasi cosa a {platformName} dal telefono."
+            "what": "Ricevi avvisi e report come messaggi, e chiedi dei tuoi siti dal telefono."
+          },
+          "chatgpt": {
+            "name": "ChatGPT",
+            "what": "Chiedi dei tuoi siti in ChatGPT, e vedi i tuoi dati come grafici."
+          },
+          "claude": {
+            "name": "Claude",
+            "what": "Chiedi dei tuoi siti in Claude, e vedi i tuoi dati come grafici."
           }
-        }
+        },
+        "switchedOff": "Disattivato"
+      },
+      "chatApp": {
+        "back": "Integrazioni",
+        "linkedTitle": "Il tuo collegamento",
+        "linkedSince": "Collegato a {company} dal {date}.",
+        "linkedHint": "{app} può leggere i tuoi dati, ma non può modificare, inviare o eliminare nulla.",
+        "unlink": "Scollega",
+        "unlinkAsk": "Scollegare {app}?",
+        "unlinkBody": "{app} smette subito di leggere i tuoi dati. Puoi ricollegarlo quando vuoi.",
+        "keep": "Tienilo",
+        "askedTitle": "Cosa ha chiesto {app}",
+        "askedHint": "Gli ultimi 90 giorni. Il più recente è in alto.",
+        "search": "Cerca tra ciò che ha chiesto {app}…",
+        "empty": "{app} non ha chiesto nulla negli ultimi 90 giorni.",
+        "columns": {
+          "asked": "Richiesta",
+          "website": "Sito",
+          "dates": "Date",
+          "when": "Quando",
+          "answer": "Risposta"
+        },
+        "answered": "Risposto",
+        "switchedOff": "Disattivato",
+        "couldNot": "Nessuna risposta",
+        "asks": {
+          "websites": "I tuoi siti",
+          "summary": "Come va un sito",
+          "findings": "Cosa è cambiato in {section}",
+          "page": "Come va una pagina",
+          "other": "Altro"
+        },
+        "tops": {
+          "searchConsole_keywords": "Parole chiave principali in Search Console",
+          "searchConsole_pages": "Pagine principali in Search Console",
+          "googleAnalytics_pages": "Pagine principali in Google Analytics",
+          "googleAnalytics_landingPages": "Pagine di arrivo principali in Google Analytics",
+          "googleAnalytics_channels": "Canali principali in Google Analytics",
+          "googleAnalytics_campaigns": "Campagne principali in Google Analytics",
+          "googleAnalytics_products": "Prodotti principali in Google Analytics",
+          "bingWebmaster_keywords": "Parole chiave principali in Bing Webmaster",
+          "bingWebmaster_pages": "Pagine principali in Bing Webmaster"
+        },
+        "linkIt": "Collegalo",
+        "howChatgpt": "In ChatGPT, aggiungi un'app con questo indirizzo. Poi accedi e premi Consenti.",
+        "howClaude": "In Claude, aggiungi un connettore con questo indirizzo. Poi accedi e premi Consenti.",
+        "address": "Indirizzo",
+        "copy": "Copia",
+        "copied": "Copiato",
+        "offTitle": "{app} non può leggere i tuoi dati in questo momento",
+        "failed": "Non ha funzionato. Riprova tra un momento.",
+        "noMatch": "Nessun risultato per questa ricerca."
       }
     },
     "assistantNote": {
@@ -21254,7 +21323,8 @@
       "taskAlerts": "Avvisi delle attività",
       "taskReports": "Report delle attività",
       "taskResearch": "Scopri perché",
-      "sees": "Cosa vede {platformName}"
+      "sees": "Cosa vede {platformName}",
+      "chatApps": "Ask {platformName} in ChatGPT e Claude"
     },
     "prices": {
       "rankings": "{credits} ogni {per, plural, =1 {parola chiave controllata} other {# parole chiave controllate}}",
@@ -21266,7 +21336,8 @@
       "taskAlerts": "{credits} per {per, plural, =1 {controllo} other {# controlli}}",
       "taskReports": "{credits} per {per, plural, =1 {report inviato} other {# report inviati}}",
       "taskResearch": "{credits} per {per, plural, =1 {domanda approfondita} other {# domande approfondite}}",
-      "sees": "{credits} per {per, plural, =1 {clic} other {# clic}} sull'occhio"
+      "sees": "{credits} per {per, plural, =1 {clic} other {# clic}} sull'occhio",
+      "chatApps": "{credits} per {per, plural, =1 {domanda} other {# domande}}"
     },
     "units": {
       "rankings": "{count, plural, =1 {# parola chiave} other {# parole chiave}}",
@@ -21278,7 +21349,8 @@
       "taskAlerts": "{count, plural, =1 {# controllo} other {# controlli}}",
       "taskReports": "{count, plural, =1 {# report inviato} other {# report inviati}}",
       "taskResearch": "{count, plural, =1 {# domanda approfondita} other {# domande approfondite}}",
-      "sees": "{count, plural, =1 {# clic sull'occhio} other {# clic sull'occhio}}"
+      "sees": "{count, plural, =1 {# clic sull'occhio} other {# clic sull'occhio}}",
+      "chatApps": "{count, plural, =1 {# domanda} other {# domande}}"
     },
     "about": {
       "rankings": "Dove si posizionano su Google i tuoi siti e i concorrenti che segui, controllato secondo una pianificazione.",
@@ -21290,7 +21362,8 @@
       "taskAlerts": "Ogni giorno in cui un avviso impostato da qualcuno guarda i tuoi dati.",
       "taskReports": "Ogni report settimanale richiesto da qualcuno.",
       "taskResearch": "Ogni volta che qualcuno ha detto sì a “scopri perché”.",
-      "sees": "Ogni pressione dell'occhio che ha scritto nuovi consigli. Finché i dati della pagina non cambiano, una pressione mostra gli stessi consigli per un giorno al massimo, inclusi nel tuo abbonamento."
+      "sees": "Ogni pressione dell'occhio che ha scritto nuovi consigli. Finché i dati della pagina non cambiano, una pressione mostra gli stessi consigli per un giorno al massimo, inclusi nel tuo abbonamento.",
+      "chatApps": "Ogni domanda di ChatGPT o Claude sui tuoi siti che ha avuto una risposta."
     },
     "often": {
       "byHand": "Quando lo chiedi",
@@ -23979,6 +24052,38 @@
       "disconnect": "Scollega",
       "limits": "Clarity consente 10 richieste al giorno per progetto e consegna solo i suoi ultimi tre giorni, quindi i suoi dati vengono letti ogni mattina e conservati qui: sei richieste per i dati del giorno, la provenienza dei visitatori e i loro browser, e fino a due per le registrazioni da guardare, tenendone sempre 2 di riserva.",
       "asksToday": "Oggi sono state usate {used} delle 10 richieste di Clarity per questo progetto, tenendone sempre 2 di riserva. Il Microsoft Clarity: Collector Agent chiede fino a 8 volte ogni mattina."
+    }
+  },
+  "chatApps": {
+    "allow": {
+      "eyebrow": "Collega un'app",
+      "title": "Lasci che {app} legga i tuoi dati?",
+      "lead": "Premi Consenti e potrai chiedere a {app} dei siti di {company}.",
+      "leadPick": "Scegli un'azienda, poi premi Consenti. Potrai chiedere a {app} dei suoi siti.",
+      "signedInAs": "Accesso come {name}",
+      "differentEmail": "Usa un'altra email",
+      "company": "Azienda",
+      "canRead": "Cosa può leggere {app}",
+      "read1": "I dati delle tue schermate, come visite e clic.",
+      "read2": "Cosa è cambiato in ogni schermata, e perché.",
+      "read3": "I primi 10 di ogni elenco, come le tue parole chiave principali.",
+      "cantDo": "Cosa non può fare {app}",
+      "cant1": "Modificare, inviare o eliminare qualcosa.",
+      "cant2": "Vedere i dati di un'altra azienda.",
+      "keeps": "{app} conserva una copia di ciò che legge. I termini di {maker} dicono cosa succede a quella copia. Puoi scollegare {app} quando vuoi dalla scheda Integrazioni del tuo profilo.",
+      "goesBack": "Consenti o Annulla ti riporta a {host}.",
+      "allow": "Consenti",
+      "cancel": "Annulla",
+      "checking": "Controllo del link…",
+      "unknownTitle": "Non puoi collegare questa app",
+      "unknownBody": "Solo ChatGPT e Claude possono collegarsi. Ricomincia da una delle due.",
+      "badTitle": "Questo link non funziona",
+      "badBody": "Qualcosa non va o è scaduto. Ricomincia dall'app.",
+      "offTitle": "{app} non può leggere i tuoi dati in questo momento",
+      "offBody": "Il collegamento di ChatGPT e Claude è disattivato per {company}.",
+      "noCompanyTitle": "Ancora nessuna azienda",
+      "noCompanyBody": "Il tuo account non fa ancora parte di un'azienda, quindi non ci sono dati da leggere.",
+      "failed": "Non ha funzionato. Riprova tra un momento."
     }
   }
 }

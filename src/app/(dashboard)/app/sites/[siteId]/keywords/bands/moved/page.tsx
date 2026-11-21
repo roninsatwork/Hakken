@@ -18,10 +18,7 @@ import { SiteSees } from "../../../../_components/SiteSees";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
-
-const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
-type Band = (typeof BANDS)[number];
-type From = Band | "none";
+import { readBandMove } from "@/convex/utils/sees/eyeData/visibilityKeywords";
 
 type MovedRow = FunctionReturnType<typeof api.siteBands.listBandMoves>["rows"][number];
 
@@ -33,15 +30,6 @@ const SORTS: SiteSortColumns<MovedRow, "keyword" | "was" | "now" | "volume"> = {
   volume: { value: (row) => row.volume, first: "desc" },
 };
 const keywordOf = (row: MovedRow) => row.keyword;
-
-const isBand = (value: string): value is Band => (BANDS as readonly string[]).includes(value);
-
-/** The move a square names — `p04_10.p01_03`, or `none.p51_up` for searches newly ranking — or null when it names none. */
-function readMove(move: string): { from: From; to: Band } | null {
-  const [from, to] = move.split(".");
-  if (!from || !to || !isBand(to) || from === to || (from !== "none" && !isBand(from))) return null;
-  return { from, to };
-}
 
 /**
  * One square of Position bands' grid: the searches that moved from one band
@@ -56,7 +44,8 @@ export default function SiteBandMovePage() {
   const router = useRouter();
   const back = useRecordBack("bandMove");
   const recordHref = useSiteRecordHref(siteId);
-  const move = readMove(useRecordKey("bandMove"));
+  // The square's move, read as a chat app's question reads its key (`readBandMove`).
+  const move = readBandMove(useRecordKey("bandMove"));
   const moved = useQuery(api.siteBands.listBandMoves, move ? { siteId, from: move.from, to: move.to } : "skip");
   const { rows: sorted, tableSort } = useSiteSortedList(moved?.rows, SORTS, { opening: "volume", name: keywordOf });
   const pager = useSitePager(sorted, { isLoading: moved === undefined, cut: moved?.cut });

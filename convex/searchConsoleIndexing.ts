@@ -1,4 +1,4 @@
-import { v, type Infer } from "convex/values";
+import { v, type Infer, type ObjectType } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
@@ -6,7 +6,7 @@ import { moduleAction, moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { periodOf } from "./searchConsoleDays";
@@ -192,13 +192,16 @@ export const searchConsoleIndexing = moduleQuery({
   module: MENU_FEATURES.searchConsole,
   args: indexingArgs,
   returns: v.union(v.null(), indexingAnswer),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    if (isTrackedHold(site.hold)) return null;
-    return await readIndexing(ctx, site.hold._id, args);
-  },
+  handler: async (ctx, args) => await readIndexingFor(ctx, args),
 });
+
+/** Indexing's summary for the caller's own website: the screen's read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readIndexingFor(ctx: SiteReader, args: ObjectType<typeof indexingArgs>) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  if (isTrackedHold(site.hold)) return null;
+  return await readIndexing(ctx, site.hold._id, args);
+}
 
 const reasonPageValidator = v.object({
   page: v.string(),
@@ -255,14 +258,17 @@ export const searchConsoleIndexingReason = moduleQuery({
   module: MENU_FEATURES.searchConsole,
   args: { ...indexingArgs, reason: v.string() },
   returns: v.union(v.null(), reasonAnswer),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    if (isTrackedHold(site.hold)) return null;
-    const { reason, ...ask } = args;
-    return await readReason(ctx, site.hold._id, reason, ask);
-  },
+  handler: async (ctx, args) => await readReasonFor(ctx, args),
 });
+
+/** A reason's own page for the caller's own website: the screen's read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readReasonFor(ctx: SiteReader, args: ObjectType<typeof indexingArgs> & { reason: string }) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  if (isTrackedHold(site.hold)) return null;
+  const { reason, ...ask } = args;
+  return await readReason(ctx, site.hold._id, reason, ask);
+}
 
 const problemPageValidator = v.object({
   page: v.string(), address: v.string(), title: v.union(v.string(), v.null()), reason: v.string(), crawled: v.union(v.string(), v.null()),

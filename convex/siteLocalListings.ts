@@ -6,7 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { moduleMutation, moduleQuery, type TenantIdentity } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { isOversightRole } from "./authz";
 import { appError } from "./utils/appError";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -127,9 +127,11 @@ const findRowValidator = v.object({
   linkedAs: v.union(v.literal("OWN"), v.literal("RIVAL"), v.null()),
 });
 
+const localListingsArgs = { siteId: v.id("companyWebsites") };
+
 export const localListings = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: localListingsArgs,
   returns: v.object({
     /** Local is switched on for the company (D16). */
     on: v.boolean(),
@@ -154,58 +156,61 @@ export const localListings = moduleQuery({
     limits: v.object({ offices: v.number(), rivalsPerOffice: v.number() }),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const hold = site.hold;
-    const [on, limits] = await Promise.all([partIsOn(ctx, hold.companyId, "local"), readFanOutLimits(ctx, hold.companyId, hold._id)]);
-    const links = isTrackedHold(hold) ? [] : await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(LINKS_READ);
-    const listings = new Map<Id<"listings">, Doc<"listings">>();
-    for (const link of links) {
-      const listing = await ctx.db.get(link.listingId);
-      if (listing) listings.set(listing._id, listing);
-    }
-    const linkedAs = new Map(links.map((link) => [link.listingId, link.role]));
-    const offices = links.filter((link) => link.role === "OWN" && listings.has(link.listingId));
-    const rivals = links.filter((link) => link.role === "RIVAL" && listings.has(link.listingId));
-
-    const finds = isTrackedHold(hold) ? [] : await ctx.db.query("listingFinds").withIndex("by_hold_source", (q) => q.eq("companyWebsiteId", hold._id)).take(3);
-    const findRows = [];
-    for (const find of finds) {
-      const pull = find.filedAt === undefined ? await ctx.db.get(find.pullId) : null;
-      const failed = pull?.status === "FAILED";
-      const rows = [];
-      for (const listingId of find.found) {
-        const listing = listings.get(listingId) ?? await ctx.db.get(listingId);
-        if (listing) rows.push({ ...listingRowOf(listing), linkedAs: linkedAs.get(listingId) ?? null });
-      }
-      findRows.push({
-        source: find.source,
-        name: find.name,
-        looking: find.filedAt === undefined && !failed,
-        failed,
-        total: find.total ?? null,
-        rows,
-      });
-    }
-    return {
-      on,
-      ownSite: !isTrackedHold(hold),
-      offices: offices.map((link) => ({ ...listingRowOf(listings.get(link.listingId)!), linkedAt: link.createdAt })),
-      rivals: rivals.map((link) => {
-        const against = link.againstListingId ? listings.get(link.againstListingId) : undefined;
-        return {
-          ...listingRowOf(listings.get(link.listingId)!),
-          againstTown: against?.town ?? null,
-          againstName: against?.name ?? null,
-          matched: link.addedFrom === "MATCHED",
-          linkedAt: link.createdAt,
-        };
-      }),
-      finds: findRows,
-      limits: { offices: limits.localOffices, rivalsPerOffice: limits.localRivalsPerOffice },
-    };
-  }, localListingsSees),
+  handler: async (ctx, args) => await readLocalListings(ctx, args),
 });
+
+/** localListings's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readLocalListings = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const hold = site.hold;
+  const [on, limits] = await Promise.all([partIsOn(ctx, hold.companyId, "local"), readFanOutLimits(ctx, hold.companyId, hold._id)]);
+  const links = isTrackedHold(hold) ? [] : await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(LINKS_READ);
+  const listings = new Map<Id<"listings">, Doc<"listings">>();
+  for (const link of links) {
+    const listing = await ctx.db.get(link.listingId);
+    if (listing) listings.set(listing._id, listing);
+  }
+  const linkedAs = new Map(links.map((link) => [link.listingId, link.role]));
+  const offices = links.filter((link) => link.role === "OWN" && listings.has(link.listingId));
+  const rivals = links.filter((link) => link.role === "RIVAL" && listings.has(link.listingId));
+
+  const finds = isTrackedHold(hold) ? [] : await ctx.db.query("listingFinds").withIndex("by_hold_source", (q) => q.eq("companyWebsiteId", hold._id)).take(3);
+  const findRows = [];
+  for (const find of finds) {
+    const pull = find.filedAt === undefined ? await ctx.db.get(find.pullId) : null;
+    const failed = pull?.status === "FAILED";
+    const rows = [];
+    for (const listingId of find.found) {
+      const listing = listings.get(listingId) ?? await ctx.db.get(listingId);
+      if (listing) rows.push({ ...listingRowOf(listing), linkedAs: linkedAs.get(listingId) ?? null });
+    }
+    findRows.push({
+      source: find.source,
+      name: find.name,
+      looking: find.filedAt === undefined && !failed,
+      failed,
+      total: find.total ?? null,
+      rows,
+    });
+  }
+  return {
+    on,
+    ownSite: !isTrackedHold(hold),
+    offices: offices.map((link) => ({ ...listingRowOf(listings.get(link.listingId)!), linkedAt: link.createdAt })),
+    rivals: rivals.map((link) => {
+      const against = link.againstListingId ? listings.get(link.againstListingId) : undefined;
+      return {
+        ...listingRowOf(listings.get(link.listingId)!),
+        againstTown: against?.town ?? null,
+        againstName: against?.name ?? null,
+        matched: link.addedFrom === "MATCHED",
+        linkedAt: link.createdAt,
+      };
+    }),
+    finds: findRows,
+    limits: { offices: limits.localOffices, rivalsPerOffice: limits.localRivalsPerOffice },
+  };
+}, localListingsSees);
 
 /** Find: one search of Google Maps, Trustpilot or Tripadvisor by name and town, bought now through the Collector. */
 export const findListing = moduleMutation({

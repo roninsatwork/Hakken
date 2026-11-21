@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { listHold, requireMySite } from "./siteAccess";
+import { listHold, requireMySite, type SiteReader } from "./siteAccess";
 import { loadRivalHolds } from "./websiteSiteRows";
 import { askedQuestions } from "./siteFigures";
 import { aiEngineValidator, type AiEngine } from "./seoAiEngines";
@@ -57,21 +57,26 @@ async function citedFor(ctx: Reader, websiteId: Id<"websites">, host: string, as
   return [...byPage.values()].sort((a, b) => b.times - a.times);
 }
 
+const rivalCitedPagesArgs = { siteId: v.id("companyWebsites"), rivalId: v.id("companyWebsites") };
+
 /** A rival's pages AI assistants cite, for the company's own questions: what the rival is building. */
 export const rivalCitedPages = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), rivalId: v.id("companyWebsites") },
+  args: rivalCitedPagesArgs,
   returns: v.array(citedRow),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const rival = (await loadRivalHolds(ctx, site)).find((hold) => hold._id === args.rivalId);
-    if (!rival) return [];
-    const website = await ctx.db.get(rival.websiteId);
-    if (!website) return [];
-    const asked = await askedQuestions(ctx, listHold(site), site.place, QUESTIONS_READ);
-    return (await citedFor(ctx, website._id, website.displayHost ?? website.host, asked)).slice(0, MOST_ROWS);
-  },
+  handler: async (ctx, args) => await readRivalCitedPages(ctx, args),
 });
+
+/** rivalCitedPages's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readRivalCitedPages(ctx: SiteReader, args: ObjectType<typeof rivalCitedPagesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const rival = (await loadRivalHolds(ctx, site)).find((hold) => hold._id === args.rivalId);
+  if (!rival) return [];
+  const website = await ctx.db.get(rival.websiteId);
+  if (!website) return [];
+  const asked = await askedQuestions(ctx, listHold(site), site.place, QUESTIONS_READ);
+  return (await citedFor(ctx, website._id, website.displayHost ?? website.host, asked)).slice(0, MOST_ROWS);
+}
 
 /** Words too common in a page's address to tell its subject. */
 const COMMON = new Set(["agency", "agencies", "company", "companies", "services", "service", "london", "surrey", "best", "near", "with", "from", "your", "what", "page"]);

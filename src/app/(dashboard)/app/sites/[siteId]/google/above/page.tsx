@@ -18,7 +18,7 @@ import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { aboveSees } from "@/convex/utils/sees/google";
 import { SiteSees } from "../../../_components/SiteSees";
-import { aboveSeen } from "../../../_components/siteSeesData";
+import { aboveSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";

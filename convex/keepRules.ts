@@ -47,6 +47,12 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   emailTemplates: RECORD,
   systemSettings: RECORD,
   featureSwitches: RECORD,
+  // Ask Hakken in ChatGPT and Claude (ask-hakken-from-ai-chat-apps-plan-2026-11-21.md).
+  chatAppGrants: RECORD,
+  chatAppClients: cleared("90 days, a signed-up client nobody allowed", "purges/chatAppHistory"),
+  chatAppCodes: cleared("90 days at the most, and gone the night after it runs out (five minutes)", "purges/chatAppHistory"),
+  chatAppPasses: cleared("90 days at the most, and gone the night after it runs out (an hour, or 30 days)", "purges/chatAppHistory"),
+  chatAppRequests: cleared("90 days", "purges/chatAppHistory"),
   systemConfig: RECORD,
   apiKeys: RECORD,
   dataMigrations: RECORD,

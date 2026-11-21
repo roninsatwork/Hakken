@@ -1,10 +1,10 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { mapRankingsSees, mapSearchSees } from "./utils/sees/local";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { listingRowOf, listingRowValidator } from "./localListings";
 import {
   MAP_BOX,
@@ -43,9 +43,11 @@ async function googlePositions(ctx: Parameters<typeof searchVolumesOf>[0], websi
   return positions;
 }
 
+const mapRankingsArgs = { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) };
+
 export const mapRankings = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")) },
+  args: mapRankingsArgs,
   returns: v.object({
     offices: v.array(officeOptionValidator),
     office: v.union(v.null(), v.object({ listingId: v.id("listings"), name: v.string(), town: v.union(v.string(), v.null()) })),
@@ -74,69 +76,74 @@ export const mapRankings = moduleQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { offices, limits } = await localSetup(ctx, site);
-    const office = openOffice(offices, args.officeId);
-    const options = offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
-    const depth = limits?.localMapDepth ?? 20;
-    const empty = { inBox: 0, of: 0, inBoxChange: null, averagePlace: null, onMap: 0, notOnMap: 0, topMost: null };
-    if (!office) return { offices: options, office: null, depth, figures: empty, rows: [] };
-
-    const searches = await officeSearches(ctx, site, office, offices);
-    const checks = await officeChecks(ctx, office, searches, true);
-    const tops = await listingsById(ctx, [...checks.values()].flatMap((check) => check.latest.listingIds.slice(0, 1)));
-    const [volumes, positions] = await Promise.all([
-      searchVolumesOf(ctx, site, searches),
-      googlePositions(ctx, site.website._id, site.place, searches),
-    ]);
-
-    const rows = searches.map((keyword) => {
-      const check = checks.get(keyword);
-      const first = check?.latest.listingIds[0];
-      return {
-        keyword,
-        volume: volumes.get(keyword) ?? null,
-        place: check ? check.place : null,
-        change: check && check.previousPlace !== null && check.place > 0 && check.previousPlace > 0 ? check.previousPlace - check.place : null,
-        googlePosition: positions.get(keyword) ?? null,
-        top: first ? tops.get(first)?.name ?? null : null,
-        topIsYou: first === office._id,
-        checkedDay: check?.latest.day ?? null,
-      };
-    });
-    const checked = rows.filter((row) => row.place !== null);
-    const boxed = (place: number | null) => place !== null && place > 0 && place <= MAP_BOX;
-    const twice = [...checks.values()].filter((check) => check.previousPlace !== null);
-    const firstCounts = new Map<Id<"listings">, number>();
-    for (const check of checks.values()) {
-      const first = check.latest.listingIds[0];
-      if (first) firstCounts.set(first, (firstCounts.get(first) ?? 0) + 1);
-    }
-    const [topId, topCount] = [...firstCounts.entries()].sort((left, right) => right[1] - left[1])[0] ?? [];
-    return {
-      offices: options,
-      office: { listingId: office._id, name: office.name, town: office.town ?? null },
-      depth,
-      figures: {
-        inBox: checked.filter((row) => boxed(row.place)).length,
-        of: checked.length,
-        inBoxChange: twice.length > 0
-          ? twice.filter((check) => boxed(check.place)).length - twice.filter((check) => boxed(check.previousPlace)).length
-          : null,
-        averagePlace: averageOf(checked.filter((row) => row.place! > 0).map((row) => row.place)),
-        onMap: checked.filter((row) => row.place! > 0).length,
-        notOnMap: checked.filter((row) => row.place === 0).length,
-        topMost: topId ? { name: tops.get(topId)?.name ?? "", first: topCount!, you: topId === office._id } : null,
-      },
-      rows,
-    };
-  }, mapRankingsSees),
+  handler: async (ctx, args) => await readMapRankings(ctx, args),
 });
+
+/** mapRankings's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readMapRankings = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const { offices, limits } = await localSetup(ctx, site);
+  const office = openOffice(offices, args.officeId);
+  const options = offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
+  const depth = limits?.localMapDepth ?? 20;
+  const empty = { inBox: 0, of: 0, inBoxChange: null, averagePlace: null, onMap: 0, notOnMap: 0, topMost: null };
+  if (!office) return { offices: options, office: null, depth, figures: empty, rows: [] };
+
+  const searches = await officeSearches(ctx, site, office, offices);
+  const checks = await officeChecks(ctx, office, searches, true);
+  const tops = await listingsById(ctx, [...checks.values()].flatMap((check) => check.latest.listingIds.slice(0, 1)));
+  const [volumes, positions] = await Promise.all([
+    searchVolumesOf(ctx, site, searches),
+    googlePositions(ctx, site.website._id, site.place, searches),
+  ]);
+
+  const rows = searches.map((keyword) => {
+    const check = checks.get(keyword);
+    const first = check?.latest.listingIds[0];
+    return {
+      keyword,
+      volume: volumes.get(keyword) ?? null,
+      place: check ? check.place : null,
+      change: check && check.previousPlace !== null && check.place > 0 && check.previousPlace > 0 ? check.previousPlace - check.place : null,
+      googlePosition: positions.get(keyword) ?? null,
+      top: first ? tops.get(first)?.name ?? null : null,
+      topIsYou: first === office._id,
+      checkedDay: check?.latest.day ?? null,
+    };
+  });
+  const checked = rows.filter((row) => row.place !== null);
+  const boxed = (place: number | null) => place !== null && place > 0 && place <= MAP_BOX;
+  const twice = [...checks.values()].filter((check) => check.previousPlace !== null);
+  const firstCounts = new Map<Id<"listings">, number>();
+  for (const check of checks.values()) {
+    const first = check.latest.listingIds[0];
+    if (first) firstCounts.set(first, (firstCounts.get(first) ?? 0) + 1);
+  }
+  const [topId, topCount] = [...firstCounts.entries()].sort((left, right) => right[1] - left[1])[0] ?? [];
+  return {
+    offices: options,
+    office: { listingId: office._id, name: office.name, town: office.town ?? null },
+    depth,
+    figures: {
+      inBox: checked.filter((row) => boxed(row.place)).length,
+      of: checked.length,
+      inBoxChange: twice.length > 0
+        ? twice.filter((check) => boxed(check.place)).length - twice.filter((check) => boxed(check.previousPlace)).length
+        : null,
+      averagePlace: averageOf(checked.filter((row) => row.place! > 0).map((row) => row.place)),
+      onMap: checked.filter((row) => row.place! > 0).length,
+      notOnMap: checked.filter((row) => row.place === 0).length,
+      topMost: topId ? { name: tops.get(topId)?.name ?? "", first: topCount!, you: topId === office._id } : null,
+    },
+    rows,
+  };
+}, mapRankingsSees);
+
+const mapSearchArgs = { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")), keyword: v.string() };
 
 export const mapSearch = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), officeId: v.optional(v.id("listings")), keyword: v.string() },
+  args: mapSearchArgs,
   returns: v.union(v.null(), v.object({
     office: v.object({ listingId: v.id("listings"), name: v.string(), town: v.union(v.string(), v.null()) }),
     keyword: v.string(),
@@ -157,48 +164,51 @@ export const mapSearch = moduleQuery({
     })),
     seen: seenValidator,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { offices, rivals } = await localSetup(ctx, site);
-    const office = openOffice(offices, args.officeId);
-    if (!office?.point) return null;
-    const [latest, before] = await latestChecks(ctx, office.point, args.keyword);
-    if (!latest) return null;
-    const listings = await listingsById(ctx, latest.listingIds);
-    const reasonOf = unpackColumn(latest.reasonOf);
-    const watched = new Set(rivals.map((rival) => rival._id as string));
-    const businesses = latest.listingIds.flatMap((id, at) => {
-      const listing = listings.get(id);
-      if (!listing) return [];
-      const reason = reasonOf[at];
-      return [{
-        ...listingRowOf(listing),
-        place: at + 1,
-        reason: reason === undefined ? null : latest.reasons[reason] ?? null,
-        you: id === office._id,
-        watched: watched.has(id),
-      }];
-    });
-    const place = latest.listingIds.indexOf(office._id) + 1;
-    const previous = before ? before.listingIds.indexOf(office._id) + 1 : null;
-    const box = businesses.slice(0, 3);
-    const [volumes, positions] = await Promise.all([
-      searchVolumesOf(ctx, site, [args.keyword]),
-      googlePositions(ctx, site.website._id, site.place, [args.keyword]),
-    ]);
-    const search = {
-      office: { listingId: office._id, name: office.name, town: office.town ?? null },
-      keyword: args.keyword,
-      day: latest.day,
-      volume: volumes.get(args.keyword) ?? null,
-      place,
-      change: previous !== null && previous > 0 && place > 0 ? previous - place : null,
-      googlePosition: positions.get(args.keyword) ?? null,
-      boxRating: averageOf(box.map((business) => business.rating)),
-      boxReviews: averageOf(box.map((business) => business.reviews)),
-      you: listingRowOf(office as Doc<"listings">),
-      businesses,
-    };
-    return { ...search, seen: mapSearchSees(search) };
-  },
+  handler: async (ctx, args) => await readMapSearch(ctx, args),
 });
+
+/** mapSearch's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readMapSearch(ctx: SiteReader, args: ObjectType<typeof mapSearchArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { offices, rivals } = await localSetup(ctx, site);
+  const office = openOffice(offices, args.officeId);
+  if (!office?.point) return null;
+  const [latest, before] = await latestChecks(ctx, office.point, args.keyword);
+  if (!latest) return null;
+  const listings = await listingsById(ctx, latest.listingIds);
+  const reasonOf = unpackColumn(latest.reasonOf);
+  const watched = new Set(rivals.map((rival) => rival._id as string));
+  const businesses = latest.listingIds.flatMap((id, at) => {
+    const listing = listings.get(id);
+    if (!listing) return [];
+    const reason = reasonOf[at];
+    return [{
+      ...listingRowOf(listing),
+      place: at + 1,
+      reason: reason === undefined ? null : latest.reasons[reason] ?? null,
+      you: id === office._id,
+      watched: watched.has(id),
+    }];
+  });
+  const place = latest.listingIds.indexOf(office._id) + 1;
+  const previous = before ? before.listingIds.indexOf(office._id) + 1 : null;
+  const box = businesses.slice(0, 3);
+  const [volumes, positions] = await Promise.all([
+    searchVolumesOf(ctx, site, [args.keyword]),
+    googlePositions(ctx, site.website._id, site.place, [args.keyword]),
+  ]);
+  const search = {
+    office: { listingId: office._id, name: office.name, town: office.town ?? null },
+    keyword: args.keyword,
+    day: latest.day,
+    volume: volumes.get(args.keyword) ?? null,
+    place,
+    change: previous !== null && previous > 0 && place > 0 ? previous - place : null,
+    googlePosition: positions.get(args.keyword) ?? null,
+    boxRating: averageOf(box.map((business) => business.rating)),
+    boxReviews: averageOf(box.map((business) => business.reviews)),
+    you: listingRowOf(office as Doc<"listings">),
+    businesses,
+  };
+  return { ...search, seen: mapSearchSees(search) };
+}

@@ -1,4 +1,4 @@
-import { v, type Infer } from "convex/values";
+import { v, type Infer, type ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -6,7 +6,7 @@ import { moduleAction, moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { checkedCountry } from "./searchConsoleCountries";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { beforeOf, historyLimitDay, periodOf } from "./searchConsoleDays";
@@ -100,13 +100,16 @@ export const searchConsoleDemand = moduleQuery({
   module: MENU_FEATURES.searchConsole,
   args: demandArgs,
   returns: v.union(v.object({ live: v.literal(true) }), v.object({ live: v.literal(false), ...demandFigures })),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    const demand = await readDemand(ctx, site.hold._id, args);
-    return demand ? { live: false as const, ...demand } : { live: true as const };
-  },
+  handler: async (ctx, args) => await readDemandFor(ctx, args),
 });
+
+/** The kept figures, or `live`: the screen's read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readDemandFor(ctx: SiteReader, args: ObjectType<typeof demandArgs>) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  const demand = await readDemand(ctx, site.hold._id, args);
+  return demand ? { live: false as const, ...demand } : { live: true as const };
+}
 
 const liveDemandAnswer = v.union(
   v.object({

@@ -21,7 +21,7 @@ import { SiteLineChart } from "../../../../sites/_components/SiteCharts";
 import { datedRow } from "../../../../sites/_components/datedRows";
 import { formatNumber, toCsv } from "../../../../sites/_components/siteFormat";
 import { HeatmapLink, Judged, Moved, wayOf, WatchLink, changeOf, duration, growthOf, mono, percent, tooFew, useBeforeWords, useClarityLinks, useClaritySeesWords, useDeviceName, usePeriodWords, useSourceName, useWaitingWords } from "../../../_components/ClarityParts";
-import { pageSees } from "../../../_components/claritySees";
+import { pageSees } from "@/convex/utils/sees/eyeData/clarity";
 import { RecordingsList } from "../../../_components/RecordingsList";
 import { useClarityArgs, useClarityQuery, useClaritySiteId, useClarityStatus, useClarityChosen } from "../../../_components/useClarity";
 

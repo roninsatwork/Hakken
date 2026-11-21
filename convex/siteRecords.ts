@@ -1,5 +1,5 @@
 import { searchVolumeOf } from "./searchVolumes";
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { keywordRecordSees } from "./utils/sees/organic";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -8,7 +8,7 @@ import { MENU_FEATURES } from "./utils/coreModules";
 import { appError } from "./utils/appError";
 import { aiEngineValidator } from "./seoAiEngines";
 import { normaliseKeyword } from "./seoJudgments";
-import { listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { listHold, listWebsiteId, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { holdFirstCheck, holdSearch } from "./holdLists";
 import { asOfListCheck, searchStats } from "./siteGoogle";
 import { keywordStanding, readKeywordCopy } from "./siteKeywordCopy";
@@ -134,6 +134,8 @@ function rankOf(row: Doc<"siteKeywordRanks">, host: string) {
   };
 }
 
+const keywordRecordArgs = { siteId: v.id("companyWebsites"), keyword: v.string() };
+
 /**
  * Everything kept about one search this site ranks for, or could: where it
  * stands and what the search is worth, where else on Google's page it shows,
@@ -143,7 +145,7 @@ function rankOf(row: Doc<"siteKeywordRanks">, host: string) {
  */
 export const keywordRecord = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), keyword: v.string() },
+  args: keywordRecordArgs,
   returns: v.object({
     keyword: v.string(),
     rank: v.union(rankValidator, v.null()),
@@ -218,146 +220,151 @@ export const keywordRecord = moduleQuery({
     serpNotKept: v.union(v.object({ day: v.string(), position: nullableNumber }), v.null()),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; keyword: string }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const keyword = normaliseKeyword(args.keyword).slice(0, MAX_KEYWORD);
-    const websiteId = site.website._id;
-    const place = site.place;
-    const holdId = listHold(site);
+  handler: async (ctx, args) => await readKeywordRecord(ctx, args),
+});
 
-    const [rank, features, rivals, listed, firstCheck, stats, serp] = await Promise.all([
-      ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("keyword", keyword))
-        .first(),
-      ctx.db
-        .query("siteKeywordFeatures")
-        .withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("keyword", keyword))
-        .take(20),
-      myRivals(ctx, site),
-      // On this company's own list, or not: never another company's.
-      holdSearch(ctx, holdId, keyword),
-      holdFirstCheck(ctx, holdId, keyword),
-      // A competitor's as of the list's newest check (`asOfListCheck`).
-      Promise.all([
-        searchStats(ctx, websiteId, keyword, place),
-        listWebsiteId(site) === websiteId ? Promise.resolve(null) : searchStats(ctx, listWebsiteId(site), keyword, place),
-      ]).then(([own, list]) => (listWebsiteId(site) === websiteId ? own : asOfListCheck(own, list))),
-      ctx.db
-        .query("siteSerpPages")
-        .withIndex("by_keyword_place_day", (q) => q.eq("keyword", keyword).eq("locationCode", place))
-        .order("desc")
-        .first(),
-    ]);
+/** keywordRecord's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readKeywordRecord = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; keyword: string }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const keyword = normaliseKeyword(args.keyword).slice(0, MAX_KEYWORD);
+  const websiteId = site.website._id;
+  const place = site.place;
+  const holdId = listHold(site);
 
-    // A first check is the company's own asking, so its result is the
-    // company's to read, as the fan-out queries screen reads it (`ownCheck`).
-    const checkedOnce = !listed && firstCheck && stats ? { position: stats.lastPosition ?? null, day: stats.lastCheckedDay } : null;
-    const shownSerp = serp && (listed || checkedOnce) ? serp : null;
-    const serpNotKept = !shownSerp && (listed || checkedOnce) && stats && stats.lastCheckedDay < serpPagesKeptFrom(site.today)
-      ? { day: stats.lastCheckedDay, position: stats.lastPosition ?? null }
-      : null;
+  const [rank, features, rivals, listed, firstCheck, stats, serp] = await Promise.all([
+    ctx.db
+      .query("siteKeywordRanks")
+      .withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("keyword", keyword))
+      .first(),
+    ctx.db
+      .query("siteKeywordFeatures")
+      .withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("keyword", keyword))
+      .take(20),
+    myRivals(ctx, site),
+    // On this company's own list, or not: never another company's.
+    holdSearch(ctx, holdId, keyword),
+    holdFirstCheck(ctx, holdId, keyword),
+    // A competitor's as of the list's newest check (`asOfListCheck`).
+    Promise.all([
+      searchStats(ctx, websiteId, keyword, place),
+      listWebsiteId(site) === websiteId ? Promise.resolve(null) : searchStats(ctx, listWebsiteId(site), keyword, place),
+    ]).then(([own, list]) => (listWebsiteId(site) === websiteId ? own : asOfListCheck(own, list))),
+    ctx.db
+      .query("siteSerpPages")
+      .withIndex("by_keyword_place_day", (q) => q.eq("keyword", keyword).eq("locationCode", place))
+      .order("desc")
+      .first(),
+  ]);
 
-    // Each competitor's own latest ranking for the same search, from the same place.
-    const rivalRanks = await Promise.all(rivals.slice(0, MAX_RIVALS).map(async (rival) => ({
-      rival,
-      row: await ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_keyword", (q) =>
-          q.eq("websiteId", rival.website._id).eq("locationCode", place).eq("keyword", keyword))
-        .first(),
-    })));
-    const facts = rank ?? rivalRanks.find((entry) => entry.row !== null)?.row ?? null;
-    const bought = facts?.volumeKnown ? null : await searchVolumeOf(ctx, keyword, place);
-    const rivalRows = rivalRanks.map(({ rival, row }) => {
-      const ranking = row && row.status !== "LOST" ? row : null;
-      if (!ranking && shownSerp) {
-        // Not in its keyword list, but the results page shown below says
-        // where it stood that day, or that it was not on it.
-        const found = shownSerp.results.find((result) => isHost(result.domain, rival.website.host));
-        return {
-          siteId: rival.hold._id,
-          host: rival.summary.host,
-          relationship: rival.summary.relationship,
-          position: found?.position ?? null,
-          page: found?.url ? pagePath(found.url) : null,
-          day: shownSerp.day,
-          checked: true,
-        };
-      }
+  // A first check is the company's own asking, so its result is the
+  // company's to read, as the fan-out queries screen reads it (`ownCheck`).
+  const checkedOnce = !listed && firstCheck && stats ? { position: stats.lastPosition ?? null, day: stats.lastCheckedDay } : null;
+  const shownSerp = serp && (listed || checkedOnce) ? serp : null;
+  const serpNotKept = !shownSerp && (listed || checkedOnce) && stats && stats.lastCheckedDay < serpPagesKeptFrom(site.today)
+    ? { day: stats.lastCheckedDay, position: stats.lastPosition ?? null }
+    : null;
+
+  // Each competitor's own latest ranking for the same search, from the same place.
+  const rivalRanks = await Promise.all(rivals.slice(0, MAX_RIVALS).map(async (rival) => ({
+    rival,
+    row: await ctx.db
+      .query("siteKeywordRanks")
+      .withIndex("by_site_keyword", (q) =>
+        q.eq("websiteId", rival.website._id).eq("locationCode", place).eq("keyword", keyword))
+      .first(),
+  })));
+  const facts = rank ?? rivalRanks.find((entry) => entry.row !== null)?.row ?? null;
+  const bought = facts?.volumeKnown ? null : await searchVolumeOf(ctx, keyword, place);
+  const rivalRows = rivalRanks.map(({ rival, row }) => {
+    const ranking = row && row.status !== "LOST" ? row : null;
+    if (!ranking && shownSerp) {
+      // Not in its keyword list, but the results page shown below says
+      // where it stood that day, or that it was not on it.
+      const found = shownSerp.results.find((result) => isHost(result.domain, rival.website.host));
       return {
         siteId: rival.hold._id,
         host: rival.summary.host,
         relationship: rival.summary.relationship,
-        position: ranking?.position ?? null,
-        page: ranking?.page ?? null,
-        day: row?.day ?? null,
-        checked: false,
+        position: found?.position ?? null,
+        page: found?.url ? pagePath(found.url) : null,
+        day: shownSerp.day,
+        checked: true,
       };
-    });
-
+    }
     return {
-      keyword,
-      rank: rank ? rankOf(rank, site.website.host) : null,
-      search: facts
-        ? {
-          volume: facts.volumeKnown ? facts.volume : null,
-          cpc: facts.cpc ?? null,
-          difficulty: facts.difficulty ?? null,
-          competitionLevel: facts.competitionLevel ?? null,
-          searchIntent: facts.searchIntent ?? null,
-          resultsCount: facts.resultsCount ?? null,
-          trend: trendOf(facts.trend),
-          serpFeatures: featuresOf(facts.serpFeatures),
-          intent: facts.intent,
-        }
-        : null,
-      bought: bought
-        ? { volume: bought.volume, cpc: bought.cpc, competition: bought.competition, trend: bought.trend, day: bought.checkedDay }
-        : null,
-      features: features.map((row) => ({
-        feature: row.feature,
-        position: row.position ?? null,
-        page: row.page ?? null,
-        day: row.day,
-      })),
-      rivals: rivalRows.sort((left, right) => (left.position ?? 999) - (right.position ?? 999) || left.host.localeCompare(right.host)),
-      // The tracked facts and the results page exist because somebody tracks
-      // the search, so they are shown only when this company does — they
-      // would otherwise say that someone else tracks it
-      // (docs/plans/active/private-tracking-lists-plan.md).
-      tracked: listed
-        ? {
-          isActive: listed.isActive,
-          lastPosition: stats?.lastPosition ?? null,
-          bestPosition: stats?.bestPosition ?? null,
-          firstCheckedDay: stats?.firstCheckedDay ?? null,
-          lastCheckedDay: stats?.lastCheckedDay ?? null,
-        }
-        : null,
-      checkedOnce,
-      serp: shownSerp
-        ? {
-          day: shownSerp.day,
-          results: shownSerp.results.slice(0, SERP_RESULTS).map((result) => {
-            const rival = rivals.find((entry) => isHost(result.domain, entry.website.host));
-            return {
-              position: result.position,
-              domain: bare(result.domain),
-              url: result.url ?? null,
-              isYou: isHost(result.domain, site.website.host),
-              rivalSiteId: rival ? rival.hold._id : null,
-            };
-          }),
-          features: shownSerp.features,
-          questions: shownSerp.questions,
-          related: shownSerp.related,
-        }
-        : null,
-      serpNotKept,
+      siteId: rival.hold._id,
+      host: rival.summary.host,
+      relationship: rival.summary.relationship,
+      position: ranking?.position ?? null,
+      page: ranking?.page ?? null,
+      day: row?.day ?? null,
+      checked: false,
     };
-  }, keywordRecordSees),
-});
+  });
+
+  return {
+    keyword,
+    rank: rank ? rankOf(rank, site.website.host) : null,
+    search: facts
+      ? {
+        volume: facts.volumeKnown ? facts.volume : null,
+        cpc: facts.cpc ?? null,
+        difficulty: facts.difficulty ?? null,
+        competitionLevel: facts.competitionLevel ?? null,
+        searchIntent: facts.searchIntent ?? null,
+        resultsCount: facts.resultsCount ?? null,
+        trend: trendOf(facts.trend),
+        serpFeatures: featuresOf(facts.serpFeatures),
+        intent: facts.intent,
+      }
+      : null,
+    bought: bought
+      ? { volume: bought.volume, cpc: bought.cpc, competition: bought.competition, trend: bought.trend, day: bought.checkedDay }
+      : null,
+    features: features.map((row) => ({
+      feature: row.feature,
+      position: row.position ?? null,
+      page: row.page ?? null,
+      day: row.day,
+    })),
+    rivals: rivalRows.sort((left, right) => (left.position ?? 999) - (right.position ?? 999) || left.host.localeCompare(right.host)),
+    // The tracked facts and the results page exist because somebody tracks
+    // the search, so they are shown only when this company does — they
+    // would otherwise say that someone else tracks it
+    // (docs/plans/active/private-tracking-lists-plan.md).
+    tracked: listed
+      ? {
+        isActive: listed.isActive,
+        lastPosition: stats?.lastPosition ?? null,
+        bestPosition: stats?.bestPosition ?? null,
+        firstCheckedDay: stats?.firstCheckedDay ?? null,
+        lastCheckedDay: stats?.lastCheckedDay ?? null,
+      }
+      : null,
+    checkedOnce,
+    serp: shownSerp
+      ? {
+        day: shownSerp.day,
+        results: shownSerp.results.slice(0, SERP_RESULTS).map((result) => {
+          const rival = rivals.find((entry) => isHost(result.domain, entry.website.host));
+          return {
+            position: result.position,
+            domain: bare(result.domain),
+            url: result.url ?? null,
+            isYou: isHost(result.domain, site.website.host),
+            rivalSiteId: rival ? rival.hold._id : null,
+          };
+        }),
+        features: shownSerp.features,
+        questions: shownSerp.questions,
+        related: shownSerp.related,
+      }
+      : null,
+    serpNotKept,
+  };
+}, keywordRecordSees);
+
+const pageRecordArgs = { siteId: v.id("companyWebsites"), page: v.string() };
 
 /**
  * Everything kept about one page of this site: how it ranks and what that
@@ -367,7 +374,7 @@ export const keywordRecord = moduleQuery({
  */
 export const pageRecord = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), page: v.string() },
+  args: pageRecordArgs,
   returns: v.object({
     page: v.string(),
     /**
@@ -431,112 +438,115 @@ export const pageRecord = moduleQuery({
       firstSeen: nullableString,
     })),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const page = args.page.slice(0, MAX_PATH);
-    const websiteId = site.website._id;
-    const place = site.place;
-
-    const [rank, crawl, citedRows, asked, links, pageKinds] = await Promise.all([
-      ctx.db
-        .query("sitePageRanks")
-        .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("page", page))
-        .first(),
-      ctx.db
-        .query("siteCrawlPages")
-        .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("page", page))
-        .order("desc")
-        .first(),
-      ctx.db
-        .query("siteCitedPages")
-        .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("page", page))
-        .take(CITED_ROWS),
-      askedQuestions(ctx, listHold(site), place, QUESTIONS_FOR_CITED_PAGES),
-      // The strongest links first, from the list of every link kept.
-      ctx.db
-        .query("siteBacklinks")
-        .withIndex("by_site_pass_page_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "ALL").eq("pageTo", page))
-        .order("desc")
-        .take(LINKS_SHOWN),
-      // This one page's classification, by the caller's own hold: its sitemap file looked up alone.
-      readPageKinds(ctx, site.hold._id, { pages: [page] }),
-    ]);
-
-    // Only the answers to the questions this site is measured on count (D17),
-    // and every form of the page's address is the one page.
-    const wanted = new Set(asked.map((entry) => `${entry.prompt}\u0000${entry.engine}\u0000${entry.locationCode}`));
-    const byQuestion = new Map<string, { prompt: string; engine: Doc<"siteCitedPages">["engine"]; times: number; lastDay: string }>();
-    for (const row of citedRows) {
-      if (!wanted.has(`${row.prompt}\u0000${row.engine}\u0000${row.locationCode}`)) continue;
-      const key = `${row.prompt}\u0000${row.engine}`;
-      const held = byQuestion.get(key);
-      if (held) {
-        held.times += row.times;
-        if (row.lastDay > held.lastDay) held.lastDay = row.lastDay;
-      } else {
-        byQuestion.set(key, { prompt: row.prompt, engine: row.engine, times: row.times, lastDay: row.lastDay });
-      }
-    }
-    const questions = [...byQuestion.values()].sort((left, right) => right.times - left.times || left.prompt.localeCompare(right.prompt));
-
-    return {
-      page,
-      kind: pageKinds ? pageKinds.kindOf(page) : null,
-      rank: rank
-        ? {
-          url: addressOf(rank, site.website.host) ?? page,
-          section: rank.section,
-          keywords: rank.keywords,
-          bestPosition: rank.bestPosition,
-          top3: rank.top3,
-          topKeyword: rank.topKeyword,
-          topKeywordVolume: rank.topKeywordVolume,
-          firstSeenDay: rank.firstSeenDay,
-          day: rank.day,
-          traffic: rank.traffic ?? null,
-          trafficValue: rank.trafficValue ?? null,
-          pageRank: rank.pageRank ?? null,
-          referringDomains: rank.referringDomains ?? null,
-          backlinks: rank.backlinks ?? null,
-          pageType: rank.pageType ?? "UNJUDGED",
-        }
-        : null,
-      crawl: crawl
-        ? {
-          url: crawl.url,
-          day: crawl.day,
-          statusCode: crawl.statusCode ?? null,
-          problems: crawl.problems,
-          score: crawl.score ?? null,
-          loadMs: crawl.loadMs ?? null,
-          largestPaintMs: crawl.largestPaintMs ?? null,
-          sizeBytes: crawl.sizeBytes ?? null,
-          words: crawl.words ?? null,
-          internalLinks: crawl.internalLinks ?? null,
-          externalLinks: crawl.externalLinks ?? null,
-          inboundLinks: crawl.inboundLinks ?? null,
-          clickDepth: crawl.clickDepth ?? null,
-          redirectTo: crawl.redirectTo ?? null,
-          canonical: crawl.canonical ?? null,
-        }
-        : null,
-      cited: {
-        times: questions.reduce((sum, entry) => sum + entry.times, 0),
-        questions: questions.slice(0, CITING_QUESTIONS_SHOWN),
-      },
-      links: links.map((row) => ({
-        _id: row._id,
-        domainFrom: row.domainFrom,
-        urlFrom: row.urlFrom,
-        anchor: row.anchor ?? null,
-        dofollow: row.dofollow,
-        domainRank: row.domainRank,
-        status: row.status,
-        firstSeen: row.firstSeen ?? null,
-      })),
-    };
-  },
+  handler: async (ctx, args) => await readPageRecord(ctx, args),
 });
+
+/** pageRecord's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readPageRecord(ctx: SiteReader, args: ObjectType<typeof pageRecordArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const page = args.page.slice(0, MAX_PATH);
+  const websiteId = site.website._id;
+  const place = site.place;
+
+  const [rank, crawl, citedRows, asked, links, pageKinds] = await Promise.all([
+    ctx.db
+      .query("sitePageRanks")
+      .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("page", page))
+      .first(),
+    ctx.db
+      .query("siteCrawlPages")
+      .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("page", page))
+      .order("desc")
+      .first(),
+    ctx.db
+      .query("siteCitedPages")
+      .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("page", page))
+      .take(CITED_ROWS),
+    askedQuestions(ctx, listHold(site), place, QUESTIONS_FOR_CITED_PAGES),
+    // The strongest links first, from the list of every link kept.
+    ctx.db
+      .query("siteBacklinks")
+      .withIndex("by_site_pass_page_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "ALL").eq("pageTo", page))
+      .order("desc")
+      .take(LINKS_SHOWN),
+    // This one page's classification, by the caller's own hold: its sitemap file looked up alone.
+    readPageKinds(ctx, site.hold._id, { pages: [page] }),
+  ]);
+
+  // Only the answers to the questions this site is measured on count (D17),
+  // and every form of the page's address is the one page.
+  const wanted = new Set(asked.map((entry) => `${entry.prompt}\u0000${entry.engine}\u0000${entry.locationCode}`));
+  const byQuestion = new Map<string, { prompt: string; engine: Doc<"siteCitedPages">["engine"]; times: number; lastDay: string }>();
+  for (const row of citedRows) {
+    if (!wanted.has(`${row.prompt}\u0000${row.engine}\u0000${row.locationCode}`)) continue;
+    const key = `${row.prompt}\u0000${row.engine}`;
+    const held = byQuestion.get(key);
+    if (held) {
+      held.times += row.times;
+      if (row.lastDay > held.lastDay) held.lastDay = row.lastDay;
+    } else {
+      byQuestion.set(key, { prompt: row.prompt, engine: row.engine, times: row.times, lastDay: row.lastDay });
+    }
+  }
+  const questions = [...byQuestion.values()].sort((left, right) => right.times - left.times || left.prompt.localeCompare(right.prompt));
+
+  return {
+    page,
+    kind: pageKinds ? pageKinds.kindOf(page) : null,
+    rank: rank
+      ? {
+        url: addressOf(rank, site.website.host) ?? page,
+        section: rank.section,
+        keywords: rank.keywords,
+        bestPosition: rank.bestPosition,
+        top3: rank.top3,
+        topKeyword: rank.topKeyword,
+        topKeywordVolume: rank.topKeywordVolume,
+        firstSeenDay: rank.firstSeenDay,
+        day: rank.day,
+        traffic: rank.traffic ?? null,
+        trafficValue: rank.trafficValue ?? null,
+        pageRank: rank.pageRank ?? null,
+        referringDomains: rank.referringDomains ?? null,
+        backlinks: rank.backlinks ?? null,
+        pageType: rank.pageType ?? "UNJUDGED",
+      }
+      : null,
+    crawl: crawl
+      ? {
+        url: crawl.url,
+        day: crawl.day,
+        statusCode: crawl.statusCode ?? null,
+        problems: crawl.problems,
+        score: crawl.score ?? null,
+        loadMs: crawl.loadMs ?? null,
+        largestPaintMs: crawl.largestPaintMs ?? null,
+        sizeBytes: crawl.sizeBytes ?? null,
+        words: crawl.words ?? null,
+        internalLinks: crawl.internalLinks ?? null,
+        externalLinks: crawl.externalLinks ?? null,
+        inboundLinks: crawl.inboundLinks ?? null,
+        clickDepth: crawl.clickDepth ?? null,
+        redirectTo: crawl.redirectTo ?? null,
+        canonical: crawl.canonical ?? null,
+      }
+      : null,
+    cited: {
+      times: questions.reduce((sum, entry) => sum + entry.times, 0),
+      questions: questions.slice(0, CITING_QUESTIONS_SHOWN),
+    },
+    links: links.map((row) => ({
+      _id: row._id,
+      domainFrom: row.domainFrom,
+      urlFrom: row.urlFrom,
+      anchor: row.anchor ?? null,
+      dofollow: row.dofollow,
+      domainRank: row.domainRank,
+      status: row.status,
+      firstSeen: row.firstSeen ?? null,
+    })),
+  };
+}
 
 /**
  * The searches behind one of Search features' figures — every search where
@@ -560,15 +570,17 @@ const FEATURE_SORTS: ListSorts<{ keyword: string; position: number | null; organ
   volume: { value: (row) => row.volume, first: "desc" },
 };
 
+const featureKeywordsArgs = {
+  siteId: v.id("companyWebsites"),
+  feature: keywordFeatureValidator,
+  ...listPageArgs,
+  sort: v.optional(v.union(v.literal("keyword"), v.literal("position"), v.literal("organic"), v.literal("volume"))),
+  direction: sortDirectionArg,
+};
+
 export const featureKeywords = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    feature: keywordFeatureValidator,
-    ...listPageArgs,
-    sort: v.optional(v.union(v.literal("keyword"), v.literal("position"), v.literal("organic"), v.literal("volume"))),
-    direction: sortDirectionArg,
-  },
+  args: featureKeywordsArgs,
   returns: listPageSeenResult(v.object({
     _id: v.id("siteKeywordFeatures"),
     keyword: v.string(),
@@ -578,41 +590,44 @@ export const featureKeywords = moduleQuery({
     organicPosition: nullableNumber,
     volume: nullableNumber,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const place = site.place;
-    // Read whole — a feature is a share of one keyword list — and counted
-    // exactly (docs/plans/active/sites-table-pages-plan.md §5.1). An older
-    // list's row for a search this one also holds is not counted twice.
-    const read = await ctx.db
-      .query("siteKeywordFeatures")
-      .withIndex("by_site_feature_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("feature", args.feature))
-      .take(FEATURE_LIST_READ + 1);
-    const { rows: held, cut } = heldTo(read, FEATURE_LIST_READ);
-    const newest = new Map<string, Doc<"siteKeywordFeatures">>();
-    for (const row of held) {
-      const kept = newest.get(row.keyword);
-      if (!kept || row.day > kept.day) newest.set(row.keyword, row);
-    }
-    const copy = await readKeywordCopy(ctx, websiteId, place);
-    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
-    const ranks = new Map(copy.rows.map((row) => [row.keyword, row]));
-    const list = [...newest.values()].map((row) => {
-      const rank = ranks.get(row.keyword);
-      return {
-        _id: row._id,
-        keyword: row.keyword,
-        position: row.position ?? null,
-        page: row.page ?? null,
-        day: row.day,
-        organicPosition: rank && rank.status !== "LOST" ? rank.position : null,
-        volume: rank?.volume ?? null,
-      };
-    }).sort(listOrder(FEATURE_SORTS, args.sort ?? "volume", args.direction, (row) => row.keyword));
-    return { ...pageOfList(list, args.page, args.rows, cut), seen: featureRecordSees(list) };
-  },
+  handler: async (ctx, args) => await readFeatureKeywords(ctx, args),
 });
+
+/** featureKeywords's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readFeatureKeywords(ctx: SiteReader, args: ObjectType<typeof featureKeywordsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId = site.website._id;
+  const place = site.place;
+  // Read whole — a feature is a share of one keyword list — and counted
+  // exactly (docs/plans/active/sites-table-pages-plan.md §5.1). An older
+  // list's row for a search this one also holds is not counted twice.
+  const read = await ctx.db
+    .query("siteKeywordFeatures")
+    .withIndex("by_site_feature_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("feature", args.feature))
+    .take(FEATURE_LIST_READ + 1);
+  const { rows: held, cut } = heldTo(read, FEATURE_LIST_READ);
+  const newest = new Map<string, Doc<"siteKeywordFeatures">>();
+  for (const row of held) {
+    const kept = newest.get(row.keyword);
+    if (!kept || row.day > kept.day) newest.set(row.keyword, row);
+  }
+  const copy = await readKeywordCopy(ctx, websiteId, place);
+  if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
+  const ranks = new Map(copy.rows.map((row) => [row.keyword, row]));
+  const list = [...newest.values()].map((row) => {
+    const rank = ranks.get(row.keyword);
+    return {
+      _id: row._id,
+      keyword: row.keyword,
+      position: row.position ?? null,
+      page: row.page ?? null,
+      day: row.day,
+      organicPosition: rank && rank.status !== "LOST" ? rank.position : null,
+      volume: rank?.volume ?? null,
+    };
+  }).sort(listOrder(FEATURE_SORTS, args.sort ?? "volume", args.direction, (row) => row.keyword));
+  return { ...pageOfList(list, args.page, args.rows, cut), seen: featureRecordSees(list) };
+}
 
 /**
  * The searches this site and one of its competitors both rank for, the
@@ -639,18 +654,20 @@ const SHARED_SORTS: ListSorts<{ keyword: string; theirPosition: number; yourPosi
   theirVisits: { value: (row) => row.theirTraffic, first: "desc" },
 };
 
+const sharedSearchesArgs = {
+  siteId: v.id("companyWebsites"),
+  rivalId: v.id("companyWebsites"),
+  lead: v.optional(v.union(v.literal("THEM"), v.literal("YOU"))),
+  ...listPageArgs,
+  sort: v.optional(v.union(
+    v.literal("keyword"), v.literal("theirs"), v.literal("yours"), v.literal("gap"), v.literal("volume"), v.literal("theirVisits"),
+  )),
+  direction: sortDirectionArg,
+};
+
 export const sharedSearches = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    rivalId: v.id("companyWebsites"),
-    lead: v.optional(v.union(v.literal("THEM"), v.literal("YOU"))),
-    ...listPageArgs,
-    sort: v.optional(v.union(
-      v.literal("keyword"), v.literal("theirs"), v.literal("yours"), v.literal("gap"), v.literal("volume"), v.literal("theirVisits"),
-    )),
-    direction: sortDirectionArg,
-  },
+  args: sharedSearchesArgs,
   returns: listPageSeenResult(v.object({
     _id: v.id("siteKeywordRanks"),
     keyword: v.string(),
@@ -659,36 +676,39 @@ export const sharedSearches = moduleQuery({
     volume: nullableNumber,
     theirTraffic: nullableNumber,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const rival = (await myRivals(ctx, site)).find((entry) => entry.hold._id === args.rivalId);
-    if (!rival) throw appError("NOT_FOUND", "That website is not one beside this one.");
-    const place = site.place;
-    // Both sides from their compact copies, matched in memory: the total is
-    // every search both rank for at the latest check, not a page's worth of
-    // the competitor's list with the misses dropped (§5.2).
-    const [theirs, ours] = await Promise.all([
-      readKeywordCopy(ctx, rival.website._id, place),
-      readKeywordCopy(ctx, site.website._id, place),
-    ]);
-    if (!theirs || !ours) return { ...preparingPage(args.rows), seen: seen([]) };
-    const yours = new Map(ours.rows
-      .filter((row) => keywordStanding(row, ours.latestCheckDay) === "current")
-      .map((row) => [row.keyword, row.position as number]));
-    const every = theirs.rows.flatMap((row) => {
-      if (keywordStanding(row, theirs.latestCheckDay) !== "current") return [];
-      const yourPosition = yours.get(row.keyword);
-      const theirPosition = row.position as number;
-      if (yourPosition === undefined) return [];
-      return [{ id: row.id, keyword: row.keyword, theirPosition, yourPosition, volume: row.volume, theirTraffic: row.traffic }];
-    });
-    const shared = every
-      .filter((row) => (args.lead !== "THEM" || row.theirPosition < row.yourPosition) && (args.lead !== "YOU" || row.yourPosition < row.theirPosition))
-      .sort(listOrder(SHARED_SORTS, args.sort ?? "theirVisits", args.direction, (row) => row.keyword));
-    const shown = pageOfList(shared, args.page, args.rows);
-    // Read in full by id, to be sure each row on screen is still there.
-    const rows = await Promise.all(shown.rows.map(async ({ id, ...row }) => ((await ctx.db.get(id)) ? { _id: id, ...row } : null)));
-    // What Hakken sees is of every search both rank for, whichever lead is chosen.
-    return { ...shown, rows: rows.filter((row) => row !== null), seen: rivalSees(every) };
-  },
+  handler: async (ctx, args) => await readSharedSearches(ctx, args),
 });
+
+/** sharedSearches's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readSharedSearches(ctx: SiteReader, args: ObjectType<typeof sharedSearchesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const rival = (await myRivals(ctx, site)).find((entry) => entry.hold._id === args.rivalId);
+  if (!rival) throw appError("NOT_FOUND", "That website is not one beside this one.");
+  const place = site.place;
+  // Both sides from their compact copies, matched in memory: the total is
+  // every search both rank for at the latest check, not a page's worth of
+  // the competitor's list with the misses dropped (§5.2).
+  const [theirs, ours] = await Promise.all([
+    readKeywordCopy(ctx, rival.website._id, place),
+    readKeywordCopy(ctx, site.website._id, place),
+  ]);
+  if (!theirs || !ours) return { ...preparingPage(args.rows), seen: seen([]) };
+  const yours = new Map(ours.rows
+    .filter((row) => keywordStanding(row, ours.latestCheckDay) === "current")
+    .map((row) => [row.keyword, row.position as number]));
+  const every = theirs.rows.flatMap((row) => {
+    if (keywordStanding(row, theirs.latestCheckDay) !== "current") return [];
+    const yourPosition = yours.get(row.keyword);
+    const theirPosition = row.position as number;
+    if (yourPosition === undefined) return [];
+    return [{ id: row.id, keyword: row.keyword, theirPosition, yourPosition, volume: row.volume, theirTraffic: row.traffic }];
+  });
+  const shared = every
+    .filter((row) => (args.lead !== "THEM" || row.theirPosition < row.yourPosition) && (args.lead !== "YOU" || row.yourPosition < row.theirPosition))
+    .sort(listOrder(SHARED_SORTS, args.sort ?? "theirVisits", args.direction, (row) => row.keyword));
+  const shown = pageOfList(shared, args.page, args.rows);
+  // Read in full by id, to be sure each row on screen is still there.
+  const rows = await Promise.all(shown.rows.map(async ({ id, ...row }) => ((await ctx.db.get(id)) ? { _id: id, ...row } : null)));
+  // What Hakken sees is of every search both rank for, whichever lead is chosen.
+  return { ...shown, rows: rows.filter((row) => row !== null), seen: rivalSees(every) };
+}

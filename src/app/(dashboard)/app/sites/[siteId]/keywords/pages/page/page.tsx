@@ -25,7 +25,7 @@ import { sharedSiteQuery } from "../../../../_components/useSiteParam";
 import { useSite, useSiteId } from "../../../../_components/useSite";
 import { pageRecordSees } from "@/convex/utils/sees/organic";
 import { SiteSees } from "../../../../_components/SiteSees";
-import { withoutGuessedMoney } from "../../_components/keywordSees";
+import { withoutGuessedMoney } from "@/convex/utils/sees/eyeData/visibilityKeywords";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";
 import { isPartHeld } from "../../../../_components/SiteCoverage";

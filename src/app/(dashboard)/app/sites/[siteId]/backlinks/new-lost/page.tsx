@@ -19,7 +19,7 @@ import { formatDay, formatMonth, formatNumber, toCsv } from "../../../_component
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { newLostSees, stepEnd } from "@/convex/utils/sees/backlinks";
 import { SiteSees } from "../../../_components/SiteSees";
-import { linkChangesSees } from "../_components/linkSees";
+import { linkChangesSees } from "@/convex/utils/sees/eyeData/visibilityBacklinks";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";

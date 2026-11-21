@@ -26,7 +26,8 @@ import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../../sites/_components/useSiteSort";
 import { HeatmapLink, Judged, Points, duration, mono, percent, tooFew, useClaritySeesWords, useDeviceName, usePeriodWords, useWaitingWords } from "../../_components/ClarityParts";
-import { pageLinks, pagesSees } from "../../_components/claritySees";
+import { pagesSees } from "@/convex/utils/sees/eyeData/clarity";
+import { pageLinks } from "../../_components/claritySees";
 import { useClarityArgs, useClarityDevice, useClarityPageHref, useClaritySiteId, useClarityStatus, useClarityChosen } from "../../_components/useClarity";
 
 type Sort = "page" | "visits" | "scroll" | "change" | "time" | "quickBack" | "errors";

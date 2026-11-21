@@ -310,8 +310,7 @@ export const wikiTables = {
     updatedAt: v.number(),
     finishedAt: v.optional(v.number()),
   })
-    .index("by_company_started", ["companyId", "startedAt"])
-    .index("by_status_started", ["status", "startedAt"]),
+    .index("by_company_started", ["companyId", "startedAt"]),
 
   /**
    * A source document that changed or was removed, waiting for the wiki to

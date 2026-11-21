@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -47,7 +47,7 @@ import { FIRST_PARTS_READ } from "./searchConsolePeriodReads";
 import { inBook, termsOf, type StoredPart } from "./searchConsolePeriodTerms";
 
 export { inBook, termsOf, type StoredPart } from "./searchConsolePeriodTerms";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { keywordsOnDay, searchLinesCover, spanKey, streamList, streamPairs } from "./searchConsoleKeptSums";
 import { chartPeriods, chartReach, daysBetween, daysFrom, lastDayOf, type ChartGrain, type ChartPeriod } from "./utils/searchConsoleChartDays";
 import { CALENDAR_PERIODS, periodSpan as calendarSpan, spanBefore as calendarBefore, ukDay } from "./utils/calendarPeriods";
@@ -305,16 +305,11 @@ const shownPeriodValidator = v.object({
  * `preparing`. A step not built yet — days and months, until the first
  * collection after 2026-10-04 — is `notBuilt`.
  */
+const chartFiguresArgs = { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, country: v.optional(v.string()), from: v.string(), to: v.string(), step: chartStepValidator };
+
 export const searchConsoleChartFigures = moduleQuery({
   module: MENU_FEATURES.searchConsole,
-  args: {
-    siteId: v.id("companyWebsites"),
-    searchType: searchTypeValidator,
-    country: v.optional(v.string()),
-    from: v.string(),
-    to: v.string(),
-    step: chartStepValidator,
-  },
+  args: chartFiguresArgs,
   returns: v.object({
     periods: v.array(shownPeriodValidator),
     step: chartStepValidator,
@@ -329,63 +324,67 @@ export const searchConsoleChartFigures = moduleQuery({
     preparing: v.boolean(),
     notBuilt: v.boolean(),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const connection = await ctx.db
-      .query("searchConsoleConnections")
-      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id))
-      .first();
-    const { chartWeeks } = await consoleLimitsOf(ctx, site.hold);
-    const nothing = { periods: [], step: args.step, byWeek: false, reach: null, chartWeeks, notBuilt: false, noSearches: false };
-    const scope = await countryScope(ctx, site.hold, connection, args.country);
-    if (scope.read === "LIVE") return { ...nothing, notReady: !scope.kept, preparing: scope.kept };
-    const newest = scope.read === "KEPT" ? scope.newestDay : connection?.newestDay;
-    const oldest = scope.read === "KEPT" ? scope.oldestDay : connection?.oldestDay;
-    if (!newest || !oldest) return { ...nothing, notReady: false, preparing: false };
-
-    // The main country's weeks and months reach back past collection, filled from Google (phase 9): its days begin there.
-    const heldFrom = scope.read === "KEPT" ? oldest : (connection?.daysFrom ?? oldest);
-    const dayLine = firstDayKeptFor(args.searchType, newest);
-    const byWeek = args.step === "day" && args.from < dayLine && heldFrom < dayLine;
-    // Weeks past six months are kept as months (`firstWeekKept`): weeks reaching there are shown by month.
-    const weekLine = firstWeekKept(newest);
-    const byMonth = (byWeek || args.step === "week") && args.from < weekLine && heldFrom < weekLine;
-    const step: ChartStep = byMonth ? "month" : byWeek ? "week" : args.step;
-    const grain = GRAIN_OF[step];
-    const reachFrom = chartReach(newest, chartWeeks);
-    const reach = args.from < reachFrom && heldFrom < reachFrom ? reachFrom : null;
-
-    const rows = await weeksOf(ctx, site.hold._id, scope.read === "KEPT" ? scope.country : undefined, args.searchType);
-    // Rows built before 2026-10-04 carry no grain: they are weeks.
-    const ofGrain = rows.filter((row) => (row.grain ?? "WEEK") === grain);
-    // Volatility's chart leaves out a day Google has only half filled in (search-console-volatility-plan.md §3).
-    const complete = grain === "DAY" ? completeDays(ofGrain) : null;
-    const periods = ofGrain
-      .filter((row) => row.week <= args.to && lastDayOf(grain, row.week) >= args.from)
-      .map((row) => {
-        const end = lastDayOf(grain, row.week);
-        const from = row.week > oldest ? row.week : oldest;
-        const lastDay = end < newest ? end : newest;
-        return {
-          start: row.week,
-          lastDay,
-          days: row.days ?? daysBetween(from, lastDay),
-          length: daysBetween(row.week, end),
-          top3: row.top3,
-          top10: row.top10,
-          top20: row.top20,
-          rest: row.rest,
-          brandClicks: row.brandClicks,
-          otherClicks: row.otherClicks,
-          ...(row.volatility === undefined || (complete && !complete.has(row.week))
-            ? {}
-            : { volatility: row.volatility, ...(row.volatilityUp === undefined || row.volatilityDown === undefined ? {} : { volatilityUp: row.volatilityUp, volatilityDown: row.volatilityDown }) }),
-        };
-      });
-    if (!LISTS_OF[args.searchType].includes("pair")) return { ...nothing, notReady: false, preparing: false, noSearches: true };
-    return { periods, step, byWeek, byMonth, reach, chartWeeks, notReady: false, preparing: false, notBuilt: rows.length > 0 && ofGrain.length === 0, noSearches: false };
-  },
+  handler: async (ctx, args) => await readChartFigures(ctx, args),
 });
+
+/** The charts' days, weeks or months: the screens' read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readChartFigures(ctx: SiteReader, args: ObjectType<typeof chartFiguresArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const connection = await ctx.db
+    .query("searchConsoleConnections")
+    .withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id))
+    .first();
+  const { chartWeeks } = await consoleLimitsOf(ctx, site.hold);
+  const nothing = { periods: [], step: args.step, byWeek: false, reach: null, chartWeeks, notBuilt: false, noSearches: false };
+  const scope = await countryScope(ctx, site.hold, connection, args.country);
+  if (scope.read === "LIVE") return { ...nothing, notReady: !scope.kept, preparing: scope.kept };
+  const newest = scope.read === "KEPT" ? scope.newestDay : connection?.newestDay;
+  const oldest = scope.read === "KEPT" ? scope.oldestDay : connection?.oldestDay;
+  if (!newest || !oldest) return { ...nothing, notReady: false, preparing: false };
+
+  // The main country's weeks and months reach back past collection, filled from Google (phase 9): its days begin there.
+  const heldFrom = scope.read === "KEPT" ? oldest : (connection?.daysFrom ?? oldest);
+  const dayLine = firstDayKeptFor(args.searchType, newest);
+  const byWeek = args.step === "day" && args.from < dayLine && heldFrom < dayLine;
+  // Weeks past six months are kept as months (`firstWeekKept`): weeks reaching there are shown by month.
+  const weekLine = firstWeekKept(newest);
+  const byMonth = (byWeek || args.step === "week") && args.from < weekLine && heldFrom < weekLine;
+  const step: ChartStep = byMonth ? "month" : byWeek ? "week" : args.step;
+  const grain = GRAIN_OF[step];
+  const reachFrom = chartReach(newest, chartWeeks);
+  const reach = args.from < reachFrom && heldFrom < reachFrom ? reachFrom : null;
+
+  const rows = await weeksOf(ctx, site.hold._id, scope.read === "KEPT" ? scope.country : undefined, args.searchType);
+  // Rows built before 2026-10-04 carry no grain: they are weeks.
+  const ofGrain = rows.filter((row) => (row.grain ?? "WEEK") === grain);
+  // Volatility's chart leaves out a day Google has only half filled in (search-console-volatility-plan.md §3).
+  const complete = grain === "DAY" ? completeDays(ofGrain) : null;
+  const periods = ofGrain
+    .filter((row) => row.week <= args.to && lastDayOf(grain, row.week) >= args.from)
+    .map((row) => {
+      const end = lastDayOf(grain, row.week);
+      const from = row.week > oldest ? row.week : oldest;
+      const lastDay = end < newest ? end : newest;
+      return {
+        start: row.week,
+        lastDay,
+        days: row.days ?? daysBetween(from, lastDay),
+        length: daysBetween(row.week, end),
+        top3: row.top3,
+        top10: row.top10,
+        top20: row.top20,
+        rest: row.rest,
+        brandClicks: row.brandClicks,
+        otherClicks: row.otherClicks,
+        ...(row.volatility === undefined || (complete && !complete.has(row.week))
+          ? {}
+          : { volatility: row.volatility, ...(row.volatilityUp === undefined || row.volatilityDown === undefined ? {} : { volatilityUp: row.volatilityUp, volatilityDown: row.volatilityDown }) }),
+      };
+    });
+  if (!LISTS_OF[args.searchType].includes("pair")) return { ...nothing, notReady: false, preparing: false, noSearches: true };
+  return { periods, step, byWeek, byMonth, reach, chartWeeks, notReady: false, preparing: false, notBuilt: rows.length > 0 && ofGrain.length === 0, noSearches: false };
+}
+
 /**
  * A period's slot: what it is (`NOW`) or is set against (`BEFORE`), its days
  * held (null when none are, or — before — when not every one is), and whether

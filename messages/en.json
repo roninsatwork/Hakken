@@ -4567,6 +4567,10 @@
             "title": "Rate-limit Counters",
             "description": "Short-lived counters behind AI action rate limits. Nothing reads them past their window."
           },
+          "chatAppHistory": {
+            "title": "Questions from ChatGPT and Claude",
+            "description": "What ChatGPT and Claude asked for, plus sign-ins that have run out and links nobody allowed."
+          },
           "analyticsSnapshots": {
             "title": "Analytics Snapshots",
             "description": "Daily usage rollups per platform, company and user. The default keeps over a year so year-on-year comparisons survive."
@@ -7275,7 +7279,8 @@
         "taskAlerts": "Per {per, plural, =1 {check} other {# checks}}: an alert’s daily look at its figures",
         "taskReports": "Per {per, plural, =1 {report} other {# reports}} sent",
         "taskResearch": "Per {per, plural, =1 {question} other {# questions}} looked into",
-        "sees": "Per {per, plural, =1 {press} other {# presses}} of the eye"
+        "sees": "Per {per, plural, =1 {press} other {# presses}} of the eye",
+        "chatApps": "Per {per, plural, =1 {question} other {# questions}}"
       },
       "was": "was {credits} · not saved",
       "costFrom": "In {month}",
@@ -7713,7 +7718,11 @@
         "clarity": "How far people scroll on each page, and where they get stuck or turn back.",
         "readingRoom": "News, people worth following and helpful guides.",
         "hakkenTasks": "The alerts and reports people ask for.",
-        "usage": "Where the company's credits go."
+        "usage": "Where the company's credits go.",
+        "chatApps": "People ask about their websites in ChatGPT or Claude."
+      },
+      "names": {
+        "chatApps": "MCP"
       }
     }
   },
@@ -9146,7 +9155,7 @@
       "integrations": {
         "tab": "Integrations",
         "title": "Apps you can link",
-        "description": "Link {platformName} to apps you already use, to hear from it and ask it things there.",
+        "description": "Link apps you already use, to ask about your websites there.",
         "columns": {
           "app": "App",
           "what": "What it does",
@@ -9161,9 +9170,69 @@
         "apps": {
           "telegram": {
             "name": "Telegram",
-            "what": "Get your alerts and reports as messages, and ask {platformName} anything from your phone."
+            "what": "Get your alerts and reports as messages, and ask about your websites from your phone."
+          },
+          "chatgpt": {
+            "name": "ChatGPT",
+            "what": "Ask about your websites in ChatGPT, and see your figures as charts."
+          },
+          "claude": {
+            "name": "Claude",
+            "what": "Ask about your websites in Claude, and see your figures as charts."
           }
-        }
+        },
+        "switchedOff": "Switched off"
+      },
+      "chatApp": {
+        "back": "Integrations",
+        "linkedTitle": "Your link",
+        "linkedSince": "Linked to {company} since {date}.",
+        "linkedHint": "{app} can read your figures, but it can't change, send or delete anything.",
+        "unlink": "Unlink",
+        "unlinkAsk": "Unlink {app}?",
+        "unlinkBody": "{app} stops reading your figures straight away. You can link it again any time.",
+        "keep": "Keep it",
+        "askedTitle": "What {app} asked for",
+        "askedHint": "The last 90 days. The newest is at the top.",
+        "search": "Search what {app} asked for…",
+        "empty": "{app} hasn't asked for anything in the last 90 days.",
+        "columns": {
+          "asked": "Asked for",
+          "website": "Website",
+          "dates": "Dates",
+          "when": "When",
+          "answer": "Answer"
+        },
+        "answered": "Answered",
+        "switchedOff": "Switched off",
+        "couldNot": "Couldn't answer",
+        "asks": {
+          "websites": "Your websites",
+          "summary": "How a website is doing",
+          "findings": "What changed in {section}",
+          "page": "How a page is doing",
+          "other": "Something else"
+        },
+        "tops": {
+          "searchConsole_keywords": "Top keywords in Search Console",
+          "searchConsole_pages": "Top pages in Search Console",
+          "googleAnalytics_pages": "Top pages in Google Analytics",
+          "googleAnalytics_landingPages": "Top landing pages in Google Analytics",
+          "googleAnalytics_channels": "Top channels in Google Analytics",
+          "googleAnalytics_campaigns": "Top campaigns in Google Analytics",
+          "googleAnalytics_products": "Top products in Google Analytics",
+          "bingWebmaster_keywords": "Top keywords in Bing Webmaster",
+          "bingWebmaster_pages": "Top pages in Bing Webmaster"
+        },
+        "linkIt": "Link it",
+        "howChatgpt": "In ChatGPT, add an app with this address. Then sign in and press Allow.",
+        "howClaude": "In Claude, add a connector with this address. Then sign in and press Allow.",
+        "address": "Address",
+        "copy": "Copy",
+        "copied": "Copied",
+        "offTitle": "{app} can't read your figures right now",
+        "failed": "That didn't work. Try again in a moment.",
+        "noMatch": "Nothing matches that search."
       }
     },
     "assistantNote": {
@@ -21254,7 +21323,8 @@
       "taskAlerts": "Task alerts",
       "taskReports": "Task reports",
       "taskResearch": "Find out why",
-      "sees": "What {platformName} sees"
+      "sees": "What {platformName} sees",
+      "chatApps": "Ask {platformName} in ChatGPT and Claude"
     },
     "prices": {
       "rankings": "{credits} per {per, plural, =1 {keyword} other {# keywords}} checked",
@@ -21266,7 +21336,8 @@
       "taskAlerts": "{credits} per {per, plural, =1 {check} other {# checks}}",
       "taskReports": "{credits} per {per, plural, =1 {report} other {# reports}}",
       "taskResearch": "{credits} per {per, plural, =1 {question} other {# questions}} looked into",
-      "sees": "{credits} per {per, plural, =1 {press} other {# presses}} of the eye"
+      "sees": "{credits} per {per, plural, =1 {press} other {# presses}} of the eye",
+      "chatApps": "{credits} per {per, plural, =1 {question} other {# questions}}"
     },
     "units": {
       "rankings": "{count, plural, =1 {# keyword} other {# keywords}}",
@@ -21278,7 +21349,8 @@
       "taskAlerts": "{count, plural, =1 {# check} other {# checks}}",
       "taskReports": "{count, plural, =1 {# report} other {# reports}}",
       "taskResearch": "{count, plural, =1 {# question looked into} other {# questions looked into}}",
-      "sees": "{count, plural, =1 {# press of the eye} other {# presses of the eye}}"
+      "sees": "{count, plural, =1 {# press of the eye} other {# presses of the eye}}",
+      "chatApps": "{count, plural, =1 {# question} other {# questions}}"
     },
     "about": {
       "rankings": "Where your websites and the competitors you track rank on Google, checked on a schedule.",
@@ -21290,7 +21362,8 @@
       "taskAlerts": "Each day an alert someone set up looks at your figures.",
       "taskReports": "Each weekly report someone asked for.",
       "taskResearch": "Each time someone said yes to “find out why”.",
-      "sees": "Each press of the eye that wrote new advice. Until the page's figures change, a press shows the same advice for up to a day, covered by your subscription."
+      "sees": "Each press of the eye that wrote new advice. Until the page's figures change, a press shows the same advice for up to a day, covered by your subscription.",
+      "chatApps": "Each question ChatGPT or Claude asked about your websites and got an answer to."
     },
     "often": {
       "byHand": "When you ask",
@@ -23979,6 +24052,38 @@
       "disconnect": "Disconnect",
       "limits": "Clarity allows 10 asks a project a day and hands over its last three days only, so its figures are read each morning and kept here: six asks for the day's figures, where visitors came from and their browsers, and up to two for recordings worth watching, with 2 always kept in hand.",
       "asksToday": "{used} of Clarity's 10 asks for this project are used today, with 2 always kept in hand. The Microsoft Clarity: Collector Agent asks up to 8 times each morning."
+    }
+  },
+  "chatApps": {
+    "allow": {
+      "eyebrow": "Link an app",
+      "title": "Let {app} read your figures?",
+      "lead": "Press Allow and you can ask about {company}'s websites in {app}.",
+      "leadPick": "Pick a company, then press Allow. You can ask about its websites in {app}.",
+      "signedInAs": "Signed in as {name}",
+      "differentEmail": "Use a different email",
+      "company": "Company",
+      "canRead": "What {app} can read",
+      "read1": "The figures on your screens, such as visits and clicks.",
+      "read2": "What changed on each screen, and why.",
+      "read3": "The first 10 of any list, such as your top keywords.",
+      "cantDo": "What {app} can't do",
+      "cant1": "Change, send or delete anything.",
+      "cant2": "See another company's figures.",
+      "keeps": "{app} keeps a copy of what it reads. {maker}'s terms say what happens to that copy. You can unlink {app} any time on the Integrations tab of My Profile.",
+      "goesBack": "Allow or Cancel takes you back to {host}.",
+      "allow": "Allow",
+      "cancel": "Cancel",
+      "checking": "Checking the link…",
+      "unknownTitle": "You can't link this app",
+      "unknownBody": "Only ChatGPT and Claude can link. Start again from one of them.",
+      "badTitle": "This link doesn't work",
+      "badBody": "Something in it is wrong or out of date. Start again from the app.",
+      "offTitle": "{app} can't read your figures right now",
+      "offBody": "Linking ChatGPT and Claude is switched off for {company}.",
+      "noCompanyTitle": "No company yet",
+      "noCompanyBody": "Your account isn't part of a company yet, so there are no figures to read.",
+      "failed": "That didn't work. Try again in a moment."
     }
   }
 }

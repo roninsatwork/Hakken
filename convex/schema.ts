@@ -7,6 +7,7 @@ import { answerChartValidator } from "./utils/assistantCharts";
 import { lookupValidator } from "./utils/assistantLookups";
 import { billingTables } from "./billingSchema";
 import { featureSwitchesTables } from "./featureSwitchesSchema";
+import { chatAppTables } from "./chatAppSchema";
 import { uploadTables } from "./uploadSchema";
 import { siteTables } from "./siteSchema";
 import { searchConsoleTables } from "./searchConsoleSchema";
@@ -52,6 +53,7 @@ export default defineSchema({
   ...authTables,
   ...billingTables,
   ...featureSwitchesTables,
+  ...chatAppTables,
   ...wikiTables,
   ...uploadTables,
   ...siteTables,
@@ -3924,6 +3926,7 @@ export default defineSchema({
       v.literal("publicApiRequests"),
       v.literal("authEvents"),
       v.literal("aiActionRequests"),
+      v.literal("chatAppHistory"),
       v.literal("analyticsSnapshots"),
       v.literal("webhookDeliveries"),
       v.literal("agentRunHistory"),

@@ -1,8 +1,37 @@
 # Ask Hakken from ChatGPT and Claude: plan
 
-**Status:** Plan, with Anthony's four answers in (21 November). Waiting for his go. Nothing is built. Overall 0% built.
-**Date:** 21 November 2026
-**Chosen:** Anthony, 21 November 2026, after comparing the usual way with Hakken's: "Let's go for the best practice way please".
+**Status:** Built on `dev` on 21 November 2026, on Anthony's "Let's build it", with Option B and credits per question. Only phase 7 is left, and it needs Hakken online. Phase 0's six boards are on [the Ask Hakken in ChatGPT and Claude canvas](https://claude.ai/artifact/QoffmnoLtvJwzDG4EkNzqY), signed off ("I'm good"). Overall about 90% built, with about 2½ developer days left: the full checks and the push, then phase 7.
+
+**Option B as built, 21 November 2026.** 110 screens hand a chat app the figures and findings their own eye gets: Google Analytics 12, Search Console 18, Bing Webmaster 7, Microsoft Clarity 4 and Visibility 69. Each screen and the server call one figures function in `convex/utils/sees/eyeData/`, and the server runs each read through the query's own reader helper (`convex/chatAppEyes/`). Two kinds of screen have no builder, because they don't show saved figures. Google Analytics Live is real time. A Search Console keyword's or page's own screens, with their countries and devices, ask Google as they open. Bing Webmaster is checked on saved test figures only, as no website on dev has Bing data yet.
+
+**What changed from this plan while building, each said to Anthony:**
+
+- **No separate Connected apps page.** ChatGPT and Claude join Telegram under Apps you can link, on the Integrations tab of My Profile, and each opens its own page like Telegram's (`/app/profile/integrations/chatgpt` and `/claude`).
+- **The switch is a row in the Features table, called MCP** (Anthony, 2026-11-21: "this should be in the table", then "the same for inside the company settings", then "the feature should be called MCP"), after Usage on both System Settings → Features and each company's Features tab. A company's table has 16 rows, so at 15 a page Wiki moves to page 2.
+- **The Allow page wears the sign-in page's look** (`RainSplit`), at `/oauth/authorize`.
+- **Both eras of MCP are answered.** The rules of 28 July 2026 made the protocol stateless; ChatGPT and Claude Code use them, Claude's web app was still moving over (checked 21 November). The door answers `initialize` and `server/discover` alike.
+- **Return addresses checked against each app's own documents on 21 November:** ChatGPT `https://chatgpt.com/connector_platform_oauth_redirect`, Claude `https://claude.ai/api/mcp/auth_callback`. A test app on a developer's machine (Claude Code, MCP Inspector) only where the deployment itself is local.
+
+**Decided: every screen's findings, on the server (Option B).** Anthony, 21 November 2026: "Option b". The eye's findings are worked out in the browser from figures each screen puts together, about 60 screens with an eye across Google Analytics, Search Console, Bing Webmaster, Microsoft Clarity, Visibility and Dashboard. No server read built them, and Ask Hakken's reads come back in another shape, so the findings rules found nothing in them (tested on More Handles, 21 November). Option B moves each screen's figures onto the server, shared with the screen so the two can't disagree. About 15 more developer days.
+
+How each screen moves (the pattern, piloted on Google Analytics Overview):
+
+1. **The reads.** Each read the screen's eye uses is called on the server through the same reader helper its query uses (`readOverview`, `readListPage`, `readOverviewSplit`, `readChart` and so on), for the pass's company, one read to a query so none runs out of room. A query with no helper gets one, its public query calling it.
+2. **The figures.** The screen's eye data is built by one pure function in `convex/utils/sees/`, as `overviewFigures` already is. The screen and the server both call it. Where a page builds its figures inline today, that code moves into the function and the page calls it.
+3. **The words.** The figures carry the screen's own words. The server reads the English ones from `messages/en.json`, so they can't drift from the screen.
+4. **The findings.** `pageFindings(screen, data)` over those figures, as the eye runs it. The tool sends the findings' words beside the figures.
+5. **The test.** For each screen, the server's figures for More Handles' saved data equal what the screen hands its eye, on every period the Dates menu offers, and the screen's own findings come out.
+
+Order: each section's main screen first (Google Analytics Overview, Search Console Performance, Bing Webmaster Overview, Microsoft Clarity Overview, Visibility's overview), so hakken_summary carries findings; then each section's other screens.
+
+**Credits per question.** Anthony, 21 November 2026: "The mcp needs to use credits per message as well please don't forget that ans they appear on the statement". This replaces "Covered by the subscription" below. Each answered question charges the company one credit (kind `chatApps`, a placeholder set on Admin → Settings → Credit prices) and shows on the Usage statement as Ask Hakken in ChatGPT and Claude. A refused question costs nothing.
+
+**When it's finished.** Anthony, 21 November 2026: commit everything, this work and the other agents', and push to `dev`, only once the plan is finished, the full checks pass and it works. Then watch GitHub's check and fix what it finds.
+
+**Found while building:**
+
+- Ask Hakken's own read of Google Analytics Visits fails on Last month for More Handles, reading too much at once (16MB). It's a fault in Ask Hakken today, not in this work.
+- On ronins.co.uk, 16 of Visibility's 34 later screens find nothing on Last month or the last 12 months, on the screen as well as in a chat app. Local profile, Local market and Your pages are three. A linking website's own screen hands its eye a whole record that becomes no figures at all. The eye is meant never to be empty on any page, so these need their own finding rules. That's separate work, not part of this plan.
 
 ## What it is
 
@@ -72,7 +101,7 @@ Since 26 January 2026, MCP Apps lets a tool send a small view that ChatGPT and C
 | A pass is stolen | A pass lasts an hour. Renewal passes are used once each, and using an old one again cancels the whole chain. Hakken keeps only a fingerprint of each pass, never the pass. A pass works only on Hakken's address (RFC 8707) and is never passed on to Google or anyone else |
 | A fake app asks for passes | Only ChatGPT and Claude get in at first, as Anthony agreed on 21 November. Return addresses must match exactly. Sign-in uses PKCE (S256) and sends Hakken's name back with the answer (RFC 9207), which ChatGPT checks. An app's details come from its own published document (Client ID Metadata Documents, the MCP rules of 28 July 2026). Hakken fetches it carefully: secure addresses only, never a private one, small and quick, kept for a while. The older way of signing up an app (Dynamic Client Registration) is accepted only for the same allowed apps, because Claude may still use it |
 | Hidden instructions in saved text | Some saved text comes from other websites, such as page titles, search terms and rivals' names. Tools send it marked as quoted data, never as instructions, with figures in their own fields. Every tool only reads, so a trick can't change or send anything |
-| Too many questions, or an app stuck in a loop | A limit per person per minute, as API keys already have (`convex/apiKeys.ts`, 60 a minute). Answers are capped at 10 rows. The log shows who asked what |
+| Too many questions, or an app stuck in a loop | 15 questions a minute per person (Anthony, 21 November 2026: "Make this 15 not 60"). Answers are capped at 10 rows. The log shows who asked what |
 | Someone leaves the company | Removing the person, switching the feature off or cutting the app off stops their passes at once. Every question checks the person still belongs to the company |
 | A super admin's reach | A super admin's pass covers only the company picked on the Allow page, never every company. No admin tool is ever offered |
 | Figures leave Hakken | Once the app has the figures, OpenAI or Anthropic keeps a copy under the person's own terms with them. The Allow page says so plainly. Only the figures the screens show go out, and nothing about any one visitor |
@@ -100,7 +129,7 @@ Since 26 January 2026, MCP Apps lets a tool send a small view that ChatGPT and C
 - **New tables**, names settled at build: allowed apps, grants (person, company, app, allowed when, last used, cut off), pass fingerprints (kind, expiry, chain) and the request log.
 - **Reuse.** The `SiteReader` pattern, `requireModuleOn`, the API keys' limit and `constantTimeEqual`, `featureSwitches` and the screen kit for the settings page (`PageHeader`, `DataTable`, `StatusLabel`, `Button`).
 - **The other direction stays.** Hakken already connects out to other tools' MCP servers (`convex/mcpServers.ts`). That is unchanged.
-- **No AI in the tools.** They choose no model and cost no credits.
+- **No AI in the tools.** They choose no model. Each answered question still charges one credit (kind `chatApps`), as Anthony asked.
 - **Tests never flake.** The rules in AGENTS.md apply, including a fixed day for any test whose saved figures end on a written day.
 
 ## Decided

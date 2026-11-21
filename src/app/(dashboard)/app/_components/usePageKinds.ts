@@ -1,5 +1,6 @@
 "use client";
 
+import { pageKindLabel } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -64,15 +65,8 @@ export function usePageKinds(siteId: Id<"companyWebsites"> | null | undefined): 
     choices,
     classified,
     isOwn,
-    label: (kind) => {
-      if (!kind) return "–";
-      if (kind === NOT_SORTED_KIND) return t("notSorted");
-      const choice = byId.get(kind);
-      if (choice) return choice.name;
-      if (PAGE_TYPE_LIST.includes(kind)) return t(`pageTypes.${kind}`);
-      // A classification the list does not know yet: still on its way, or just removed.
-      return choices === undefined ? "…" : "–";
-    },
+    // The label the server gives a chat app's question too (`pageKindLabel`), so the two can't disagree.
+    label: pageKindLabel(choices, Object.assign((key: string) => t(key as never), { has: (key: string) => t.has(key as never) })),
     typeOf: (kind) => (kind ? byId.get(kind)?.type ?? null : null),
     options: classified
       ? [...(choices ?? []).map((choice) => ({ value: choice.id, label: choice.name })), { value: NOT_SORTED_KIND, label: t("notSorted") }]

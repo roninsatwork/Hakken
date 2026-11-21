@@ -391,3 +391,24 @@ export async function creditSeesPress(ctx: MutationCtx, answer: Doc<"seesAnswers
     }, 1, { ...(run?.costUsd !== undefined ? { realCostUsd: run.costUsd } : {}) }, Date.now());
   });
 }
+
+/**
+ * A question ChatGPT or Claude asked through Hakken's MCP door and got an answer to
+ * (ask-hakken-from-ai-chat-apps-plan-2026-11-21.md; Anthony, 2026-11-21: "The mcp needs to use credits per message
+ * as well … they appear on the statement"). One charge a question, by the person whose pass asked, for their company.
+ * The tools ask no model, so there's no real cost to record beside it. A refused question costs nothing.
+ */
+export async function creditChatAppQuestion(
+  ctx: MutationCtx,
+  question: { companyId: Id<"companies">; userId: Id<"users">; requestId: Id<"chatAppRequests"> },
+): Promise<void> {
+  await quietly("a question from ChatGPT or Claude", async () => {
+    await chargeCreditsNow(ctx, {
+      companyId: question.companyId,
+      kind: "chatApps",
+      runKey: `chatApp:${question.requestId}`,
+      how: "byHand",
+      userId: question.userId,
+    }, 1, { realCostUsd: 0 }, Date.now());
+  });
+}

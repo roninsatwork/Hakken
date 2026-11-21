@@ -1,22 +1,18 @@
-import type { FunctionReturnType } from "convex/server";
-import type { api } from "@/convex/_generated/api";
-import { newestOfEach } from "../[siteId]/newestOfEach";
-import { checksFor, rivalChecksFor } from "./seesChecks";
-import { formatMonth, formatShortDay } from "./siteFormat";
+import { checksFor, newestOfEach, rivalChecksFor, type SiteLine, type SitePoint } from "./visibilityChecks";
 
 /**
- * What Visibility's second half hands its eye (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): each page's
- * own figures, built here once from the answers the page already reads, so the page and the test of its rules
+ * What Visibility's screens hand their eye (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): each page's
+ * own figures, built here once from the answers the page already reads, so the page, a chat app's question
+ * (`chatAppEyes/visibility.ts`, ask-hakken-from-ai-chat-apps-plan-2026-11-21.md, Option B) and the test of its rules
  * (`convex/utils/sees/visibilityPeriods.test.ts`) build them the same way. Every name is the reader's own, handed in by
- * the page; every count is over the whole list the page shows (a long list reaches the eye cut to its first rows, so a
- * list is handed the most telling first). Never a guessed money figure (decision 4): what adverts cost and what visits
- * would be worth stay stored and unshown.
+ * the page, or English from `messages/en.json` on the server; every count is over the whole list the page shows (a long
+ * list reaches the eye cut to its first rows, so a list is handed the most telling first). Never a guessed money figure
+ * (decision 4): what adverts cost and what visits would be worth stay stored and unshown.
  */
 
-type Answer<Name extends keyof typeof api> = typeof api[Name];
-type Series = FunctionReturnType<(typeof api)["siteCharts"]["siteSeries"]>;
-type Line = Series[number];
-type Point = Line["points"][number];
+type Series = readonly SiteLine[];
+type Line = SiteLine;
+type Point = SitePoint;
 export type Words = Record<string, string>;
 type Span = { from: string; to: string };
 const inSpan = (day: string, span: Span) => day >= span.from && day <= span.to;
@@ -60,7 +56,7 @@ export function aboveSeen(rows: readonly AboveRow[], names: Words) {
   };
 }
 
-type Features = FunctionReturnType<Answer<"siteGoogleSerp">["listFeatures"]>;
+type Features = { checked: number; totals: ReadonlyArray<{ feature: string; searches: number; withSite: number | null }> };
 
 /** Search features: the boxes against the check before the dates, and the chart's features by their names on screen. */
 export function featuresSeen(data: Features, line: Line | undefined, label: (feature: string) => string, names: Words) {
@@ -76,8 +72,15 @@ export function featuresSeen(data: Features, line: Line | undefined, label: (fea
 
 type MoveRow = { keyword: string; position: number | null; previousPosition: number | null; change: number; volume: number | null; traffic: number | null; page: string };
 
+/** How a chart's step is written: the screen's own formatters, or British English on the server. */
+export type StepLabels = { month: (month: string) => string; day: (day: string) => string };
+export const ENGLISH_STEPS: StepLabels = {
+  month: (month) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }),
+  day: (day) => new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }),
+};
+
 /** Wins and losses: moves up against down over the dates and the span before, the chart's steps, the table's moves. */
-export function winsLossesSeen(line: Line | undefined, before: Line | undefined, rows: readonly MoveRow[] | undefined, step: "day" | "week" | "month", names: Words) {
+export function winsLossesSeen(line: Line | undefined, before: Line | undefined, rows: readonly MoveRow[] | undefined, step: "day" | "week" | "month", names: Words, labels: StepLabels = ENGLISH_STEPS) {
   const points = line?.points ?? [];
   const sum = (list: readonly Point[], field: "rankedUp" | "rankedDown") => list.reduce((total, point) => total + point[field], 0);
   const was = before?.points;
@@ -89,7 +92,7 @@ export function winsLossesSeen(line: Line | undefined, before: Line | undefined,
       ...(was && was.length > 0 ? { upBefore: sum(was, "rankedUp"), downBefore: sum(was, "rankedDown"), checksBefore: checks(was) } : {}),
       names,
     },
-    steps: points.map((point) => ({ day: point.day, label: step === "month" ? formatMonth(point.day.slice(0, 7)) : formatShortDay(point.day), up: point.rankedUp, down: point.rankedDown })),
+    steps: points.map((point) => ({ day: point.day, label: step === "month" ? labels.month(point.day.slice(0, 7)) : labels.day(point.day), up: point.rankedUp, down: point.rankedDown })),
     ...(rows ? { moves: rows.map((row) => ({ keyword: row.keyword, position: row.position, previousPosition: row.previousPosition, change: row.change, volume: row.volume, traffic: row.traffic, page: row.page })) } : {}),
   };
 }
@@ -120,9 +123,10 @@ export function searchesSeen(rows: readonly Tracked[], positions: unknown, names
 
 // --- Competitors ---
 
-type GroupFigures = FunctionReturnType<Answer<"siteCharts">["siteAndRivals"]>;
-type Rivals = FunctionReturnType<Answer<"siteCompetitors">["listRivals"]>;
-type RivalMoves = FunctionReturnType<Answer<"siteRivalMoves">["rivalMoves"]>;
+type Figure = number | null;
+type GroupFigures = ReadonlyArray<{ host: string; isYou: boolean; estimatedTraffic: Figure; keywords: Figure; top3: Figure; referringDomains: Figure; domainRank: Figure }>;
+type Rivals = ReadonlyArray<{ host: string; beatsYouOn: number; youBeatOn: number; comparedOn: number; verdict: string }>;
+type RivalMoves = ReadonlyArray<{ host: string; newSearches: number; climbed: number; fell: number; visits: Figure; visitsBefore: Figure }>;
 const traffic = { estimatedTraffic: (point: Point) => point.estimatedTraffic };
 
 /** Side by side: each website's newest check, the chart's lines against the check before, the searches compared, the moves. */
@@ -353,7 +357,7 @@ export function reviewsRivalsSeen(data: ReviewBusinesses, sourceName: (source: s
 
 // --- The Overview, Paid search and Site audit ---
 
-type Extras = FunctionReturnType<Answer<"siteOverview">["overviewExtras"]>;
+type Extras = { competitors: { you: { visits: Figure; keywords: Figure }; rivals: ReadonlyArray<{ host: string; visits: Figure; keywords: Figure; shared: Figure; sharedVisits: Figure }> } };
 
 /** The Overview: the panels' figures against the check before the dates, the assistants, and the website beside its rivals. */
 export function overviewSeen(line: Line | undefined, extras: Extras | undefined, engineLabel: (engine: string) => string, names: Words) {
@@ -398,7 +402,7 @@ export function paidSeen(line: Line, names: Words) {
   };
 }
 
-type Audit = NonNullable<FunctionReturnType<Answer<"siteCrawl">["siteAudit"]>>;
+type Audit = { day: string; pagesCrawled: number; pagesFound: Figure; onPageScore: Figure; turnedAway: unknown; issues: ReadonlyArray<{ check: string; severity: string; pages: number }> };
 
 /** Site audit: the newest crawl's boxes and problems by their names on screen, the crawls against the one before, the money pages. */
 export function auditSeen(audit: Audit, line: Line | undefined, moneyPages: unknown, label: (check: string) => string, names: Words) {
@@ -412,3 +416,54 @@ export function auditSeen(audit: Audit, line: Line | undefined, moneyPages: unkn
     ...(moneyPages ? { moneyPages } : {}),
   };
 }
+
+// --- Rows a screen puts together before its eye reads them ---
+
+/**
+ * Tracked fan-out queries: the running searches that came from a fan-out query, the ones ticked to check every run,
+ * each with what the assistants did with it (`listTrackedFanOut`, joined on the keyword).
+ */
+export function trackedFanOutRows<
+  Standing extends { keyword: string; fromFanOut: boolean; isActive: boolean },
+  FanOut extends { keyword: string; queryText: string; prompt: string | null; engines: string[]; timesSeen: number | null },
+>(standings: readonly Standing[], fanOut: { rows: readonly FanOut[] }): Array<Standing & Omit<FanOut, "keyword">> {
+  const byKeyword = new Map<string, FanOut>(fanOut.rows.map((row) => [row.keyword, row]));
+  return standings
+    .filter((row) => row.fromFanOut && row.isActive)
+    .map((row) => {
+      const found = byKeyword.get(row.keyword);
+      return { ...row, queryText: found?.queryText ?? row.keyword, prompt: found?.prompt ?? null, engines: found?.engines ?? [], timesSeen: found?.timesSeen ?? null } as Standing & Omit<FanOut, "keyword">;
+    });
+}
+
+/** The market map's websites as its chart draws them: a website found ranking beside you only when judged a competitor, unless every one is asked for. */
+export function marketMapRows<Row extends { role: string; kind: string | null }>(rows: readonly Row[], everything: boolean): Row[] {
+  return rows.filter((row) => row.role !== "FOUND" || everything || row.kind === null || row.kind === "COMPETITOR");
+}
+
+// --- Names a screen reads out, in the reader's words or English (`utils/sees/serverWords.ts`) ---
+
+/** A `useTranslations`-shaped reader of one namespace. */
+type Say = ((key: string, values?: Record<string, string | number>) => string) & { has: (key: string) => boolean };
+
+/** An AI engine's name (`aiEngines`), as `useEngineLabel` gives it. */
+export function engineNameFrom(t: Say) {
+  return (engine: string) => {
+    if (engine === "ai_mode") return t("aiMode");
+    if (engine === "google_ai_overview") return t("googleAiOverview");
+    return t.has(engine) ? t(engine) : engine;
+  };
+}
+
+/** A results-page feature's name (`sites.common.features`): ours where we have one, else DataForSEO's own, made readable. */
+export function featureNameFrom(t: Say) {
+  return (feature: string) => (t.has(feature) ? t(feature) : feature.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase()));
+}
+
+/** A site audit check's name (`sites.audit`): ours where we have one, else the check's own code in words. */
+export function auditCheckNameFrom(t: Say) {
+  return (check: string) => (t.has(`checks.${check}`) ? t(`checks.${check}`) : check.replace(/_/g, " "));
+}
+
+/** Words that open a sentence: "The month before" for "the month before". */
+export const capitalised = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);

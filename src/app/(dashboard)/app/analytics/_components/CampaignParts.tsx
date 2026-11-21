@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { hasNoName, isCameFromCode } from "@/convex/utils/campaignNames";
+import {
+  EYE_CAMPAIGNS, MAP_CAMPAIGNS, answerHasRates, campaignDayFigure, campaignFigures, campaignMapForEye, campaignMapRows, campaignNamesFrom,
+  campaignsByDayForEye, whatPeopleDidForEye, type CampaignCount, type CampaignShow,
+} from "@/convex/utils/sees/eyeData/googleAnalyticsCampaigns";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { yearComparable } from "@/src/ui/components/screens/chartExplorerRule";
 import { ConversionsMap, type ConversionsMapColumn, type ConversionsMapRow, type ConversionsMapWords } from "@/src/ui/components/screens/ConversionsMap";
@@ -18,7 +21,6 @@ import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 import { BeforeLine } from "./AnalyticsFigures";
-import type { ListPageAnswer } from "./AnalyticsListScreen";
 import { formatPercent } from "./analyticsFormat";
 import { shiftDays } from "./stepScale";
 import { useIsShop } from "./useIsShop";
@@ -32,31 +34,16 @@ import { spansOfList, useSpanInWords, useSpanWords } from "./VisitsCharts";
  * shared components". What's here is the reading, the words and the figures each part is handed.
  */
 
-/** Every campaign the boxes and the eye weigh, from the busiest. A website with more is cut here, and says so in the plan's limits. */
-export const EYE_CAMPAIGNS = 100;
-/** The map's boxes at most, as on All pages. */
-const MAP_CAMPAIGNS = 40;
-/** A campaign with under this share of the page's figure is too small for a box. */
-const SMALLEST_BOX = 1 / 500;
+/** The map's rule, shared with a chat app's question (`eyeData/googleAnalyticsCampaigns.ts`), kept here for the screen's tests. */
+export { boxedCampaigns } from "@/convex/utils/sees/eyeData/googleAnalyticsCampaigns";
 
 const EVERYWHERE = "everywhere";
 const pct = (share: number) => `${(share * 100).toFixed(1)}%`;
 
-type Named = { label: string; cameFrom?: string };
-
 /** A campaign and where its link was, in the reader's words: the table's, the map's, the squares' and the eye's. */
 export function useCampaignNames() {
   const t = useTranslations("googleAnalytics.campaigns");
-  return useMemo(() => {
-    const place = (cameFrom: string) => (isCameFromCode(cameFrom) ? t(`cameFrom.${cameFrom}`) : cameFrom);
-    const name = (row: Named) => (hasNoName(row.label) ? t("noName", { place: place(row.cameFrom ?? "notKnown") }) : row.label);
-    /** For a place with little room: the last part of "Performance Max > Zombies". */
-    const short = (row: Named) => {
-      const last = name(row).split(" > ").at(-1) ?? name(row);
-      return last.length > 26 ? `${last.slice(0, 25)}…` : last;
-    };
-    return { place, name, short };
-  }, [t]);
+  return useMemo(() => campaignNamesFrom(t as unknown as Parameters<typeof campaignNamesFrom>[0]), [t]);
 }
 
 export type CameFromChoice = { value: string; set: (next: string) => void; cameFrom: string | undefined };
@@ -139,13 +126,10 @@ export function CampaignBoxes({ campaigns }: { campaigns: Campaigns }) {
   );
 }
 
-type Show = "visits" | "bought" | "conversions" | "left";
+type Show = CampaignShow;
 const SHOWS: readonly Show[] = ["visits", "bought", "conversions", "left"];
 type DayPoint = { day: string; lastDay?: string; visits: number; engaged: number; conversions: number; bought: number };
-
-function figureOf(point: DayPoint, show: Show): number {
-  return show === "left" ? Math.max(0, point.visits - point.engaged) : point[show];
-}
+const figureOf = campaignDayFigure;
 
 /**
  * Visits from campaigns each day, against the same days of the dates before where those are held day by day (weeks and months, as on
@@ -168,10 +152,8 @@ export function CampaignDaysCard({ choice, campaigns }: { choice: CameFromChoice
   const before = chart?.before ?? null;
   const drawn = Boolean(before?.drawn) && (before?.points.length ?? 0) > 0;
   const comparing = against === "before" && drawn;
-  const seen = useMemo(() => (chart ? {
-    days: chart.points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), visits: point.visits, bought: point.bought, conversions: point.conversions, leftStraightAway: figureOf(point, "left") })),
-    ...(before ? { daysBefore: before.points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), visits: point.visits, bought: point.bought, conversions: point.conversions, leftStraightAway: figureOf(point, "left") })) } : {}),
-  } : undefined), [chart, before]);
+  // Built by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts).
+  const seen = useMemo(() => campaignsByDayForEye(chart), [chart]);
   useSeesPart("campaignsByDay", seen);
   const valued = (points: readonly DayPoint[], which: Show) => points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: figureOf(point, which) }));
   // A day September didn't have, like 31 October's, has no figure rather than none.
@@ -214,20 +196,8 @@ export function CampaignDaysCard({ choice, campaigns }: { choice: CameFromChoice
   );
 }
 
-type Count = "visits" | "bought" | "conversions";
+type Count = CampaignCount;
 const COUNTS: readonly Count[] = ["visits", "bought", "conversions"];
-type Row = ListPageAnswer["rows"][number];
-
-function campaignFigures(row: Row, count: Count): { now: number; before: number | null } {
-  if (count === "bought") return { now: row.purchases, before: row.purchasesBefore ?? null };
-  if (count === "conversions") return { now: row.conversions, before: row.conversionsBefore };
-  return { now: row.visits, before: row.visitsBefore ?? null };
-}
-
-/** The most boxes a map can hold, and the smallest it has room to show, as the screen says it. Plain code, for its tests. */
-export function boxedCampaigns<R>(rows: readonly R[], figure: (row: R) => number, whole: number, most = MAP_CAMPAIGNS): R[] {
-  return rows.filter((row) => figure(row) > 0 && figure(row) >= whole * SMALLEST_BOX).slice(0, most);
-}
 
 /**
  * All your campaigns (Anthony, 2026-11-05: "let keep this control on our new page design"): each a box, the bigger the more it had,
@@ -248,9 +218,7 @@ export function CampaignMapCard({ choice, campaigns }: { choice: CameFromChoice;
   const read = useQuery(api.googleAnalyticsReads.analyticsListPage, ready ? ask : "skip");
   const everyDevice = useQuery(api.googleAnalyticsReads.analyticsListPage, read?.live ? { ...ask, device: "" } : "skip");
   const list = read?.live ? everyDevice : read;
-  const totals = list?.campaignTotals;
-  const whole = totals ? (count === "bought" ? totals.bought : count === "conversions" ? totals.conversions : totals.visits) : 0;
-  const rows = useMemo(() => boxedCampaigns(list?.rows ?? [], (row) => campaignFigures(row, count).now, whole), [list?.rows, count, whole]);
+  const rows = useMemo(() => campaignMapRows(list, count), [list, count]);
   const boxes: PageMapBox[] = rows.map((row) => {
     const shown = campaignFigures(row, count);
     const others = COUNTS.filter((one) => one !== count && (one !== "bought" || sells));
@@ -272,7 +240,7 @@ export function CampaignMapCard({ choice, campaigns }: { choice: CameFromChoice;
       ],
     };
   });
-  const seen = useMemo(() => (list ? { count, campaigns: rows.map((row) => ({ name: name(row), cameFrom: place(row.cameFrom ?? "notKnown"), visits: row.visits, visitsBefore: row.visitsBefore ?? null, bought: row.purchases, boughtBefore: row.purchasesBefore ?? null, conversions: row.conversions, conversionsBefore: row.conversionsBefore })) } : undefined), [list, count, rows, name, place]);
+  const seen = useMemo(() => campaignMapForEye(list, count, rows, { name, place }), [list, count, rows, name, place]);
   useSeesPart("campaignMap", seen);
   const left = (list?.total ?? 0) - rows.length;
   const allRead = (list?.total ?? 0) <= (list?.rows.length ?? 0);
@@ -321,14 +289,10 @@ export function CampaignSquaresCard({ choice }: { choice: CameFromChoice }) {
   const answer = useQuery(api.googleAnalyticsCampaignReads.analyticsCampaignActions, status?.connection?.newestDay ? { ...args, ...(choice.cameFrom ? { cameFrom: choice.cameFrom } : {}) } : "skip");
   const events = useMemo(() => answer?.events ?? [], [answer?.events]);
   // Saved lists from before both units were kept hold only the times, so there's no rate to offer.
-  const hasRates = (answer?.rows ?? []).some((row) => row.visitsDid.some((did) => did !== null));
+  const hasRates = answerHasRates(answer);
   const count: SquareCount = chosen === "rate" && !hasRates ? "times" : chosen;
-  const seen = useMemo(() => (answer ? {
-    things: events.map(thing),
-    unit: hasRates ? "visits" : "times",
-    campaigns: answer.rows.map((row) => ({ name: name(row), visits: row.visits, ...Object.fromEntries(events.map((event, at) => [thing(event), (hasRates ? row.visitsDid[at] : row.times[at]) ?? 0])) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `thing` is new each draw; the events and the rows decide.
-  } : undefined), [answer, events, name, hasRates]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `thing` is new each draw; the answer decides.
+  const seen = useMemo(() => whatPeopleDidForEye(answer, thing, name), [answer, name]);
   useSeesPart("whatPeopleDid", seen);
   const visitsOf = new Map((answer?.rows ?? []).map((row) => [row.key, row.visits]));
   const didOf = new Map((answer?.rows ?? []).map((row) => [row.key, row.visitsDid]));

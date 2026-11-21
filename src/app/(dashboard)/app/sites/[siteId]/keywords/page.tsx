@@ -21,7 +21,7 @@ import { formatDay, formatNumber, formatVisits, toCsv } from "../../_components/
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useCompareDay, useSite, useSiteId } from "../../_components/useSite";
 import { SiteSees } from "../../_components/SiteSees";
-import { keywordsSees } from "./_components/keywordSees";
+import { keywordsSees } from "@/convex/utils/sees/eyeData/visibilityKeywords";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSort } from "../../_components/useSiteSort";
 import { TableDownload } from "../../_components/SiteDownloads";

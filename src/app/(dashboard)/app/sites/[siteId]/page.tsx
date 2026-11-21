@@ -18,10 +18,10 @@ import { ukDay } from "@/convex/utils/calendarPeriods";
 import { useSite, useSiteId } from "../_components/useSite";
 import { overviewSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../_components/SiteSees";
-import { overviewSeen } from "../_components/siteSeesData";
+import { overviewSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { SiteViewSwitch } from "../_components/SiteViewSwitch";
-import { newestOfEach } from "./newestOfEach";
+import { newestOfEach } from "@/convex/utils/sees/eyeData/visibilityChecks";
 import { OverviewPanels } from "./OverviewPanels";
 import { OverviewSections } from "./OverviewSections";
 

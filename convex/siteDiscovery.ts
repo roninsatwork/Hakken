@@ -1,7 +1,7 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, type QueryCtx } from "./_generated/server";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 
@@ -44,7 +44,7 @@ export const recordDiscoveryTotal = internalMutation({
 });
 
 /** How many competitors the supplier found for a site from a place at its newest discovery; null before one said. */
-export async function discoveredTotal(ctx: QueryCtx, websiteId: Id<"websites">, place: number): Promise<number | null> {
+export async function discoveredTotal(ctx: { db: QueryCtx["db"] }, websiteId: Id<"websites">, place: number): Promise<number | null> {
   const rows = await ctx.db
     .query("seoWebsiteMetrics")
     .withIndex("by_website_operation_day", (q) => q.eq("websiteId", websiteId).eq("operationId", DISCOVERY_OPERATION_ID))
@@ -58,16 +58,23 @@ export async function discoveredTotal(ctx: QueryCtx, websiteId: Id<"websites">, 
   return null;
 }
 
+const siteDiscoveryTotalArgs = { siteId: v.id("companyWebsites") };
+
 /** How many websites rank for the same searches as the site, from its place: what Organic competitors' rows are "of". */
 export const siteDiscoveryTotal = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: siteDiscoveryTotalArgs,
   returns: v.union(v.number(), v.null()),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    return await discoveredTotal(ctx, site.website._id, site.place);
-  },
+  handler: async (ctx, args) => await readDiscoveryTotal(ctx, args),
 });
+
+/** siteDiscoveryTotal's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readDiscoveryTotal(ctx: SiteReader, args: ObjectType<typeof siteDiscoveryTotalArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  return await discoveredTotal(ctx, site.website._id, site.place);
+}
+
+const sharedWithRivalArgs = { siteId: v.id("companyWebsites"), rivalId: v.id("companyWebsites") };
 
 /**
  * How many searches the site and one of its competitors share, across
@@ -78,24 +85,27 @@ export const siteDiscoveryTotal = moduleQuery({
  */
 export const sharedWithRival = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), rivalId: v.id("companyWebsites") },
+  args: sharedWithRivalArgs,
   returns: v.union(v.number(), v.null()),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // Only a hold of the same company: another company's discovery is its own.
-    const rivalHold = await ctx.db.get(args.rivalId);
-    if (!rivalHold || rivalHold.companyId !== site.hold.companyId) return null;
-    const rivalSite = await ctx.db.get(rivalHold.websiteId);
-    if (!rivalSite) return null;
-    const mine = await ctx.db
-      .query("discoveredCompetitors")
-      .withIndex("by_company_website_host", (q) => q.eq("companyWebsiteId", args.siteId).eq("host", rivalSite.host))
-      .first();
-    if (mine) return mine.intersections;
-    const theirs = await ctx.db
-      .query("discoveredCompetitors")
-      .withIndex("by_company_website_host", (q) => q.eq("companyWebsiteId", args.rivalId).eq("host", site.website.host))
-      .first();
-    return theirs?.intersections ?? null;
-  },
+  handler: async (ctx, args) => await readSharedWithRival(ctx, args),
 });
+
+/** sharedWithRival's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readSharedWithRival(ctx: SiteReader, args: ObjectType<typeof sharedWithRivalArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // Only a hold of the same company: another company's discovery is its own.
+  const rivalHold = await ctx.db.get(args.rivalId);
+  if (!rivalHold || rivalHold.companyId !== site.hold.companyId) return null;
+  const rivalSite = await ctx.db.get(rivalHold.websiteId);
+  if (!rivalSite) return null;
+  const mine = await ctx.db
+    .query("discoveredCompetitors")
+    .withIndex("by_company_website_host", (q) => q.eq("companyWebsiteId", args.siteId).eq("host", rivalSite.host))
+    .first();
+  if (mine) return mine.intersections;
+  const theirs = await ctx.db
+    .query("discoveredCompetitors")
+    .withIndex("by_company_website_host", (q) => q.eq("companyWebsiteId", args.rivalId).eq("host", site.website.host))
+    .first();
+  return theirs?.intersections ?? null;
+}

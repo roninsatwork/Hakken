@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { FileSearch } from "lucide-react";
-import { reasonSlug } from "@/convex/utils/indexingReasons";
 import { indexingSees } from "@/convex/utils/sees/searchConsoleScreens";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -12,7 +11,9 @@ import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { GoogleCutLine } from "../../_components/GoogleCutLine";
 import { IndexingBoxes, IndexingDaysCard, IndexingProgress, tableIcon, useIndexing, useReasonColumns, useReasonNames, useReasonsTable } from "../../_components/IndexingParts";
-import { indexingBoxes, indexingPageData, indexingRows, pageNameOf, titleCounts, type IndexingRow } from "../../_components/indexingSees";
+import type { IndexingRow } from "../../_components/indexingSees";
+import { indexingEyeData, indexingScreenOf } from "@/convex/utils/sees/eyeData/searchConsoleIndexing";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { LiveProblem, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
@@ -35,21 +36,10 @@ export default function SearchConsoleIndexingPage() {
   const namesOf = useReasonNames();
   const indexing = useIndexing();
   const { answer, figures } = indexing;
-  const rows = useMemo(() => (answer ? indexingRows(answer.reasons, figures, namesOf, reasonSlug) : undefined), [answer, figures, namesOf]);
-  const boxes = useMemo(() => (rows && answer ? indexingBoxes(rows, answer.checks?.indexed ?? 0, figures ? figures.clicks : null) : null), [rows, answer, figures]);
-  // What Hakken sees: the boxes, every reason, the pages that still get clicks and the sitemap's pages Google won't show.
-  const seesData = useMemo(() => {
-    if (!rows || !boxes || !answer || !answer.checks) return undefined;
-    const clicked = figures?.clickedPages ?? [];
-    const titles = titleCounts(clicked);
-    return indexingPageData({
-      rows,
-      boxes,
-      clickedPages: clicked.map((page) => ({ name: pageNameOf(page, titles, t("reason.table.home")), reason: page.reason, clicks: page.clicks, impressions: page.impressions })),
-      weekBefore: answer.weekBefore?.reasons ?? null,
-      names: { notIndexed: t("boxes.notIndexed"), clicks: t("boxes.clicks"), sitemap: t("reason.boxes.sitemap") },
-    });
-  }, [rows, boxes, answer, figures, t]);
+  const { rows, boxes } = useMemo(() => indexingScreenOf(answer, figures, namesOf), [answer, figures, namesOf]);
+  // What Hakken sees: the boxes, every reason, the pages that still get clicks and the sitemap's pages Google won't show,
+  // built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts).
+  const seesData = useMemo(() => indexingEyeData({ rows, boxes, answer, clickedPages: figures?.clickedPages }, wordsReader(t)), [rows, boxes, answer, figures, t]);
   const seen = rows && answer ? indexingSees(rows.map((row) => ({ name: row.name, slug: row.slug, pages: row.pages })), answer.checks) : null;
 
   return (

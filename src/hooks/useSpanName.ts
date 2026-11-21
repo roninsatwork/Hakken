@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import { useLocale } from "next-intl";
+import { spanNameOf } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 /**
  * A span's name where it has one: a whole calendar month by its name, "October", with its year when it isn't this year's;
@@ -11,13 +11,6 @@ import { useLocale } from "next-intl";
  */
 export function useSpanName(): (span: { from: string; to: string } | null) => string | null {
   const locale = useLocale();
-  const months = useMemo(() => new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { month: "long", timeZone: "UTC" }), [locale]);
-  const year = new Date().getUTCFullYear();
-  return (span) => {
-    if (!span?.from || !span.to || !span.from.endsWith("-01")) return null;
-    const last = new Date(Date.UTC(Number(span.from.slice(0, 4)), Number(span.from.slice(5, 7)), 0)).toISOString().slice(0, 10);
-    if (span.to !== last) return null;
-    const name = months.format(new Date(`${span.from}T00:00:00Z`));
-    return Number(span.from.slice(0, 4)) === year ? name : `${name} ${span.from.slice(0, 4)}`;
-  };
+  // The same function the server names a chat app's dates with (`spanNameOf`), so the two can't disagree.
+  return (span) => spanNameOf(span, locale);
 }

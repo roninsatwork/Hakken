@@ -62,6 +62,18 @@ const nextConfig: NextConfig = {
 
     return config;
   },
+  // Ask Hakken in ChatGPT and Claude (docs/plans/active/ask-hakken-from-ai-chat-apps-plan-2026-11-21.md): the MCP
+  // door and its sign-in endpoints answer at Hakken's own address, passed through to Convex.
+  async rewrites() {
+    return [
+      { source: "/.well-known/oauth-protected-resource", destination: "/api/chat-apps/protected-resource" },
+      { source: "/.well-known/oauth-protected-resource/mcp", destination: "/api/chat-apps/protected-resource-mcp" },
+      { source: "/.well-known/oauth-authorization-server", destination: "/api/chat-apps/authorization-server" },
+      { source: "/oauth/token", destination: "/api/chat-apps/token" },
+      { source: "/oauth/register", destination: "/api/chat-apps/register" },
+      { source: "/mcp", destination: "/api/chat-apps/mcp" },
+    ];
+  },
   async headers() {
     const defaultHeaders = createSecureHeaders({
       contentSecurityPolicy: buildAppContentSecurityPolicy(process.env),
@@ -92,6 +104,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/", headers: defaultHeaders },
       { source: "/login", headers: defaultHeaders },
+      { source: "/oauth/:path*", headers: defaultHeaders },
       { source: "/admin/:path*", headers: defaultHeaders },
       { source: "/app/:path*", headers: defaultHeaders },
       { source: "/sandbox/:path*", headers: defaultHeaders },

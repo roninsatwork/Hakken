@@ -259,18 +259,21 @@ export const analyticsPageKey = moduleQuery({
   module: MENU_FEATURES.googleAnalytics,
   args: analyticsPageArgs,
   returns: v.union(v.string(), v.null()),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const list = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country, PAGE_READING);
-    if (!list || list === "LIVE") return null;
-    const wanted = normalisePage(args.page);
-    const addresses = await decodePages(ctx, holdId, list.rows.map((row) => row.key));
-    const at = addresses.findIndex((address) => normalisePage(address) === wanted);
-    return at >= 0 ? list.rows[at].key : null;
-  },
+  handler: async (ctx, args) => await readPageKey(ctx, args),
 });
+
+/** A page's number from its address, for the screen and a chat app's question alike: the caller's own website only. */
+export async function readPageKey(ctx: SiteReader, args: ObjectType<typeof analyticsPageArgs>): Promise<string | null> {
+  const site = await requireMySite(ctx, args.siteId);
+  const holdId = site.hold._id;
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const list = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country, PAGE_READING);
+  if (!list || list === "LIVE") return null;
+  const wanted = normalisePage(args.page);
+  const addresses = await decodePages(ctx, holdId, list.rows.map((row) => row.key));
+  const at = addresses.findIndex((address) => normalisePage(address) === wanted);
+  return at >= 0 ? list.rows[at].key : null;
+}
 
 export async function findPage(ctx: SiteReader, args: Omit<ObjectType<typeof analyticsPageArgs>, "page"> & { page: string }) {
   const site = await requireMySite(ctx, args.siteId);

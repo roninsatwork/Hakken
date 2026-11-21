@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { seenValidator } from "./utils/hakkenSees";
 import { overviewGapsSees } from "./utils/sees/radar";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
+import { listHold, listWebsiteId, requireMySite, type SiteReader } from "./siteAccess";
 import { holdSearches } from "./holdLists";
 import { searchVolumeOf } from "./searchVolumes";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
@@ -21,9 +21,11 @@ type Reader = { db: QueryCtx["db"] };
  */
 const DAY_MS = 86_400_000;
 
+const overviewGapsArgs = { siteId: v.id("companyWebsites") };
+
 export const overviewGaps = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: overviewGapsArgs,
   returns: v.object({
     searches: v.number(),
     quotedBefore: v.union(v.number(), v.null()),
@@ -39,11 +41,14 @@ export const overviewGaps = moduleQuery({
     })),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const result = await readOverviews(ctx, await requireMySite(ctx, args.siteId));
-    return { ...result, seen: overviewGapsSees(result) };
-  },
+  handler: async (ctx, args) => await readOverviewGaps(ctx, args),
 });
+
+/** overviewGaps's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readOverviewGaps(ctx: SiteReader, args: ObjectType<typeof overviewGapsArgs>) {
+  const result = await readOverviews(ctx, await requireMySite(ctx, args.siteId));
+  return { ...result, seen: overviewGapsSees(result) };
+}
 
 /** Each tracked search's AI Overview from its newest check, and how many quoted the website a month before: the page's rows, and Your assets'. */
 export async function readOverviews(ctx: Reader, site: Site) {

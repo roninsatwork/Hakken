@@ -13,7 +13,7 @@ import { v } from "convex/values";
 
 import { internalQuery } from "./_generated/server";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
-import { MENU_FEATURE_KEYS } from "./utils/coreModules";
+import { SWITCHED_FEATURE_KEYS } from "./utils/coreModules";
 import { companyFeaturesOff, everyCompanyFeaturesOff, featuresOffForEveryone, menuFeaturesFor, writeFeaturesOff } from "./utils/featureSwitchReads";
 
 /** As many companies as Manage Companies reads at once (`getCompanies`). */
@@ -41,7 +41,7 @@ export const getFeatureSwitches = superAdminQuery({
       offForEveryone: await featuresOffForEveryone(ctx),
       companyOff: args.companyId ? await companyFeaturesOff(ctx, args.companyId) : [],
       companies: companies.length,
-      ticked: MENU_FEATURE_KEYS.map((feature) => ({
+      ticked: SWITCHED_FEATURE_KEYS.map((feature) => ({
         feature,
         companies: companies.length - ownOff.filter((off) => off.has(feature)).length,
       })),

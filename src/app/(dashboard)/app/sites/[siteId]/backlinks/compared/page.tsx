@@ -18,7 +18,7 @@ import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { comparedSees } from "@/convex/utils/sees/backlinks";
-import { comparedSees as comparedFigures } from "../_components/linkSees";
+import { comparedSees as comparedFigures } from "@/convex/utils/sees/eyeData/visibilityBacklinks";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";

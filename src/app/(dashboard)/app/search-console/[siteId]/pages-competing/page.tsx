@@ -15,7 +15,8 @@ import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { figureColumns, useSearchConsoleList, type ChipId, type ListRow, keywordColumn } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { competingSees } from "@/convex/utils/sees/searchConsoleScreens";
-import { cannibalisationSeesData } from "@/convex/utils/sees/own/searchConsoleCannibalisation";
+import { competingEyeData } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 const CHIPS: readonly ChipId[] = ["intent", "band"];
 /** In the address for a keyword unticked: the chart waits for one rather than drawing the table's first. */
@@ -43,11 +44,8 @@ export default function SearchConsoleCompetingPage() {
   const { answer } = useKeywordPages(keyword);
   // The eye's figures: the list's own the page shows, never the whole summary, and the table's columns
   // (`cannibalisationSeesData`), with the names the page says things by.
-  const names = useMemo(() => ({
-    these: t("competing.eye.these"), competing: t("competing.eye.competing"), nextPage: t("competing.eye.nextPage"),
-    average: t("competing.eye.average"), swapped: t("competing.eye.swapped"),
-  }), [t]);
-  const seesData = useMemo(() => (summary ? { ...cannibalisationSeesData(summary, list.table.pageRows ?? null), names } : undefined), [summary, list.table.pageRows, names]);
+  // Built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
+  const seesData = useMemo(() => competingEyeData({ summary, rows: list.table.pageRows ?? null }, wordsReader(t)), [summary, list.table.pageRows, t]);
   // "Do first" may open the keywords the eye names, each ticked on this page, where its pages are drawn day by day: the first
   // press linked them to a keyword's own screen, which shows no swaps (20 November 2026).
   const pathname = usePathname();

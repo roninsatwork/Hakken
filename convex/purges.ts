@@ -1,4 +1,5 @@
 import { internalMutation, internalQuery } from "./_generated/server";
+import { clearChatAppHistory, countChatAppHistory } from "./chatAppPasses";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
@@ -192,6 +193,8 @@ async function buildPurgePreviewCounts(ctx: { db: Pick<MutationCtx["db"], "query
         rows = (await capped(ctx.db.query("authEvents").withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff)))).length;
       } else if (key === "aiActionRequests") {
         rows = (await capped(ctx.db.query("aiActionRequests").withIndex("by_requested", (q) => q.lt("requestedAt", cutoff)))).length;
+      } else if (key === "chatAppHistory") {
+        rows = await countChatAppHistory(ctx, cutoff, now, capped);
       } else if (key === "analyticsSnapshots") {
         const cutoffKey = dateKeyForCutoff(cutoff);
         rows = (await capped(ctx.db.query("analyticsDailySnapshots").withIndex("by_date", (q) => q.lt("date", cutoffKey)))).length;
@@ -514,6 +517,8 @@ export const executePurgeRecursive = internalMutation({
         }
         currentDeleted = batch.length;
         hasMore = batch.length === 500;
+      } else if (pipelineKey === "chatAppHistory") {
+        ({ deleted: currentDeleted, hasMore } = await clearChatAppHistory(ctx, cutoffTimestamp));
       } else if (pipelineKey === "analyticsSnapshots") {
         const cutoffKey = dateKeyForCutoff(cutoffTimestamp);
         const batch = await ctx.db

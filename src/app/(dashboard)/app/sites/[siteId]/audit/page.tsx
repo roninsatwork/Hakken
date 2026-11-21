@@ -22,7 +22,7 @@ import { formatDay, formatNumber, toCsv } from "../../_components/siteFormat";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { auditSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../../_components/SiteSees";
-import { auditSeen } from "../../_components/siteSeesData";
+import { auditCheckNameFrom, auditSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
@@ -69,7 +69,8 @@ export default function SiteAuditPage() {
   const shared = sharedSiteQuery(params);
   const severityHref = (wanted: Severity) => `/app/sites/${siteId}/audit${shared ? `${shared}&` : "?"}severity=${wanted}`;
 
-  const label = useCallback((check: string) => (t.has(`checks.${check}`) ? t(`checks.${check}`) : check.replace(/_/g, " ")), [t]);
+  // The rule a chat app's question names them by too (chatAppEyes/visibility.ts).
+  const label = useMemo(() => auditCheckNameFrom(t), [t]);
   const issues = audit?.issues ?? [];
   const matches = wordStartMatcher(term);
   const matching = audit === undefined ? undefined : issues

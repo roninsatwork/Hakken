@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { FileSearch } from "lucide-react";
 import { kindOf, wordsOfSlug } from "@/convex/utils/indexingReasons";
-import { byOwnPage, reasonBoxes, reasonPages } from "@/convex/utils/indexingFigures";
 import { reasonSees } from "@/convex/utils/sees/searchConsoleScreens";
 import { ukDay } from "@/convex/utils/calendarPeriods";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -17,7 +16,8 @@ import { useSitePager } from "../../../../sites/_components/useSitePagedTable";
 import { formatNumber } from "../../../../sites/_components/siteFormat";
 import { GoogleCutLine } from "../../../_components/GoogleCutLine";
 import { ReasonBoxes, ShownEachDayCard, tableIcon, useExampleColumns, useExamplesTable, useIndexingReason, useReasonNames, type ExampleRow } from "../../../_components/IndexingParts";
-import { pageNameOf, reasonPageData, titleCounts } from "../../../_components/indexingSees";
+import { reasonEyeData, reasonScreenOf } from "@/convex/utils/sees/eyeData/searchConsoleIndexing";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { LiveProblem, SearchConsoleGate } from "../../../_components/SearchConsoleNotices";
 import { SearchConsoleSees } from "../../../_components/SearchConsoleSees";
 import { useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../../_components/useSearchConsole";
@@ -42,28 +42,10 @@ export default function SearchConsoleIndexingReasonPage() {
   const kind = kindOf(words);
   const reason = useIndexingReason(words);
   const { answer, figures, shown, days } = reason;
-  const folded = useMemo(() => (figures ? byOwnPage(figures.byPage, figures.clicks, figures.impressions) : null), [figures]);
-  const pages = useMemo(() => {
-    if (!answer) return undefined;
-    // Whether the page Google shows in each one's place is in Google, as the checks found it.
-    const indexedMains = new Set(answer.pages.filter((page) => page.mainIndexed).map((page) => page.page));
-    return reasonPages(answer.pages, folded, () => false).map((page) => ({ ...page, mainIndexed: page.main !== null && indexedMains.has(page.page) }));
-  }, [answer, folded]);
-  const boxes = useMemo(() => (pages && answer ? reasonBoxes(kind, pages, { checked: answer.checks?.checked ?? 0, allClicks: figures?.clicks ?? 0, month: `${ukDay().slice(0, 7)}-01`, shown }) : null), [kind, pages, answer, figures, shown]);
-  const rows = useMemo<ExampleRow[] | undefined>(() => {
-    if (!pages) return undefined;
-    const titles = titleCounts(pages);
-    return pages.map((page) => ({
-      ...page,
-      key: page.page,
-      name: pageNameOf(page, titles, t("reason.table.home")),
-      lastShown: shown?.get(page.page)?.lastShown ?? null,
-      daysShown: shown ? (shown.get(page.page)?.days ?? 0) : null,
-    }));
-  }, [pages, shown, t]);
-  const seesData = useMemo(() => (rows && boxes && rows.length > 0
-    ? reasonPageData({ reason: { ...names, kind }, pages: rows, boxes, nameOf: (page) => rows.find((row) => row.page === page.page)?.name ?? page.page, names: { pages: t("reason.boxes.pages") } })
-    : undefined), [rows, boxes, names, kind, t]);
+  // The pages, the boxes and the Examples table's rows, and the eye's figures, built by the same functions a chat app's
+  // question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
+  const { boxes, rows } = useMemo(() => reasonScreenOf(answer, figures, shown, kind, `${ukDay().slice(0, 7)}-01`, wordsReader(t)), [answer, figures, shown, kind, t]);
+  const seesData = useMemo(() => reasonEyeData({ reason: words, rows, boxes }, wordsReader(t)), [words, rows, boxes, t]);
   const seen = rows ? reasonSees(names.name, rows.length, rows.filter((row) => row.clicks > 0).length) : null;
 
   return (

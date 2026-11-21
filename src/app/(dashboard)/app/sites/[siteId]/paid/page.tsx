@@ -18,7 +18,7 @@ import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { paidSees } from "@/convex/utils/sees/paid";
 import { SiteSees } from "../../_components/SiteSees";
-import { paidSeen } from "../../_components/siteSeesData";
+import { paidSeen } from "@/convex/utils/sees/eyeData/visibility";
 
 /**
  * Searches with adverts and the visits they bring. Never the estimated spend: our data supplier's guess at what the

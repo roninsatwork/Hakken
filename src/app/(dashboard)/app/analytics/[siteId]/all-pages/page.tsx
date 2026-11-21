@@ -6,6 +6,7 @@ import { Files } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { PAGE_MOVES, type PageMove } from "@/convex/utils/pageMoves";
+import { allPagesEyeData, EYE_MOVERS } from "@/convex/utils/sees/eyeData/googleAnalyticsAllPages";
 import { viewsCountedDifferently } from "@/convex/utils/viewsCounted";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -85,9 +86,6 @@ function ViewsCountedNotice() {
   return <Notice tone="warning">{t("viewsCounted", { before: formatPerVisit(counted.pagesAVisitBefore), now: formatPerVisit(counted.pagesAVisit) })}</Notice>;
 }
 
-/** The pages the eye is handed from each end of the whole list: those that gained and lost most. */
-const EYE_MOVERS = 10;
-
 /**
  * The page's eye: the table's page as shown, the whole website's views (`website`), and from every page, as the server
  * sorts them, those that gained and lost most views and lost most conversions (`pagesGained`, `pagesLost`,
@@ -109,12 +107,8 @@ function AllPagesSees({ answer, currency, choice }: { answer: ListPageAnswer | u
   const lost = useQuery(api.googleAnalyticsReads.analyticsListPage, ready ? end("viewsChange", "asc") : "skip");
   const conversionsLost = useQuery(api.googleAnalyticsReads.analyticsListPage, ready ? end("conversionsChange", "asc") : "skip");
   const kinds = choice.kinds;
-  const data = useMemo(() => (answer ? {
-    ...answer, names, ...(website ? { website } : {}),
-    ...(gained ? { pagesGained: gained, bands: gained.bands, concentration: gained.concentration, shop: gained.shop } : {}),
-    ...(lost ? { pagesLost: lost } : {}), ...(conversionsLost ? { pagesConversionsLost: conversionsLost } : {}),
-    ...(kinds ? { classifications: kinds } : {}),
-  } : answer), [answer, names, website, gained, lost, conversionsLost, kinds]);
+  // Built by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts), so the two can't disagree.
+  const data = useMemo(() => allPagesEyeData({ answer, names, website, gained, lost, conversionsLost, classifications: kinds }), [answer, names, website, gained, lost, conversionsLost, kinds]);
   // Where "Do first" may send the reader: the pages that moved most, and where a page's move is looked into.
   const topGained = gained?.rows[0];
   const topLost = lost?.rows[0];

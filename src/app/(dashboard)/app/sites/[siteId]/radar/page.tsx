@@ -25,7 +25,7 @@ import { ListDownload } from "../../_components/SiteDownloads";
 import { useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { SiteSees } from "../../_components/SiteSees";
-import { radarSeen } from "../../_components/siteSeesData";
+import { radarSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { FigureCell } from "../local/_components/LocalParts";

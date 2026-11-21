@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { postDataForSeoTask, readDataForSeoCredentials } from "./dataForSeoRest";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { CRAWL_ISSUES } from "./siteCrawl";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
@@ -340,43 +340,48 @@ export const clearOlderCrawlDetail = internalMutation({
  */
 const PAGES_READ = 1_000;
 
+const crawlProblemPagesArgs = { siteId: v.id("companyWebsites"), check: v.string() };
+
 /**
  * The pages of the newest crawl with one problem, and — for broken links —
  * the broken links on each: what "4 pages" on the Site audit is made of.
  */
 export const crawlProblemPages = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), check: v.string() },
+  args: crawlProblemPagesArgs,
   returns: listWithCut(v.object({
     page: v.string(),
     url: v.string(),
     statusCode: v.union(v.number(), v.null()),
     brokenLinks: v.array(v.object({ to: v.string(), statusCode: v.union(v.number(), v.null()) })),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const newest = await ctx.db
-      .query("siteCrawls")
-      .withIndex("by_site_day", (q) => q.eq("websiteId", site.website._id))
-      .order("desc")
-      .first();
-    if (!newest) return { rows: [], cut: null };
-    const crawled = heldTo(await ctx.db.query("siteCrawlPages").withIndex("by_pull", (q) => q.eq("pullId", newest.pullId)).take(PAGES_READ + 1), PAGES_READ);
-    const pages = crawled.rows.filter((row) => row.problems.includes(args.check));
-    const links = args.check === "broken_links"
-      ? heldTo(await ctx.db.query("siteCrawlLinks").withIndex("by_pull", (q) => q.eq("pullId", newest.pullId)).take(PAGES_READ + 1), PAGES_READ)
-      : { rows: [], cut: null };
-    const broken = links.rows;
-    const rows = pages
-      .sort((left, right) => left.page.localeCompare(right.page))
-      .map((row) => ({
-        page: row.page,
-        url: row.url,
-        statusCode: row.statusCode ?? null,
-        brokenLinks: broken
-          .filter((link) => link.from === row.url)
-          .map((link) => ({ to: link.to, statusCode: link.statusCode ?? null })),
-      }));
-    return { rows, cut: crawled.cut !== null || links.cut !== null || newest.detailCut === true ? rows.length : null };
-  },
+  handler: async (ctx, args) => await readCrawlProblemPages(ctx, args),
 });
+
+/** crawlProblemPages's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readCrawlProblemPages(ctx: SiteReader, args: ObjectType<typeof crawlProblemPagesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const newest = await ctx.db
+    .query("siteCrawls")
+    .withIndex("by_site_day", (q) => q.eq("websiteId", site.website._id))
+    .order("desc")
+    .first();
+  if (!newest) return { rows: [], cut: null };
+  const crawled = heldTo(await ctx.db.query("siteCrawlPages").withIndex("by_pull", (q) => q.eq("pullId", newest.pullId)).take(PAGES_READ + 1), PAGES_READ);
+  const pages = crawled.rows.filter((row) => row.problems.includes(args.check));
+  const links = args.check === "broken_links"
+    ? heldTo(await ctx.db.query("siteCrawlLinks").withIndex("by_pull", (q) => q.eq("pullId", newest.pullId)).take(PAGES_READ + 1), PAGES_READ)
+    : { rows: [], cut: null };
+  const broken = links.rows;
+  const rows = pages
+    .sort((left, right) => left.page.localeCompare(right.page))
+    .map((row) => ({
+      page: row.page,
+      url: row.url,
+      statusCode: row.statusCode ?? null,
+      brokenLinks: broken
+        .filter((link) => link.from === row.url)
+        .map((link) => ({ to: link.to, statusCode: link.statusCode ?? null })),
+    }));
+  return { rows, cut: crawled.cut !== null || links.cut !== null || newest.detailCut === true ? rows.length : null };
+}

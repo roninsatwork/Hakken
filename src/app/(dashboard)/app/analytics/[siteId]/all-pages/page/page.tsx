@@ -9,6 +9,7 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { pageSees, pageStoryFacts } from "@/convex/utils/sees/analytics";
+import { pageAnswerOf, pageSeesData } from "@/convex/utils/sees/eyeData/googleAnalyticsPage";
 import type { Seen } from "@/convex/utils/hakkenSees";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { ListTable } from "@/src/ui/components/screens/ListTable";
@@ -33,36 +34,6 @@ import { PageBoxes, type PageAnswer } from "../../../_components/PageBoxes";
 import { ConversionExplorerCard } from "../../../_components/ConversionExplorer";
 import { PageVisitorsCard } from "../../../_components/PageVisitors";
 
-
-/**
- * What the eye reads of the page (page-screen-redo-plan-2026-11-03.md, step 2): only what the screen shows — no money,
- * people, time, page before or links clicked, which the screen no longer draws. Rows carry a `name` so code can find
- * figures in them. The boxes and the charts that read their own figures hand theirs over as parts.
- */
-/** Names as people say them, for the eye's figures (Anthony, 2026-11-03: a reading age of 14). */
-// As the screen names them: Google's own device names (Anthony, 2026-11-03: "the words the supplier uses").
-const DEVICE_NAMES: Record<string, string> = { mobile: "Mobile", desktop: "Desktop", tablet: "Tablet" };
-const GENDER_NAMES: Record<string, string> = { female: "Female", male: "Male" };
-
-function seesDataOf(answer: PageAnswer) {
-  const story = answer.story;
-  let country: Intl.DisplayNames | null = null;
-  try {
-    country = new Intl.DisplayNames(["en-GB"], { type: "region" });
-  } catch {
-    country = null;
-  }
-  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  return {
-    days: answer.points.map((point) => ({ day: point.day, views: point.views })),
-    sources: story.sources.map((row) => ({ name: row.name ?? (row.source === "(direct)" ? "Typed in or a bookmark" : "Not known"), channel: row.channel, visits: row.visits, pagesPerVisit: row.pages, scrolledToBottomRate: row.read, cameBackRate: row.back })),
-    devices: story.devices.map((row) => ({ name: DEVICE_NAMES[row.device] ?? row.device, viewsShare: row.share, websiteViewsShare: row.websiteShare })),
-    countries: story.countries.map((row) => ({ name: country?.of(row.code) ?? row.code, people: row.people })),
-    ages: story.ages.rows.map((row) => ({ name: `Aged ${row.key.replace("-", " to ")}`, peopleShare: row.share, websitePeopleShare: row.websiteShare })),
-    genders: story.genders.rows.map((row) => ({ name: GENDER_NAMES[row.key] ?? row.key, peopleShare: row.share, websitePeopleShare: row.websiteShare })),
-    weekdays: story.weekdays.map((row) => ({ name: days[Number(row.day)] ?? row.day, views: row.views })),
-  };
-}
 
 /** A phrase worked out again on the screen keeps the server's names for it (a page by its title, not its number). */
 function withNames(fresh: Seen, named: Seen): Seen {
@@ -118,16 +89,18 @@ function PageBody({ status }: { status: AnalyticsStatus }) {
   // Its own figures and its story are two reads, each with Convex's second to itself; the screen shows them together.
   const main = useQuery(api.googleAnalyticsPageReads.analyticsPage, page ? { ...args, page } : "skip");
   const told = useQuery(api.googleAnalyticsPageReads.analyticsPageStory, page ? { ...args, page } : "skip");
-  const answer = useMemo<PageAnswer | null | undefined>(() => (main === null || told === null ? null : main && told ? { ...main, ...told } : undefined), [main, told]);
+  const answer = useMemo<PageAnswer | null | undefined>(() => pageAnswerOf(main, told), [main, told]);
   // The rules again with the boxes' items and sale, which are their own read (the page's read would pass a second with
   // them): the same rules as the server's, names kept from its words (page-screen-redo-plan-2026-11-03.md, step 2).
   const boxes = useQuery(api.googleAnalyticsPageBoxes.analyticsPageBoxes, answer && page ? { ...args, page } : "skip");
   const seen = useMemo(() => (answer && !answer.live && boxes ? withNames(pageSees(page, answer.address, Boolean(answer.row), pageStoryFacts(answer.story, boxes)), answer.seen) : answer?.seen), [answer, boxes, page]);
   const currency = status.connection?.currency ?? null;
   const address = answer?.address ?? "";
-  // With the names its own findings use ("This page", "The whole website"), in the reader's words.
+  // What the eye reads of the page, with the names its own findings use ("This page", "The whole website"), in the
+  // reader's words: built by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts).
+  // The boxes and the chart that read their own figures hand theirs over as parts.
   const eyeNames = useEyeNames();
-  const seesData = useMemo(() => (answer ? { ...seesDataOf(answer), names: eyeNames } : undefined), [answer, eyeNames]);
+  const seesData = useMemo(() => (answer ? pageSeesData(answer, eyeNames) : undefined), [answer, eyeNames]);
   const named = { period: tf(`periods.${periodWord(period)}`) };
   // Where the team's "Do first" steps may send the reader, beside the rules' own links.
   const seesLinks = useMemo(() => [

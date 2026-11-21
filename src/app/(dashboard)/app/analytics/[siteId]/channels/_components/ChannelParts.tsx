@@ -3,7 +3,8 @@
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { NO_PAGE_ADDRESS as NOT_SET, NO_PAGE_KIND, OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
+import { NO_PAGE_ADDRESS as NOT_SET } from "@/convex/utils/sees/analyticsChannel";
+import { kindNameFrom } from "@/convex/utils/sees/eyeData/googleAnalyticsChannels";
 import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { ChangeBars, type ChangeBar } from "@/src/ui/components/screens/ChangeBars";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
@@ -39,13 +40,7 @@ type Kind = ChannelTop["kinds"][number];
 export function useKindName(kinds: ReadonlyArray<{ kind: string; name: string | null }> = []): (kind: string) => string {
   const t = useTranslations("googleAnalytics.channelPage.kinds");
   const pageKinds = usePageKinds(useAnalyticsSiteId());
-  return (kind) => {
-    const own = kinds.find((one) => one.kind === kind)?.name;
-    if (own) return own;
-    if (kind === NO_PAGE_KIND) return t("noPage");
-    if (kind === OTHER_KIND) return t("other");
-    return pageKinds.label(kind);
-  };
+  return kindNameFrom(kinds, { noPage: t("noPage"), other: t("other") }, pageKinds.label);
 }
 
 /** "The 30 days before", as a legend or a series names it. */

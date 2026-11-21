@@ -19,6 +19,7 @@ export const purgePipelineKeyValidator = v.union(
   v.literal("publicApiRequests"),
   v.literal("authEvents"),
   v.literal("aiActionRequests"),
+  v.literal("chatAppHistory"),
   v.literal("analyticsSnapshots"),
   v.literal("webhookDeliveries"),
   v.literal("agentRunHistory"),
@@ -78,6 +79,8 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   publicApiRequests: { ...DAILY_2AM, retentionDays: 90 },
   authEvents: { ...DAILY_2AM, retentionDays: 180 },
   aiActionRequests: { ...DAILY_2AM, retentionDays: 30 },
+  // Questions ChatGPT and Claude asked: operational, as the API's own log. Codes and passes go once they run out.
+  chatAppHistory: { ...DAILY_2AM, retentionDays: 90 },
   analyticsSnapshots: { ...DAILY_2AM, retentionDays: 400 },
   webhookDeliveries: { ...DAILY_2AM, retentionDays: 90 },
   agentRunHistory: { ...DAILY_2AM, retentionDays: 180 },

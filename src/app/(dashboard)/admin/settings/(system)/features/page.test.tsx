@@ -66,9 +66,11 @@ describe("PlatformFeaturesPage", () => {
     expect(rows).toEqual([
       "dashboard", "askPlatform", "insights", "sites", "searchConsole", "bingWebmaster",
       "googleAnalytics", "clarity", "learn", "hakkenTasks", "usage",
+      // Ask Hakken in ChatGPT and Claude, after the menu (Anthony, 2026-11-21: "this should be in the table").
+      "chatApps",
     ]);
     expect(screen.getAllByText("alwaysOn")).toHaveLength(4);
-    expect(screen.getAllByRole("checkbox")).toHaveLength(7);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(8);
   });
 
   it("counts the companies that have each one switched on, and says Off for everyone for what is", async () => {

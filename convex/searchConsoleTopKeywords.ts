@@ -1,7 +1,7 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { searchTypeValidator } from "./searchConsoleSchema";
 import { checkedRange } from "./searchConsoleReads";
 import { answerFacts, brandSplitValidator, readList } from "./searchConsoleLists";
@@ -17,16 +17,18 @@ const topKeywordValidator = v.object({ key: v.string(), clicks: v.number(), impr
  * keyword list, as the Keywords screen reads it (`readList`), with only the top `TOP_KEYWORDS` named and sent. `live`
  * for other dates and a country not kept ready: the page then asks Google for the list (`searchConsoleLiveList`).
  */
+const topKeywordsArgs = {
+  siteId: v.id("companyWebsites"),
+  searchType: searchTypeValidator,
+  from: v.string(),
+  to: v.string(),
+  period: v.optional(calendarPeriodValidator),
+  country: v.optional(v.string()),
+};
+
 export const searchConsoleTopKeywords = moduleQuery({
   module: MENU_FEATURES.searchConsole,
-  args: {
-    siteId: v.id("companyWebsites"),
-    searchType: searchTypeValidator,
-    from: v.string(),
-    to: v.string(),
-    period: v.optional(calendarPeriodValidator),
-    country: v.optional(v.string()),
-  },
+  args: topKeywordsArgs,
   returns: v.object({
     rows: v.array(topKeywordValidator),
     brand: v.union(v.null(), v.object({ now: brandSplitValidator, before: v.union(brandSplitValidator, v.null()) })),
@@ -34,23 +36,26 @@ export const searchConsoleTopKeywords = moduleQuery({
     noSearches: v.optional(v.boolean()),
     ...answerFacts,
   }),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    const list = await readList(ctx, site.hold._id, { ...args, dimension: "query", sort: "impressions", direction: "desc" });
-    const named = await namedRows(list, list.rows.slice(0, TOP_KEYWORDS));
-    return {
-      rows: named.map((row) => ({ key: row.key, clicks: row.clicks, impressions: row.impressions, position: row.position, brand: row.brand === true })),
-      brand: list.summary?.brand ?? null,
-      preparing: list.preparing,
-      ...(list.noSearches ? { noSearches: true } : {}),
-      current: true,
-      named: list.named,
-      listed: list.listed,
-      comparable: list.comparable,
-      live: list.live,
-      from: list.from,
-      to: list.to,
-    };
-  },
+  handler: async (ctx, args) => await readTopKeywords(ctx, args),
 });
+
+/** Performance's top keywords and brand split: the screen's read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readTopKeywords(ctx: SiteReader, args: ObjectType<typeof topKeywordsArgs>) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  const list = await readList(ctx, site.hold._id, { ...args, dimension: "query", sort: "impressions", direction: "desc" });
+  const named = await namedRows(list, list.rows.slice(0, TOP_KEYWORDS));
+  return {
+    rows: named.map((row) => ({ key: row.key, clicks: row.clicks, impressions: row.impressions, position: row.position, brand: row.brand === true })),
+    brand: list.summary?.brand ?? null,
+    preparing: list.preparing,
+    ...(list.noSearches ? { noSearches: true } : {}),
+    current: true,
+    named: list.named,
+    listed: list.listed,
+    comparable: list.comparable,
+    live: list.live,
+    from: list.from,
+    to: list.to,
+  };
+}

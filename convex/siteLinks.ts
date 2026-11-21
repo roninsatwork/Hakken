@@ -1,9 +1,9 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { myRivals, requireMySite } from "./siteAccess";
+import { myRivals, requireMySite, type SiteReader } from "./siteAccess";
 
 /**
  * The site's link profile as its newest backlinks summary describes it: how
@@ -93,15 +93,22 @@ async function newestLinkProfile(ctx: { db: QueryCtx["db"] }, websiteId: Id<"web
   };
 }
 
+const linkProfileArgs = { siteId: v.id("companyWebsites") };
+
 export const linkProfile = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: linkProfileArgs,
   returns: v.union(v.null(), profileValidator),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    return await newestLinkProfile(ctx, site.website._id);
-  },
+  handler: async (ctx, args) => await readLinkProfile(ctx, args),
 });
+
+/** linkProfile's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readLinkProfile(ctx: SiteReader, args: ObjectType<typeof linkProfileArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  return await newestLinkProfile(ctx, site.website._id);
+}
+
+const linkProfilesAgainstRivalsArgs = { siteId: v.id("companyWebsites") };
 
 /**
  * The site's link summary beside each rival's it is watched against, for the eye on Link quality and Where links come
@@ -111,19 +118,22 @@ export const linkProfile = moduleQuery({
  */
 export const linkProfilesAgainstRivals = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: linkProfilesAgainstRivalsArgs,
   returns: v.array(v.object({ host: v.string(), isYou: v.boolean(), profile: profileValidator })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const everyone = [{ website: site.website, isYou: true }, ...(await myRivals(ctx, site)).map((rival) => ({ website: rival.website, isYou: false }))];
-    const out: Array<{ host: string; isYou: boolean; profile: NonNullable<Awaited<ReturnType<typeof newestLinkProfile>>> }> = [];
-    for (const one of everyone) {
-      const profile = await newestLinkProfile(ctx, one.website._id);
-      if (profile) out.push({ host: one.website.displayHost, isYou: one.isYou, profile });
-    }
-    return out;
-  },
+  handler: async (ctx, args) => await readLinkProfilesAgainstRivals(ctx, args),
 });
+
+/** linkProfilesAgainstRivals's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readLinkProfilesAgainstRivals(ctx: SiteReader, args: ObjectType<typeof linkProfilesAgainstRivalsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const everyone = [{ website: site.website, isYou: true }, ...(await myRivals(ctx, site)).map((rival) => ({ website: rival.website, isYou: false }))];
+  const out: Array<{ host: string; isYou: boolean; profile: NonNullable<Awaited<ReturnType<typeof newestLinkProfile>>> }> = [];
+  for (const one of everyone) {
+    const profile = await newestLinkProfile(ctx, one.website._id);
+    if (profile) out.push({ host: one.website.displayHost, isYou: one.isYou, profile });
+  }
+  return out;
+}
 
 /** The lists whose totals the screens say, by the request that buys each. */
 const LIST_TOTALS = {
@@ -138,6 +148,8 @@ const LIST_TOTALS = {
 /** A list's newest pages read for its total: ten at most a list, from a few runs. */
 const LIST_PAGES_READ = 30;
 
+const linkListTotalsArgs = { siteId: v.id("companyWebsites") };
+
 /**
  * How long each link list is in all, as the supplier counted it when the
  * newest list was bought — what the rows kept are "of" (sites-data-completeness-plan.md,
@@ -145,30 +157,33 @@ const LIST_PAGES_READ = 30;
  */
 export const linkListTotals = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: linkListTotalsArgs,
   returns: v.object(Object.fromEntries(Object.keys(LIST_TOTALS).map((key) => [key, numberOrNull])) as Record<keyof typeof LIST_TOTALS, typeof numberOrNull>),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const totals = {} as Record<keyof typeof LIST_TOTALS, number | null>;
-    for (const [key, operationId] of Object.entries(LIST_TOTALS) as Array<[keyof typeof LIST_TOTALS, string]>) {
-      const pages = await ctx.db
-        .query("seoWebsiteMetrics")
-        .withIndex("by_website_operation_day", (q) => q.eq("websiteId", site.website._id).eq("operationId", operationId))
-        .order("desc")
-        .take(LIST_PAGES_READ);
-      const newest = pages[0]?.day;
-      let total: number | null = null;
-      for (const page of pages) {
-        if (page.day !== newest) break;
-        try {
-          const figures = JSON.parse(page.metricsJson) as { listTotal?: unknown };
-          if (typeof figures.listTotal === "number") total = Math.max(total ?? 0, figures.listTotal);
-        } catch {
-          // A page whose figures cannot be read says nothing of the total.
-        }
-      }
-      totals[key] = total;
-    }
-    return totals;
-  },
+  handler: async (ctx, args) => await readLinkListTotals(ctx, args),
 });
+
+/** linkListTotals's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readLinkListTotals(ctx: SiteReader, args: ObjectType<typeof linkListTotalsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const totals = {} as Record<keyof typeof LIST_TOTALS, number | null>;
+  for (const [key, operationId] of Object.entries(LIST_TOTALS) as Array<[keyof typeof LIST_TOTALS, string]>) {
+    const pages = await ctx.db
+      .query("seoWebsiteMetrics")
+      .withIndex("by_website_operation_day", (q) => q.eq("websiteId", site.website._id).eq("operationId", operationId))
+      .order("desc")
+      .take(LIST_PAGES_READ);
+    const newest = pages[0]?.day;
+    let total: number | null = null;
+    for (const page of pages) {
+      if (page.day !== newest) break;
+      try {
+        const figures = JSON.parse(page.metricsJson) as { listTotal?: unknown };
+        if (typeof figures.listTotal === "number") total = Math.max(total ?? 0, figures.listTotal);
+      } catch {
+        // A page whose figures cannot be read says nothing of the total.
+      }
+    }
+    totals[key] = total;
+  }
+  return totals;
+}

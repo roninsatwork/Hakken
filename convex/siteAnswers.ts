@@ -1,8 +1,8 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { aiEngineValidator, answerPlace, fanOutPlace, type AiEngine } from "./seoAiEngines";
-import { askedPlace, listHold, requireMySite } from "./siteAccess";
+import { askedPlace, listHold, requireMySite, type SiteReader } from "./siteAccess";
 import { holdBrandNames } from "./holdProfiles";
 import { holdQuestion, holdQuestions } from "./holdLists";
 import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
@@ -170,31 +170,36 @@ const stanceValidator = v.union(
   v.literal("NOT_NAMED"),
 );
 
+const answerQuestionsArgs = { siteId: v.id("companyWebsites") };
+
 /** The questions the site is measured on, with the engines asked, and the names it goes by. */
 export const answerQuestions = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: answerQuestionsArgs,
   returns: v.object({
     questions: v.array(v.object({ prompt: v.string(), engines: v.array(aiEngineValidator), isActive: v.boolean() })),
     /** The site's names and misspellings, to pick out in the text. */
     names: v.array(v.string()),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // The whole list, as Mentions links to any of it (docs/plans/active/sites-audit-fixes-plan.md, 3.2).
-    const questions = await holdQuestions(ctx, listHold(site), MAX_LIST);
-    return {
-      questions: questions
-        .map((question) => ({ prompt: question.prompt, engines: question.engines, isActive: question.isActive }))
-        .sort((left, right) => Number(right.isActive) - Number(left.isActive) || left.prompt.localeCompare(right.prompt)),
-      // The names this company knows the site by (holdProfiles.ts).
-      names: (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name),
-      // What Hakken sees: the newest answers naming the website, from the list's own rows.
-      seen: fullAnswersSees(await readMentions(ctx, args.siteId)),
-    };
-  },
+  handler: async (ctx, args) => await readAnswerQuestions(ctx, args),
 });
+
+/** answerQuestions's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readAnswerQuestions(ctx: SiteReader, args: ObjectType<typeof answerQuestionsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // The whole list, as Mentions links to any of it (docs/plans/active/sites-audit-fixes-plan.md, 3.2).
+  const questions = await holdQuestions(ctx, listHold(site), MAX_LIST);
+  return {
+    questions: questions
+      .map((question) => ({ prompt: question.prompt, engines: question.engines, isActive: question.isActive }))
+      .sort((left, right) => Number(right.isActive) - Number(left.isActive) || left.prompt.localeCompare(right.prompt)),
+    // The names this company knows the site by (holdProfiles.ts).
+    names: (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name),
+    // What Hakken sees: the newest answers naming the website, from the list's own rows.
+    seen: fullAnswersSees(await readMentions(ctx, args.siteId)),
+  };
+}
 
 /** A question's answers listed from one engine and place: a daily answer for more than a decade. */
 const ANSWERS_LISTED = 5_000;
@@ -226,6 +231,18 @@ const ANSWER_SORTS: ListSorts<AnswerEntry, "day"> = {
   day: { value: (entry) => entry.day, first: "desc" },
 };
 
+const listAnswersArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  prompt: v.string(),
+  engine: v.optional(aiEngineValidator),
+  from: v.string(),
+  to: v.string(),
+  search: v.optional(v.string()),
+  sort: v.optional(v.literal("day")),
+  direction: sortDirectionArg,
+};
+
 /**
  * What the engines said to one of the site's questions, newest first, between
  * two days — or those that say what was searched for (word starts, T8).
@@ -244,17 +261,7 @@ const ANSWER_SORTS: ListSorts<AnswerEntry, "day"> = {
  */
 export const listAnswers = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    prompt: v.string(),
-    engine: v.optional(aiEngineValidator),
-    from: v.string(),
-    to: v.string(),
-    search: v.optional(v.string()),
-    sort: v.optional(v.literal("day")),
-    direction: sortDirectionArg,
-  },
+  args: listAnswersArgs,
   returns: listPageResult(v.object({
     _id: answerIdValidator,
     engine: aiEngineValidator,
@@ -264,98 +271,103 @@ export const listAnswers = moduleQuery({
     sources: v.array(v.string()),
     stance: stanceValidator,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // Only a question on this company's own list: an address cannot be
-    // turned into another company's question.
-    const question = await holdQuestion(ctx, listHold(site), args.prompt);
-    if (!question) throw appError("NOT_FOUND", "That question is not one this website is measured on.");
+  handler: async (ctx, args) => await readListAnswers(ctx, args),
+});
 
-    // Each engine answers from its own place: where the site is read from,
-    // or nowhere in particular for an engine that takes no location.
-    const engines = args.engine ? question.engines.filter((engine) => engine === args.engine) : question.engines;
-    const places = engines.map((engine) => ({ engine, place: answerPlace(engine, site.place) }));
-    const matches = wordStartMatcher(args.search);
-    const inDates = (day: string) => day >= args.from && day <= args.to;
+/** listAnswers's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListAnswers(ctx: SiteReader, args: ObjectType<typeof listAnswersArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // Only a question on this company's own list: an address cannot be
+  // turned into another company's question.
+  const question = await holdQuestion(ctx, listHold(site), args.prompt);
+  if (!question) throw appError("NOT_FOUND", "That question is not one this website is measured on.");
 
-    let entries: AnswerEntry[] = [];
-    let cut: number | null = null;
-    const texts = new Map<Id<"aiAnswerTexts">, Doc<"aiAnswerTexts">>();
-    if (!matches) {
-      const keptFrom = wordingKeptFrom(site.today);
-      // Every answer from each engine, from its own place, in the dates: exact.
-      for (const { engine, place } of places) {
-        const read = await ctx.db
-          .query("aiAnswerIndex")
-          .withIndex("by_question", (q) =>
-            q.eq("prompt", args.prompt).eq("engine", engine).eq("locationCode", place).gte("day", args.from).lte("day", args.to))
-          .order("desc")
-          .take(ANSWERS_LISTED + 1);
-        const held = heldTo(read, ANSWERS_LISTED);
-        if (held.cut !== null) cut = held.cut;
-        entries.push(...held.rows.map((row) => ({ textId: row.textId, answer: null, pullId: row.pullId, engine: row.engine, day: row.day })));
-        if (args.from >= keptFrom) continue;
-        // Before the wording kept: the answers themselves, those whose wording
-        // has gone. One whose wording the hourly sweep has yet to clear is listed above.
-        const worded = new Set(held.rows.map((row) => row.pullId));
-        const older = await ctx.db
-          .query("aiAnswers")
-          .withIndex("by_question", (q) => {
-            const asked = q.eq("prompt", args.prompt).eq("engine", engine).eq("locationCode", place).gte("day", args.from);
-            return args.to < keptFrom ? asked.lte("day", args.to) : asked.lt("day", keptFrom);
-          })
-          .order("desc")
-          .take(ANSWERS_LISTED + 1);
-        const heldOlder = heldTo(older, ANSWERS_LISTED);
-        if (heldOlder.cut !== null) cut = heldOlder.cut;
-        for (const answer of heldOlder.rows) {
-          if (!worded.has(answer.pullId)) entries.push({ textId: null, answer, pullId: answer.pullId, engine, day: answer.day });
-        }
-      }
-    } else {
-      // The search index finds the answers with a word starting as the
-      // longest word typed does; of those, the ones every word typed starts
-      // a word in are kept.
-      const longest = wordsOf(args.search ?? "").sort((left, right) => right.length - left.length)[0] ?? "";
-      for (const { engine, place } of places) {
-        const found = await ctx.db
-          .query("aiAnswerTexts")
-          .withSearchIndex("search_text", (q) => q.search("text", longest).eq("prompt", args.prompt).eq("engine", engine).eq("locationCode", place))
-          .take(SEARCH_CANDIDATES);
-        if (found.length === SEARCH_CANDIDATES) cut = SEARCH_CANDIDATES;
-        for (const row of found) {
-          if (!inDates(row.day) || !matches(row.text)) continue;
-          texts.set(row._id, row);
-          entries.push({ textId: row._id, answer: null, pullId: row.pullId, engine: row.engine, day: row.day });
-        }
+  // Each engine answers from its own place: where the site is read from,
+  // or nowhere in particular for an engine that takes no location.
+  const engines = args.engine ? question.engines.filter((engine) => engine === args.engine) : question.engines;
+  const places = engines.map((engine) => ({ engine, place: answerPlace(engine, site.place) }));
+  const matches = wordStartMatcher(args.search);
+  const inDates = (day: string) => day >= args.from && day <= args.to;
+
+  let entries: AnswerEntry[] = [];
+  let cut: number | null = null;
+  const texts = new Map<Id<"aiAnswerTexts">, Doc<"aiAnswerTexts">>();
+  if (!matches) {
+    const keptFrom = wordingKeptFrom(site.today);
+    // Every answer from each engine, from its own place, in the dates: exact.
+    for (const { engine, place } of places) {
+      const read = await ctx.db
+        .query("aiAnswerIndex")
+        .withIndex("by_question", (q) =>
+          q.eq("prompt", args.prompt).eq("engine", engine).eq("locationCode", place).gte("day", args.from).lte("day", args.to))
+        .order("desc")
+        .take(ANSWERS_LISTED + 1);
+      const held = heldTo(read, ANSWERS_LISTED);
+      if (held.cut !== null) cut = held.cut;
+      entries.push(...held.rows.map((row) => ({ textId: row.textId, answer: null, pullId: row.pullId, engine: row.engine, day: row.day })));
+      if (args.from >= keptFrom) continue;
+      // Before the wording kept: the answers themselves, those whose wording
+      // has gone. One whose wording the hourly sweep has yet to clear is listed above.
+      const worded = new Set(held.rows.map((row) => row.pullId));
+      const older = await ctx.db
+        .query("aiAnswers")
+        .withIndex("by_question", (q) => {
+          const asked = q.eq("prompt", args.prompt).eq("engine", engine).eq("locationCode", place).gte("day", args.from);
+          return args.to < keptFrom ? asked.lte("day", args.to) : asked.lt("day", keptFrom);
+        })
+        .order("desc")
+        .take(ANSWERS_LISTED + 1);
+      const heldOlder = heldTo(older, ANSWERS_LISTED);
+      if (heldOlder.cut !== null) cut = heldOlder.cut;
+      for (const answer of heldOlder.rows) {
+        if (!worded.has(answer.pullId)) entries.push({ textId: null, answer, pullId: answer.pullId, engine, day: answer.day });
       }
     }
-    entries = entries.sort(listOrder(ANSWER_SORTS, args.sort ?? "day", args.direction, (entry) => entry.engine));
-
-    const shown = pageOfList(entries, args.page, args.rows, cut);
-    const id = site.website._id;
-    const rows = await Promise.all(shown.rows.map(async (entry) => {
-      if (entry.answer) {
-        // Past the 90 days its wording is kept: who it named, and what it cited.
-        const sources = await citedSourcesOf(ctx, entry.pullId);
-        return { _id: entry.answer._id, engine: entry.engine, day: entry.day, text: null, sources, stance: answerStance(entry.answer, id) };
+  } else {
+    // The search index finds the answers with a word starting as the
+    // longest word typed does; of those, the ones every word typed starts
+    // a word in are kept.
+    const longest = wordsOf(args.search ?? "").sort((left, right) => right.length - left.length)[0] ?? "";
+    for (const { engine, place } of places) {
+      const found = await ctx.db
+        .query("aiAnswerTexts")
+        .withSearchIndex("search_text", (q) => q.search("text", longest).eq("prompt", args.prompt).eq("engine", engine).eq("locationCode", place))
+        .take(SEARCH_CANDIDATES);
+      if (found.length === SEARCH_CANDIDATES) cut = SEARCH_CANDIDATES;
+      for (const row of found) {
+        if (!inDates(row.day) || !matches(row.text)) continue;
+        texts.set(row._id, row);
+        entries.push({ textId: row._id, answer: null, pullId: row.pullId, engine: row.engine, day: row.day });
       }
-      if (!entry.textId) return null;
-      const text = texts.get(entry.textId) ?? await ctx.db.get(entry.textId);
-      if (!text) return null;
-      const answer = await ctx.db
-        .query("aiAnswers")
-        .withIndex("by_pull", (q) => q.eq("pullId", entry.pullId))
-        .first();
-      const stance = answerStance(answer, id);
-      return { _id: text._id, engine: text.engine, day: text.day, text: text.text, sources: text.sources, stance };
-    }));
-    return { ...shown, rows: rows.flatMap((row) => (row ? [row] : [])) };
-  },
-});
+    }
+  }
+  entries = entries.sort(listOrder(ANSWER_SORTS, args.sort ?? "day", args.direction, (entry) => entry.engine));
+
+  const shown = pageOfList(entries, args.page, args.rows, cut);
+  const id = site.website._id;
+  const rows = await Promise.all(shown.rows.map(async (entry) => {
+    if (entry.answer) {
+      // Past the 90 days its wording is kept: who it named, and what it cited.
+      const sources = await citedSourcesOf(ctx, entry.pullId);
+      return { _id: entry.answer._id, engine: entry.engine, day: entry.day, text: null, sources, stance: answerStance(entry.answer, id) };
+    }
+    if (!entry.textId) return null;
+    const text = texts.get(entry.textId) ?? await ctx.db.get(entry.textId);
+    if (!text) return null;
+    const answer = await ctx.db
+      .query("aiAnswers")
+      .withIndex("by_pull", (q) => q.eq("pullId", entry.pullId))
+      .first();
+    const stance = answerStance(answer, id);
+    return { _id: text._id, engine: text.engine, day: text.day, text: text.text, sources: text.sources, stance };
+  }));
+  return { ...shown, rows: rows.flatMap((row) => (row ? [row] : [])) };
+}
 
 /** The engine's own searches listed with one answer: its most persistent for the question. */
 const SEARCHES_SHOWN = 25;
+
+const answerRecordArgs = { siteId: v.id("companyWebsites"), answerId: answerIdValidator };
 
 /**
  * One answer's own screen (AI answers › Full answers › an answer): what the
@@ -373,7 +385,7 @@ const SEARCHES_SHOWN = 25;
  */
 export const answerRecord = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), answerId: answerIdValidator },
+  args: answerRecordArgs,
   returns: v.union(v.object({
     prompt: v.string(),
     engine: aiEngineValidator,
@@ -385,54 +397,57 @@ export const answerRecord = moduleQuery({
     names: v.array(v.string()),
     searches: v.array(v.object({ query: v.string(), queryText: v.string(), timesSeen: v.number(), lastSeenDay: v.string() })),
   }), v.null()),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const found = await answerById(ctx, args.answerId);
-    const row = found?.text ?? found?.answer;
-    if (!found || !row) return null;
-    const question = await holdQuestion(ctx, listHold(site), row.prompt);
-    if (!question || !question.engines.includes(row.engine) || row.locationCode !== answerPlace(row.engine, site.place)) return null;
-
-    const answer = found.answer;
-    const [sources, searches] = await Promise.all([
-      found.text ? Promise.resolve(found.text.sources) : citedSourcesOf(ctx, row.pullId),
-      ctx.db
-        .query("promptFanOutQueries")
-        .withIndex("by_prompt_engine_place_seen", (q) =>
-          q.eq("prompt", row.prompt).eq("engine", row.engine).eq("place", fanOutPlace(row.engine, askedPlace(site))))
-        .order("desc")
-        .take(SEARCHES_SHOWN),
-    ]);
-    const id = site.website._id;
-    const stance = answerStance(answer, id);
-    const host = site.website.host;
-    // A source on this site opens its page's screen: the path, when the address is the site's own.
-    const pageOf = (url: string): string | null => {
-      try {
-        const parsed = new URL(url);
-        const name = parsed.hostname.toLowerCase().replace(/^www\./, "");
-        return name === host || name.endsWith(`.${host}`) ? parsed.pathname || "/" : null;
-      } catch {
-        return null;
-      }
-    };
-    return {
-      prompt: row.prompt,
-      engine: row.engine,
-      day: row.day,
-      text: found.text?.text ?? null,
-      sources: sources.map((url) => ({ url, page: pageOf(url) })),
-      stance,
-      names: (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name),
-      searches: searches.map((entry) => ({
-        query: entry.query,
-        queryText: entry.queryText,
-        timesSeen: entry.timesSeen,
-        lastSeenDay: entry.lastSeenDay,
-      })),
-    };
-  },
+  handler: async (ctx, args) => await readAnswerRecord(ctx, args),
 });
+
+/** answerRecord's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readAnswerRecord(ctx: SiteReader, args: ObjectType<typeof answerRecordArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const found = await answerById(ctx, args.answerId);
+  const row = found?.text ?? found?.answer;
+  if (!found || !row) return null;
+  const question = await holdQuestion(ctx, listHold(site), row.prompt);
+  if (!question || !question.engines.includes(row.engine) || row.locationCode !== answerPlace(row.engine, site.place)) return null;
+
+  const answer = found.answer;
+  const [sources, searches] = await Promise.all([
+    found.text ? Promise.resolve(found.text.sources) : citedSourcesOf(ctx, row.pullId),
+    ctx.db
+      .query("promptFanOutQueries")
+      .withIndex("by_prompt_engine_place_seen", (q) =>
+        q.eq("prompt", row.prompt).eq("engine", row.engine).eq("place", fanOutPlace(row.engine, askedPlace(site))))
+      .order("desc")
+      .take(SEARCHES_SHOWN),
+  ]);
+  const id = site.website._id;
+  const stance = answerStance(answer, id);
+  const host = site.website.host;
+  // A source on this site opens its page's screen: the path, when the address is the site's own.
+  const pageOf = (url: string): string | null => {
+    try {
+      const parsed = new URL(url);
+      const name = parsed.hostname.toLowerCase().replace(/^www\./, "");
+      return name === host || name.endsWith(`.${host}`) ? parsed.pathname || "/" : null;
+    } catch {
+      return null;
+    }
+  };
+  return {
+    prompt: row.prompt,
+    engine: row.engine,
+    day: row.day,
+    text: found.text?.text ?? null,
+    sources: sources.map((url) => ({ url, page: pageOf(url) })),
+    stance,
+    names: (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name),
+    searches: searches.map((entry) => ({
+      query: entry.query,
+      queryText: entry.queryText,
+      timesSeen: entry.timesSeen,
+      lastSeenDay: entry.lastSeenDay,
+    })),
+  };
+}
 
 type MigrationBatchResult = { cursor: string | null; isDone: boolean; processed: number; updated: number };
 

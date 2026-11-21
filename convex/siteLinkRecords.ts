@@ -5,7 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { referringDomainNamed } from "./siteReferringDomainParts";
 import { anchorNamed } from "./siteLinkGroupParts";
 
@@ -122,13 +122,15 @@ async function linksBy(
   return every.length > 0 ? every : await read("ONE_PER_DOMAIN");
 }
 
+const linkingWebsiteRecordArgs = { siteId: v.id("companyWebsites"), domain: v.string() };
+
 /**
  * One website linking to this site: how strong it is, how many links and
  * pages it has pointing here, and each of its links in full.
  */
 export const linkingWebsiteRecord = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), domain: v.string() },
+  args: linkingWebsiteRecordArgs,
   returns: v.object({
     domain: v.string(),
     website: v.union(v.object({
@@ -146,57 +148,62 @@ export const linkingWebsiteRecord = moduleQuery({
     links: v.array(linkValidator),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; domain: string }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId: Id<"websites"> = site.website._id;
-    const domain = args.domain.trim().toLowerCase().slice(0, MAX_KEY);
-    // The website as the list of linking websites names it: this host, or the
-    // nearest website it sits under.
-    const findWebsite = async () => {
-      for (const candidate of [domain, ...parentDomains(domain)]) {
-        const found = await referringDomainNamed(ctx, websiteId, candidate);
-        if (found) return found;
-      }
-      return null;
-    };
-    const [row, links] = await Promise.all([
-      findWebsite(),
-      linksBy(ctx, async (pass) => {
-        const [own, underIt] = await Promise.all([
-          ctx.db
-            .query("siteBacklinks")
-            .withIndex("by_site_pass_domain", (q) => q.eq("websiteId", websiteId).eq("pass", pass).eq("domainFrom", domain))
-            .take(LINKS_SHOWN),
-          ctx.db
-            .query("siteBacklinks")
-            .withSearchIndex("search_text", (q) => q.search("searchText", domain).eq("websiteId", websiteId).eq("pass", pass))
-            .take(SUBDOMAIN_LINKS_READ),
-        ]);
-        const seen = new Set(own.map((link) => link._id));
-        const subdomains = underIt.filter((link) => !seen.has(link._id) && link.domainFrom !== domain && isOnWebsite(link.domainFrom, domain));
-        return [...own, ...subdomains].slice(0, LINKS_SHOWN);
-      }),
-    ]);
-    return {
-      domain,
-      website: row
-        ? {
-          rank: row.rank,
-          backlinks: row.backlinks,
-          referringPages: row.referringPages ?? null,
-          nofollowPages: row.nofollowPages ?? null,
-          brokenBacklinks: row.brokenBacklinks ?? null,
-          spamScore: row.spamScore ?? null,
-          firstSeen: row.firstSeen ?? null,
-          lostDate: row.lostDate ?? null,
-          status: row.status,
-          day: row.day,
-        }
-        : null,
-      links: links.sort((left, right) => right.domainRank - left.domainRank || (right.linkRank ?? 0) - (left.linkRank ?? 0)).map(linkOf),
-    };
-  }, domainRecordSees),
+  handler: async (ctx, args) => await readLinkingWebsiteRecord(ctx, args),
 });
+
+/** linkingWebsiteRecord's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readLinkingWebsiteRecord = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; domain: string }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId: Id<"websites"> = site.website._id;
+  const domain = args.domain.trim().toLowerCase().slice(0, MAX_KEY);
+  // The website as the list of linking websites names it: this host, or the
+  // nearest website it sits under.
+  const findWebsite = async () => {
+    for (const candidate of [domain, ...parentDomains(domain)]) {
+      const found = await referringDomainNamed(ctx, websiteId, candidate);
+      if (found) return found;
+    }
+    return null;
+  };
+  const [row, links] = await Promise.all([
+    findWebsite(),
+    linksBy(ctx, async (pass) => {
+      const [own, underIt] = await Promise.all([
+        ctx.db
+          .query("siteBacklinks")
+          .withIndex("by_site_pass_domain", (q) => q.eq("websiteId", websiteId).eq("pass", pass).eq("domainFrom", domain))
+          .take(LINKS_SHOWN),
+        ctx.db
+          .query("siteBacklinks")
+          .withSearchIndex("search_text", (q) => q.search("searchText", domain).eq("websiteId", websiteId).eq("pass", pass))
+          .take(SUBDOMAIN_LINKS_READ),
+      ]);
+      const seen = new Set(own.map((link) => link._id));
+      const subdomains = underIt.filter((link) => !seen.has(link._id) && link.domainFrom !== domain && isOnWebsite(link.domainFrom, domain));
+      return [...own, ...subdomains].slice(0, LINKS_SHOWN);
+    }),
+  ]);
+  return {
+    domain,
+    website: row
+      ? {
+        rank: row.rank,
+        backlinks: row.backlinks,
+        referringPages: row.referringPages ?? null,
+        nofollowPages: row.nofollowPages ?? null,
+        brokenBacklinks: row.brokenBacklinks ?? null,
+        spamScore: row.spamScore ?? null,
+        firstSeen: row.firstSeen ?? null,
+        lostDate: row.lostDate ?? null,
+        status: row.status,
+        day: row.day,
+      }
+      : null,
+    links: links.sort((left, right) => right.domainRank - left.domainRank || (right.linkRank ?? 0) - (left.linkRank ?? 0)).map(linkOf),
+  };
+}, domainRecordSees);
+
+const anchorRecordArgs = { siteId: v.id("companyWebsites"), anchor: v.string() };
 
 /**
  * One anchor — the words other websites link here with — and each link that
@@ -205,7 +212,7 @@ export const linkingWebsiteRecord = moduleQuery({
  */
 export const anchorRecord = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), anchor: v.string() },
+  args: anchorRecordArgs,
   returns: v.object({
     anchor: v.string(),
     summary: v.union(v.object({
@@ -220,32 +227,35 @@ export const anchorRecord = moduleQuery({
     links: v.array(linkValidator),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; anchor: string }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const anchor = args.anchor.slice(0, MAX_KEY);
-    const [row, links] = await Promise.all([
-      anchorNamed(ctx, websiteId, anchor),
-      // A link with no words has no anchor at all on its row.
-      linksBy(ctx, (pass) => ctx.db
-        .query("siteBacklinks")
-        .withIndex("by_site_pass_anchor", (q) => q.eq("websiteId", websiteId).eq("pass", pass).eq("anchor", anchor === "" ? undefined : anchor))
-        .take(LINKS_SHOWN)),
-    ]);
-    return {
-      anchor,
-      summary: row
-        ? {
-          backlinks: row.backlinks,
-          referringDomains: row.referringDomains,
-          firstSeen: row.firstSeen ?? null,
-          lostDate: row.lostDate ?? null,
-          status: row.status,
-          spamScore: row.spamScore ?? null,
-          day: row.day,
-        }
-        : null,
-      links: links.sort((left, right) => right.domainRank - left.domainRank).map(linkOf),
-    };
-  }, anchorRecordSees),
+  handler: async (ctx, args) => await readAnchorRecord(ctx, args),
 });
+
+/** anchorRecord's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export const readAnchorRecord = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; anchor: string }) => {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId = site.website._id;
+  const anchor = args.anchor.slice(0, MAX_KEY);
+  const [row, links] = await Promise.all([
+    anchorNamed(ctx, websiteId, anchor),
+    // A link with no words has no anchor at all on its row.
+    linksBy(ctx, (pass) => ctx.db
+      .query("siteBacklinks")
+      .withIndex("by_site_pass_anchor", (q) => q.eq("websiteId", websiteId).eq("pass", pass).eq("anchor", anchor === "" ? undefined : anchor))
+      .take(LINKS_SHOWN)),
+  ]);
+  return {
+    anchor,
+    summary: row
+      ? {
+        backlinks: row.backlinks,
+        referringDomains: row.referringDomains,
+        firstSeen: row.firstSeen ?? null,
+        lostDate: row.lostDate ?? null,
+        status: row.status,
+        spamScore: row.spamScore ?? null,
+        day: row.day,
+      }
+      : null,
+    links: links.sort((left, right) => right.domainRank - left.domainRank).map(linkOf),
+  };
+}, anchorRecordSees);

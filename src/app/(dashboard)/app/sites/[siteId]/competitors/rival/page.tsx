@@ -27,7 +27,7 @@ import { SiteMark } from "../../../_components/SiteMark";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
-import { rivalSeen } from "../../../_components/siteSeesData";
+import { rivalSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { sharedSiteQuery, useSiteParam } from "../../../_components/useSiteParam";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";

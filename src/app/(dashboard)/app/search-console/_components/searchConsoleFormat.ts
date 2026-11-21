@@ -35,10 +35,8 @@ export function formatPosition(value: number | null | undefined): string {
   return new Intl.NumberFormat(readerLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
 }
 
-/** Google's name for a kind of rich result, in words: "REVIEW_SNIPPET" reads "Review snippet". Rich results and Performance name them so. */
-export function appearanceName(key: string, known: (key: string) => string | null): string {
-  return known(key) ?? key.toLowerCase().replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase());
-}
+/** Google's name for a kind of rich result, in words: shared with the eye's figures built on the server. */
+export { appearanceName } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 /** The reader's language, for naming countries. */
 export function readerLanguage(): string {

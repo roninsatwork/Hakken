@@ -226,18 +226,21 @@ export const analyticsVisitorGroups = moduleQuery({
     /** Each group's engaged visits too, so the eye can say which groups leave at once (pageOwnFindings.ts). */
     rows: v.array(v.object({ key: v.string(), visits: v.number(), visitsBefore: v.union(v.number(), v.null()), engaged: v.number() })),
   }))),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, site.hold._id);
-    if (!connection?.newestDay) return null;
-    const lists = [];
-    // Not interests: one person sits in many, so their moves are noise ("Soccer Fans" fell, on a door handle shop).
-    for (const list of VISITOR_LISTS.filter((one) => one !== "interest")) {
-      const bars = await barsOf(ctx, site.hold._id, list, args.period, args.device, country);
-      if (!bars || bars.waiting) continue;
-      lists.push({ list, rows: bars.rows.filter((row) => !isUnknownValue(row.key)).slice(0, EYE_GROUPS) });
-    }
-    return lists;
-  },
+  handler: async (ctx, args) => await readVisitorGroups(ctx, args),
 });
+
+/** The eye's groups, for the screen and a chat app's question alike: the caller's own website only. */
+export async function readVisitorGroups(ctx: SiteReader, args: ObjectType<typeof analyticsVisitorsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const country = await keptCountry(ctx, site.hold, args.country);
+  const connection = await connectionOf(ctx, site.hold._id);
+  if (!connection?.newestDay) return null;
+  const lists = [];
+  // Not interests: one person sits in many, so their moves are noise ("Soccer Fans" fell, on a door handle shop).
+  for (const list of VISITOR_LISTS.filter((one) => one !== "interest")) {
+    const bars = await barsOf(ctx, site.hold._id, list, args.period, args.device, country);
+    if (!bars || bars.waiting) continue;
+    lists.push({ list, rows: bars.rows.filter((row) => !isUnknownValue(row.key)).slice(0, EYE_GROUPS) });
+  }
+  return lists;
+}

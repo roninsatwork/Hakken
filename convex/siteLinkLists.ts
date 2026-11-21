@@ -1,8 +1,8 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { bucketOf, stepValidator } from "./siteFigures";
 import { linksCopyKey, readListCopy } from "./siteListCopies";
 import { heldTo, listOrder, listPageArgs, listPageResult, listPageSeenResult, newestPerKey, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
@@ -156,6 +156,26 @@ export function linkChangedIn(row: Pick<Doc<"siteBacklinks">, "firstSeen" | "las
   return within(row.firstSeen) || (row.status === "LOST" && within(row.lastSeen));
 }
 
+const listBacklinksArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  every: v.optional(v.boolean()),
+  search: v.optional(v.string()),
+  status: v.optional(status),
+  follow: v.optional(v.union(v.literal("FOLLOW"), v.literal("NOFOLLOW"))),
+  sort: v.optional(v.union(v.literal("from"), v.literal("domainRank"), v.literal("firstSeen"))),
+  direction: sortDirectionArg,
+  /**
+   * Where links come from's group (`<breakdown>:<key>`) and New and lost
+   * links' stretch of days (`changedFrom` up to `changedUntil`): both narrow
+   * the strongest link from each website, a list read whole, so neither
+   * needs a copy of every link's every field (§5, measured 2026-10-10).
+   */
+  group: v.optional(v.string()),
+  changedFrom: v.optional(v.string()),
+  changedUntil: v.optional(v.string()),
+};
+
 /**
  * The links to the site — the strongest from each linking website, or with
  * `every` every link its limit keeps (`backlinks_all`) — strongest first,
@@ -168,66 +188,51 @@ export function linkChangedIn(row: Pick<Doc<"siteBacklinks">, "firstSeen" | "las
  */
 export const listBacklinks = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    every: v.optional(v.boolean()),
-    search: v.optional(v.string()),
-    status: v.optional(status),
-    follow: v.optional(v.union(v.literal("FOLLOW"), v.literal("NOFOLLOW"))),
-    sort: v.optional(v.union(v.literal("from"), v.literal("domainRank"), v.literal("firstSeen"))),
-    direction: sortDirectionArg,
-    /**
-     * Where links come from's group (`<breakdown>:<key>`) and New and lost
-     * links' stretch of days (`changedFrom` up to `changedUntil`): both narrow
-     * the strongest link from each website, a list read whole, so neither
-     * needs a copy of every link's every field (§5, measured 2026-10-10).
-     */
-    group: v.optional(v.string()),
-    changedFrom: v.optional(v.string()),
-    changedUntil: v.optional(v.string()),
-  },
+  args: listBacklinksArgs,
   returns: listPageSeenResult(backlinkRow),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const narrowed = Boolean(args.group || (args.changedFrom && args.changedUntil));
-    // What Hakken sees is of the links listed: those the filters and search leave.
-    const filtered = narrowed || Boolean(args.search || args.status || args.follow);
-    if (!args.every || narrowed) {
-      const read = await ctx.db
-        .query("siteBacklinks")
-        .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "ONE_PER_DOMAIN"))
-        .order("desc")
-        .take(LINK_LIST_READ + 1);
-      const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
-      const inView = newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`)
-        .filter((row) => (!args.group || linkInGroup(row, args.group))
-          && (!args.changedFrom || !args.changedUntil || linkChangedIn(row, args.changedFrom, args.changedUntil)));
-      const list = narrowLinks(inView, args);
-      const page = pageOfList(list, args.page, args.rows, cut);
-      return { ...page, rows: page.rows.map(shapeBacklink), seen: allLinksSees(list, filtered) };
-    }
-
-    const copy = await readListCopy(ctx, "links", linksCopyKey(websiteId), LINK_COPY_FIELDS);
-    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
-    const links = copy.rows.map(([id, domainFrom, urlFrom, anchor, pageTo, dofollow, linkStatus, domainRank, firstSeen]) => ({
-      id: id as Id<"siteBacklinks">,
-      domainFrom: domainFrom as string,
-      urlFrom: urlFrom as string,
-      anchor: anchor as string | null,
-      pageTo: pageTo as string,
-      dofollow: dofollow as boolean,
-      status: linkStatus as LinkFacts["status"],
-      domainRank: domainRank as number,
-      firstSeen: firstSeen as string | null,
-    }));
-    const list = narrowLinks(links, args);
-    const page = pageOfList(list, args.page, args.rows, copy.cut);
-    const full = await Promise.all(page.rows.map((link) => ctx.db.get(link.id)));
-    return { ...page, rows: full.flatMap((row) => (row ? [shapeBacklink(row)] : [])), seen: allLinksSees(list, filtered) };
-  },
+  handler: async (ctx, args) => await readListBacklinks(ctx, args),
 });
+
+/** listBacklinks's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListBacklinks(ctx: SiteReader, args: ObjectType<typeof listBacklinksArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const websiteId = site.website._id;
+  const narrowed = Boolean(args.group || (args.changedFrom && args.changedUntil));
+  // What Hakken sees is of the links listed: those the filters and search leave.
+  const filtered = narrowed || Boolean(args.search || args.status || args.follow);
+  if (!args.every || narrowed) {
+    const read = await ctx.db
+      .query("siteBacklinks")
+      .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "ONE_PER_DOMAIN"))
+      .order("desc")
+      .take(LINK_LIST_READ + 1);
+    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+    const inView = newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`)
+      .filter((row) => (!args.group || linkInGroup(row, args.group))
+        && (!args.changedFrom || !args.changedUntil || linkChangedIn(row, args.changedFrom, args.changedUntil)));
+    const list = narrowLinks(inView, args);
+    const page = pageOfList(list, args.page, args.rows, cut);
+    return { ...page, rows: page.rows.map(shapeBacklink), seen: allLinksSees(list, filtered) };
+  }
+
+  const copy = await readListCopy(ctx, "links", linksCopyKey(websiteId), LINK_COPY_FIELDS);
+  if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
+  const links = copy.rows.map(([id, domainFrom, urlFrom, anchor, pageTo, dofollow, linkStatus, domainRank, firstSeen]) => ({
+    id: id as Id<"siteBacklinks">,
+    domainFrom: domainFrom as string,
+    urlFrom: urlFrom as string,
+    anchor: anchor as string | null,
+    pageTo: pageTo as string,
+    dofollow: dofollow as boolean,
+    status: linkStatus as LinkFacts["status"],
+    domainRank: domainRank as number,
+    firstSeen: firstSeen as string | null,
+  }));
+  const list = narrowLinks(links, args);
+  const page = pageOfList(list, args.page, args.rows, copy.cut);
+  const full = await Promise.all(page.rows.map((link) => ctx.db.get(link.id)));
+  return { ...page, rows: full.flatMap((row) => (row ? [shapeBacklink(row)] : [])), seen: allLinksSees(list, filtered) };
+}
 
 /**
  * Broken backlinks' columns that sort: the linking website A to Z, then its
@@ -240,34 +245,39 @@ const BROKEN_SORTS: ListSorts<Doc<"siteBacklinks">, "from" | "code" | "domainRan
   domainRank: { value: (row) => row.domainRank, first: "desc" },
 };
 
+const listBrokenBacklinksArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  sort: v.optional(v.union(v.literal("from"), v.literal("code"), v.literal("domainRank"))),
+  direction: sortDirectionArg,
+};
+
 /** Links pointing at pages here that no longer work, strongest linking website first unless a heading says otherwise. */
 export const listBrokenBacklinks = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("from"), v.literal("code"), v.literal("domainRank"))),
-    direction: sortDirectionArg,
-  },
+  args: listBrokenBacklinksArgs,
   returns: listPageSeenResult(backlinkRow),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const read = await ctx.db
-      .query("siteBacklinks")
-      .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", site.website._id).eq("pass", "BROKEN"))
-      .order("desc")
-      .take(LINK_LIST_READ + 1);
-    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
-    const matches = wordStartMatcher(args.search);
-    const every = newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`);
-    const list = every
-      .filter((row) => !matches || matches(row.domainFrom, row.urlFrom, row.anchor, row.pageTo))
-      .sort(listOrder(BROKEN_SORTS, args.sort ?? "domainRank", args.direction, (row) => row.urlFrom));
-    const page = pageOfList(list, args.page, args.rows, cut);
-    return { ...page, rows: page.rows.map(shapeBacklink), seen: brokenSees(every) };
-  },
+  handler: async (ctx, args) => await readListBrokenBacklinks(ctx, args),
 });
+
+/** listBrokenBacklinks's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListBrokenBacklinks(ctx: SiteReader, args: ObjectType<typeof listBrokenBacklinksArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const read = await ctx.db
+    .query("siteBacklinks")
+    .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", site.website._id).eq("pass", "BROKEN"))
+    .order("desc")
+    .take(LINK_LIST_READ + 1);
+  const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+  const matches = wordStartMatcher(args.search);
+  const every = newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`);
+  const list = every
+    .filter((row) => !matches || matches(row.domainFrom, row.urlFrom, row.anchor, row.pageTo))
+    .sort(listOrder(BROKEN_SORTS, args.sort ?? "domainRank", args.direction, (row) => row.urlFrom));
+  const page = pageOfList(list, args.page, args.rows, cut);
+  return { ...page, rows: page.rows.map(shapeBacklink), seen: brokenSees(every) };
+}
 
 const groupShape = {
   rank: v.number(),
@@ -303,23 +313,25 @@ const DOMAIN_SORTS: ListSorts<ReferringDomainRow, "domain" | "rank" | "backlinks
   firstSeen: { value: (row) => row.firstSeen, first: "desc" },
 };
 
+const listReferringDomainsArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  status: v.optional(status),
+  /**
+   * Only the websites with at least one nofollow link here: what Link
+   * quality's "Nofollow linking websites" counts, as DataForSEO does
+   * (docs/plans/active/sites-audit-fixes-plan.md, 4.13).
+   */
+  follow: v.optional(v.literal("NOFOLLOW")),
+  sort: v.optional(v.union(v.literal("domain"), v.literal("rank"), v.literal("backlinks"), v.literal("spam"), v.literal("firstSeen"))),
+  direction: sortDirectionArg,
+};
+
 /** Every website linking here, live or lost: strongest first unless a heading says otherwise. */
 export const listReferringDomains = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    status: v.optional(status),
-    /**
-     * Only the websites with at least one nofollow link here: what Link
-     * quality's "Nofollow linking websites" counts, as DataForSEO does
-     * (docs/plans/active/sites-audit-fixes-plan.md, 4.13).
-     */
-    follow: v.optional(v.literal("NOFOLLOW")),
-    sort: v.optional(v.union(v.literal("domain"), v.literal("rank"), v.literal("backlinks"), v.literal("spam"), v.literal("firstSeen"))),
-    direction: sortDirectionArg,
-  },
+  args: listReferringDomainsArgs,
   returns: listPageSeenResult(v.object({
     domain: v.string(),
     ...groupShape,
@@ -327,32 +339,35 @@ export const listReferringDomains = moduleQuery({
     referringPages: nullableNumber,
     nofollowPages: nullableNumber,
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // Strongest first, the newest list first among equals, as each check's list is packed (`siteReferringDomainParts.ts`).
-    const read = await readReferringDomains(ctx, site.website._id);
-    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
-    const matches = wordStartMatcher(args.search);
-    const name = (row: ReferringDomainRow) => row.domain;
-    const every = newestPerKey(held, name);
-    const list = every
-      .filter((row) => (!args.status || row.status === args.status) && (!matches || matches(row.domain)))
-      .filter((row) => !args.follow || (row.nofollowPages ?? 0) > 0)
-      .sort(listOrder(DOMAIN_SORTS, args.sort ?? "rank", args.direction, name));
-    const page = pageOfList(list, args.page, args.rows, cut);
-    return {
-      ...page,
-      rows: page.rows.map((row) => ({
-        domain: row.domain,
-        ...shapeGroup(row),
-        brokenBacklinks: row.brokenBacklinks ?? null,
-        referringPages: row.referringPages ?? null,
-        nofollowPages: row.nofollowPages ?? null,
-      })),
-      seen: domainsSees(every),
-    };
-  },
+  handler: async (ctx, args) => await readListReferringDomains(ctx, args),
 });
+
+/** listReferringDomains's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListReferringDomains(ctx: SiteReader, args: ObjectType<typeof listReferringDomainsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // Strongest first, the newest list first among equals, as each check's list is packed (`siteReferringDomainParts.ts`).
+  const read = await readReferringDomains(ctx, site.website._id);
+  const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+  const matches = wordStartMatcher(args.search);
+  const name = (row: ReferringDomainRow) => row.domain;
+  const every = newestPerKey(held, name);
+  const list = every
+    .filter((row) => (!args.status || row.status === args.status) && (!matches || matches(row.domain)))
+    .filter((row) => !args.follow || (row.nofollowPages ?? 0) > 0)
+    .sort(listOrder(DOMAIN_SORTS, args.sort ?? "rank", args.direction, name));
+  const page = pageOfList(list, args.page, args.rows, cut);
+  return {
+    ...page,
+    rows: page.rows.map((row) => ({
+      domain: row.domain,
+      ...shapeGroup(row),
+      brokenBacklinks: row.brokenBacklinks ?? null,
+      referringPages: row.referringPages ?? null,
+      nofollowPages: row.nofollowPages ?? null,
+    })),
+    seen: domainsSees(every),
+  };
+}
 
 /** Anchors' columns that sort: the words A to Z; most links, most linking websites and newest first. */
 const ANCHOR_SORTS: ListSorts<AnchorRow, "anchor" | "backlinks" | "domains" | "firstSeen"> = {
@@ -362,40 +377,45 @@ const ANCHOR_SORTS: ListSorts<AnchorRow, "anchor" | "backlinks" | "domains" | "f
   firstSeen: { value: (row) => row.firstSeen, first: "desc" },
 };
 
+const listAnchorsArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  sort: v.optional(v.union(v.literal("anchor"), v.literal("backlinks"), v.literal("domains"), v.literal("firstSeen"))),
+  direction: sortDirectionArg,
+};
+
 /** The words other websites link here with: most links first unless a heading says otherwise. */
 export const listAnchors = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("anchor"), v.literal("backlinks"), v.literal("domains"), v.literal("firstSeen"))),
-    direction: sortDirectionArg,
-  },
+  args: listAnchorsArgs,
   returns: listPageSeenResult(v.object({
     anchor: v.string(),
     ...groupShape,
     referringDomains: v.number(),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // Most links first, the newest list first among equals, as each check's list is packed (`siteLinkGroupParts.ts`).
-    const read = await readAnchors(ctx, site.website._id);
-    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
-    const matches = wordStartMatcher(args.search);
-    const name = (row: AnchorRow) => row.anchor;
-    const every = newestPerKey(held, name);
-    const list = every
-      .filter((row) => !matches || matches(row.anchor))
-      .sort(listOrder(ANCHOR_SORTS, args.sort ?? "backlinks", args.direction, name));
-    const page = pageOfList(list, args.page, args.rows, cut);
-    return {
-      ...page,
-      rows: page.rows.map((row) => ({ anchor: row.anchor, ...shapeGroup(row), referringDomains: row.referringDomains })),
-      seen: anchorsSees(every, site.website.host),
-    };
-  },
+  handler: async (ctx, args) => await readListAnchors(ctx, args),
 });
+
+/** listAnchors's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListAnchors(ctx: SiteReader, args: ObjectType<typeof listAnchorsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // Most links first, the newest list first among equals, as each check's list is packed (`siteLinkGroupParts.ts`).
+  const read = await readAnchors(ctx, site.website._id);
+  const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+  const matches = wordStartMatcher(args.search);
+  const name = (row: AnchorRow) => row.anchor;
+  const every = newestPerKey(held, name);
+  const list = every
+    .filter((row) => !matches || matches(row.anchor))
+    .sort(listOrder(ANCHOR_SORTS, args.sort ?? "backlinks", args.direction, name));
+  const page = pageOfList(list, args.page, args.rows, cut);
+  return {
+    ...page,
+    rows: page.rows.map((row) => ({ anchor: row.anchor, ...shapeGroup(row), referringDomains: row.referringDomains })),
+    seen: anchorsSees(every, site.website.host),
+  };
+}
 
 /** Referring IPs' columns that sort: the address in number order; most linking websites and most links first. */
 const IP_SORTS: ListSorts<ReferringIpRow, "ip" | "domains" | "backlinks"> = {
@@ -404,61 +424,73 @@ const IP_SORTS: ListSorts<ReferringIpRow, "ip" | "domains" | "backlinks"> = {
   backlinks: { value: (row) => row.backlinks, first: "desc" },
 };
 
+const listReferringIpsArgs = {
+  siteId: v.id("companyWebsites"),
+  ...listPageArgs,
+  search: v.optional(v.string()),
+  subnet: v.optional(v.string()),
+  sort: v.optional(v.union(v.literal("ip"), v.literal("domains"), v.literal("backlinks"))),
+  direction: sortDirectionArg,
+};
+
 /** The servers links come from, or those on one network: most links first unless a heading says otherwise. */
 export const listReferringIps = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: {
-    siteId: v.id("companyWebsites"),
-    ...listPageArgs,
-    search: v.optional(v.string()),
-    subnet: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("ip"), v.literal("domains"), v.literal("backlinks"))),
-    direction: sortDirectionArg,
-  },
+  args: listReferringIpsArgs,
   returns: listPageResult(v.object({
     ip: v.string(),
     subnet: v.string(),
     ...groupShape,
     referringDomains: v.number(),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // Most links first, the newest list first among equals, as each check's list is packed (`siteLinkGroupParts.ts`).
-    const read = await readServers(ctx, site.website._id);
-    const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
-    const matches = wordStartMatcher(args.search);
-    const name = (row: ReferringIpRow) => row.ip;
-    // The network chosen holds while searching, and the order holds within it.
-    const list = newestPerKey(held, name)
-      .filter((row) => (!args.subnet || row.subnet === args.subnet) && (!matches || matches(row.ip, row.subnet)))
-      .sort(listOrder(IP_SORTS, args.sort ?? "backlinks", args.direction, name));
-    const page = pageOfList(list, args.page, args.rows, cut);
-    return {
-      ...page,
-      rows: page.rows.map((row) => ({
-        ip: row.ip, subnet: row.subnet, ...shapeGroup(row), referringDomains: row.referringDomains,
-      })),
-    };
-  },
+  handler: async (ctx, args) => await readListReferringIps(ctx, args),
 });
+
+/** listReferringIps's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readListReferringIps(ctx: SiteReader, args: ObjectType<typeof listReferringIpsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // Most links first, the newest list first among equals, as each check's list is packed (`siteLinkGroupParts.ts`).
+  const read = await readServers(ctx, site.website._id);
+  const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
+  const matches = wordStartMatcher(args.search);
+  const name = (row: ReferringIpRow) => row.ip;
+  // The network chosen holds while searching, and the order holds within it.
+  const list = newestPerKey(held, name)
+    .filter((row) => (!args.subnet || row.subnet === args.subnet) && (!matches || matches(row.ip, row.subnet)))
+    .sort(listOrder(IP_SORTS, args.sort ?? "backlinks", args.direction, name));
+  const page = pageOfList(list, args.page, args.rows, cut);
+  return {
+    ...page,
+    rows: page.rows.map((row) => ({
+      ip: row.ip, subnet: row.subnet, ...shapeGroup(row), referringDomains: row.referringDomains,
+    })),
+  };
+}
+
+const topSubnetsArgs = { siteId: v.id("companyWebsites") };
 
 /** The networks with the most linking websites: the Referring IPs chart. */
 export const topSubnets = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: topSubnetsArgs,
   returns: v.array(v.object({ subnet: v.string(), ips: v.number(), backlinks: v.number(), referringDomains: v.number() })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // Counted from the servers the list beside it shows, not kept a second time (`networksOf`).
-    const { rows: held } = heldTo(await readServers(ctx, site.website._id), LINK_LIST_READ);
-    return networksOf(newestPerKey(held, (row) => row.ip)).slice(0, SUBNETS_SHOWN);
-  },
+  handler: async (ctx, args) => await readTopSubnets(ctx, args),
 });
+
+/** topSubnets's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readTopSubnets(ctx: SiteReader, args: ObjectType<typeof topSubnetsArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // Counted from the servers the list beside it shows, not kept a second time (`networksOf`).
+  const { rows: held } = heldTo(await readServers(ctx, site.website._id), LINK_LIST_READ);
+  return networksOf(newestPerKey(held, (row) => row.ip)).slice(0, SUBNETS_SHOWN);
+}
+
+const linkChangesArgs = { siteId: v.id("companyWebsites"), from: v.string(), to: v.string(), step: stepValidator };
 
 /** Links and linking websites gained and lost, added up per day, week or month. */
 export const linkChanges = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), from: v.string(), to: v.string(), step: stepValidator },
+  args: linkChangesArgs,
   returns: v.array(v.object({
     day: v.string(),
     newBacklinks: v.number(),
@@ -466,29 +498,34 @@ export const linkChanges = moduleQuery({
     newReferringDomains: v.number(),
     lostReferringDomains: v.number(),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    // The website's weeks, one packed record (`siteLinkWeeks.ts`): those in the dates asked.
-    const rows = (await readLinkChanges(ctx, site.website._id)).filter((row) => row.day >= args.from && row.day <= args.to);
-    const points = new Map<string, { day: string; newBacklinks: number; lostBacklinks: number; newReferringDomains: number; lostReferringDomains: number }>();
-    for (const row of rows) {
-      const key = bucketOf(row.day, args.step);
-      const held = points.get(key) ?? { day: key, newBacklinks: 0, lostBacklinks: 0, newReferringDomains: 0, lostReferringDomains: 0 };
-      held.newBacklinks += row.newBacklinks;
-      held.lostBacklinks += row.lostBacklinks;
-      held.newReferringDomains += row.newReferringDomains;
-      held.lostReferringDomains += row.lostReferringDomains;
-      points.set(key, held);
-    }
-    return [...points.values()].sort((left, right) => left.day.localeCompare(right.day));
-  },
+  handler: async (ctx, args) => await readLinkChangeSteps(ctx, args),
 });
+
+/** linkChanges's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readLinkChangeSteps(ctx: SiteReader, args: ObjectType<typeof linkChangesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  // The website's weeks, one packed record (`siteLinkWeeks.ts`): those in the dates asked.
+  const rows = (await readLinkChanges(ctx, site.website._id)).filter((row) => row.day >= args.from && row.day <= args.to);
+  const points = new Map<string, { day: string; newBacklinks: number; lostBacklinks: number; newReferringDomains: number; lostReferringDomains: number }>();
+  for (const row of rows) {
+    const key = bucketOf(row.day, args.step);
+    const held = points.get(key) ?? { day: key, newBacklinks: 0, lostBacklinks: 0, newReferringDomains: 0, lostReferringDomains: 0 };
+    held.newBacklinks += row.newBacklinks;
+    held.lostBacklinks += row.lostBacklinks;
+    held.newReferringDomains += row.newReferringDomains;
+    held.lostReferringDomains += row.lostReferringDomains;
+    points.set(key, held);
+  }
+  return [...points.values()].sort((left, right) => left.day.localeCompare(right.day));
+}
 
 /** An anchor's spam score from which its links read as bought or spam (DataForSEO's 0–100; the "PBN" anchors score 60 and more). */
 const SPAMMY_ANCHOR = 50;
 /** Anchors first seen this many days before the list's day are new. */
 const FRESH_DAYS = 90;
 const shareShape = v.object({ links: v.number(), websites: v.number(), anchors: v.number() });
+
+const anchorFiguresArgs = { siteId: v.id("companyWebsites") };
 
 /**
  * The whole anchor list, summed for the eye on Anchors (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10:
@@ -498,7 +535,7 @@ const shareShape = v.object({ links: v.number(), websites: v.number(), anchors: 
  */
 export const anchorFigures = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: anchorFiguresArgs,
   returns: v.object({
     day: v.union(v.string(), v.null()),
     anchors: v.number(),
@@ -509,28 +546,33 @@ export const anchorFigures = moduleQuery({
     spammy: shareShape,
     fresh: shareShape,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { rows: held } = heldTo(await readAnchors(ctx, site.website._id), LINK_LIST_READ);
-    const every = newestPerKey(held, (row) => row.anchor).filter((row) => row.status !== "LOST");
-    const day = every.reduce<string | null>((newest, row) => (newest === null || row.day > newest ? row.day : newest), null);
-    // The business's own name, as its website spells it: "acme" of acme.co.uk, as the box finds it (`anchorsSees`).
-    const brand = site.website.host.toLowerCase().replace(/^www\./, "").split(".")[0];
-    const freshFrom = day ? new Date(Date.parse(`${day}T00:00:00Z`) - FRESH_DAYS * 86_400_000).toISOString().slice(0, 10) : null;
-    const sum = (rows: typeof every) => ({ links: rows.reduce((total, row) => total + row.backlinks, 0), websites: rows.reduce((total, row) => total + row.referringDomains, 0), anchors: rows.length });
-    const top = [...every].sort((left, right) => right.backlinks - left.backlinks)[0];
-    return {
-      day,
-      anchors: every.length,
-      links: every.reduce((total, row) => total + row.backlinks, 0),
-      top: top ? { anchor: top.anchor, links: top.backlinks, websites: top.referringDomains } : null,
-      brand: sum(every.filter((row) => brand.length >= 3 && row.anchor.toLowerCase().replace(/\s+/g, "").includes(brand))),
-      noWords: sum(every.filter((row) => row.anchor.trim() === "")),
-      spammy: sum(every.filter((row) => (row.spamScore ?? 0) >= SPAMMY_ANCHOR)),
-      fresh: sum(every.filter((row) => freshFrom !== null && row.firstSeen !== undefined && row.firstSeen >= freshFrom)),
-    };
-  },
+  handler: async (ctx, args) => await readAnchorFigures(ctx, args),
 });
+
+/** anchorFigures's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readAnchorFigures(ctx: SiteReader, args: ObjectType<typeof anchorFiguresArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { rows: held } = heldTo(await readAnchors(ctx, site.website._id), LINK_LIST_READ);
+  const every = newestPerKey(held, (row) => row.anchor).filter((row) => row.status !== "LOST");
+  const day = every.reduce<string | null>((newest, row) => (newest === null || row.day > newest ? row.day : newest), null);
+  // The business's own name, as its website spells it: "acme" of acme.co.uk, as the box finds it (`anchorsSees`).
+  const brand = site.website.host.toLowerCase().replace(/^www\./, "").split(".")[0];
+  const freshFrom = day ? new Date(Date.parse(`${day}T00:00:00Z`) - FRESH_DAYS * 86_400_000).toISOString().slice(0, 10) : null;
+  const sum = (rows: typeof every) => ({ links: rows.reduce((total, row) => total + row.backlinks, 0), websites: rows.reduce((total, row) => total + row.referringDomains, 0), anchors: rows.length });
+  const top = [...every].sort((left, right) => right.backlinks - left.backlinks)[0];
+  return {
+    day,
+    anchors: every.length,
+    links: every.reduce((total, row) => total + row.backlinks, 0),
+    top: top ? { anchor: top.anchor, links: top.backlinks, websites: top.referringDomains } : null,
+    brand: sum(every.filter((row) => brand.length >= 3 && row.anchor.toLowerCase().replace(/\s+/g, "").includes(brand))),
+    noWords: sum(every.filter((row) => row.anchor.trim() === "")),
+    spammy: sum(every.filter((row) => (row.spamScore ?? 0) >= SPAMMY_ANCHOR)),
+    fresh: sum(every.filter((row) => freshFrom !== null && row.firstSeen !== undefined && row.firstSeen >= freshFrom)),
+  };
+}
+
+const serverFiguresArgs = { siteId: v.id("companyWebsites") };
 
 /**
  * Every server and network links come from, summed for the eye on Referring IPs (section 10: "One network holds 14% of
@@ -539,7 +581,7 @@ export const anchorFigures = moduleQuery({
  */
 export const serverFigures = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: serverFiguresArgs,
   returns: v.object({
     servers: v.number(),
     networks: v.number(),
@@ -550,21 +592,24 @@ export const serverFigures = moduleQuery({
     topServer: v.union(v.null(), v.object({ ip: v.string(), subnet: v.string(), links: v.number(), websites: v.number() })),
     topNetwork: v.union(v.null(), v.object({ subnet: v.string(), servers: v.number(), links: v.number(), websites: v.number() })),
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { rows: held } = heldTo(await readServers(ctx, site.website._id), LINK_LIST_READ);
-    const every = newestPerKey(held, (row) => row.ip).filter((row) => row.status !== "LOST");
-    const networks = networksOf(every);
-    const server = [...every].sort((left, right) => right.backlinks - left.backlinks)[0];
-    const network = [...networks].sort((left, right) => right.referringDomains - left.referringDomains || right.backlinks - left.backlinks)[0];
-    return {
-      servers: every.length,
-      networks: networks.length,
-      links: every.reduce((total, row) => total + row.backlinks, 0),
-      websites: every.reduce((total, row) => total + row.referringDomains, 0),
-      oneWebsiteServers: every.filter((row) => row.referringDomains === 1).length,
-      topServer: server ? { ip: server.ip, subnet: server.subnet, links: server.backlinks, websites: server.referringDomains } : null,
-      topNetwork: network ? { subnet: network.subnet, servers: network.ips, links: network.backlinks, websites: network.referringDomains } : null,
-    };
-  },
+  handler: async (ctx, args) => await readServerFigures(ctx, args),
 });
+
+/** serverFigures's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readServerFigures(ctx: SiteReader, args: ObjectType<typeof serverFiguresArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { rows: held } = heldTo(await readServers(ctx, site.website._id), LINK_LIST_READ);
+  const every = newestPerKey(held, (row) => row.ip).filter((row) => row.status !== "LOST");
+  const networks = networksOf(every);
+  const server = [...every].sort((left, right) => right.backlinks - left.backlinks)[0];
+  const network = [...networks].sort((left, right) => right.referringDomains - left.referringDomains || right.backlinks - left.backlinks)[0];
+  return {
+    servers: every.length,
+    networks: networks.length,
+    links: every.reduce((total, row) => total + row.backlinks, 0),
+    websites: every.reduce((total, row) => total + row.referringDomains, 0),
+    oneWebsiteServers: every.filter((row) => row.referringDomains === 1).length,
+    topServer: server ? { ip: server.ip, subnet: server.subnet, links: server.backlinks, websites: server.referringDomains } : null,
+    topNetwork: network ? { subnet: network.subnet, servers: network.ips, links: network.backlinks, websites: network.referringDomains } : null,
+  };
+}

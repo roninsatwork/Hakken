@@ -1,0 +1,112 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-21T19:45:00Z"
+  },
+  "title": "Ask Hakken in ChatGPT and Claude",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "1 · The Allow page, after signing in",
+      "expand": "fill"
+    },
+    "Integrations.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "2 · My Profile → Integrations",
+      "expand": "fill"
+    },
+    "ChatGPT.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "3 · ChatGPT's own page, once linked",
+      "expand": "fill"
+    },
+    "Features.dc.html": {
+      "x": 0,
+      "y": 1243,
+      "w": 1440,
+      "h": 1490,
+      "title": "4 · System Settings → Features",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "CompanyFeatures.dc.html": {
+      "x": 1520,
+      "y": 1243,
+      "w": 1440,
+      "h": 1690,
+      "title": "5 · Period House Group's Features page",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Chat.dc.html": {
+      "x": 3040,
+      "y": 1243,
+      "w": 1440,
+      "h": 900,
+      "title": "6 · A question in a chat, with the chart",
+      "expand": "fill"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Integrations.dc.html",
+    "ChatGPT.dc.html",
+    "Features.dc.html",
+    "CompanyFeatures.dc.html",
+    "Chat.dc.html"
+  ],
+  "notes": {
+    "heading": {
+      "x": 0,
+      "y": -300,
+      "text": "Ask Hakken in ChatGPT and Claude",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "how": {
+      "x": 4560,
+      "y": 0,
+      "w": 480,
+      "text": "A person adds Ask Hakken to ChatGPT or Claude. That app then opens the Allow page on board 1. They sign in if they need to, then press Allow.\n\nAfter that they ask about their websites in the chat, as on board 6. ChatGPT and Claude only read. They can't change, send or delete anything.\n\nA super admin also picks a company from a menu above Allow. Board 1 is what a client sees, so that menu isn't drawn."
+    },
+    "where": {
+      "x": 4560,
+      "y": 560,
+      "w": 480,
+      "text": "ChatGPT and Claude join Telegram under Apps you can link, on the Integrations tab of My Profile. That's board 2. So the plan's separate Connected apps page isn't needed.\n\nThe line under Apps you can link is new, and so are Telegram's words under What it does. Today's page says \"Link Hakken\" and \"ask Hakken anything\" in those two places.\n\nPress Manage beside ChatGPT on board 2 and ChatGPT's own page opens, on board 3. That page says when ChatGPT was linked and what ChatGPT asked for. Press Unlink and a pop-up asks \"Unlink ChatGPT?\" That pop-up isn't drawn. Press Unlink on the pop-up and ChatGPT stops reading your figures straight away. Anyone else at Period House Group who linked ChatGPT stays linked. Claude gets a page like board 3 once it's linked."
+    },
+    "switch": {
+      "x": 4560,
+      "y": 1243,
+      "w": 480,
+      "text": "Boards 4 and 5 have a new feature, Ask Hakken in ChatGPT and Claude. It's the row after Usage in each Features table.\n\nSwitch it off for a company and ChatGPT and Claude can't read that company's figures. People stay linked, so they can ask again once it's back on.\n\nWhen it's off, the Status for ChatGPT and Claude says Switched off, and nobody can link them. Board 2 shows it switched on."
+    },
+    "chart": {
+      "x": 4560,
+      "y": 1843,
+      "w": 480,
+      "text": "The chart on board 6 is drawn by Ask Hakken and sits inside the chat. The chat around it is a plain stand-in, because ChatGPT and Claude each look different.\n\nThe figures are More Handles' real visits for October and September. The chat's words carry the same figures, for a chat that can't show charts."
+    },
+    "kit": {
+      "x": 4560,
+      "y": 2393,
+      "w": 480,
+      "text": "Drawn from the drawing kit, kit.css 48caae902257, look 149d9f4fb243, on 21 November 2026. Boards 2 to 5 are copies of today's pages with the new parts added. As on the Features canvas, board 4 says what System Settings holds in simpler words.\n\nJo Hughes on board 1 and what ChatGPT asked for on board 3 are made up. Only the new row's tick box on boards 4 and 5 works in Play."
+    }
+  },
+  "designSystems": []
+}

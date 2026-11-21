@@ -13,7 +13,8 @@ import { figureColumns, pageColumn, useSearchConsoleList, type ChipId, type List
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { useSearchConsoleCountry } from "../../_components/useSearchConsole";
 import { lowCtrSees } from "@/convex/utils/sees/searchConsoleScreens";
-import { lowCtrSeesData } from "@/convex/utils/sees/own/searchConsoleLowCtr";
+import { lowCtrEyeData } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 /**
  * No Device menu since 20 November 2026, as Pages left it on 17 November: a page split by device leaves out the searches
@@ -41,13 +42,12 @@ export default function SearchConsoleLowCtrPage() {
   const summary = list.summary;
   // The eye's figures: the list's own the page shows, never the whole summary, and the table's columns (`lowCtrSeesData`), with
   // the names the page says things by, each Classification's among them (pages not sorted yet are never named).
+  // Built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
   const choices = list.pageKinds.choices;
-  const names = useMemo(() => ({
-    these: t("lowCtr.eye.these"), usually: t("lowCtr.eye.usually"), position: t("lowCtr.eye.position"), firstPage: t("lowCtr.eye.firstPage"),
-    home: t("pages.chart.homePage"),
-    kinds: Object.fromEntries((choices ?? []).map((choice) => [choice.id, choice.name])),
-  }), [t, choices]);
-  const seesData = useMemo(() => (summary ? { ...lowCtrSeesData(summary, list.table.pageRows ?? null), names } : undefined), [summary, list.table.pageRows, names]);
+  const seesData = useMemo(
+    () => lowCtrEyeData({ summary, rows: list.table.pageRows ?? null, kinds: choices }, wordsReader(t)),
+    [summary, list.table.pageRows, choices, t],
+  );
   // "Do first" may open the pages the eye names, each on its own screen: the first press linked the page short of most clicks
   // to Pages (20 November 2026).
   const homePage = t("pages.chart.homePage");

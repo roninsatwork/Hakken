@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { OTHER_ROWS } from "@/convex/utils/analyticsSharedLists";
+import { eventEyeData } from "@/convex/utils/sees/eyeData/googleAnalyticsConversions";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
@@ -129,7 +130,7 @@ function EventBody({ status }: { status: AnalyticsStatus }) {
         description={what ? t("descriptionWhat", { google: event, what }) : t("description", { google: event })}
         pills={answer?.counted ? <StatusLabel tone="success">{t("countsAsConversion")}</StatusLabel> : undefined}
       />
-      <AnalyticsSees screen="event" seen={answer?.seen} currency={currency} data={answer} />
+      <AnalyticsSees screen="event" seen={answer?.seen} currency={currency} data={eventEyeData(answer)} />
 
       {figures ? (
         <FigureRow columns={4}>

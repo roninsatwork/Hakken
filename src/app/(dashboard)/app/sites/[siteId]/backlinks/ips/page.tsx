@@ -16,7 +16,7 @@ import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { ipsSees } from "@/convex/utils/sees/backlinks";
 import { SiteSees } from "../../../_components/SiteSees";
-import { ipsSees as ipsFigures } from "../_components/linkSees";
+import { ipsSees as ipsFigures } from "@/convex/utils/sees/eyeData/visibilityBacklinks";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";

@@ -1,10 +1,13 @@
+import { BREAKDOWN_REST } from "../../siteShapes";
+
 /**
  * What each Backlinks screen hands the eye (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the figures it
  * shows, cut to the ones its rules read (`convex/utils/sees/own/visibility.ts`, Backlinks and Keywords' block), and the
- * rivals beside them where a rule sets yours against theirs. Built here, in one place, so the screen and the every-period
+ * rivals beside them where a rule sets yours against theirs. Built here, in one place, so the screen, a chat app's
+ * question (`chatAppEyes/visibility.ts`, ask-hakken-from-ai-chat-apps-plan-2026-11-21.md, Option B) and the every-period
  * test (`convex/utils/sees/visibilityLinksKeywordsPeriods.test.ts`) hand the rules the same figures. Names are the
- * reader's own words, from the screen's translations; no money. Link counts are `backlinks`, never `links`, which the
- * eye drops as plumbing (`pageData.ts`).
+ * reader's own words, from the screen's translations, or English from `messages/en.json` on the server; no money. Link
+ * counts are `backlinks`, never `links`, which the eye drops as plumbing (`pageData.ts`).
  */
 
 type Figures = Record<string, unknown>;
@@ -264,5 +267,30 @@ export function linkChangesSees(
     ...(heldTo !== null && heldTo < range.to ? { heldTo } : {}),
     ...(fair.length > 0 ? { before: totalOf(fair), beforeTo: cutBefore } : {}),
     names,
+  };
+}
+
+/** A `useTranslations`-shaped reader of one namespace, or the English words on the server (`utils/sees/serverWords.ts`). */
+type Say = ((key: string, values?: Record<string, string | number>) => string) & { has: (key: string) => boolean };
+
+/**
+ * A group of links in words (`sites.linkSources`), as Where links come from's rows and All backlinks' group filter say
+ * them: a country's name in the reader's language ("Worldwide" for links Google places nowhere), a domain ending with
+ * its dot, a kind of site or link as a word. `regions` names a country, or nothing where the browser can't.
+ */
+export function linkGroupNameFrom(t: Say, regions: Intl.DisplayNames | null) {
+  return (breakdown: (typeof BREAKDOWNS)[number], key: string): string => {
+    if (key === BREAKDOWN_REST) return t("rest");
+    if (key === "(none)" || key === "") return t("unknown");
+    if (breakdown === "countries" && key === "WW") return t("worldwide");
+    if (breakdown === "countries" && /^[A-Z]{2}$/.test(key)) {
+      try {
+        return regions?.of(key) ?? key;
+      } catch {
+        return key;
+      }
+    }
+    if (breakdown === "tlds") return `.${key}`;
+    return key.replace(/[_-]/g, " ");
   };
 }

@@ -55,12 +55,15 @@ export const searchConsoleVolatility = moduleQuery({
     impressions: v.optional(v.object({ now: v.number(), before: v.union(v.number(), v.null()) })),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    // The day rows are Ask Hakken's, for the score day by day (`assistantSearchConsoleReads.ts`): the page's chart reads its own.
-    const { days: _days, complete: _complete, ...facts } = await readVolatility(ctx, args);
-    return facts;
-  },
+  handler: async (ctx, args) => await readVolatilityFacts(ctx, args),
 });
+
+/** Volatility's facts as the screen reads them, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readVolatilityFacts(ctx: SiteReader, args: ObjectType<typeof readVolatilityArgs>) {
+  // The day rows are Ask Hakken's, for the score day by day (`assistantSearchConsoleReads.ts`): the page's chart reads its own.
+  const { days: _days, complete: _complete, ...facts } = await readVolatility(ctx, args);
+  return facts;
+}
 
 /** Volatility's figures: the one read the screen and Ask Hakken both make (ask-hakken-every-chart-page-plan-2026-11-03.md, section 6). */
 export async function readVolatility(ctx: SiteReader, args: ObjectType<typeof readVolatilityArgs>) {

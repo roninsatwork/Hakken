@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { formatPosition } from "../../../search-console/_components/searchConsoleFormat";
 import { BingFigures, BingSees, useBingEyeNames } from "../../_components/BingParts";
-import { eyeWords, listSeen, performanceSeen } from "../../_components/bingSeesData";
+import { eyeWords, listSeen, performanceSeen } from "@/convex/utils/sees/eyeData/bing";
 import { useWholeListLinks } from "../../_components/BingListTable";
 import { BingClicksChart } from "../../_components/BingCharts";
 import { BingListScreen } from "../../_components/BingListTable";
@@ -30,7 +30,7 @@ export default function BingKeywordsPage() {
   const hrefFor = useBingHref(siteId);
   const { period } = useBingDates();
   const figures = useQuery(api.bingWebmasterReads.bingPerformance, status?.connection?.newestDay ? { siteId, period } : "skip");
-  // The eye reads the whole list beside the table's page: what moved, the engines' gaps, the place bands (bingSeesData.ts).
+  // The eye reads the whole list beside the table's page: what moved, the engines' gaps, the place bands (eyeData/bing.ts, built the same for a chat app).
   const whole = useQuery(api.bingWebmasterReads.bingListSeen, status?.connection?.newestWeek ? { siteId, list: "query", period } : "skip");
   const names = useBingEyeNames();
   const seenFigures = useMemo(() => performanceSeen(figures, names), [figures, names]);

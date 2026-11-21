@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Blocks } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
-import type { MenuFeature } from "@/convex/utils/coreModules";
+import type { SwitchedFeature } from "@/convex/utils/coreModules";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -51,10 +51,10 @@ export function PlatformFeaturesContent({ offForEveryone, companies, ticked }: P
     setOff(offForEveryone);
   }
 
-  const toggle = (feature: MenuFeature) => {
+  const toggle = (feature: SwitchedFeature) => {
     setOff((previous) => (previous.includes(feature) ? previous.filter((key) => key !== feature) : [...previous, feature]));
   };
-  const tickedFor = (feature: MenuFeature) => ticked.find((entry) => entry.feature === feature)?.companies ?? companies;
+  const tickedFor = (feature: SwitchedFeature) => ticked.find((entry) => entry.feature === feature)?.companies ?? companies;
 
   const matching = rows.filter((row) => matchesSearchTerm(searchTerm, [row.name, row.description]));
   const paged = paginateItems(matching, page, TABLE_PAGE_SIZE);

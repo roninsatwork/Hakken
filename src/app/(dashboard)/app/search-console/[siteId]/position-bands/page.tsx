@@ -20,7 +20,8 @@ import { usePerformanceDates } from "../../_components/PerformanceParts";
 import { MoveLine } from "../../_components/PlacesParts";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { bandsSees } from "@/convex/utils/sees/searchConsoleScreens";
-import { bandsSeesData, bandsSeesRows } from "@/convex/utils/sees/own/searchConsoleBands";
+import { bandsEyeData } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 const CHIPS: readonly ChipId[] = ["band", "intent", "device"];
 
@@ -56,15 +57,9 @@ export default function SearchConsoleBandsPage() {
   // 21 and below is off at first: weeks older than the days kept hold only some of it (the plan's open question).
   const ticks = useSeriesTicks(series, ["rest"]);
   const restShown = ticks.shown.some((entry) => entry.key === "rest");
-  // The eye's figures: the list's, with each band named as its boxes name it, and the chart's days, weeks or months.
-  const bandNames = useMemo(() => ({
-    "1-3": t("bands.top3"), "4-10": t("filters.bands.4-10"), "11-20": t("filters.bands.11-20"), "21-50": t("filters.bands.21-50"), "51+": t("filters.bands.51+"),
-  }), [t]);
-  // The chart's periods by their first day (`day`), so the eye keeps the newest of a long chart, never its oldest.
-  // The list's own figures the page shows, and the table's own columns, so the writer's brief keeps its size (`bandsSeesData`).
-  const seesData = useMemo(() => (list.pageData
-    ? { ...list.pageData, summary: bandsSeesData(list.pageData.summary), rows: bandsSeesRows(list.pageData.rows), chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null, names: bandNames }
-    : undefined), [list.pageData, periods, bandNames]);
+  // The eye's figures: the list's own the page shows, the table's own columns, each band named as its boxes name it, and the
+  // chart's days, weeks or months (`bandsEyeData`, which a chat app's question builds them with too).
+  const seesData = useMemo(() => bandsEyeData({ page: list.pageData, periods }, wordsReader(t)), [list.pageData, periods, t]);
   return (
     <SearchConsoleListScreen
       sees={<SearchConsoleSees screen="bands" seen={list.summary ? (list.range.period === "custom" ? null : bandsSees(list.summary, list.range.period)) : null} data={seesData} />}

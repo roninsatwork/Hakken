@@ -1,7 +1,7 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
-import { groupOwner, listHold, requireMySite } from "./siteAccess";
+import { groupOwner, listHold, requireMySite, type SiteReader } from "./siteAccess";
 import { holdQuestions } from "./holdLists";
 import { questionsOf, readings } from "./siteBrandRadar";
 import { linkGapOf, shownMentionsOf } from "./siteWebMentions";
@@ -50,9 +50,11 @@ function stepFor(kind: Kind, host: string): SeenStep | null {
   return null;
 }
 
+const websiteDetailArgs = { siteId: v.id("companyWebsites"), host: v.string() };
+
 export const websiteDetail = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), host: v.string() },
+  args: websiteDetailArgs,
   returns: v.object({
     host: v.string(),
     kind: kindValidator,
@@ -83,103 +85,108 @@ export const websiteDetail = moduleQuery({
     })),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const host = args.host.trim().replace(/^www\./, "").toLowerCase();
-    const { readings: all } = await readings(ctx, site);
-    const own = all.find((reading) => reading.you)?.website ?? site.website;
-    const rivals = all.filter((reading) => !reading.you).map((reading) => reading.website);
-    const rivalHosts = rivals.map((rival) => rival.host);
-
-    let times = 0;
-    let besideYou = 0;
-    let besideRivals = 0;
-    const quotedBeside = new Map<string, number>();
-    const pages = new Map<string, { times: number; besideYou: number; besideRivals: number }>();
-    const questions = new Map<string, { question: string; volume: number; named: Map<string, boolean>; page: string | null }>();
-    for (const reading of all) {
-      if (!reading.part) continue;
-      for (const entry of questionsOf(reading.part)) {
-        // Its own address only, as Websites AI cites groups them: m.youtube.com is a row of its own there.
-        const onIt = [...new Set(entry.pages)].filter((url) => hostOfUrl(url) === host);
-        if (onIt.length === 0) continue;
-        // Counted by page quoted, as Websites AI cites counts it, so the two screens agree.
-        times += onIt.length;
-        if (reading.you) besideYou += onIt.length;
-        else besideRivals += onIt.length;
-        quotedBeside.set(reading.website.host, (quotedBeside.get(reading.website.host) ?? 0) + onIt.length);
-        for (const url of onIt) {
-          const page = pages.get(url) ?? { times: 0, besideYou: 0, besideRivals: 0 };
-          page.times += 1;
-          if (reading.you) page.besideYou += 1;
-          else page.besideRivals += 1;
-          pages.set(url, page);
-        }
-        const key = entry.question.toLowerCase();
-        const row = questions.get(key) ?? { question: entry.question, volume: entry.volume, named: new Map<string, boolean>(), page: onIt[0] ?? null };
-        if (entry.firstAt !== null) row.named.set(reading.website.displayHost, reading.you);
-        questions.set(key, row);
-      }
-    }
-
-    const gap = (await linkGapOf(ctx, own._id, rivalHosts)).get(host) ?? null;
-    const linksTo = gap ? rivals.filter((rival) => gap.rivals.has(rival.host)).map((rival) => rival.displayHost) : [];
-    const namesYou = ((await shownMentionsOf(ctx, own._id)) ?? []).filter((row) => isOnHost(row.host, host)).length;
-    const kind = kindFor(host, own.host, rivalHosts);
-    const questionRows = [...questions.values()].map((row) => ({
-      question: row.question,
-      volume: row.volume,
-      named: [...row.named.entries()].map(([name, you]) => ({ host: name, you })),
-      page: row.page,
-    }));
-    const businesses = [
-      { host: own.displayHost, you: true, on: namesYou > 0 ? "NAMES" as const : gap ? "NOT_LINKED" as const : "UNKNOWN" as const, quotedBeside: besideYou },
-      ...rivals.map((rival) => ({
-        host: rival.displayHost,
-        you: false,
-        on: gap?.rivals.has(rival.host) ? "LINKS" as const : "UNKNOWN" as const,
-        quotedBeside: quotedBeside.get(rival.host) ?? 0,
-      })),
-    ];
-
-    // What Hakken sees: how it is quoted, beside whom; who it links to; whether it names the business.
-    const says: Array<SeenPhrase | null> = [
-      times === 0 ? { code: "notQuoted", text: host }
-        : besideYou === 0 ? { code: "onlyRivals", text: host, a: times }
-        : besideRivals > besideYou ? { code: "mostlyRivals", text: host, a: times, b: besideRivals, c: besideYou }
-        : { code: "besideYou", text: host, a: times, c: besideYou },
-      linksTo.length > 0 ? { code: "linksToRivals", a: linksTo.length, more: linksTo.join(", ") } : null,
-      namesYou > 0 ? { code: "namesYou", a: namesYou } : PLACES.has(kind) ? { code: "notOnIt" } : null,
-    ];
-    const missing = [...questions.values()].filter((row) => !row.named.has(own.displayHost) && [...row.named.values()].some((you) => !you))
-      .sort((left, right) => right.volume - left.volume)[0];
-    const steps: Array<SeenStep | null> = [
-      namesYou === 0 && besideRivals > 0 ? stepFor(kind, host) : null,
-      missing ? { code: "answerQuestion", text: missing.question, link: "seeQuestion", to: toRecord("question", missing.question) } : null,
-    ];
-
-    return {
-      host,
-      kind,
-      times,
-      besideYou,
-      besideRivals,
-      rivals: rivals.length,
-      linksTo,
-      strength: gap?.strength ?? null,
-      asks: questionRows.reduce((sum, row) => sum + row.volume, 0),
-      namesYou,
-      questions: questionRows,
-      pages: [...pages.entries()].map(([url, row]) => ({ url, ...row })),
-      businesses,
-      seen: seen(says, steps),
-    };
-  },
+  handler: async (ctx, args) => await readWebsiteDetail(ctx, args),
 });
+
+/** websiteDetail's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readWebsiteDetail(ctx: SiteReader, args: ObjectType<typeof websiteDetailArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const host = args.host.trim().replace(/^www\./, "").toLowerCase();
+  const { readings: all } = await readings(ctx, site);
+  const own = all.find((reading) => reading.you)?.website ?? site.website;
+  const rivals = all.filter((reading) => !reading.you).map((reading) => reading.website);
+  const rivalHosts = rivals.map((rival) => rival.host);
+
+  let times = 0;
+  let besideYou = 0;
+  let besideRivals = 0;
+  const quotedBeside = new Map<string, number>();
+  const pages = new Map<string, { times: number; besideYou: number; besideRivals: number }>();
+  const questions = new Map<string, { question: string; volume: number; named: Map<string, boolean>; page: string | null }>();
+  for (const reading of all) {
+    if (!reading.part) continue;
+    for (const entry of questionsOf(reading.part)) {
+      // Its own address only, as Websites AI cites groups them: m.youtube.com is a row of its own there.
+      const onIt = [...new Set(entry.pages)].filter((url) => hostOfUrl(url) === host);
+      if (onIt.length === 0) continue;
+      // Counted by page quoted, as Websites AI cites counts it, so the two screens agree.
+      times += onIt.length;
+      if (reading.you) besideYou += onIt.length;
+      else besideRivals += onIt.length;
+      quotedBeside.set(reading.website.host, (quotedBeside.get(reading.website.host) ?? 0) + onIt.length);
+      for (const url of onIt) {
+        const page = pages.get(url) ?? { times: 0, besideYou: 0, besideRivals: 0 };
+        page.times += 1;
+        if (reading.you) page.besideYou += 1;
+        else page.besideRivals += 1;
+        pages.set(url, page);
+      }
+      const key = entry.question.toLowerCase();
+      const row = questions.get(key) ?? { question: entry.question, volume: entry.volume, named: new Map<string, boolean>(), page: onIt[0] ?? null };
+      if (entry.firstAt !== null) row.named.set(reading.website.displayHost, reading.you);
+      questions.set(key, row);
+    }
+  }
+
+  const gap = (await linkGapOf(ctx, own._id, rivalHosts)).get(host) ?? null;
+  const linksTo = gap ? rivals.filter((rival) => gap.rivals.has(rival.host)).map((rival) => rival.displayHost) : [];
+  const namesYou = ((await shownMentionsOf(ctx, own._id)) ?? []).filter((row) => isOnHost(row.host, host)).length;
+  const kind = kindFor(host, own.host, rivalHosts);
+  const questionRows = [...questions.values()].map((row) => ({
+    question: row.question,
+    volume: row.volume,
+    named: [...row.named.entries()].map(([name, you]) => ({ host: name, you })),
+    page: row.page,
+  }));
+  const businesses = [
+    { host: own.displayHost, you: true, on: namesYou > 0 ? "NAMES" as const : gap ? "NOT_LINKED" as const : "UNKNOWN" as const, quotedBeside: besideYou },
+    ...rivals.map((rival) => ({
+      host: rival.displayHost,
+      you: false,
+      on: gap?.rivals.has(rival.host) ? "LINKS" as const : "UNKNOWN" as const,
+      quotedBeside: quotedBeside.get(rival.host) ?? 0,
+    })),
+  ];
+
+  // What Hakken sees: how it is quoted, beside whom; who it links to; whether it names the business.
+  const says: Array<SeenPhrase | null> = [
+    times === 0 ? { code: "notQuoted", text: host }
+      : besideYou === 0 ? { code: "onlyRivals", text: host, a: times }
+      : besideRivals > besideYou ? { code: "mostlyRivals", text: host, a: times, b: besideRivals, c: besideYou }
+      : { code: "besideYou", text: host, a: times, c: besideYou },
+    linksTo.length > 0 ? { code: "linksToRivals", a: linksTo.length, more: linksTo.join(", ") } : null,
+    namesYou > 0 ? { code: "namesYou", a: namesYou } : PLACES.has(kind) ? { code: "notOnIt" } : null,
+  ];
+  const missing = [...questions.values()].filter((row) => !row.named.has(own.displayHost) && [...row.named.values()].some((you) => !you))
+    .sort((left, right) => right.volume - left.volume)[0];
+  const steps: Array<SeenStep | null> = [
+    namesYou === 0 && besideRivals > 0 ? stepFor(kind, host) : null,
+    missing ? { code: "answerQuestion", text: missing.question, link: "seeQuestion", to: toRecord("question", missing.question) } : null,
+  ];
+
+  return {
+    host,
+    kind,
+    times,
+    besideYou,
+    besideRivals,
+    rivals: rivals.length,
+    linksTo,
+    strength: gap?.strength ?? null,
+    asks: questionRows.reduce((sum, row) => sum + row.volume, 0),
+    namesYou,
+    questions: questionRows,
+    pages: [...pages.entries()].map(([url, row]) => ({ url, ...row })),
+    businesses,
+    seen: seen(says, steps),
+  };
+}
+
+const questionDetailArgs = { siteId: v.id("companyWebsites"), question: v.string() };
 
 export const questionDetail = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites"), question: v.string() },
+  args: questionDetailArgs,
   returns: v.object({
     question: v.string(),
     /** Whether any reading holds it: a question no longer asked of the website or its rivals is not found. */
@@ -192,68 +199,71 @@ export const questionDetail = moduleQuery({
     pages: v.array(v.object({ url: v.string(), host: v.string(), kind: kindValidator })),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const key = args.question.trim().toLowerCase();
-    const { readings: all } = await readings(ctx, site);
-    const own = all.find((reading) => reading.you)?.website ?? site.website;
-    const rivalHosts = all.filter((reading) => !reading.you).map((reading) => reading.website.host);
-
-    let question = args.question.trim();
-    let volume = 0;
-    let found = false;
-    let month: string | null = null;
-    const named: Array<{ host: string; you: boolean; at: number | null; page: string | null }> = [];
-    const pages = new Map<string, string>();
-    for (const reading of all) {
-      const entry = reading.part ? questionsOf(reading.part).find((row) => row.question.toLowerCase() === key) : undefined;
-      if (!entry) {
-        named.push({ host: reading.website.displayHost, you: reading.you, at: null, page: null });
-        continue;
-      }
-      found = true;
-      question = entry.question;
-      volume = Math.max(volume, entry.volume);
-      month = month ?? reading.part?.month ?? null;
-      for (const url of entry.pages) pages.set(url, hostOfUrl(url));
-      const theirs = entry.pages.find((url) => isOnHost(hostOfUrl(url), reading.website.host)) ?? null;
-      named.push({ host: reading.website.displayHost, you: reading.you, at: entry.firstAt, page: theirs });
-    }
-    const order = named.filter((row) => row.at !== null).sort((left, right) => (left.at ?? 0) - (right.at ?? 0));
-    const placeOf = (row: (typeof named)[number]) => (row.at === null ? null : order.indexOf(row) + 1);
-    const hold = groupOwner(site);
-    const tracked = hold
-      ? (await holdQuestions(ctx, listHold(site), MAX_PROMPTS_PER_WEBSITE)).some((row) => row.prompt.toLowerCase() === key)
-      : false;
-    const pageRows = [...pages.entries()].map(([url, host]) => ({ url, host, kind: kindFor(host, own.host, rivalHosts) }));
-
-    // What Hakken sees: who it names, whether it quotes your page, whose pages it quotes instead.
-    const you = named.find((row) => row.you);
-    const first = order[0];
-    const yourPage = pageRows.find((row) => row.kind === "YOURS");
-    const rivalPages = pageRows.filter((row) => row.kind === "RIVAL");
-    const place = pageRows.find((row) => PLACES.has(row.kind));
-    const says: Array<SeenPhrase | null> = found ? [
-      you && you.at !== null ? { code: "namesYou", a: volume, b: placeOf(you) ?? 0 }
-        : first ? { code: "namesOther", a: volume, text: first.host }
-        : { code: "namesNone", a: volume },
-      yourPage ? { code: "yourPage", text: pathOfUrl(yourPage.url) } : { code: "noPage" },
-      rivalPages.length > 0 ? { code: "rivalPages", a: rivalPages.length, text: rivalPages[0].url.replace(/^https?:\/\/(www\.)?/, "") } : null,
-    ] : [{ code: "notFound" }];
-    const steps: Array<SeenStep | null> = found ? [
-      !yourPage ? { code: "answerOnPage", link: "yourPages", to: toPage("your-pages") } : null,
-      place ? { code: "getListedOn", text: place.host, link: "seeWebsite", to: toRecord("website", place.host) } : null,
-    ] : [];
-
-    return {
-      question,
-      found,
-      volume,
-      month,
-      tracked,
-      named: [...order, ...named.filter((row) => row.at === null && row.you)].map((row) => ({ host: row.host, you: row.you, place: placeOf(row), page: row.page })),
-      pages: pageRows,
-      seen: seen(says, steps),
-    };
-  },
+  handler: async (ctx, args) => await readQuestionDetail(ctx, args),
 });
+
+/** questionDetail's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readQuestionDetail(ctx: SiteReader, args: ObjectType<typeof questionDetailArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const key = args.question.trim().toLowerCase();
+  const { readings: all } = await readings(ctx, site);
+  const own = all.find((reading) => reading.you)?.website ?? site.website;
+  const rivalHosts = all.filter((reading) => !reading.you).map((reading) => reading.website.host);
+
+  let question = args.question.trim();
+  let volume = 0;
+  let found = false;
+  let month: string | null = null;
+  const named: Array<{ host: string; you: boolean; at: number | null; page: string | null }> = [];
+  const pages = new Map<string, string>();
+  for (const reading of all) {
+    const entry = reading.part ? questionsOf(reading.part).find((row) => row.question.toLowerCase() === key) : undefined;
+    if (!entry) {
+      named.push({ host: reading.website.displayHost, you: reading.you, at: null, page: null });
+      continue;
+    }
+    found = true;
+    question = entry.question;
+    volume = Math.max(volume, entry.volume);
+    month = month ?? reading.part?.month ?? null;
+    for (const url of entry.pages) pages.set(url, hostOfUrl(url));
+    const theirs = entry.pages.find((url) => isOnHost(hostOfUrl(url), reading.website.host)) ?? null;
+    named.push({ host: reading.website.displayHost, you: reading.you, at: entry.firstAt, page: theirs });
+  }
+  const order = named.filter((row) => row.at !== null).sort((left, right) => (left.at ?? 0) - (right.at ?? 0));
+  const placeOf = (row: (typeof named)[number]) => (row.at === null ? null : order.indexOf(row) + 1);
+  const hold = groupOwner(site);
+  const tracked = hold
+    ? (await holdQuestions(ctx, listHold(site), MAX_PROMPTS_PER_WEBSITE)).some((row) => row.prompt.toLowerCase() === key)
+    : false;
+  const pageRows = [...pages.entries()].map(([url, host]) => ({ url, host, kind: kindFor(host, own.host, rivalHosts) }));
+
+  // What Hakken sees: who it names, whether it quotes your page, whose pages it quotes instead.
+  const you = named.find((row) => row.you);
+  const first = order[0];
+  const yourPage = pageRows.find((row) => row.kind === "YOURS");
+  const rivalPages = pageRows.filter((row) => row.kind === "RIVAL");
+  const place = pageRows.find((row) => PLACES.has(row.kind));
+  const says: Array<SeenPhrase | null> = found ? [
+    you && you.at !== null ? { code: "namesYou", a: volume, b: placeOf(you) ?? 0 }
+      : first ? { code: "namesOther", a: volume, text: first.host }
+      : { code: "namesNone", a: volume },
+    yourPage ? { code: "yourPage", text: pathOfUrl(yourPage.url) } : { code: "noPage" },
+    rivalPages.length > 0 ? { code: "rivalPages", a: rivalPages.length, text: rivalPages[0].url.replace(/^https?:\/\/(www\.)?/, "") } : null,
+  ] : [{ code: "notFound" }];
+  const steps: Array<SeenStep | null> = found ? [
+    !yourPage ? { code: "answerOnPage", link: "yourPages", to: toPage("your-pages") } : null,
+    place ? { code: "getListedOn", text: place.host, link: "seeWebsite", to: toRecord("website", place.host) } : null,
+  ] : [];
+
+  return {
+    question,
+    found,
+    volume,
+    month,
+    tracked,
+    named: [...order, ...named.filter((row) => row.at === null && row.you)].map((row) => ({ host: row.host, you: row.you, place: placeOf(row), page: row.page })),
+    pages: pageRows,
+    seen: seen(says, steps),
+  };
+}

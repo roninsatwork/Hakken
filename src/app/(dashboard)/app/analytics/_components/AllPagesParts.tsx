@@ -16,12 +16,13 @@ import { MapCard } from "@/src/ui/components/screens/MapCard";
 import { PageMap, arrowMove, type PageMapBox } from "@/src/ui/components/screens/PageMap";
 import { Select } from "@/src/ui/components/screens/Select";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
+import { classificationName, classificationsForEye, pageMapForEye, pageMapRows, pageNameWith, viewsADayForEye, type ClassificationForEye, type LinesShow, type MapCount } from "@/convex/utils/sees/eyeData/googleAnalyticsAllPages";
 import { usePageKinds } from "../../_components/usePageKinds";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
 import { useSiteParam } from "../../sites/_components/useSiteParam";
 import type { ListPageAnswer } from "./AnalyticsListScreen";
 import { BeforeLine } from "./AnalyticsFigures";
-import { formatPerVisit, pathOf } from "./analyticsFormat";
+import { formatPerVisit } from "./analyticsFormat";
 import { useIsShop } from "./useIsShop";
 import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, usePageHref, useStep } from "./useAnalytics";
 import { useWebsiteForEye } from "./useEyeFigures";
@@ -46,7 +47,7 @@ export type ClassificationChoice = {
   group: string | undefined;
   leaveOut: boolean;
   /** Each classification's views now and before, for the eye. */
-  kinds: ReadonlyArray<{ name: string; views: number; viewsBefore: number; pages: number; shop: boolean; sorted: boolean }> | undefined;
+  kinds: readonly ClassificationForEye[] | undefined;
 };
 
 /**
@@ -63,18 +64,15 @@ export function useClassificationChoice(): ClassificationChoice {
   const pageKinds = usePageKinds(useAnalyticsSiteId());
   const answer = useQuery(api.googleAnalyticsPageKindViews.analyticsPageKindViews, status?.connection?.newestDay ? { ...args, against: true } : "skip");
   const [raw, set] = useSiteParam<string>("classification", LEFT_OUT);
-  const nameOf = useMemo(() => (kind: { kind: string; name: string | null }) => (
-    kind.kind === SHOP_PAGES_KIND ? t(shopWord) : kind.kind === NOT_SORTED_KIND ? t("notSorted") : kind.name ?? kind.kind
-  ), [t, shopWord]);
+  const nameOf = useMemo(() => (kind: { kind: string; name: string | null }) => classificationName(kind, { shop: t(shopWord), notSorted: t("notSorted") }), [t, shopWord]);
   const found = answer?.kinds;
   const hasShop = found?.some((kind) => kind.kind === SHOP_PAGES_KIND) ?? true;
   const special = raw === LEFT_OUT || raw === EVERY;
   const named = (found ?? []).map((kind) => ({ value: kind.kind, label: nameOf(kind) }));
   // A classification with no views in these dates, or one from a saved link, still says what it is.
   const missing = !special && !named.some((option) => option.value === raw) ? [{ value: raw, label: raw === SHOP_PAGES_KIND ? t(shopWord) : raw === NOT_SORTED_KIND ? t("notSorted") : pageKinds.label(raw) }] : [];
-  const kinds = useMemo(() => found?.map((kind) => ({
-    name: nameOf(kind), views: kind.views, viewsBefore: kind.viewsBefore ?? 0, pages: kind.pages, shop: kind.kind === SHOP_PAGES_KIND, sorted: kind.kind !== NOT_SORTED_KIND,
-  })), [found, nameOf]);
+  // The eye's Classifications, built by the same function a chat app's question builds them with (chatAppEyes/googleAnalytics.ts).
+  const kinds = useMemo(() => classificationsForEye(found, nameOf), [found, nameOf]);
   return {
     value: raw === LEFT_OUT && !hasShop ? EVERY : raw,
     set: (next) => set(next === EVERY && !hasShop ? LEFT_OUT : next),
@@ -140,8 +138,8 @@ export function AllPagesBoxes({ answer, choice }: { answer: ListPageAnswer | und
   );
 }
 
-type Count = "views" | "visits";
-type Measure = Count | "conversions";
+type Count = MapCount;
+type Measure = LinesShow;
 const COUNTS: readonly Count[] = ["views", "visits"];
 const MEASURES: readonly Measure[] = ["views", "visits", "conversions"];
 const FOLLOWS_COUNT = "follow";
@@ -156,7 +154,7 @@ type ListRowShown = ListPageAnswer["rows"][number];
 function usePageName(): (address: string, title: string | undefined) => string {
   const t = useTranslations("googleAnalytics.allPages.map");
   const home = t("homePage");
-  return useMemo(() => (address, title) => (pathOf(address) === "/" ? home : title ?? pathOf(address)), [home]);
+  return useMemo(() => pageNameWith(home), [home]);
 }
 
 function figuresOf(row: ListRowShown, measure: Measure): { now: number; before: number | null } {
@@ -192,7 +190,7 @@ export function PagesMapCard({ choice, answer }: { choice: ClassificationChoice;
   const everyDevice = useQuery(api.googleAnalyticsReads.analyticsListPage, read?.live ? { ...ask, device: "" } : "skip");
   const list = read?.live ? everyDevice : read;
   const inWords = useSpanInWords(...spansOfList(answer));
-  const rows = useMemo(() => (list?.rows ?? []).filter((row) => row.key.startsWith("~") && row[count] > 0), [list?.rows, count]);
+  const rows = useMemo(() => pageMapRows(list?.rows, count), [list?.rows, count]);
   const pageName = usePageName();
   const boxes: PageMapBox[] = rows.map((row) => {
     const shown = figuresOf(row, colour);
@@ -214,14 +212,9 @@ export function PagesMapCard({ choice, answer }: { choice: ClassificationChoice;
       ],
     };
   });
-  // The eye reads the boxes on screen, for whichever Count is chosen. Never money.
-  const seen = useMemo(() => (list ? {
-    count,
-    pages: rows.map((row) => ({
-      name: pageName(row.label, row.title), page: pathOf(row.label),
-      views: row.views, viewsBefore: row.viewsBefore, visits: row.visits, visitsBefore: row.visitsBefore ?? null, conversions: row.conversions, conversionsBefore: row.conversionsBefore,
-    })),
-  } : undefined), [list, rows, count, pageName]);
+  // The eye reads the boxes on screen, for whichever Count is chosen. Never money. Built by the same function a chat app's
+  // question builds it with (chatAppEyes/googleAnalytics.ts).
+  const seen = useMemo(() => pageMapForEye(list, rows, count, pageName), [list, rows, count, pageName]);
   useSeesPart("pageMap", seen);
 
   const held = rows.reduce((sum, row) => sum + row.views, 0);
@@ -298,14 +291,7 @@ export function PagesLinesCard({ pages, answer }: { pages: readonly string[]; an
   ];
   // The eye reads every line drawn, each point by its day. By the pages' numbers, not the array they come in, which is new each time the table draws.
   const ticked = pages.join(",");
-  const seen = useMemo(() => (website || daily ? {
-    show,
-    ...(website ? { website: website.points.map((point) => ({ day: point.day, views: point.views, visits: point.visits, conversions: point.conversions })) } : {}),
-    pages: (ticked ? ticked.split(",") : []).flatMap((ref) => {
-      const page = daily?.pages.find((one) => one.ref === ref);
-      return page?.points ? [{ name: pageName(page.address, page.title), days: page.points }] : [];
-    }),
-  } : undefined), [website, daily, ticked, show, pageName]);
+  const seen = useMemo(() => viewsADayForEye(website, daily, ticked ? ticked.split(",") : [], show, pageName), [website, daily, ticked, show, pageName]);
   useSeesPart("viewsADay", seen);
   return (
     <DaysChart

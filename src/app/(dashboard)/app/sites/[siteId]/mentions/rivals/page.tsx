@@ -19,7 +19,7 @@ import { datedRow } from "../../../_components/datedRows";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
-import { mentionsRivalsSeen } from "../../../_components/siteSeesData";
+import { mentionsRivalsSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";

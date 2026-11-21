@@ -19,7 +19,7 @@ import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
-import { structureSees } from "../_components/keywordSees";
+import { structureSees } from "@/convex/utils/sees/eyeData/visibilityKeywords";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";

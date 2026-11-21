@@ -9,9 +9,7 @@ import { SearchConsoleChartCard } from "../../search-console/_components/SearchC
 import { routesFrom, type FlowAnswer, type RouteWords } from "./funnelRoutes";
 import { useAnalyticsStatus } from "./useAnalytics";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
-
-/** The routes the eye is handed: the chart's download has every one. */
-const ROUTES_THE_EYE_READS = 60;
+import { flowForEye } from "@/convex/utils/sees/eyeData/googleAnalyticsFunnel";
 
 /**
  * Funnel's "Where people went next" (docs/plans/active/funnel-way-1-plan-2026-11-05.md, board Way 1): the pages ticked in the
@@ -55,15 +53,8 @@ export function LandingFlowCard({ flow, month, before, nothingTicked = false, on
   }), [t, before]);
   const built = useMemo(() => (flow?.held ? routesFrom(flow, words) : null), [flow, words]);
   // The eye reads every box and the biggest routes, with the figures the chart says. It has the whole website's from `funnel`.
-  const seen = useMemo(() => {
-    if (!built) return undefined;
-    const nameOf = new Map(built.boxes.map((box) => [box.id, box.name]));
-    return {
-      picked: true,
-      rows: built.boxes.map((box) => ({ name: box.name, step: box.column + 1, group: box.isGroup, visits: built.said(box), leftThere: built.saidLeft(box), conversions: box.conversions })),
-      routes: built.routes.map((route) => ({ from: nameOf.get(route.from) ?? "", to: nameOf.get(route.to) ?? "", visits: built.saidRoute(route), conversions: route.conversions })).sort((one, other) => other.visits - one.visits).slice(0, ROUTES_THE_EYE_READS),
-    };
-  }, [built]);
+  // Built by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts).
+  const seen = useMemo(() => flowForEye(built), [built]);
   useSeesPart("flow", seen);
   // Each heading says what's on the chart: the ticked pages' own visits, who left them and who stayed.
   const first = built?.boxes.filter((box) => box.column === 0) ?? [];

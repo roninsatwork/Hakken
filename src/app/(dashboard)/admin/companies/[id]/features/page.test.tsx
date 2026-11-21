@@ -98,7 +98,9 @@ describe("CompanyFeaturesPage", () => {
     expect(rows).toEqual([
       "dashboard", "askPlatform", "insights", "sites", "searchConsole", "bingWebmaster",
       "googleAnalytics", "clarity", "learn", "hakkenTasks", "usage",
-      "modules.tasks.name", "modules.calls.name", "modules.reception.name", "modules.wiki.name",
+      // Ask Hakken in ChatGPT and Claude, after the menu; at 15 rows a page, Wiki is on page 2.
+      "chatApps",
+      "modules.tasks.name", "modules.calls.name", "modules.reception.name",
     ]);
     // The four always on carry no tick box.
     expect(screen.getAllByText("alwaysOn")).toHaveLength(4);

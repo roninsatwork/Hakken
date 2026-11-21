@@ -4,10 +4,10 @@ import { readFixture } from "@/src/test/readFixture";
 import en from "@/messages/en.json";
 import {
   anchorsSees, comparedSees, ipsSees, linkChangesSees, qualitySees, summarySees, whereSees,
-} from "@/src/app/(dashboard)/app/sites/[siteId]/backlinks/_components/linkSees";
+} from "./eyeData/visibilityBacklinks";
 import {
   bandsSees, keywordsSees, newLostSees, pagesSees, searchSees, structureSees, withoutGuessedMoney,
-} from "@/src/app/(dashboard)/app/sites/[siteId]/keywords/_components/keywordSees";
+} from "./eyeData/visibilityKeywords";
 import { findingWords, type Finding } from "./findings";
 import { pageDataFor } from "./pageData";
 import { pageFindings } from "./pageFindings";

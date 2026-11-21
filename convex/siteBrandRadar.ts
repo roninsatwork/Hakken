@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { moduleQuery } from "./tenantFunctions";
@@ -173,9 +173,11 @@ export async function readRadarOverview(ctx: SiteReader, args: { siteId: Id<"com
 
 const kindValidator = v.union(v.literal("DIRECTORY"), v.literal("REVIEWS"), v.literal("FORUM"), v.literal("NEWS"), v.literal("VIDEO"), v.literal("REFERENCE"), v.literal("WEBSITE"), v.literal("RIVAL"), v.literal("YOURS"));
 
+const radarSourcesArgs = { siteId: v.id("companyWebsites") };
+
 export const radarSources = moduleQuery({
   module: MENU_FEATURES.visibility,
-  args: { siteId: v.id("companyWebsites") },
+  args: radarSourcesArgs,
   returns: v.object({
     websites: v.array(v.object({
       host: v.string(),
@@ -191,42 +193,45 @@ export const radarSources = moduleQuery({
     yourTimes: v.number(),
     seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const { readings: all } = await readings(ctx, site);
-    const own = all.find((reading) => reading.you)?.website.host ?? site.website.host;
-    const rivalHosts = all.filter((reading) => !reading.you).map((reading) => reading.website.host);
-    const kindOf = (host: string) => (host === own || host.endsWith(`.${own}`) ? "YOURS" as const
-      : rivalHosts.some((rival) => host === rival || host.endsWith(`.${rival}`)) ? "RIVAL" as const : siteKindOf(host));
-    const websites = new Map<string, { times: number; besideYou: number; besideRivals: number; rivals: Set<string> }>();
-    const pages = new Map<string, { times: number; citedFor: string }>();
-    for (const reading of all) {
-      if (!reading.part) continue;
-      for (const entry of questionsOf(reading.part)) {
-        for (const url of new Set(entry.pages)) {
-          const host = hostOf(url);
-          const row = websites.get(host) ?? { times: 0, besideYou: 0, besideRivals: 0, rivals: new Set<string>() };
-          row.times += 1;
-          if (reading.you) row.besideYou += 1;
-          else {
-            row.besideRivals += 1;
-            row.rivals.add(reading.website.host);
-          }
-          websites.set(host, row);
-          const page = pages.get(url) ?? { times: 0, citedFor: entry.question };
-          page.times += 1;
-          pages.set(url, page);
+  handler: async (ctx, args) => await readRadarSources(ctx, args),
+});
+
+/** radarSources's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readRadarSources(ctx: SiteReader, args: ObjectType<typeof radarSourcesArgs>) {
+  const site = await requireMySite(ctx, args.siteId);
+  const { readings: all } = await readings(ctx, site);
+  const own = all.find((reading) => reading.you)?.website.host ?? site.website.host;
+  const rivalHosts = all.filter((reading) => !reading.you).map((reading) => reading.website.host);
+  const kindOf = (host: string) => (host === own || host.endsWith(`.${own}`) ? "YOURS" as const
+    : rivalHosts.some((rival) => host === rival || host.endsWith(`.${rival}`)) ? "RIVAL" as const : siteKindOf(host));
+  const websites = new Map<string, { times: number; besideYou: number; besideRivals: number; rivals: Set<string> }>();
+  const pages = new Map<string, { times: number; citedFor: string }>();
+  for (const reading of all) {
+    if (!reading.part) continue;
+    for (const entry of questionsOf(reading.part)) {
+      for (const url of new Set(entry.pages)) {
+        const host = hostOf(url);
+        const row = websites.get(host) ?? { times: 0, besideYou: 0, besideRivals: 0, rivals: new Set<string>() };
+        row.times += 1;
+        if (reading.you) row.besideYou += 1;
+        else {
+          row.besideRivals += 1;
+          row.rivals.add(reading.website.host);
         }
+        websites.set(host, row);
+        const page = pages.get(url) ?? { times: 0, citedFor: entry.question };
+        page.times += 1;
+        pages.set(url, page);
       }
     }
-    const yours = [...pages.entries()].filter(([url]) => kindOf(hostOf(url)) === "YOURS");
-    const result = {
-      websites: [...websites.entries()].map(([host, row]) => ({ host, kind: kindOf(host), times: row.times, besideYou: row.besideYou, besideRivals: row.besideRivals, rivalsBeside: row.rivals.size })),
-      pages: [...pages.entries()].sort((left, right) => right[1].times - left[1].times).slice(0, 5)
-        .map(([url, row]) => ({ url, host: hostOf(url), kind: kindOf(hostOf(url)), times: row.times, citedFor: row.citedFor })),
-      yourPages: yours.length,
-      yourTimes: yours.reduce((sum, [, row]) => sum + row.times, 0),
-    };
-    return { ...result, seen: radarSourcesSees(result) };
-  },
-});
+  }
+  const yours = [...pages.entries()].filter(([url]) => kindOf(hostOf(url)) === "YOURS");
+  const result = {
+    websites: [...websites.entries()].map(([host, row]) => ({ host, kind: kindOf(host), times: row.times, besideYou: row.besideYou, besideRivals: row.besideRivals, rivalsBeside: row.rivals.size })),
+    pages: [...pages.entries()].sort((left, right) => right[1].times - left[1].times).slice(0, 5)
+      .map(([url, row]) => ({ url, host: hostOf(url), kind: kindOf(hostOf(url)), times: row.times, citedFor: row.citedFor })),
+    yourPages: yours.length,
+    yourTimes: yours.reduce((sum, [, row]) => sum + row.times, 0),
+  };
+  return { ...result, seen: radarSourcesSees(result) };
+}

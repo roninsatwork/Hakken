@@ -7,7 +7,9 @@ import type { SiteFigures } from "./SearchConsoleFigures";
 import type { useSearchConsoleList } from "./SearchConsoleTables";
 import { useSearchConsoleSiteFigures } from "./SearchConsoleFigures";
 import type { TickedRow } from "./TickedDays";
-import { trackedPageData, type TickedUpdate } from "./trackedSees";
+import type { TickedUpdate } from "./trackedSees";
+import { trackedEyeData } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 /**
  * Tracked keywords and Tracked pages, as Anthony chose them on 18 November 2026 (the canvas's Way 1 for both;
@@ -55,15 +57,12 @@ export function useTrackedSeesData({ list, ticked, update, nameOf, kind }: {
   const t = useTranslations("searchConsole");
   const site = useSearchConsoleSiteFigures();
   const countryClicks = site.problem ? null : (site.figures?.totals?.clicks ?? null);
-  const names = useMemo(() => ({
-    allTracked: t(`tracked.${kind}.eye.all`), firstPage: t("tracked.keywords.eye.firstPage"), notShown: t("tracked.eye.notShown"), home: t("pages.chart.homePage"),
-    onChart: t(`tracked.${kind}.eye.onChart`),
-  }), [t, kind]);
-  return useMemo(() => (list.pageData ? trackedPageData({
+  // Built by the same function a chat app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
+  return useMemo(() => trackedEyeData({
     page: list.pageData,
     countryClicks,
     ticked: ticked.map((row) => ({ name: nameOf(row.key), clicks: row.clicks, previousClicks: row.previousClicks })),
     update,
-    names,
-  }) : undefined), [list.pageData, countryClicks, ticked, nameOf, update, names]);
+    kind,
+  }, wordsReader(t)), [list.pageData, countryClicks, ticked, nameOf, update, kind, t]);
 }

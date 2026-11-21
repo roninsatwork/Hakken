@@ -5,9 +5,8 @@ import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { BEST_FOR_FLOOR } from "@/convex/utils/channelPicks";
-import { channelBoxes, per100Words, type ChannelBoxRow } from "@/convex/utils/channelBoxes";
-import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
-import { NO_PAGE_KIND, OTHER_KIND } from "@/convex/utils/sees/analyticsChannel";
+import { per100Words } from "@/convex/utils/channelBoxes";
+import { EVERY_CHANNEL, channelBoxesOf, channelSquaresForEye, channelStepsForEye, channelsByDayForEye, sellsOf, squareKindName, squareKinds } from "@/convex/utils/sees/eyeData/googleAnalyticsChannels";
 import { CHART_SERIES_SLATE } from "@/src/ui/components/charts/chartPalette";
 import type { ExplorerControl } from "@/src/ui/components/screens/ChartExplorer";
 import { ExplorerToolbar } from "@/src/ui/components/screens/ChartExplorer";
@@ -20,7 +19,6 @@ import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
 import { formatDay, formatNumber, toCsv } from "../../../../sites/_components/siteFormat";
 import { useSiteParam, useSiteTicks } from "../../../../sites/_components/useSiteParam";
 import { CHANNEL_LINE_COLOURS } from "../../../_components/AnalyticsChart";
-import { stepKey } from "../../../_components/stepScale";
 import { spansOfList, useSpanInWords, useSpanWords } from "../../../_components/VisitsCharts";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsStatus, useStep } from "../../../_components/useAnalytics";
 import { useThingDone } from "../../../_components/useEventName";
@@ -33,8 +31,6 @@ import { useKindName } from "./ChannelParts";
  * and everything around them plain. A shop keeps Bought; any other website says Events. A whole-website figure is Google's own total.
  */
 
-/** Every channel the boxes and the eye weigh: far more than Google has. */
-const EVERY_CHANNEL = 100;
 /** The chart opens on the busiest few, like today. */
 const FIRST_LINES = 4;
 /** A square with under this many visits doesn't set how bright the others are: 1 sale from 2 visits isn't the best of anything. */
@@ -51,19 +47,11 @@ export function useChannels() {
   const every = read?.live ? everyDevice : read;
   const overview = useQuery(api.googleAnalyticsReads.analyticsOverview, ready ? args : "skip");
   // A website that has sold anything in these dates or those before. Without it the page counts its events.
-  const sells = overview ? (overview.now?.purchases ?? 0) > 0 || (overview.before?.purchases ?? 0) > 0 : true;
+  const sells = sellsOf(overview);
   return { every, overview, sells };
 }
 
 export type Channels = ReturnType<typeof useChannels>;
-
-/** The list as the boxes' rule weighs it: a channel that stopped altogether can still be the biggest change. */
-export function boxRowsOf({ every, sells }: Channels): ChannelBoxRow[] {
-  return [
-    ...(every?.rows ?? []).map((row) => ({ key: row.label, visits: row.visits, visitsBefore: row.visitsBefore ?? null, done: sells ? row.purchases : row.conversions })),
-    ...(every?.gone ?? []).map((one) => ({ key: one.key, visits: 0, visitsBefore: one.visitsBefore, done: 0 })),
-  ];
-}
 
 /** Four boxes, each naming a channel, each saying what it's set against. A box with nothing true to say shows a dash. */
 export function ChannelBoxes({ channels }: { channels: Channels }) {
@@ -72,8 +60,7 @@ export function ChannelBoxes({ channels }: { channels: Channels }) {
   const spans = spansOfList(every);
   const inWords = useSpanInWords(...spans);
   if (!every || !overview) return null;
-  const now = overview.now;
-  const boxes = channelBoxes(boxRowsOf(channels), { visits: now?.visits ?? null, done: now ? (sells ? now.purchases : now.conversions) : null });
+  const boxes = channelBoxesOf(every, overview, sells);
   const quiet = (words: string, title?: string) => <span className="text-secondary" title={title}>{words}</span>;
   const { mostVisits, mostDone, bestFor, biggestChange } = boxes;
   const before = spans[1];
@@ -127,22 +114,6 @@ function dayFigure(point: EachDay["points"][number], channelAt: number, eventsAt
 }
 
 /**
- * Each channel's figures added up for the chart's step, by its name, for the eye: the plain sum, not the average a long step draws.
- * The eye reads what the chart shows, and a year of days for every channel twice over would crowd out the rest of the page.
- */
-function daysForEye(points: ReadonlyArray<{ day: string; lastDay?: string; visits: readonly number[] }>, channels: readonly string[], step: "day" | "week" | "month") {
-  const steps = new Map<string, { day: string; lastDay: string; sums: number[] }>();
-  for (const point of points) {
-    const key = stepKey(step, point.day, point.lastDay);
-    const held = steps.get(key) ?? { day: point.day, lastDay: point.lastDay ?? point.day, sums: channels.map(() => 0) };
-    if ((point.lastDay ?? point.day) > held.lastDay) held.lastDay = point.lastDay ?? point.day;
-    point.visits.forEach((visits, at) => (held.sums[at] += visits));
-    steps.set(key, held);
-  }
-  return [...steps.values()].map(({ day, lastDay, sums }) => ({ day, ...(lastDay !== day ? { lastDay } : {}), ...Object.fromEntries(channels.map((channel, at) => [channel, sums[at]])) }));
-}
-
-/**
  * Visits each day, by channel (Anthony, 2026-11-06: "Can we add a drop-down here which selects the channels"; "can we add drop downs
  * for events"). Each channel ticked gets its own line and the rest share a grey one. Tick events and each line counts those instead,
  * as times. Colours stay with the channel, whatever else is ticked. Ticks live in the address, so a link opens what was showing.
@@ -163,12 +134,9 @@ export function ChannelDaysCard({ channels }: { channels: Channels }) {
   const tickedEvents = (pickedEvents ?? []).filter((event) => events.some((one) => one.eventName === event));
   const eventsAt = tickedEvents.map((event) => events.findIndex((one) => one.eventName === event));
   const points = useMemo(() => chart?.points ?? [], [chart?.points]);
-  const seen = useMemo(() => (chart ? {
-    days: daysForEye(points, every, step),
-    ...(chart.before ? { daysBefore: daysForEye(chart.before, every, step) } : {}),
-    events: events.map((one) => ({ name: eventName(one.eventName), times: one.times, countsAsConversion: one.counted })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `eventName` is new each draw; the events and the rows decide.
-  } : undefined), [chart, points, every, events, step]);
+  // Each channel's visits at the chart's step, by its name, built as a chat app's question builds them (googleAnalyticsChannels.ts).
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `eventName` is new each draw; the read and the step decide.
+  const seen = useMemo(() => channelsByDayForEye(chart, step, eventName), [chart, step]);
   useSeesPart("channelsByDay", seen);
   const pointOf = (figure: (point: EachDay["points"][number]) => number) => points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: figure(point) }));
   const lines: DaysLine[] = ticked.length === 0 ? [] : [
@@ -252,13 +220,6 @@ function squareRate(figures: SquareFigures, count: SquareCount, which: "now" | "
 
 const isRate = (count: SquareCount) => count === "boughtPer100" || count === "conversionsPer100";
 
-/** A row or column's figures for the eye, in the names its rules read. */
-const figuresForEye = (figures: SquareFigures) => ({
-  visits: figures.visits, visitsBefore: figures.visitsBefore,
-  purchases: figures.bought, purchasesBefore: figures.boughtBefore,
-  conversions: figures.conversions, conversionsBefore: figures.conversionsBefore,
-});
-
 /**
  * Where each channel's visits started (Anthony, 2026-11-06: "What drop downs can we add here to make this more interactive"): the same
  * part as on Conversions and Campaigns, with five menus. Brighter means a bigger share of that channel, or on a rate, more than other
@@ -282,16 +243,17 @@ export function ChannelSquaresCard({ channels }: { channels: Channels }) {
   const byKind = useSquares("kind");
   const byDevice = useSquares("device");
   const answer = split === "device" ? byDevice : byKind;
-  const kindName = useKindName(useMemo(() => [...(byKind?.columns ?? []).map((one) => ({ kind: one.key, name: one.name })), ...(byKind?.columns ?? []).flatMap((one) => one.holds ?? [])], [byKind?.columns]));
+  const kindName = useKindName(useMemo(() => squareKinds(byKind), [byKind]));
   const counts = sells ? SHOP_COUNTS : OTHER_COUNTS;
   const count: SquareCount = counts.includes(chosenCount) ? chosenCount : "visits";
   const compare = compareTo === "before" && Boolean(answer?.hasBefore);
-  const columnName = (key: string, name: string | null) => (split === "device" ? tf(`devices.${key}`)
-    : key === OTHER_KIND ? t("otherGroups") : key === NOT_SORTED_KIND ? t("notSorted") : key === NO_PAGE_KIND ? t("noPage") : name ?? kindName(key));
-  const seenKinds = useMemo(() => seenPart(byKind, (key, own) => (key === OTHER_KIND ? t("otherGroups") : key === NOT_SORTED_KIND ? t("notSorted") : key === NO_PAGE_KIND ? t("noPage") : own ?? kindName(key))),
+  const kindColumn = squareKindName({ otherGroups: t("otherGroups"), notSorted: t("notSorted"), noPage: t("noPage") }, kindName);
+  const columnName = (key: string, name: string | null) => (split === "device" ? tf(`devices.${key}`) : kindColumn(key, name));
+  // Built as a chat app's question builds them (googleAnalyticsChannels.ts), each column in the page's words.
+  const seenKinds = useMemo(() => channelSquaresForEye(byKind, kindColumn),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `kindName` is new each draw; the read decides.
     [byKind, t]);
-  const seenDevices = useMemo(() => seenPart(byDevice, (key) => tf(`devices.${key}`)), [byDevice, tf]);
+  const seenDevices = useMemo(() => channelSquaresForEye(byDevice, (key) => tf(`devices.${key}`)), [byDevice, tf]);
   useSeesPart("channelSquares", seenKinds);
   useSeesPart("channelDevices", seenDevices);
   const allRows = answer?.rows ?? [];
@@ -396,19 +358,6 @@ export function ChannelSquaresCard({ channels }: { channels: Channels }) {
   );
 }
 
-/** A read of the squares as the eye reads it, each column in the page's words. */
-function seenPart(read: Squares | undefined, name: (key: string, own: string | null) => string) {
-  if (!read) return undefined;
-  return {
-    ...(read.everyDevice ? { everyDevice: true } : {}),
-    columns: read.columns.map((column) => ({ key: column.key, name: name(column.key, column.name), visits: column.visits })),
-    rows: read.rows.map((row) => ({
-      name: row.channel, ...figuresForEye(row),
-      cells: row.cells.flatMap((cell, at) => (cell.visits > 0 || (cell.visitsBefore ?? 0) > 0 ? [{ key: read.columns[at]?.key, column: name(read.columns[at]?.key ?? "", read.columns[at]?.name ?? null), ...figuresForEye(cell) }] : [])),
-    })),
-  };
-}
-
 type StepsAnswer = NonNullable<ReturnType<typeof useSteps>>;
 type StepFigures = StepsAnswer["channels"][number];
 
@@ -431,7 +380,7 @@ export function ChannelStepsCard({ channels }: { channels: Channels }) {
   const offered = useMemo(() => (answer?.channels ?? []).filter((row) => row.arrived >= BEST_FOR_FLOOR), [answer?.channels]);
   const row = offered.find((one) => one.channel === chosen) ?? null;
   const stepNames = useMemo(() => ({ arrived: t("arrived"), stayed: t("stayed"), basket: t("basket"), checkout: t("checkout"), bought: t("bought") }), [t]);
-  const seen = useMemo(() => (answer && !answer.collecting ? { steps: stepNames, tracks: answer.tracks, ...(answer.everywhere ? { everywhere: answer.everywhere } : {}), channels: answer.channels.map(({ channel, ...steps }) => ({ name: channel, ...steps })) } : undefined), [answer, stepNames]);
+  const seen = useMemo(() => channelStepsForEye(answer, stepNames), [answer, stepNames]);
   useSeesPart("channelSteps", seen);
   if (!channels.sells) return null;
   const flowOf = (figures: Omit<StepFigures, "channel">): FlowStep[] => [

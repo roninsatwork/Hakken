@@ -16,8 +16,8 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
-import { toCsv } from "../../../_components/siteFormat";
-import { winsLossesSeen } from "../../../_components/siteSeesData";
+import { formatMonth, formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { capitalised, winsLossesSeen } from "@/convex/utils/sees/eyeData/visibility";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
@@ -86,7 +86,7 @@ export default function SiteMovesPage() {
   const seen = useMemo(() => (series ? winsLossesSeen(series[0], seriesBefore?.[0], table.result?.rows, range.step, {
     up: t("up"), down: t("down"), dates: tp(range.period === "custom" ? "customName" : range.period), usual: te("usual", { step: range.step }),
     before: capitalised(tp(`before.${range.period}`)),
-  }) : undefined), [series, seriesBefore, table.result, range.step, range.period, t, tp, te]);
+  }, { month: formatMonth, day: formatShortDay }) : undefined), [series, seriesBefore, table.result, range.step, range.period, t, tp, te]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -166,6 +166,3 @@ export default function SiteMovesPage() {
     </div>
   );
 }
-
-/** A period's words as the start of a name: "the month before" → "The month before". */
-const capitalised = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);

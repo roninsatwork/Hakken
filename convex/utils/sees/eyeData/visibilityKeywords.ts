@@ -1,12 +1,14 @@
-import { websitesOf } from "../../backlinks/_components/linkSees";
+import { websitesOf } from "./visibilityBacklinks";
 
 /**
  * What each Keywords screen hands the eye (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): the figures it
  * shows, cut to the ones its rules read (`convex/utils/sees/own/visibility.ts`, Backlinks and Keywords' block), the whole
  * list summed on the server where the table shows one page of it, and the rivals beside yours where a rule sets one
- * against the other. Built here so the screen and the every-period test hand the rules the same figures. Never what a
- * click costs or what visits would be worth (Anthony, 2026-11-03: "Yes, all of it"): a row's `cpc` and `trafficValue`
- * stay behind. Names are the reader's own words, from the screen's translations.
+ * against the other. Built here so the screen, a chat app's question (`chatAppEyes/visibility.ts`,
+ * ask-hakken-from-ai-chat-apps-plan-2026-11-21.md, Option B) and the every-period test hand the rules the same figures.
+ * Never what a click costs or what visits would be worth (Anthony, 2026-11-03: "Yes, all of it"): a row's `cpc` and
+ * `trafficValue` stay behind. Names are the reader's own words, from the screen's translations, or English from
+ * `messages/en.json` on the server.
  */
 
 type Figures = Record<string, unknown>;
@@ -296,3 +298,18 @@ export function withoutGuessedMoney<T>(value: T): T {
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).filter(([field]) => !GUESSED_MONEY.has(field)).map(([field, inner]) => [field, withoutGuessedMoney(inner)])) as T;
 }
+
+const BAND_KEYS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
+type BandKey = (typeof BAND_KEYS)[number];
+const isBandKey = (value: string): value is BandKey => (BAND_KEYS as readonly string[]).includes(value);
+
+/**
+ * The move one square of Position bands' grid names, `p04_10.p01_03` (or `none.p51_up` for searches newly ranking), as
+ * its own screen reads it from the address and a chat app's question from its key; null when it names none.
+ */
+export function readBandMove(move: string): { from: BandKey | "none"; to: BandKey } | null {
+  const [from, to] = move.split(".");
+  if (!from || !to || !isBandKey(to) || from === to || (from !== "none" && !isBandKey(from))) return null;
+  return { from, to };
+}
+

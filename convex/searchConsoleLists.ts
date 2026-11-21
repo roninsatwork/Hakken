@@ -1,4 +1,4 @@
-import { v, type Infer } from "convex/values";
+import { v, type Infer, type ObjectType } from "convex/values";
 import { internalQuery } from "./_generated/server";
 import type { ActionCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -7,7 +7,7 @@ import { moduleAction, moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
-import { requireMySite } from "./siteAccess";
+import { requireMySite, type SiteReader } from "./siteAccess";
 import { listPageArgs, pageOfList, sortDirectionArg } from "./siteListPages";
 import { VOLATILITY_PERIOD, searchTypeValidator, type SearchType } from "./searchConsoleSchema";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
@@ -463,29 +463,32 @@ export const searchConsoleListPage = moduleQuery({
     summary: v.union(summaryValidator, v.null()),
     ...answerFacts,
   }),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    const list = await readList(ctx, site.hold._id, args);
-    const page = pageOfList(list.rows, args.page, args.rows, list.cut);
-    // Only the page's rows named: the rest stay tokens of the book (core-data-normalisation-plan.md §5.3); a page's title (GA27) beside it.
-    const named: Array<Awaited<ReturnType<typeof namedRows>>[number] & { title?: string }> = await namedRows(list, page.rows);
-    return {
-      ...page,
-      rows: args.dimension === "page" ? await withTitles(ctx, site.hold._id, named) : named,
-      preparing: list.preparing,
-      ...(list.noSearches ? { noSearches: true } : {}),
-      summary: list.summary,
-      current: true,
-      named: list.named,
-      listed: list.listed,
-      comparable: list.comparable,
-      live: list.live,
-      from: list.from,
-      to: list.to,
-    };
-  },
+  handler: async (ctx, args) => await readListPage(ctx, args),
 });
+
+/** One page of a list: the screens' read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readListPage(ctx: SiteReader, args: ObjectType<typeof listArgs> & ObjectType<typeof listPageArgs>) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  const list = await readList(ctx, site.hold._id, args);
+  const page = pageOfList(list.rows, args.page, args.rows, list.cut);
+  // Only the page's rows named: the rest stay tokens of the book (core-data-normalisation-plan.md §5.3); a page's title (GA27) beside it.
+  const named: Array<Awaited<ReturnType<typeof namedRows>>[number] & { title?: string }> = await namedRows(list, page.rows);
+  return {
+    ...page,
+    rows: args.dimension === "page" ? await withTitles(ctx, site.hold._id, named) : named,
+    preparing: list.preparing,
+    ...(list.noSearches ? { noSearches: true } : {}),
+    summary: list.summary,
+    current: true,
+    named: list.named,
+    listed: list.listed,
+    comparable: list.comparable,
+    live: list.live,
+    from: list.from,
+    to: list.to,
+  };
+}
 
 /**
  * A short list whole — countries, devices, kinds of search appearance — for
@@ -497,14 +500,17 @@ export const searchConsoleSplitList = moduleQuery({
   module: MENU_FEATURES.searchConsole,
   args: listArgs,
   returns: v.object({ rows: v.array(rowValidator), preparing: v.boolean(), summary: v.optional(v.union(summaryValidator, v.null())), ...answerFacts }),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    const list = await readList(ctx, site.hold._id, args);
-    const { preparing, summary, named, listed, comparable, live, from, to } = list;
-    return { rows: await namedRows(list, list.rows.slice(0, SPLIT_ROWS)), preparing, summary, current: true, named, listed, comparable, live, from, to };
-  },
+  handler: async (ctx, args) => await readSplitList(ctx, args),
 });
+
+/** A short list whole: the screens' read, and a chat app's (`chatAppEyes/searchConsole.ts`). */
+export async function readSplitList(ctx: SiteReader, args: ObjectType<typeof listArgs>) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  const list = await readList(ctx, site.hold._id, args);
+  const { preparing, summary, named, listed, comparable, live, from, to } = list;
+  return { rows: await namedRows(list, list.rows.slice(0, SPLIT_ROWS)), preparing, summary, current: true, named, listed, comparable, live, from, to };
+}
 
 // ---------------------------------------------------------------------------
 // Other dates: asked of Google when chosen (§14.3, item 4)

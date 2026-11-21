@@ -20,7 +20,7 @@ import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { qualitySees } from "@/convex/utils/sees/backlinks";
-import { qualitySees as qualityFigures } from "../_components/linkSees";
+import { qualitySees as qualityFigures } from "@/convex/utils/sees/eyeData/visibilityBacklinks";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";

@@ -19,6 +19,8 @@ import { periodArg } from "../../_components/useSearchConsole";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { brandSees } from "@/convex/utils/sees/searchConsoleScreens";
 import { moverWorthNaming } from "@/convex/utils/sees/own/searchConsole";
+import { brandEyeData } from "@/convex/utils/sees/eyeData/searchConsoleLists";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 
 const CHIPS: readonly ChipId[] = ["brand", "band", "device"];
 
@@ -48,24 +50,17 @@ export default function SearchConsoleBrandPage() {
   const held = Boolean(list.status?.connection?.newestDay) && !list.range.waiting && list.range.days > 0;
   const every = useSiteFiguresFor(held ? { siteId: list.siteId, searchType: list.kind, from: list.range.from, to: list.range.to, ...periodArg(list.range) } : null).figures;
   // The eye's figures: the list's, its brand words, the chart's periods and the page's own names for the two kinds of
-  // search; its "Do first" steps may open the searches that gained and lost most, each on its own screen.
-  const brandName = t("performance.squares.groups.brand");
-  const otherName = t("performance.squares.groups.named");
+  // search (`brandEyeData`, which a chat app's question builds them with too); its "Do first" steps may open the searches
+  // that gained and lost most, each on its own screen.
   const brandWords = words?.names ?? null;
-  // The chart's periods by their first day (`day`), so the eye keeps the newest of a long chart, never its oldest.
-  const hiddenName = t("performance.squares.groups.hidden");
   const totals = every?.totals ?? null;
   const previous = every?.previous ?? null;
   // Only once every click is in, so the eye never writes the share of named clicks alone while the totals are on their way.
   const everyIn = every !== undefined;
-  const seesData = useMemo(() => (list.pageData && everyIn ? {
-    ...list.pageData,
-    brandWords,
-    chart: periods ? periods.map((period) => ({ ...period, day: period.start })) : null,
-    // Every click, the hidden ones too, as the boxes count them: the eye's share and hidden clicks are the boxes'.
-    every: totals ? { clicks: totals.clicks, before: previous?.clicks ?? null } : null,
-    names: { brand: brandName, other: otherName, hidden: hiddenName },
-  } : undefined), [list.pageData, everyIn, brandWords, periods, totals, previous, brandName, otherName, hiddenName]);
+  const seesData = useMemo(
+    () => brandEyeData({ page: list.pageData, brandWords, periods, every: everyIn ? { totals, previous } : undefined }, wordsReader(t)),
+    [list.pageData, everyIn, brandWords, periods, totals, previous, t],
+  );
   const movers = list.summary?.wholeList?.movers;
   // Only the searches the eye may name: the same bar as its findings (`moverWorthNaming`).
   const seesLinks = useMemo(() => [movers?.otherDown, movers?.otherUp, movers?.brandDown]

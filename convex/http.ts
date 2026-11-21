@@ -22,6 +22,8 @@ import { BING_AUTHORIZE_PATH, BING_CALLBACK_PATH, handleBingAuthorize, handleBin
 import { handleOneClickUnsubscribe, handleResendWebhook } from "./emailHttp";
 import { handleXAuthorize, handleXCallback } from "./xConnect";
 import { handleTelegramWebhook } from "./telegramHttp";
+import { handleAuthorizationServer, handleOpenOptions, handleProtectedResource, handleRegister, handleToken } from "./chatAppsHttp";
+import { handleMcp, handleMcpOther } from "./chatAppDoor";
 
 const http = httpRouter();
 http.route({ path: "/api/uploads", method: "POST", handler: handleUpload });
@@ -183,6 +185,24 @@ http.route({ path: "/api/x/oauth/authorize", method: "GET", handler: handleXAuth
 http.route({ path: "/api/x/oauth/callback", method: "GET", handler: handleXCallback });
 // Telegram, another way in to the Assistant (docs/plans/active/hakken-tasks-plan.md, item 6.1).
 http.route({ path: "/telegram/webhook", method: "POST", handler: handleTelegramWebhook });
+
+// Ask Hakken in ChatGPT and Claude (docs/plans/active/ask-hakken-from-ai-chat-apps-plan-2026-11-21.md): the
+// sign-in server's public endpoints, reached at Hakken's own address through Next.js (`src/app/api/chat-apps`).
+for (const path of ["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"]) {
+  http.route({ path, method: "GET", handler: handleProtectedResource });
+  http.route({ path, method: "OPTIONS", handler: handleOpenOptions });
+}
+http.route({ path: "/.well-known/oauth-authorization-server", method: "GET", handler: handleAuthorizationServer });
+http.route({ path: "/.well-known/oauth-authorization-server", method: "OPTIONS", handler: handleOpenOptions });
+http.route({ path: "/oauth/token", method: "POST", handler: handleToken });
+http.route({ path: "/oauth/token", method: "OPTIONS", handler: handleOpenOptions });
+http.route({ path: "/oauth/register", method: "POST", handler: handleRegister });
+http.route({ path: "/oauth/register", method: "OPTIONS", handler: handleOpenOptions });
+// The MCP door itself (phase 2): POST only, plain JSON, no session.
+http.route({ path: "/mcp", method: "POST", handler: handleMcp });
+http.route({ path: "/mcp", method: "OPTIONS", handler: handleOpenOptions });
+http.route({ path: "/mcp", method: "GET", handler: handleMcpOther });
+http.route({ path: "/mcp", method: "DELETE", handler: handleMcpOther });
 
 http.route({
   path: "/apify-webhook",

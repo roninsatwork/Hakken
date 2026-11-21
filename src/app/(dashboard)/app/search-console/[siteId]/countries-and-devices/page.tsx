@@ -20,7 +20,9 @@ import { countryInWords, countryName } from "../../_components/countries";
 import { GoogleCutLine } from "../../_components/GoogleCutLine";
 import { usePerformanceDates } from "../../_components/PerformanceParts";
 import { PlacesBoxes } from "../../_components/PlacesParts";
-import { placesFigures, placesPageData } from "../../_components/placesSees";
+import { placesFigures } from "../../_components/placesSees";
+import { placeRowNames, placesEyeData } from "@/convex/utils/sees/eyeData/searchConsolePlaces";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { filePercent, filePosition, readerLanguage } from "../../_components/searchConsoleFormat";
 import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, canRetry, hasFigures, liveProblemKey, type LiveProblemKind } from "../../_components/SearchConsoleNotices";
 import { figureColumns, nameColumn, type ListRow } from "../../_components/SearchConsoleTables";
@@ -39,7 +41,6 @@ import {
 
 /** Countries ticked as the page opens: the three busiest after the one chosen, whose line would flatten the rest. */
 const OPENING_TICKED = 3;
-const DEVICES = ["DESKTOP", "MOBILE", "TABLET"];
 
 /**
  * Countries and devices (search-console-plan.md §5.4), as Anthony chose it on 18 November 2026: the canvas's Way 1, once
@@ -67,17 +68,17 @@ export default function SearchConsolePlacesPage() {
   const countryList = useSearchConsoleSplit(held ? { ...base, dimension: "country" } : null);
   const deviceList = useSearchConsoleSplit(held ? { ...base, dimension: "device", ...countryArg(country) } : null);
   const chosen = country ?? choices?.main ?? null;
-  const chosenName = chosen ? (countryName(chosen, language) ?? t("places.unknownCountry")) : "";
   const chosenWords = chosen ? (countryInWords(chosen, language) ?? t("places.unknownCountry")) : "";
   const countryRows = countryList && !countryList.preparing ? countryList.rows : undefined;
   const deviceRows = deviceList && !deviceList.preparing ? deviceList.rows : undefined;
+  // Each row named as a chat app's question names it too (`placeRowNames`).
   const countries = useMemo<PlaceListRow[] | undefined>(
-    () => countryRows?.map((row) => ({ ...row, name: countryName(row.key, language) ?? t("places.unknownCountry") })),
+    () => countryRows?.map((row) => ({ ...row, name: placeRowNames(wordsReader(t), language).country(row.key) })),
     [countryRows, language, t],
   );
   const devices = useMemo<PlaceListRow[] | undefined>(
-    () => deviceRows?.map((row) => ({ ...row, name: DEVICES.includes(row.key) ? t(`places.deviceNames.${row.key}`) : row.key })),
-    [deviceRows, t],
+    () => deviceRows?.map((row) => ({ ...row, name: placeRowNames(wordsReader(t), language).device(row.key) })),
+    [deviceRows, language, t],
   );
   const countrySummary = countryList?.summary ?? null;
   const countriesComparable = countryList?.comparable ?? false;
@@ -93,25 +94,12 @@ export default function SearchConsolePlacesPage() {
   const nameOf = (key: string) => countryName(key, language) ?? key.toUpperCase();
 
   // What Hakken sees: the boxes, every country against the dates before, the devices in the country chosen, and the
-  // countries ticked onto the chart, by the names the page says them by.
-  const seesData = useMemo(() => {
-    if (!countries || !devices || !chosen) return undefined;
-    return placesPageData({
-      chosen,
-      countries,
-      summary: countrySummary,
-      comparable: countriesComparable,
-      devices,
-      devicesComparable,
-      ticked: ticked.filter((row) => row.clicks !== null).map((row) => ({ name: countryName(row.key, language) ?? row.key, clicks: row.clicks ?? 0, previousClicks: row.previousClicks })),
-      names: {
-        chosen: chosenName,
-        others: t("places.eye.others"),
-        clicked: t("places.boxes.clicked"),
-        devices: Object.fromEntries(devices.map((row) => [row.key, t("places.eye.deviceIn", { device: row.name, country: chosenWords })])),
-      },
-    });
-  }, [countries, devices, chosen, countrySummary, countriesComparable, devicesComparable, ticked, language, chosenName, chosenWords, t]);
+  // countries ticked onto the chart, by the names the page says them by: built by the same function a chat app's question
+  // builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
+  const seesData = useMemo(
+    () => placesEyeData({ chosen, countries, summary: countrySummary, comparable: countriesComparable, devices, devicesComparable, ticked }, wordsReader(t), language),
+    [countries, devices, chosen, countrySummary, countriesComparable, devicesComparable, ticked, language, t],
+  );
   // The fixed lines: the busiest country's share, and mobile's share of the country chosen's clicks when it is the busiest.
   const busiest = countries ? [...countries].sort((left, right) => right.clicks - left.clicks)[0] ?? null : null;
   const mobile = busiest && busiest.key === chosen ? devices?.find((row) => row.key === "MOBILE") ?? null : null;

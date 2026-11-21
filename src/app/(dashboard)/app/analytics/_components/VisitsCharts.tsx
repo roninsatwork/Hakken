@@ -5,9 +5,9 @@ import { useTranslations } from "next-intl";
 import type { FunctionReturnType } from "convex/server";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import { isUnknownValue } from "@/convex/utils/analyticsUnknown";
 import type { VisitorList } from "@/convex/googleAnalyticsLists";
+import { pageKindBoxes, pageKindsForEye, shortInterest, visitsDaysForEye } from "@/convex/utils/sees/eyeData/googleAnalyticsVisits";
 import { BarsCard } from "@/src/ui/components/screens/BarsCard";
 import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
@@ -80,12 +80,12 @@ export function VisitsLineCard({ spans: words, host }: { spans: SpanWords; host:
   const comparing = against === "before" && Boolean(pointsBefore && pointsBefore.length > 0);
   // The eye reads each day's visits by its date, never a day's place in a list (visits-redo-plan-2026-11-03.md, step 2),
   // with the names it says weekends against weekdays in (pageOwnFindings.ts).
-  const seen = useMemo(() => (answer ? {
-    // Days only, and only where every point is a day: past 90 days a point is a week or a month (its `lastDay`), which
-    // no weekend rule may read as a Monday, and the last 90 days of a year are not the year the page shows.
-    byDay: answer.points.some((point) => point.lastDay) ? {} : Object.fromEntries(answer.points.map((point) => [point.day, { new: point.new, returning: point.returning }])),
+  // Days only, and only where every point is a day: past 90 days a point is a week or a month (its `lastDay`), which
+  // no weekend rule may read as a Monday, and the last 90 days of a year are not the year the page shows. Built as a chat
+  // app's question builds it (`googleAnalyticsVisits.ts`).
+  const seen = useMemo(() => visitsDaysForEye(answer, {
     newName: t("line.new"), returningName: t("line.returning"), weekendName: t("line.eyeWeekend"), weekdayName: t("line.eyeWeekday"),
-  } : null), [answer, t]);
+  }), [answer, t]);
   useSeesPart("days", seen);
   const line = (key: "new" | "returning", list: readonly Point[] | null | undefined) => (list ?? []).map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: point[key] }));
   const lines: DaysLine[] = [
@@ -122,10 +122,6 @@ export function VisitsLineCard({ spans: words, host }: { spans: SpanWords; host:
 const PLACED_ONLY: readonly VisitorList[] = ["age", "gender", "interest"];
 /** Interests shown at most: a website has a hundred or more, each a long name. */
 const MOST_INTERESTS = 8;
-/** An interest by its last part: Google's "Travel/Travel Buffs" is "Travel Buffs". */
-const shortInterest = (label: string) => label.split("/").at(-1)?.trim() || label;
-/** A group as the eye names it: an interest by its last part, an age with its dash; the rest as Google keeps them. */
-export const eyeName = (view: VisitorList, key: string) => (view === "interest" ? shortInterest(key) : view === "age" ? key.replace("-", "–") : key);
 
 /**
  * "Who visits your website, by …" (the chart Anthony approved on a page's own screen on 3 November, `WhoLooksCard`):
@@ -197,9 +193,9 @@ export function PageKindsCard({ host }: { host: string }) {
   const args = useAnalyticsArgs();
   const status = useAnalyticsStatus();
   const answer = useQuery(api.googleAnalyticsPageKindViews.analyticsPageKindViews, status?.connection?.newestDay ? args : "skip");
-  const kinds = useMemo(() => (answer?.kinds ?? []).map((kind) => ({ ...kind, label: kind.kind === NOT_SORTED_KIND ? t("notSorted") : kind.name ?? kind.kind })), [answer?.kinds, t]);
+  const kinds = useMemo(() => pageKindBoxes(answer?.kinds ?? [], t("notSorted")), [answer?.kinds, t]);
   // Not sorted marked as such, so the eye can say how much of the treemap tells the reader nothing (pageOwnFindings.ts).
-  const seen = useMemo(() => (answer && answer.kinds.length > 0 ? { kinds: kinds.map((kind) => ({ name: kind.label, views: kind.views, pages: kind.pages, sorted: kind.kind !== NOT_SORTED_KIND })) } : null), [answer, kinds]);
+  const seen = useMemo(() => pageKindsForEye(answer, t("notSorted")), [answer, t]);
   useSeesPart("whatPeopleLookedAt", seen);
   const message = answer === null || answer?.waiting ? (answer?.waiting ? t("waiting") : t("empty"))
     : answer && !answer.sorted ? t("unsorted")

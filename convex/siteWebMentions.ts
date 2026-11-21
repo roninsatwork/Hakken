@@ -179,63 +179,66 @@ export const whereToGetListed = moduleQuery({
     })),
     seen: seenValidator,
   }),
-  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const hold = groupOwner(site);
-    const own = hold ? await ctx.db.get(hold.websiteId) : null;
-    if (!hold || !own) return { rows: [] };
-    const radar = (await readings(ctx, site)).readings;
-    const rivalHosts = radar.filter((reading) => !reading.you).map((reading) => reading.website.host);
-    const isOwnOrRival = (host: string) => [own.host, ...rivalHosts].some((entry) => host === entry || host.endsWith(`.${entry}`));
-    const places = new Map<string, { quoted: number; linksTo: Set<string>; rivals: Set<string>; strength: number | null; there: boolean }>();
-    const place = (host: string) => {
-      const row = places.get(host) ?? { quoted: 0, linksTo: new Set<string>(), rivals: new Set<string>(), strength: null, there: false };
-      places.set(host, row);
-      return row;
-    };
-    // Quoted by Google's AI answers beside the website or its rivals (Brand radar).
-    for (const reading of radar) {
-      if (!reading.part) continue;
-      for (const entry of questionsOf(reading.part)) {
-        for (const url of new Set(entry.pages)) {
-          let host = "";
-          try {
-            host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-          } catch {
-            continue;
-          }
-          if (!host || isOwnOrRival(host)) continue;
-          const row = place(host);
-          row.quoted += 1;
-          if (reading.you) row.there = true;
-          else row.rivals.add(reading.website.displayHost);
-        }
-      }
-    }
-    // Linking to two of the rivals and not to the website (their shared links, monthly).
-    for (const [domain, gap] of await linkGapOf(ctx, own._id, rivalHosts)) {
-      if (isOwnOrRival(domain)) continue;
-      const row = place(domain);
-      for (const rival of gap.rivals) {
-        row.linksTo.add(rival);
-        row.rivals.add(rival);
-      }
-      row.strength = Math.max(row.strength ?? 0, gap.strength);
-    }
-    // Naming the website on a page found: already there.
-    for (const row of await mentionsOf(ctx, own)) if (places.has(row.host)) places.get(row.host)!.there = true;
-    return {
-      rows: [...places.entries()]
-        .filter(([host, row]) => row.linksTo.size >= 2 || ["DIRECTORY", "REVIEWS", "NEWS"].includes(siteKindOf(host)) || row.there)
-        .map(([host, row]) => ({
-          host,
-          kind: siteKindOf(host),
-          quoted: row.quoted,
-          linksTo: [...row.linksTo],
-          rivals: [...row.rivals],
-          strength: row.strength,
-          there: row.there,
-        })),
-    };
-  }, whereListedSees),
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => await readWhereToGetListed(ctx, args), whereListedSees),
 });
+
+/** whereToGetListed's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
+export async function readWhereToGetListed(ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) {
+  const site = await requireMySite(ctx, args.siteId);
+  const hold = groupOwner(site);
+  const own = hold ? await ctx.db.get(hold.websiteId) : null;
+  if (!hold || !own) return { rows: [] };
+  const radar = (await readings(ctx, site)).readings;
+  const rivalHosts = radar.filter((reading) => !reading.you).map((reading) => reading.website.host);
+  const isOwnOrRival = (host: string) => [own.host, ...rivalHosts].some((entry) => host === entry || host.endsWith(`.${entry}`));
+  const places = new Map<string, { quoted: number; linksTo: Set<string>; rivals: Set<string>; strength: number | null; there: boolean }>();
+  const place = (host: string) => {
+    const row = places.get(host) ?? { quoted: 0, linksTo: new Set<string>(), rivals: new Set<string>(), strength: null, there: false };
+    places.set(host, row);
+    return row;
+  };
+  // Quoted by Google's AI answers beside the website or its rivals (Brand radar).
+  for (const reading of radar) {
+    if (!reading.part) continue;
+    for (const entry of questionsOf(reading.part)) {
+      for (const url of new Set(entry.pages)) {
+        let host = "";
+        try {
+          host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+        } catch {
+          continue;
+        }
+        if (!host || isOwnOrRival(host)) continue;
+        const row = place(host);
+        row.quoted += 1;
+        if (reading.you) row.there = true;
+        else row.rivals.add(reading.website.displayHost);
+      }
+    }
+  }
+  // Linking to two of the rivals and not to the website (their shared links, monthly).
+  for (const [domain, gap] of await linkGapOf(ctx, own._id, rivalHosts)) {
+    if (isOwnOrRival(domain)) continue;
+    const row = place(domain);
+    for (const rival of gap.rivals) {
+      row.linksTo.add(rival);
+      row.rivals.add(rival);
+    }
+    row.strength = Math.max(row.strength ?? 0, gap.strength);
+  }
+  // Naming the website on a page found: already there.
+  for (const row of await mentionsOf(ctx, own)) if (places.has(row.host)) places.get(row.host)!.there = true;
+  return {
+    rows: [...places.entries()]
+      .filter(([host, row]) => row.linksTo.size >= 2 || ["DIRECTORY", "REVIEWS", "NEWS"].includes(siteKindOf(host)) || row.there)
+      .map(([host, row]) => ({
+        host,
+        kind: siteKindOf(host),
+        quoted: row.quoted,
+        linksTo: [...row.linksTo],
+        rivals: [...row.rivals],
+        strength: row.strength,
+        there: row.there,
+      })),
+  };
+}

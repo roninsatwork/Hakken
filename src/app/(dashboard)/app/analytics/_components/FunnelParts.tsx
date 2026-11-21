@@ -9,6 +9,7 @@ import { CHART_COMPARATOR_GREY, CHART_SERIES_ORANGE } from "@/src/ui/components/
 import { DaysChart, type DaysLine } from "@/src/ui/components/screens/DaysChart";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { useSeesPart } from "@/src/ui/components/screens/hakkenSeesStore";
+import { leftEachDayFigure, leftEachDayForEye, type LeftEachDayShow } from "@/convex/utils/sees/eyeData/googleAnalyticsFunnel";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { TABLE_PAGE_KEY, useSetSiteParams } from "../../sites/_components/useSiteParam";
 import type { TableTicks } from "@/src/ui/components/screens/TableTicks";
@@ -91,16 +92,9 @@ export function FunnelBoxes({ answer }: { answer: ListPageAnswer | undefined }) 
   );
 }
 
-type Show = "left" | "stayed" | "conversions";
+type Show = LeftEachDayShow;
 const SHOWS: readonly Show[] = ["left", "stayed", "conversions"];
 type DayPoint = { day: string; lastDay?: string; visits: number; engaged?: number; conversions: number };
-
-/** The figure a day's point gives for what the chart shows. */
-function figureOf(point: DayPoint, show: Show): number {
-  if (show === "conversions") return point.conversions;
-  const engaged = point.engaged ?? 0;
-  return show === "left" ? Math.max(0, point.visits - engaged) : engaged;
-}
 
 /**
  * People who left straight away each day, or those who stayed, or conversions: the kit's chart with menus, set against the
@@ -122,17 +116,14 @@ export function LeftEachDayCard({ answer }: { answer: ListPageAnswer | undefined
   const spans = useSpanWords(...dates);
   const inWords = useSpanInWords(...dates);
   const comparing = against === "before" && Boolean(before?.held) && (before?.points.length ?? 0) > 0;
-  const toPoints = (points: readonly DayPoint[]) => points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: figureOf(point, show) }));
+  const toPoints = (points: readonly DayPoint[]) => points.map((point) => ({ day: point.day, ...(point.lastDay ? { lastDay: point.lastDay } : {}), value: leftEachDayFigure(point, show) }));
   // A day September didn't have, like 31 October's, has no figure rather than none.
   const lines: DaysLine[] = [
     { key: "now", name: inWords.now, colour: CHART_SERIES_ORANGE, points: toPoints(now?.points ?? []) },
     ...(comparing ? [{ key: "before", name: inWords.before, colour: CHART_COMPARATOR_GREY, dashed: true, gaps: true, points: toPoints(before?.points ?? []) }] : []),
   ];
-  const seen = useMemo(() => (now ? {
-    show,
-    days: (now.points as readonly DayPoint[]).map((point) => ({ day: point.day, leftStraightAway: figureOf(point, "left"), stayed: figureOf(point, "stayed"), conversions: point.conversions })),
-    ...(before?.held ? { daysBefore: (before.points as readonly DayPoint[]).map((point) => ({ day: point.day, leftStraightAway: figureOf(point, "left"), stayed: figureOf(point, "stayed"), conversions: point.conversions })) } : {}),
-  } : undefined), [now, before, show]);
+  // Built by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts).
+  const seen = useMemo(() => leftEachDayForEye(now, before, show), [now, before, show]);
   useSeesPart("leftEachDay", seen);
   return (
     <DaysChart

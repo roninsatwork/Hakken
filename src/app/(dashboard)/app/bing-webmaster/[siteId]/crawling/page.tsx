@@ -22,7 +22,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_compone
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
 import { BingGate } from "../../_components/BingNotices";
 import { BingSees, useBingEyeNames } from "../../_components/BingParts";
-import { crawlingSeen } from "../../_components/bingSeesData";
+import { crawlingSeen } from "@/convex/utils/sees/eyeData/bing";
 import { BingCrawlChart } from "../../_components/BingCharts";
 import { useBingSiteId, useBingStatus, useBingDates, type BingStatus } from "../../_components/useBing";
 
@@ -66,7 +66,7 @@ function CrawlingBody({ status }: { status: BingStatus }) {
   const siteId = useBingSiteId();
   const { period } = useBingDates();
   const crawling = useQuery(api.bingWebmasterReads.bingCrawling, { siteId, period });
-  // The eye reads every money page, not the table's first page of them, and each day by its name (bingSeesData.ts).
+  // The eye reads every money page, not the table's first page of them, and each day by its name (eyeData/bing.ts, built the same for a chat app).
   const names = useBingEyeNames();
   const seen = useMemo(() => crawlingSeen(crawling, names), [crawling, names]);
   const [search, setSearch, settled] = useSiteSearch();

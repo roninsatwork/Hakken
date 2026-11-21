@@ -4,7 +4,7 @@ import { readFixture } from "@/src/test/readFixture";
 import {
   aboveSeen, aiDemandSeen, aiMentionsSeen, auditSeen, featuresSeen, marketSeen, mentionsRivalsSeen, overviewSeen, paidSeen, radarSeen,
   reviewsRivalsSeen, reviewsSeen, rivalSeen, searchesSeen, shareSeen, sideBySideSeen, webMentionsSeen, winsLossesSeen,
-} from "@/src/app/(dashboard)/app/sites/_components/siteSeesData";
+} from "./eyeData/visibility";
 import { findingWords } from "./findings";
 import { pageDataFor } from "./pageData";
 import { pageFindings } from "./pageFindings";
@@ -14,7 +14,7 @@ const moreHandles = readFixture("moreHandlesVisibility");
 /**
  * Visibility's second half on every period the date menu offers (ask-hakken-every-chart-page-plan-2026-11-03.md, section
  * 10; Anthony, 2026-11-03: "we have a date selection picker FFS … please add this to your tests"): each page's figures
- * built the way the page builds them (`siteSeesData.ts`), cut as the eye cuts them (`pageDataFor`), and read by its own
+ * built the way the page builds them (`eyeData/visibility.ts`), cut as the eye cuts them (`pageDataFor`), and read by its own
  * rules (`own/visibility.ts`).
  *
  * Two sets of figures. More Handles' own, as saved on 3 November 2026 (`moreHandlesVisibility.json`): one check, on 5

@@ -332,7 +332,7 @@ const PERCENTS: Record<string, Measure> = {
   // Google, set beside the whole website's.
   ownClicksSharePercent: { words: "of its clicks from Google", kind: "percent", ofWhole: true },
   // Visibility's Backlinks and Keywords (own/visibility.ts, `linksAndKeywords`): shares worked out beside each page's
-  // figures (`linkSees.ts`, `keywordSees.ts`), each set against a typical rival's or the share it is of something else.
+  // figures (`eyeData/visibilityBacklinks.ts`, `eyeData/visibilityKeywords.ts`), each set against a typical rival's or the share it is of something else.
   nofollowWebsitesPercent: { words: "of linking websites ask Google not to follow their links", kind: "percent" },
   linksSharePercent: { words: "of the links", kind: "percent" },
   pageOnePercent: { words: "of its searches on Google's first page", kind: "percent" },

@@ -1,6 +1,7 @@
 const DEFAULT_AUTH_REDIRECT = "/app";
 const AUTH_REDIRECT_BASE = "https://hakken.local";
-const ALLOWED_AUTH_REDIRECT_PREFIXES = ["/admin", "/app"] as const;
+/** The Allow page (ask-hakken-from-ai-chat-apps-plan-2026-11-21.md) comes back after sign-in with its whole request. */
+const ALLOWED_AUTH_REDIRECT_PREFIXES = ["/admin", "/app", "/oauth/authorize"] as const;
 
 export function sanitizeAuthRedirect(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {

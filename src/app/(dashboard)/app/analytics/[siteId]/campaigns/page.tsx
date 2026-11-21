@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import { Megaphone } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { campaignForEye, hasNoName } from "@/convex/utils/campaignNames";
+import { hasNoName } from "@/convex/utils/campaignNames";
+import { campaignsEyeData, noCampaigns } from "@/convex/utils/sees/eyeData/googleAnalyticsCampaigns";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
@@ -31,7 +32,7 @@ export default function AnalyticsCampaignsPage() {
   const campaigns = useCampaigns(choice);
   const { name, place } = useCampaignNames();
   const inWords = useSpanInWords(...spansOfList(campaigns.every));
-  const nothing = campaigns.every?.campaignTotals?.visits === 0;
+  const nothing = noCampaigns(campaigns.every);
   return (
     <AnalyticsListScreen
       header={{ icon: <Megaphone className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
@@ -82,15 +83,8 @@ function CampaignsSees({ campaigns }: { campaigns: ReturnType<typeof useCampaign
   const website = useWebsiteForEye();
   const { name, place } = useCampaignNames();
   const { every, overview, sells } = campaigns;
-  const data = useMemo(() => (every ? {
-    rows: every.rows.map((row) => campaignForEye(row, name(row), place(row.cameFrom ?? "notKnown"))),
-    total: every.total,
-    untagged: every.untagged,
-    names: eyeNames,
-    sells,
-    ...(every.campaignTotals ? { totals: every.campaignTotals } : {}),
-    ...(website ? { website: { ...website, bought: overview?.now?.purchases ?? 0, boughtBefore: overview?.before?.purchases ?? null } } : {}),
-  } : undefined), [every, eyeNames, name, place, website, overview, sells]);
+  // Built by the same function a chat app's question builds it with (chatAppEyes/googleAnalytics.ts), so the two can't disagree.
+  const data = useMemo(() => campaignsEyeData({ every, overview, website, sells }, { names: eyeNames, campaigns: { name, place } }), [every, eyeNames, name, place, website, overview, sells]);
   // Where "Do first" may send the reader: where campaigns' figures are looked into and their tracking checked.
   const links = useMemo(() => [
     { label: tm("channels"), href: hrefFor("channels") },

@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Layers } from "lucide-react";
-import { NOT_SORTED_KIND } from "@/convex/utils/pageKinds";
 import { servicesSees } from "@/convex/utils/sees/searchConsoleScreens";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { Change } from "@/src/ui/components/screens/Change";
@@ -20,7 +19,9 @@ import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { DemandBandsCard, DemandBoxes, DemandSquaresCard, useDemand } from "../../_components/DemandParts";
-import { demandPageData, demandParts, type DemandPart } from "../../_components/demandSees";
+import type { DemandPart } from "../../_components/demandSees";
+import { demandEyeData, demandPartsOf } from "@/convex/utils/sees/eyeData/searchConsoleDemand";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import { GoogleCutLine } from "../../_components/GoogleCutLine";
 import { usePerformanceDates } from "../../_components/PerformanceParts";
 import { useSiteFiguresFor } from "../../_components/SearchConsoleFigures";
@@ -71,18 +72,10 @@ export default function SearchConsoleDemandPage() {
   const previous = figures?.previous ?? null;
   const answer = demand.answer;
   const { label } = pageKinds;
-  const parts = useMemo(() => {
-    if (!answer || !figures) return undefined;
-    // Hakken's "not judged yet" reads as Unclassified, as Performance's squares say it.
-    const kindOf = (kind: string) => (kind === "UNJUDGED" ? NOT_SORTED_KIND : kind);
-    return demandParts(answer.rows, previous, answer.comparable, {
-      kind: (kind) => label(kindOf(kind)),
-      sorted: (kind) => kindOf(kind) !== NOT_SORTED_KIND,
-    });
-  }, [answer, figures, previous, label]);
-  const seesData = useMemo(() => (parts
-    ? demandPageData({ parts, totals, previous, names: { others: t("sees.others"), allPages: t("performance.eye.allPages"), hidden: t("performance.squares.groups.hidden") } })
-    : undefined), [parts, totals, previous, t]);
+  // Hakken's "not judged yet" reads as Unclassified, as Performance's squares say it. Built by the same functions a chat
+  // app's question builds them with (chatAppEyes/searchConsole.ts), so the two can't disagree.
+  const parts = useMemo(() => demandPartsOf(answer, figures ? { previous } : undefined, label), [answer, figures, previous, label]);
+  const seesData = useMemo(() => demandEyeData({ parts, totals, previous }, wordsReader(t)), [parts, totals, previous, t]);
 
   return (
     <div className="flex flex-col gap-6">

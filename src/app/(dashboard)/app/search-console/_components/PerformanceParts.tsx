@@ -23,7 +23,9 @@ import { useSearchConsoleSummaryRead } from "./SearchConsoleTables";
 import { appearanceName, formatPosition } from "./searchConsoleFormat";
 import { useLiveAsk } from "./searchConsoleRecords";
 import { useSearchConsoleSplit } from "./useSearchConsoleSplit";
-import { TIMES, TIMES_BY, dotsOf, performanceSplits, websiteRate, type Times } from "./performanceSees";
+import { TIMES, TIMES_BY, dotsOf, websiteRate, type Times } from "./performanceSees";
+import { performanceEyeData, type PerformanceEyeReads } from "@/convex/utils/sees/eyeData/searchConsolePerformance";
+import { wordsReader } from "@/convex/utils/sees/eyeData/searchConsoleWords";
 import {
   countryArg,
   isReadyMade,
@@ -459,22 +461,19 @@ export function PerformanceDotsCard({ reads, figures, host }: { reads: Performan
   );
 }
 
-/** The charts' figures for the page's eye, in the reader's words (`performanceSplits`). */
-export function usePerformanceEye(reads: PerformanceReads, figures: SiteFigures | undefined) {
-  const t = useTranslations("searchConsole.performance.dots");
-  const names = useNames();
+/**
+ * What the page hands its eye (`performanceEyeData`), in the reader's words: built by the same function a chat app's
+ * question builds it with (chatAppEyes/searchConsole.ts), so the two can't disagree.
+ */
+export function usePerformanceEye(reads: PerformanceReads, figures: SiteFigures | undefined, brand: Pick<PerformanceEyeReads, "brandNow" | "brandBefore">, dates: PerformanceEyeReads["dates"]) {
+  const t = useTranslations("searchConsole");
   const siteId = useSearchConsoleSiteId();
   const pageKinds = usePageKinds(siteId);
-  const splits = figures ? performanceSplits(
-    { totals: figures.totals, previous: figures.previous, brand: reads.keywords?.brand, kinds: reads.kinds, devices: reads.devices, looks: reads.appearance, keywords: reads.keywords?.rows },
-    {
-      kind: (key) => (key === NOT_SORTED_KIND || key === "UNJUDGED" ? null : pageKinds.label(key)),
-      device: names.device,
-      look: names.look,
-      quiet: (line, rate) => t("groups.name", { across: t("groups.acrossMore", { count: formatNumber(line), noun: t("noun.impressions") }), up: t("groups.upFewer", { rate: oneDecimal(rate) }) }),
-    },
-  ) : undefined;
+  const data = performanceEyeData(
+    { figures, ...brand, dates, raw: { brand: reads.keywords?.brand, kinds: reads.kinds, devices: reads.devices, looks: reads.appearance, keywords: reads.keywords?.rows } },
+    { t: wordsReader(t), kind: pageKinds.label, number: formatNumber, oneDecimal },
+  );
   // The same figures keep the same object, so the eye works them out again only when they change.
-  const key = splits === undefined ? "" : JSON.stringify(splits);
+  const key = data === undefined ? "" : JSON.stringify(data);
   return useMemo(() => (key ? (JSON.parse(key) as Record<string, unknown>) : undefined), [key]);
 }
