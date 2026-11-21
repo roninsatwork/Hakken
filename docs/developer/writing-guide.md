@@ -5,14 +5,14 @@ feature_area: words on screens, drawings and canvas notes
 audience: every agent and developer who writes words Anthony or a client reads
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/writing-guide.md
-last_reviewed: '2026-11-18T09:15:00+00:00'
+last_reviewed: '2026-11-21T10:00:00+00:00'
 reviewed_against: current implementation
 status: Current
 ---
-# Writing words people read — read before you write any
+# Writing words people read. Read this before you write any.
 
 > **Product:** Hakken · **Document type:** Developer guide · **Feature area:** words on screens, drawings and canvas notes
-> **Reviewed:** 18 November 2026, 09:15 GMT (Europe/London)
+> **Reviewed:** 21 November 2026, 10:00 GMT (Europe/London)
 > **Source path:** `docs/developer/writing-guide.md` · **Status:** Current
 
 Every word Anthony or a client reads is written the way a helpful person
@@ -33,9 +33,15 @@ the rules, so he had to teach them again.
 - 7 November: "i keep asking for it to be in our style and its not".
 - 17 November: "have you forgotten the language style and reading age".
 - 18 November: "why do I have to ask every day", then "how do we stop that for other agents".
+- 21 November: the Features canvas said "Has what's ticked here, unless you switch it off there." Every check had passed.
 
 This guide is the answer. Read it before you write. Then let the checks
 catch what a machine can, and read every line yourself for the rest.
+
+Reading it wasn't enough. In about ten sessions from 17 November the agent
+had measured the reading age but hadn't copied the redone screens first. So
+now the tool asks at the moment words are written, and a fresh reader reads
+them before Anthony does. See "The tool asks first" and "A fresh reader".
 
 ## The standard is the redone screens
 
@@ -97,6 +103,9 @@ Check every line against this list before anyone sees it.
    the exact figure for the big number itself.
 7. **Read each line aloud.** If it sounds like a report or a spreadsheet,
    write it again.
+8. **No em dashes. No comma before the "and" that ends a list.** Write
+   "light, dark or the same as your device", never "light, dark, or the
+   same". Anthony, 21 November 2026: "i hate emdashes and oxford commas".
 
 And always:
 
@@ -109,6 +118,13 @@ And always:
 - **Say a thing once on a screen.** One line under the boxes, not the same
   note in every chart's hint.
 - **Use the name the app already has.** Classification, never "kind of page".
+- **Name what you point at.** Say "on board 2" or "in System Settings",
+  never "here" or "there" for another board or page. The same goes for
+  "one", "it", "their" and "the websites" when the line never says which.
+- **Call one thing by one name.** Not "None" in one place and "Off for
+  everyone" in another.
+- **Match the words to the control.** A column called Switched on takes
+  "switch off", not "untick".
 
 ## Google's own terms stay
 
@@ -202,21 +218,83 @@ Canvas notes and your replies to Anthony follow the same rules. Explain in
 three or four short lines, with one example each. Don't send lists of
 figures joined by colons and dashes. Give the plain answer first.
 
-## Who checks
+## The tool asks first
 
-Whoever hands Anthony a board or a screen reads every string on it first.
-That includes boards a helper drew. A helper saying "the check passes" is
-not that read. On 18 November 2026 two canvases reached him with "on the
-month before" in the boxes, one note said three times, and a promise that
-rows open. Every one of them passed the reading-age check.
+A hook in `.claude/settings.json` runs `scripts/words-hook.mjs` in every
+Claude Code session in this project. It asks at the moment words are
+written, so nobody has to remember.
+
+- **The first time a session writes words, it stops once.** That's the
+  first write of a board (`*.dc.html`), a `canvas.json` or
+  `messages/en.json`, or the first run of the drawing kit. A helper the
+  session starts gets its own stop. The stop shows this checklist and about
+  20 real lines from the redone screens. It asks you to put each new line
+  beside the redone line it copies, in your reply. Then you write again.
+- **Every write after that is checked as it goes in.** A write that adds a
+  fault the checks can find is refused, with the fault named. A fault that
+  was there before doesn't stop you, so you can fix one at a time.
+- **A canvas publish waits for the checks and a fresh reader.** It runs
+  `npm run check:drawing` on every board and the notes. Then it waits until
+  a fresh reader has read every new line.
+- **A turn that changed screen lines waits for a fresh reader too.** If the
+  session changed lines in `messages/en.json`, it can't end its turn until a
+  fresh reader has read them. If it ends anyway, Anthony is told.
+
+Codex sessions don't run Claude Code's hooks. There, run the checks and the
+fresh reader by hand, as below.
+
+## A fresh reader
+
+Before a board or a screen's new words reach Anthony, a helper agent that
+didn't write them reads every line. It reads them against the redone
+screens' words and returns the faults. Whoever wrote the words can't see
+their own slips. A check passing isn't a read.
+
+1. Make a packet. The hook makes one and hands you its prompt. By hand, run
+   `node scripts/words-read.mjs packet <board.dc.html | canvas.json>...`
+   for a canvas, or `node scripts/words-read.mjs packet --keys <key,key>`
+   for screen lines.
+2. Start a helper agent with the prompt it gives you. The packet holds the
+   rules, the redone screens' lines and every new line, numbered. The
+   reader signs it off with `node scripts/words-read.mjs sign`, naming each
+   line with a fault.
+3. Fix what the reader found. A changed line needs a read of its own, so
+   the hook asks again for just that line.
+4. If you keep a line the reader faulted, tell Anthony which line and why.
+   The hook refuses once and lists the faults. The next time it lets them
+   through and tells Anthony which lines were kept.
+
+What has been read is kept by each line's words, in the repository's git
+folder (`hakken-words/read.json`), so a line read once stays read in every
+worktree. Words the app already shows, like a menu's names, need no read.
+Nor does a screen line that copies a redone screen's line word for word.
+
+It works. On 21 November a fresh reader went over every line of the
+Features canvas, and Anthony said "the wording is much better, use this
+style and tone every time". Lines he liked include "Switch a feature off
+and nothing new comes in for it. The figures so far stay." The reader had
+caught what no check could. Words pointing at nothing, a verb that didn't
+match its control, one state with two names, and the same point made three
+times.
+
+Whoever hands Anthony a board or a screen still reads every string on it
+first, as before. That includes boards a helper drew. On 18 November 2026
+two canvases reached him with "on the month before" in the boxes, one note
+said three times, and a promise that rows open. Every one of them passed
+the reading-age check.
 
 ## What the checks catch
 
 - `npm run check:reading` fails a client line over reading age 14 in
   `messages/en.json`.
 - `npm run check:words` fails a client line in `messages/en.json` with a
-  month left unnamed, a colon or a dash joining two ideas, or Hakken
-  talking about itself (`scripts/word-style.mjs`). Both run inside
+  month left unnamed, a colon or a dash joining two ideas, an em dash, a
+  comma before the "and" that ends a list, or Hakken talking about itself
+  (`scripts/word-style.mjs`). It also fails a word the redone screens never
+  use, with the word they use instead. That list came from real misses, like
+  "showings" for impressions and "kind of page" for Classification. A word
+  a redone screen does use can't go on it, so "split", "place", "row",
+  "list" and "step" aren't there. The fresh reader catches those. Both run inside
   `npm run check:guards`, so they run on every push.
 - `npm run check:drawing -- <board.dc.html | canvas.json>` holds a board to
   the same rules. It also fails a sentence said twice on one board, and a
@@ -224,12 +302,15 @@ rows open. Every one of them passed the reading-age check.
   canvas's `canvas.json`, it holds the canvas's notes to them too.
 
 Words in quote marks are left alone, so a note can quote a bad line to
-point at it. A table's rows are the website's own words, so the words rules
-skip them. A board copied from the app (`<!-- copied-from-app -->`) is
-today's page and is let through.
+point at it. A table's name column holds the website's own words, like a
+page's title, so the words rules skip it. Every other cell is ours, and is
+checked and read. On 21 November an em dash in a feature's description got
+through, because every row was skipped then. A board copied from the app
+(`<!-- copied-from-app -->`) is today's page and is let through.
 
 The lines already at fault the day `check:words` came in are frozen in
-`scripts/word-style-allowlist.json`, by rule. Like
+`scripts/word-style-allowlist.json`, by rule. So are the lines at fault on
+21 November 2026, when the em dash, list comma and swap rules came in. Like
 `scripts/reading-age-allowlist.json`, the list may shrink, never grow. Fix a
 line and take it off. Never add one.
 

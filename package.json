@@ -33,6 +33,7 @@
     "theme:pull": "node scripts/theme-pull.mjs",
     "drawing-kit": "node scripts/drawing-kit.mjs",
     "check:drawing": "node scripts/check-drawing.mjs",
+    "words:read": "node scripts/words-read.mjs",
     "template:build": "node scripts/strip-verticals.mjs",
     "verify:env": "node scripts/verify-local-environment.mjs",
     "verify:deployment": "node scripts/verify-deployment-environment.mjs",

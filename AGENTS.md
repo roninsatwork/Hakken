@@ -498,6 +498,27 @@ standard is the screens redone with him, and the guide lists them.
 - **Read every string yourself before handing anything back, whoever drew
   it.** A helper's "the check passes" is not that read. The checks can't tell
   whether a line sounds like a person talking.
+- **A fresh reader reads every new line before Anthony does. This is a
+  required step.** Before a board or a screen's new words reach him, start a
+  helper agent that didn't write them. It reads every line against the
+  redone screens and signs them off (`node scripts/words-read.mjs`). Fix
+  what it finds. If you keep a faulted line, tell Anthony which and why.
+  This came in on 2026-11-21. In about ten sessions from 17 November he
+  had asked "have you forgotten the language style and reading age", and
+  the Features canvas still said "Has what's ticked here, unless you switch
+  it off there."
+- **The tool asks first** (`.claude/settings.json`, `scripts/words-hook.mjs`).
+  The first time a session writes a board, a `canvas.json` or
+  `messages/en.json`, the write stops once with the checklist and real
+  redone lines. Put each new line beside the redone line it copies, then
+  write again. After that each write is checked as it goes in. A canvas
+  publish waits for `check:drawing` and a fresh read, and a turn that
+  changed screen lines can't end without one. Don't work around it. Codex
+  sessions don't run these hooks, so run `words-read.mjs` by hand there.
+- **No em dashes, and no comma before the "and" that ends a list**
+  (Anthony, 2026-11-21: "i hate emdashes and oxford commas"). `check:words`
+  and `check:drawing` refuse both, and a word the redone screens never use,
+  such as "showings".
 
 ## Drawing And Building Screens
 

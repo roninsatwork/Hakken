@@ -47,6 +47,36 @@ export function allowedColours(theme, paletteSource) {
   return colours;
 }
 
+/** A heading cell's words as a person sees them: no tags, and nothing kept for screen readers only. */
+const shown = (cell) => cell.replace(/<span\b[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>[\s\S]*?<\/span>/g, "").replace(/<[^>]+>/g, "").trim();
+
+/**
+ * The words in a table's rows that are ours. The name column holds the website's own words, a page's title as the
+ * website wrote it, so it's left to the website. Every other cell is ours: a Features table's descriptions, a status,
+ * a row across the table that says it's empty. On 21 November 2026 board 3 of the Features canvas carried "The phone
+ * line's history — every call…" in a row, and the words rules never saw it (Anthony: "why is there an em dash then").
+ */
+export function tableCellWords(html) {
+  const words = [];
+  for (const table of html.matchAll(/<table\b[\s\S]*?<\/table>/g)) {
+    const head = table[0].match(/<thead\b[\s\S]*?<\/thead>/)?.[0] ?? "";
+    const headRow = [...head.matchAll(/<tr\b[\s\S]*?<\/tr>/g)].at(-1)?.[0] ?? "";
+    const cells = [...headRow.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/g)].map((cell) => cell[1]);
+    // The first column with a heading is the name. One with no heading is the tick box that draws a row on the chart.
+    const nameAt = cells.length > 0 && shown(cells[0]) === "" ? 1 : 0;
+    const body = table[0].match(/<tbody\b[\s\S]*?<\/tbody>/)?.[0] ?? "";
+    for (const row of body.matchAll(/<tr\b[\s\S]*?<\/tr>/g)) {
+      const tds = [...row[0].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map((td) => td[1]);
+      // A row across the table (empty, loading, an opened detail) is all ours.
+      const across = cells.length > 0 && tds.length !== cells.length;
+      tds.forEach((td, at) => {
+        if (across || at !== nameAt) words.push(...drawingLines(td));
+      });
+    }
+  }
+  return words;
+}
+
 /** The problems in one drawing, each a line a person can act on. */
 export function checkDrawing(html, { kitCss, colours, appSource = "" }) {
   const problems = [];
@@ -123,7 +153,6 @@ export function checkDrawing(html, { kitCss, colours, appSource = "" }) {
     const head = table[0].match(/<thead\b[\s\S]*?<\/thead>/)?.[0] ?? table[0];
     const row = [...head.matchAll(/<tr\b[\s\S]*?<\/tr>/g)].at(-1)?.[0] ?? "";
     const cells = [...row.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/g)].map((cell) => cell[1]);
-    const shown = (cell) => cell.replace(/<span\b[^>]*class="[^"]*\bsr-only\b[^"]*"[^>]*>[\s\S]*?<\/span>/g, "").replace(/<[^>]+>/g, "").trim();
     const counted = cells.length - (cells.length > 0 && shown(cells[0]) === "" ? 1 : 0);
     if (counted > MOST_TABLE_COLUMNS) {
       problems.push(`a table of ${counted} columns, and the most is ${MOST_TABLE_COLUMNS}: the name and ${MOST_TABLE_COLUMNS - 1} more, besides a tick box for the chart — put the rest on the row's own screen`);
@@ -156,27 +185,38 @@ export function checkDrawing(html, { kitCss, colours, appSource = "" }) {
     else if (!tag[1] && tableDepth > 0) problems.push(`<${tag[2]}> inside a table — a browser moves it out; write the rows out, with holes for what changes`);
   }
 
-  // Words a client reads (scripts/reading-age.mjs). A board copied from the app carries `<!-- copied-from-app -->`
-  // and is let through: its words are today's, which is what a redraw is there to fix.
-  if (!/<!--\s*copied-from-app/.test(html)) {
-    for (const line of drawingLines(html)) {
-      if (tooHard(line)) problems.push(`reading age ${readingAge(line).toFixed(1)}, and the most is ${MOST_READING_AGE}. Say it more simply: "${line}"`);
-    }
-    // The words rules judge our words, not a table's rows: a row's name is the website's own title, as it wrote it.
-    const ours = drawingLines(html.replace(/<tbody\b[\s\S]*?<\/tbody>/g, "\n"));
-    for (const line of ours) for (const { fix } of styleFaults(line)) problems.push(`${fix} "${line}"`);
-    for (const sentence of saidTwice(ours)) problems.push(`said more than once on one board. Say it once, where it belongs: "${sentence}"`);
-    // "Compare with" is only ever a period on the redone screens: September, the same days last year, no comparison.
-    for (const menu of html.matchAll(/<select\b[^>]*aria-label="Compare with"[^>]*>([\s\S]*?)<\/select>/g)) {
-      const choices = [...menu[1].matchAll(/<option\b[^>]*>([^<]*)<\/option>/g)].map((option) => option[1].trim());
-      const others = choices.filter((choice) => !isPeriodChoice(choice));
-      if (others.length > 0) problems.push(`"Compare with" offers ${others.map((choice) => `"${choice}"`).join(", ")}, which isn't a period. Compare with is only for a period. Use Show for another choice.`);
-    }
-  }
+  problems.push(...drawingWordProblems(html));
 
   const counted = new Map();
   for (const problem of problems) counted.set(problem, (counted.get(problem) ?? 0) + 1);
   return [...counted].map(([problem, times]) => (times > 1 ? `${problem} (${times} times)` : problem));
+}
+
+/**
+ * The words faults on a board (scripts/reading-age.mjs, scripts/word-style.mjs): a line over the reading age, a style
+ * fault, a sentence said twice, or a "Compare with" that isn't a period. A board copied from the app carries
+ * `<!-- copied-from-app -->` and is let through: its words are today's, which is what a redraw is there to fix.
+ * The words hook (scripts/words-hook.mjs) runs this on each write of a board.
+ */
+export function drawingWordProblems(html) {
+  if (/<!--\s*copied-from-app/.test(html)) return [];
+  const problems = [];
+  for (const line of drawingLines(html)) {
+    if (tooHard(line)) problems.push(`reading age ${readingAge(line).toFixed(1)}, and the most is ${MOST_READING_AGE}. Say it more simply: "${line}"`);
+  }
+  // The words rules judge our words, and a table's name column is the website's own: a page's title, as it wrote it.
+  // The rest of a row is ours (tableCellWords). A row may say what the row above said, so only lines outside the
+  // rows count as said twice.
+  const ours = drawingLines(html.replace(/<tbody\b[\s\S]*?<\/tbody>/g, "\n"));
+  for (const line of [...ours, ...tableCellWords(html)]) for (const { fix } of styleFaults(line)) problems.push(`${fix} "${line}"`);
+  for (const sentence of saidTwice(ours)) problems.push(`said more than once on one board. Say it once, where it belongs: "${sentence}"`);
+  // "Compare with" is only ever a period on the redone screens: September, the same days last year, no comparison.
+  for (const menu of html.matchAll(/<select\b[^>]*aria-label="Compare with"[^>]*>([\s\S]*?)<\/select>/g)) {
+    const choices = [...menu[1].matchAll(/<option\b[^>]*>([^<]*)<\/option>/g)].map((option) => option[1].trim());
+    const others = choices.filter((choice) => !isPeriodChoice(choice));
+    if (others.length > 0) problems.push(`"Compare with" offers ${others.map((choice) => `"${choice}"`).join(", ")}, which isn't a period. Compare with is only for a period. Use Show for another choice.`);
+  }
+  return problems;
 }
 
 /** Kinds of note on a canvas that aren't words to read: a title, or a shape the person drew. */
@@ -204,23 +244,36 @@ function appSourceText(dir) {
   }).join("\n");
 }
 
+/** What a board is checked against: the kit's stylesheet, the app's own marker classes and the look's colours. Null with no kit built. */
+export function drawingContext() {
+  if (!existsSync(KIT_CSS)) return null;
+  return {
+    kitCss: readFileSync(KIT_CSS, "utf8"),
+    appSource: appSourceText(path.join(ROOT, "src")),
+    colours: allowedColours(readThemeRecord(), `${readFileSync(CHART_PALETTE, "utf8")}\n${readFileSync(GOOGLE_MARK, "utf8")}`),
+  };
+}
+
+/** The problems in one board or canvas.json on disk. */
+export function checkFile(file, context) {
+  return file.endsWith(".json")
+    ? checkCanvasNotes(JSON.parse(readFileSync(file, "utf8")))
+    : checkDrawing(readFileSync(file, "utf8"), context);
+}
+
 function main(files) {
   if (files.length === 0) {
     console.error("Usage: npm run check:drawing -- <board.dc.html | canvas.json> [...]");
     process.exit(2);
   }
-  if (!existsSync(KIT_CSS)) {
+  const context = drawingContext();
+  if (!context) {
     console.error("check:drawing: no kit yet — run `npm run drawing-kit` first.");
     process.exit(2);
   }
-  const kitCss = readFileSync(KIT_CSS, "utf8");
-  const appSource = appSourceText(path.join(ROOT, "src"));
-  const colours = allowedColours(readThemeRecord(), `${readFileSync(CHART_PALETTE, "utf8")}\n${readFileSync(GOOGLE_MARK, "utf8")}`);
   let failed = 0;
   for (const file of files) {
-    const problems = file.endsWith(".json")
-      ? checkCanvasNotes(JSON.parse(readFileSync(file, "utf8")))
-      : checkDrawing(readFileSync(file, "utf8"), { kitCss, colours, appSource });
+    const problems = checkFile(file, context);
     if (problems.length === 0) {
       console.log(`✓ ${file}`);
     } else {

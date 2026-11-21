@@ -182,7 +182,7 @@ The movement demo is frozen unless the user explicitly asks to reopen it or a re
 ## Further References
 
 - [Drawing and building screens — read before either](./drawing-guide.md)
-- [Writing words people read — read before you write any](./writing-guide.md)
+- [Writing words people read. Read this before you write any.](./writing-guide.md)
 
 ## Coverage Status
 

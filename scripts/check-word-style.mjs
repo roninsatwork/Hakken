@@ -13,7 +13,7 @@ import { readOut } from "./reading-age.mjs";
 import { styleFaults } from "./word-style.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const RULES = ["named-month", "colon", "dash", "hakken"];
+export const RULES = ["named-month", "colon", "dash", "em-dash", "oxford-comma", "hakken", "swap"];
 
 /** Each client line's faults, by rule and then key: `{ rule: Map<key, { words, fix }> }`. */
 export function styleFaultsOf(messages) {

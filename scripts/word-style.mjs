@@ -27,6 +27,33 @@ const HAKKEN_NAMES = /\bAsk Hakken\b|\bHakken tasks\b/gi;
 const QUOTED = /"[^"]*"|“[^”]*”|‘[^’]*’/g;
 /** Addresses, email addresses and code names: a colon or dash inside them isn't joining ideas. */
 const NOT_WORDS = /\S*(?::\/\/|[./@_])\S*/g;
+/** Addresses and code names a swap looks past, without the full stop that ends a sentence ("Failed to queue URLs."). */
+const ADDRESSES = /\S*(?::\/\/|[/@_]|\w\.\w)\S*/g;
+
+/**
+ * Words the redone screens never use, each with the word they use instead (docs/developer/writing-guide.md). Each came
+ * from a real miss or from the guide's own rules: "showings" on 20 November 2026, where the redone screens say
+ * impressions, which Anthony chose to keep; "kind of page" for Classification; the system words in the checklist's
+ * fourth rule that no redone screen uses; and Google's "crawl" and "URL" in a sentence rather than a label. A word a
+ * redone screen does use can't go here: "split", "place", "row", "list" and "step" all appear on one, and
+ * `scripts/check-word-style.test.mjs` fails a swap that a redone screen's words would trip. `sentences` limits a swap
+ * to lines of a sentence's length, so Google's own label ("Last crawled") is let through.
+ */
+export const SWAPS = [
+  { words: /\bshowings\b/i, say: 'Say "impressions", as Search Console\'s Performance does.' },
+  { words: /\bkinds? of pages?\b/i, say: 'Say "Classification", the name the app already has.' },
+  { words: /\bspans?\b/i, say: 'Name the dates instead, as "since September" or "in the last 30 days" do.' },
+  { words: /\bjudged\b/i, say: "Say what happened in a shop owner's words, as \"checked\" or \"looked at\"." },
+  { words: /\broutines?\b|\berrands?\b|\bslots?\b/i, say: "It's a system word. Say what the person sees happen." },
+  { words: /\bcrawl(?:s|ed|ing)?\b/i, say: 'Say "visited" in a sentence. Google\'s "Last crawled" stays only as a label.', sentences: true },
+  { words: /\bURLs?\b/, say: 'Say "page" or "link" in a sentence.', sentences: true },
+];
+
+/** An em dash with words on both sides. A lone "—" is an empty table cell, not a sentence. Anthony, 2026-11-21: "i hate emdashes". */
+const EM_DASH = /\S\s*—\s*\S/;
+/** A comma before the "and" or "or" that ends a list of short items, as "light, dark, or the same". Anthony, 2026-11-21: "i hate ... oxford commas". Items of one or two words keep two clauses ("In September, sales went up, and visits fell") out of it. */
+const LIST_WORD = "[A-Za-z0-9’'%]+";
+const OXFORD_COMMA = new RegExp(`(?:^|[^\\w,]\\s)${LIST_WORD}(?: ${LIST_WORD})?, ${LIST_WORD}(?: ${LIST_WORD})?, (?:and|or) ${LIST_WORD}`);
 
 const wordsOf = (text) => text.match(/[A-Za-z0-9'’]+/g) ?? [];
 const letterWordsOf = (text) => text.match(/[A-Za-z][A-Za-z'’]+/g) ?? [];
@@ -65,8 +92,16 @@ export function styleFaults(text) {
   const sentences = sentencesOf(line);
   if (sentences.some(colonJoins)) faults.push({ rule: "colon", fix: "A colon joins two ideas here. Write two sentences." });
   if (sentences.some(dashJoins)) faults.push({ rule: "dash", fix: "A dash joins two ideas here. Write two sentences." });
+  if (EM_DASH.test(line.replace(NOT_WORDS, " "))) faults.push({ rule: "em-dash", fix: "No em dashes. Write two sentences, or use a comma." });
+  if (OXFORD_COMMA.test(line)) faults.push({ rule: "oxford-comma", fix: 'No comma before the "and" or "or" that ends a list. Write "light, dark or the same as your device".' });
   if (wordsOf(line).length >= FEWEST_WORDS_FOR_HAKKEN && /\bHakken\b/.test(line.replace(HAKKEN_NAMES, ""))) {
     faults.push({ rule: "hakken", fix: "Screens talk about people and Google, never Hakken. Say what happened, not who did it." });
+  }
+  const swapped = SWAPS.filter((swap) => !swap.sentences || wordsOf(line).length >= FEWEST_WORDS_FOR_HAKKEN)
+    .map((swap) => ({ found: swap.words.exec(line.replace(ADDRESSES, " ")), swap }))
+    .filter(({ found }) => found);
+  if (swapped.length > 0) {
+    faults.push({ rule: "swap", fix: swapped.map(({ found, swap }) => `"${found[0]}" isn't a word the redone screens use. ${swap.say}`).join(" ") });
   }
   return faults;
 }

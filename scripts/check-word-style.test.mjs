@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { checkCanvasNotes, checkDrawing, selectorFor } from "./check-drawing.mjs";
+import { checkCanvasNotes, checkDrawing, drawingWordProblems, selectorFor } from "./check-drawing.mjs";
 import { checkWordStyle, styleFaultsOf } from "./check-word-style.mjs";
-import { isPeriodChoice, saidTwice, sentencesOf, styleFaults } from "./word-style.mjs";
+import { isPeriodChoice, saidTwice, sentencesOf, styleFaults, SWAPS } from "./word-style.mjs";
 
 const rules = (line) => styleFaults(line).map((fault) => fault.rule);
 
@@ -60,6 +60,61 @@ describe("Hakken talking about itself", () => {
     expect(rules("Hakken")).toEqual([]);
     expect(rules("Ask Hakken about this page and its figures")).toEqual([]);
     expect(rules("Open Hakken tasks to see what runs next week")).toEqual([]);
+  });
+});
+
+describe("an em dash", () => {
+  test("between words fails, however it's spaced (Anthony, 2026-11-21: \"i hate emdashes\")", () => {
+    expect(rules("Listening — just talk")).toContain("em-dash");
+    expect(rules("Task raised—it's on the Tasks screen")).toContain("em-dash");
+  });
+
+  test("a lone dash in an empty cell, or an en dash in a range, passes", () => {
+    expect(rules("—")).toEqual([]);
+    expect(rules("Pages at positions 1–3 on Google")).toEqual([]);
+  });
+});
+
+describe("a comma before the and that ends a list", () => {
+  test("a list of short items with a comma before its last and or or fails", () => {
+    expect(rules("Light, dark, or the same as your device.")).toContain("oxford-comma");
+    expect(rules("How many, how good, and how fast each business answers.")).toContain("oxford-comma");
+    expect(rules("Google, Bing, and ChatGPT sent 40 visits.")).toContain("oxford-comma");
+  });
+
+  test("the same list without it, or two clauses joined by and, passes", () => {
+    expect(rules("Light, dark or the same as your device.")).toEqual([]);
+    expect(rules("In September, sales went up, and visits went down.")).toEqual([]);
+  });
+});
+
+describe("a word the redone screens never use", () => {
+  test("fails, with the word they use instead", () => {
+    expect(styleFaults("Pages with the most showings")).toEqual([expect.objectContaining({ rule: "swap", fix: expect.stringContaining('Say "impressions"') })]);
+    expect(rules("What kind of page is this?")).toContain("swap");
+    expect(rules("Not judged yet")).toContain("swap");
+  });
+
+  test("Google's crawl and URL only fail in a sentence, so its own labels pass", () => {
+    expect(rules("Last crawled")).toEqual([]);
+    expect(rules("Your website has not been crawled yet by Google.")).toContain("swap");
+    expect(rules("Website URL")).toEqual([]);
+    expect(rules("Failed to queue the URLs you added today.")).toContain("swap");
+  });
+
+  test("a word inside an address isn't read as a word", () => {
+    expect(rules("It came from https://example.com/showings and nowhere else at all")).toEqual([]);
+  });
+
+  test("no line on a redone screen trips one, so the list never bans a word the standard uses", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { redoneLines, redoneNamespaces } = await import("./words-read.mjs");
+    const { readOut } = await import("./reading-age.mjs");
+    const guide = readFileSync(new URL("../docs/developer/writing-guide.md", import.meta.url), "utf8");
+    const messages = JSON.parse(readFileSync(new URL("../messages/en.json", import.meta.url), "utf8"));
+    const tripped = redoneLines(messages, redoneNamespaces(guide)).filter(([, message]) => rules(readOut(message)).includes("swap"));
+    expect(tripped).toEqual([]);
+    expect(SWAPS.length).toBeGreaterThan(0);
   });
 });
 
@@ -129,6 +184,18 @@ describe("a board's words", () => {
 
   test("a table's rows are the website's own words, so they aren't judged", () => {
     expect(check('<table><tbody><tr><td class="text-foreground">Door handles - how to fit them - our blog</td></tr></tbody></table>')).toEqual([]);
+  });
+
+  test("a table's name column is the website's, and its other cells are ours, so they are judged", () => {
+    const table = (name, words) => `<table><thead><tr><th class="text-foreground">Feature</th><th class="text-foreground">What it does</th></tr></thead><tbody><tr><td class="text-foreground">${name}</td><td class="text-foreground">${words}</td></tr></tbody></table>`;
+    expect(drawingWordProblems(table("Calls", "The phone line's history — every call and what happened."))).toEqual([expect.stringContaining("A dash joins"), expect.stringContaining("No em dashes")]);
+    expect(drawingWordProblems(table("Door handles — how to fit them — our blog", "Every call to the phone line."))).toEqual([]);
+  });
+
+  test("a row across the table is ours, and a tick box column doesn't make it the name", () => {
+    const head = '<thead><tr><th class="text-foreground"></th><th class="text-foreground">Page</th><th class="text-foreground">Clicks</th></tr></thead>';
+    expect(drawingWordProblems(`<table>${head}<tbody><tr><td colspan="3">Nobody yet — check back in September</td></tr></tbody></table>`)).toEqual([expect.stringContaining("No em dashes")]);
+    expect(drawingWordProblems(`<table>${head}<tbody><tr><td>x</td><td>Fit a handle — our blog</td><td>12</td></tr></tbody></table>`)).toEqual([]);
   });
 
   test("a sentence said twice fails once", () => {
