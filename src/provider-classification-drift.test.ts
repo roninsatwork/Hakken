@@ -313,7 +313,8 @@ describe('Provider Classification Drift', () => {
       'convex/vertexProviderService.ts',
       // What each Gemini takes is read from its id (`vertexModelRules`), so the
       // test of that rule has to name real ids: 2026-11-09, after Gemini 3.8
-      // Flash and Gemini 4 Argon changed what a request may carry.
+      // Flash and Gemini 4 Argon changed what a request may carry, and
+      // 2026-11-21, when Gemini 4 Neon and Hydrogen took their places.
       'convex/vertexProviderService.test.ts',
       'docs/plans/completed/model-provider-agnostic-plan.md',
       'docs/product/ai-visibility-landscape-sept-2026.md',

@@ -24,6 +24,7 @@ import {
   guardModelTurn,
 } from "./modelTurnService";
 import { createVertexGenAIClient, generateVertexContentWithRetry, VERTEX_TEXT_CLIENT } from "./vertexProviderService";
+import { vertexUsage } from "./vertexUsage";
 import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
@@ -1151,10 +1152,12 @@ export const executeAgentNode = internalAction({
             }, {
                 operation: "workflowAgentNodeGenerate",
             });
+            // Thinking counts as output, as Google bills it (`vertexUsage`).
+            const usage = vertexUsage(vertexResponse.usageMetadata);
             return {
                 text: vertexResponse.text || "",
-                inputTokens: vertexResponse.usageMetadata?.promptTokenCount || 0,
-                outputTokens: vertexResponse.usageMetadata?.candidatesTokenCount || 0,
+                inputTokens: usage.inputTokens,
+                outputTokens: usage.outputTokens,
             };
         })()
         : await (async () => {

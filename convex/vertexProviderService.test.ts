@@ -1,4 +1,4 @@
-import type { GoogleGenAI } from "@google/genai";
+import { ThinkingLevel, type GoogleGenAI } from "@google/genai";
 import { describe, expect, test, vi } from "vitest";
 import { whileMovingClock } from "@/src/test/realTime";
 import {
@@ -12,6 +12,8 @@ import {
   generateVertexContentWithRetry,
   streamVertexContentWithRetry,
   vertexModelRules,
+  vertexUnaskedThinkingLevel,
+  withVertexThinkingDefault,
 } from "./vertexProviderService";
 
 /** A streaming client yielding the given chunks, shaped as the SDK yields them. */
@@ -267,7 +269,8 @@ describe("vertex provider service", () => {
 /**
  * What each Gemini takes, from Google's guides to Gemini 3.8 Flash and Gemini 4
  * Argon (read 2026-11-09): sampling ignored from 3 on, Minimal thinking refused
- * on 3.8 Flash, Pro and 4, and no explicit prompt cache on 4.
+ * on 3.8 Flash, Pro and 4, and no explicit prompt cache on 4. Gemini 4 Neon and
+ * Hydrogen's guides (read 2026-11-21) keep all of it.
  */
 describe("vertex model rules", () => {
   test("Gemini 2.5 takes everything it took before", () => {
@@ -289,13 +292,17 @@ describe("vertex model rules", () => {
   });
 
   test("Gemini 4 takes no temperature, no Minimal thinking and no explicit prompt cache", () => {
-    // `argon` is neither Pro nor Flash: the family is read as any word.
-    expect(vertexModelRules("gemini-4-argon")).toEqual({
-      honoursTemperature: false,
-      takesMinimalThinking: false,
-      takesPromptCache: false,
-      thinksByDefault: true,
-    });
+    // `argon`, `neon` and `hydrogen` are neither Pro nor Flash: the family is
+    // read as any word. Neon and Hydrogen's guides (read 2026-11-21) keep
+    // every rule Argon's had.
+    for (const id of ["gemini-4-argon", "gemini-4-neon", "gemini-4-hydrogen"]) {
+      expect(vertexModelRules(id), id).toEqual({
+        honoursTemperature: false,
+        takesMinimalThinking: false,
+        takesPromptCache: false,
+        thinksByDefault: true,
+      });
+    }
   });
 
   test("reads the model id out of a full Vertex resource name", () => {
@@ -309,5 +316,54 @@ describe("vertex model rules", () => {
       takesPromptCache: true,
       thinksByDefault: false,
     });
+  });
+});
+
+/**
+ * Neon and Hydrogen think at High when no level is sent, where Argon and
+ * 3.8 Flash thought at Medium (Google's guides, read 2026-11-21). A call that
+ * names no level is sent at Medium, the depth Hakken's calls were timed at.
+ */
+describe("thinking a call names no level for", () => {
+  test("is Medium on every model that would otherwise pick its own", () => {
+    for (const id of ["gemini-4-neon", "gemini-4-hydrogen", "gemini-4-argon", "gemini-3.8-flash", "publishers/google/models/gemini-4-neon"]) {
+      expect(vertexUnaskedThinkingLevel(id), id).toBe("MEDIUM");
+    }
+  });
+
+  test("is nothing on a model that thinks only when asked, a speech model or one that is not Gemini", () => {
+    for (const id of ["gemini-2.5-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.8-flash-tts", "vertex-test-model-1"]) {
+      expect(vertexUnaskedThinkingLevel(id), id).toBeUndefined();
+    }
+  });
+
+  test("fills in Medium and keeps the rest of the request", () => {
+    expect(withVertexThinkingDefault({
+      model: "gemini-4-hydrogen",
+      contents: "Prompt",
+      config: { systemInstruction: "Be brief", responseMimeType: "application/json" },
+    })).toEqual({
+      model: "gemini-4-hydrogen",
+      contents: "Prompt",
+      config: { systemInstruction: "Be brief", responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "MEDIUM" } },
+    });
+    expect(withVertexThinkingDefault({ model: "gemini-4-neon", contents: "Prompt" }).config).toEqual({ thinkingConfig: { thinkingLevel: "MEDIUM" } });
+  });
+
+  test("never changes a level the call asked for, or a request to a model that needs none", () => {
+    const asked = { model: "gemini-4-neon", contents: "Prompt", config: { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } };
+    expect(withVertexThinkingDefault(asked)).toBe(asked);
+    const old = { model: "gemini-2.5-flash", contents: "Prompt" };
+    expect(withVertexThinkingDefault(old)).toBe(old);
+  });
+
+  test("goes out on both the plain and the streamed send", async () => {
+    const generateContent = vi.fn(async () => ({ text: "ok" }));
+    await generateVertexContentWithRetry({ models: { generateContent } } as unknown as GoogleGenAI, { model: "gemini-4-hydrogen", contents: "Prompt" });
+    expect(generateContent).toHaveBeenCalledWith({ model: "gemini-4-hydrogen", contents: "Prompt", config: { thinkingConfig: { thinkingLevel: "MEDIUM" } } });
+
+    const ai = streamingClient([{ candidates: [{ content: { parts: [{ text: "ok" }] } }], text: "ok" }]);
+    await streamVertexContentWithRetry(ai, { model: "gemini-4-neon", contents: "Prompt" });
+    expect(ai.models.generateContentStream).toHaveBeenCalledWith({ model: "gemini-4-neon", contents: "Prompt", config: { thinkingConfig: { thinkingLevel: "MEDIUM" } } });
   });
 });

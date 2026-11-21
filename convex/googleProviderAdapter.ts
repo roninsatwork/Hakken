@@ -64,8 +64,10 @@ export function createGoogleProviderAdapter(args: { location?: string } = {}): A
       if (typeof request.temperature === "number" && rules.honoursTemperature) config.temperature = request.temperature;
       if (typeof request.maxOutputTokens === "number") config.maxOutputTokens = request.maxOutputTokens;
       if (request.thinkingLevel === "NONE") {
-        // "Fast": nothing is sent, except where nothing would mean Medium —
-        // there it is Low, the quickest the model takes (`thinksByDefault`).
+        // "Fast": nothing is sent, except where nothing would mean the model's
+        // own depth. There it is Low, the quickest the model takes
+        // (`thinksByDefault`). A call that names no level at all is sent as
+        // Medium where it is sent (`withVertexThinkingDefault`).
         if (rules.thinksByDefault) config.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
       } else if (request.thinkingLevel) {
         const thinkingLevel = parseGoogleThinkingLevel(request.thinkingLevel, rules);

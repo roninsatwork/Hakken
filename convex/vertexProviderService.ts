@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type {
   Content,
   EmbedContentParameters,
@@ -38,8 +38,9 @@ export const DEFAULT_VERTEX_LOCATION = "global";
  * library found `global` took up to 117 seconds for a four-word request and `eu`
  * ran past Google's own deadline, while `us` answered in under three. The library
  * calls Vertex's older `v1beta1` address unless told otherwise, and 3.0.0 still
- * does; Google's guide for Gemini 3.8 Flash calls `v1`. Both of Hakken's writing
- * models, 3.8 Flash and 4 Argon, are offered in `us`.
+ * does; Google's guide for Gemini 3.8 Flash calls `v1`. Hakken's writing models
+ * since 2026-11-21, Gemini 4 Neon and Gemini 4 Hydrogen, are offered in `global`,
+ * `us` and `eu`, and Google's guides for both call `v1`.
  *
  * The model list and speech stay on the configured location and the library's
  * own address, and embeddings keep their own region.
@@ -138,10 +139,15 @@ export function parseVertexModelId(resourceName: string | undefined) {
  * - An explicit prompt cache (`caches.create`, `cachedContent`) returns an error
  *   on Gemini 4. Its implicit cache is on by default instead.
  * - From Gemini 3.7 on, a request with no thinking level thinks at the model's
- *   own depth (Medium on 3.8 Flash). Another app on this code measured it on
- *   2026-11-10: with nothing sent, picking wiki pages took 10–21 seconds and a
- *   four-word title 4–28; at Low the same calls took 2–5 seconds with the same
- *   answers. So "Fast" (`NONE`) is sent as Low on these models.
+ *   own depth (Medium on 3.8 Flash and Argon, High on Neon and Hydrogen).
+ *   Another app on this code measured it on 2026-11-10: with nothing sent,
+ *   picking wiki pages took 10–21 seconds and a four-word title 4–28; at Low
+ *   the same calls took 2–5 seconds with the same answers. So "Fast" (`NONE`)
+ *   is sent as Low on these models, and a call that names no level is sent as
+ *   Medium (`withVertexThinkingDefault`).
+ *
+ * Gemini 4 Neon and Gemini 4 Hydrogen (Google's guides, read 2026-11-21) keep
+ * every rule above. Neon took Argon's place and Hydrogen 3.8 Flash's.
  *
  * A rule on the version in the id, not a list of models, so the next release
  * is covered on the day it ships. An id that is not a Gemini model keeps
@@ -154,8 +160,8 @@ export type VertexModelRules = {
   thinksByDefault: boolean;
 };
 
-// The family is any word: Gemini 4's first model is `gemini-4-argon`, neither
-// Pro nor Flash.
+// The family is any word: Gemini 4's models are `gemini-4-argon`, `gemini-4-neon`
+// and `gemini-4-hydrogen`, neither Pro nor Flash.
 const VERTEX_GEMINI_ID = /^gemini-(\d+)(?:\.(\d+))?-([a-z]+)(-lite)?/;
 
 export function vertexModelRules(providerModelId: string): VertexModelRules {
@@ -174,6 +180,39 @@ export function vertexModelRules(providerModelId: string): VertexModelRules {
     // Pro thinks by default whatever its number; Flash from 3.7.
     thinksByDefault: major > 3 || (major === 3 && (!flash || minor >= 7)),
   };
+}
+
+/**
+ * The thinking level a call that names none is sent with.
+ *
+ * Gemini 4 Neon and Hydrogen think at High when no level is sent, where Argon
+ * and 3.8 Flash thought at Medium (Google's guides, read 2026-11-21). Google's
+ * advice for a call that relied on Medium is to send it. Hakken's calls were
+ * written and timed at Medium, and High costs more and takes longer, so a call
+ * that names no level is sent at Medium on any model that would otherwise pick
+ * its own (`thinksByDefault`). The next model's default can't then quietly make
+ * every call slower and dearer.
+ *
+ * Only text models: a speech model's id reads like a Flash model's
+ * (`gemini-3.8-flash-tts`) and takes no thinking level.
+ */
+export function vertexUnaskedThinkingLevel(providerModelId: string): ThinkingLevel | undefined {
+  if (!isVertexTextGenerationModel(parseVertexModelId(providerModelId))) return undefined;
+  return vertexModelRules(providerModelId).thinksByDefault ? ThinkingLevel.MEDIUM : undefined;
+}
+
+/**
+ * The request as Google gets it: Medium thinking where the call named no level
+ * (`vertexUnaskedThinkingLevel`), and otherwise exactly as the caller built it.
+ *
+ * Applied where every generate call is sent, so a new caller is covered without
+ * having to know this.
+ */
+export function withVertexThinkingDefault(params: GenerateContentParameters): GenerateContentParameters {
+  if (params.config?.thinkingConfig) return params;
+  const thinkingLevel = vertexUnaskedThinkingLevel(params.model);
+  if (!thinkingLevel) return params;
+  return { ...params, config: { ...params.config, thinkingConfig: { thinkingLevel } } };
 }
 
 /**
@@ -288,7 +327,7 @@ export async function generateVertexContentWithRetry(
     operation,
     policy: args.retryPolicy,
     onRetry: (event) => logGoogleRetry(event),
-  }, async () => await ai.models.generateContent(params));
+  }, async () => await ai.models.generateContent(withVertexThinkingDefault(params)));
 }
 
 /**
@@ -354,7 +393,7 @@ export async function streamVertexContentWithRetry(
     shouldRetry: () => !delivered,
     onRetry: (event) => logGoogleRetry(event),
   }, async () => {
-    const stream = await ai.models.generateContentStream(params);
+    const stream = await ai.models.generateContentStream(withVertexThinkingDefault(params));
 
     let text = "";
     const functionCalls: VertexFunctionCall[] = [];
