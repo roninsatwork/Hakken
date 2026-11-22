@@ -207,9 +207,10 @@ a half-finished deploy is worse than a slow one. The job also carries a
 45-minute timeout; without one, a wedged deploy runs to GitHub's six-hour
 default and bills the whole way.
 
-Every image is tagged twice: with the commit SHA and with `latest`. Cloud Run is
-deployed from the **SHA tag**, so each revision records exactly which image is
-serving traffic and previous images remain addressable.
+Every image is tagged twice: with the commit SHA and with `latest`. The build
+also records its image digest. Cloud Run deploys that digest, so a later tag
+change cannot change the image selected for the release. Each job summary
+records the digest needed to roll back.
 
 The production audit is scoped with `--omit=dev --audit-level=high` and always runs, even when previous CI covers unchanged source. The weekly security-audit workflow separately reports the full dependency tree. Workflow comments explain historical dev-tool advisory debt; they are not a current vulnerability assessment, and this review neither queried advisories nor ran an audit. Keep live dependency security findings separate from the source-level description of the release gate.
 
@@ -300,11 +301,11 @@ The Gmail mailbox surface and polling are retired; see the [retirement note](./g
 
 ## Rolling Back
 
-Find the SHA you want (the deploy job's summary prints the deployed SHA, and
-`git log main` gives you the previous one), then point the service at it:
+Find the previous deploy job's image digest in its summary, then point the
+service at that exact image:
 
 ```bash
-gcloud run services update hakken-app --region us-central1 --image us-central1-docker.pkg.dev/$GCP_PROJECT/hakken-repo/hakken-app:<PREVIOUS_SHA>
+gcloud run services update hakken-app --region us-central1 --image us-central1-docker.pkg.dev/$GCP_PROJECT/hakken-repo/hakken-app@sha256:<PREVIOUS_DIGEST>
 ```
 
 Confirm the rollback took effect:

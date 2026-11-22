@@ -1,5 +1,6 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import type { AuthProviderConfig } from "@convex-dev/auth/server";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 
 import Google from "@auth/core/providers/google";
 import Resend from "@auth/core/providers/resend";
@@ -7,8 +8,8 @@ import { Email } from "@convex-dev/auth/providers/Email";
 import { ConvexCredentials } from "@convex-dev/auth/providers/ConvexCredentials";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import { publicAction } from "./tenantFunctions";
-import { createOrUpdateHakkenAuthUser } from "./authUserProvisioning";
+import { publicAction, tenantQuery } from "./tenantFunctions";
+import { createOrUpdateHakkenAuthUser, googleControlsEmail, type AuthProfile } from "./authUserProvisioning";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { buildSignInCodeEmail, buildSignInEmail } from "./platformEmails";
 import { buildConsentUrl } from "./magicLinkUrlService";
@@ -26,6 +27,16 @@ const providers: AuthProviderConfig[] = [
   Google({
     clientId: process.env.AUTH_GOOGLE_ID,
     clientSecret: process.env.AUTH_GOOGLE_SECRET,
+    profile(profile) {
+      return {
+        id: profile.sub,
+        name: profile.name,
+        email: profile.email,
+        image: profile.picture,
+        emailVerified: profile.email_verified === true,
+        hostedDomain: profile.hd,
+      };
+    },
   }),
   Resend({
     apiKey: process.env.RESEND_API_KEY,
@@ -170,8 +181,63 @@ const authRuntime = convexAuth({
   },
 });
 
-export const { auth, signOut, store, isAuthenticated } = authRuntime;
+export const { auth, signOut, isAuthenticated } = authRuntime;
 const frameworkSignIn = authRuntime.signIn;
+const frameworkStore = authRuntime.store;
+
+const GOOGLE_LINK_PROOF_MS = 10 * 60 * 1000;
+
+/** The OAuth verifier ties this callback to the account that began Google linking. */
+async function hasRecentEmailProof(ctx: MutationCtx, signature: string, email: string) {
+  const verifier = await ctx.db.query("authVerifiers")
+    .withIndex("signature", (q) => q.eq("signature", signature)).unique();
+  const session = verifier?.sessionId ? await ctx.db.get(verifier.sessionId) : null;
+  if (!session || session.expirationTime <= Date.now()) return false;
+  const user = await ctx.db.get(session.userId);
+  if (!user || normaliseEmail(user.email ?? "") !== email) return false;
+
+  const since = Date.now() - GOOGLE_LINK_PROOF_MS;
+  for (const eventType of ["MAGIC_LINK_VERIFIED", "ONE_TIME_CODE_VERIFIED"] as const) {
+    const recent = await ctx.db.query("authEvents")
+      .withIndex("by_email_type_timestamp", (q) => q.eq("email", email).eq("eventType", eventType).gt("timestamp", since))
+      .order("desc").take(10);
+    if (recent.some((event) => event.userId === session.userId)) return true;
+  }
+  return false;
+}
+
+/** Convex Auth calls this internal mutation for every provider. */
+export const store = internalMutation({
+  args: { args: v.any() },
+  handler: async (ctx, args) => {
+    const request = args.args as Record<string, unknown>;
+    if (request?.type === "userOAuth" && request.provider === "google") {
+      const profile = (request.profile ?? {}) as AuthProfile;
+      const email = normaliseEmail(profile.email ?? "");
+      const accountId = request.providerAccountId;
+      const existing = typeof accountId === "string" ? await ctx.db.query("authAccounts")
+        .withIndex("providerAndAccountId", (q) => q.eq("provider", "google").eq("providerAccountId", accountId)).unique() : null;
+      const proved = !existing && !googleControlsEmail(profile) && typeof request.signature === "string"
+        ? await hasRecentEmailProof(ctx, request.signature, email)
+        : false;
+      request.profile = { ...profile, emailProofConfirmed: proved };
+    }
+    return await (frameworkStore as unknown as {
+      _handler: (handlerCtx: typeof ctx, handlerArgs: { args: typeof request }) => Promise<unknown>;
+    })._handler(ctx, { args: request });
+  },
+});
+
+export const myGoogleLink = tenantQuery({
+  args: {},
+  returns: v.object({ linked: v.boolean() }),
+  handler: async (ctx) => {
+    const account = await ctx.db.query("authAccounts")
+      .withIndex("userIdAndProvider", (q) => q.eq("userId", ctx.userId).eq("provider", "google"))
+      .first();
+    return { linked: account !== null };
+  },
+});
 
 /**
  * Keep the public function name expected by the Convex Auth clients, but put

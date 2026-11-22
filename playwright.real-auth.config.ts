@@ -19,7 +19,8 @@ export default defineConfig({
   },
   use: {
     baseURL: "http://localhost:3100",
-    trace: "on-first-retry",
+    // Traces can retain auth tokens in browser traffic. This lane uses real accounts.
+    trace: "off",
   },
   projects: [
     {

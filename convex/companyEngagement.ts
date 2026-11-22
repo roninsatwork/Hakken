@@ -78,7 +78,7 @@ async function readPersonActivity(ctx: QueryCtx, args: {
     .query("logins")
     .withIndex("by_user", (q) => q.eq("userId", args.user._id).gte("timestamp", args.cutoff))
     .take(PER_PERSON_LOGIN_LIMIT);
-  const successfulLogins = logins.filter((login) => login.status === "SUCCESS");
+  const successfulLogins = logins.filter((login) => login.status === "SUCCESS" && login.companyId === args.user.companyId);
 
   // `role` here is the message author, not the person's permissions: only what
   // someone typed counts as a question asked.
@@ -88,7 +88,7 @@ async function readPersonActivity(ctx: QueryCtx, args: {
       q.eq("userId", args.user._id).eq("role", "user").gte("createdAt", args.cutoff))
     .take(PER_PERSON_QUESTION_LIMIT);
 
-  return { logins: successfulLogins, questions };
+  return { logins: successfulLogins, questions: questions.filter((question) => question.companyId === args.user.companyId) };
 }
 
 /**

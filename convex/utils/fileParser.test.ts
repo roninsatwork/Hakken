@@ -1,8 +1,14 @@
 import ExcelJS from "exceljs";
-import { describe, expect, test, vi } from "vitest";
+import { strToU8, zipSync } from "fflate";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { parseDocuments } from "./fileParser";
+import { assertOfficeArchiveBudget } from "./officeArchiveBudget";
 
 const XLSX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const pdfExtraction = vi.hoisted(() => vi.fn());
+vi.mock("pdf-extraction", () => ({ default: pdfExtraction }));
+
+beforeEach(() => pdfExtraction.mockReset());
 
 function blobFor(text: string, type: string) {
   return new Blob([text], { type });
@@ -16,6 +22,32 @@ async function xlsxBlobFor(rows: Array<Array<string | number>>) {
 }
 
 describe("file parser", () => {
+  test("rejects a PDF beyond 500 pages and keeps a PDF at the limit readable", async () => {
+    const pdf = new Blob(["dummy PDF"], { type: "application/pdf" });
+    const ctx = { storage: { get: vi.fn(async () => pdf) } };
+    pdfExtraction.mockResolvedValueOnce({ numpages: 501, text: "Page 501 marker" });
+    const tooLong = await parseDocuments(ctx as never, ["long-pdf" as never]);
+    expect(tooLong).toContain("more than 500 pages");
+    expect(tooLong).not.toContain("Page 501 marker");
+
+    pdfExtraction.mockResolvedValueOnce({ numpages: 500, text: "Page 500 is readable" });
+    const allowed = await parseDocuments(ctx as never, ["allowed-pdf" as never]);
+    expect(allowed).toContain("Page 500 is readable");
+  });
+
+  test("rejects an office archive whose small upload expands beyond the parser budget", async () => {
+    const compressed = zipSync({ "word/document.xml": strToU8("x".repeat(1_000_000)) });
+    expect(compressed.length).toBeLessThan(10_000);
+    expect(() => assertOfficeArchiveBudget(compressed, 100_000)).toThrow("expanded");
+    const falseHeader = compressed.slice();
+    new DataView(falseHeader.buffer).setUint32(22, 1, true);
+    expect(() => assertOfficeArchiveBudget(falseHeader, 100_000)).toThrow("expanded");
+
+    const valid = await xlsxBlobFor([["Region", "Revenue"], ["London", 1234]]);
+    const validBytes = new Uint8Array(await valid.arrayBuffer());
+    expect(() => assertOfficeArchiveBudget(validBytes)).not.toThrow();
+  });
+
   test("returns empty text for missing file ids and compiles plain text uploads", async () => {
     expect(await parseDocuments({ storage: { get: vi.fn() } } as never, [])).toBe("");
 

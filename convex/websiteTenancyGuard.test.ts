@@ -202,7 +202,9 @@ describe("Search Console is read only through the company's own hold", () => {
     expect(body, `${table} must carry companyWebsiteId, the hold it belongs to.`).toMatch(/\bcompanyWebsiteId: /);
   });
 
-  const MODULES = new Set(["searchConsoleConnect.ts", "searchConsoleSync.ts"]);
+  // Shared Google OAuth checks the pending state, then verifies the starter's
+  // live company, role and hold before it can use or save the grant.
+  const MODULES = new Set(["searchConsoleConnect.ts", "searchConsoleSync.ts", "googleConnection.ts"]);
   const LOOKUPS = new Set(["by_pending_state", "by_status"]);
   const READS = new RegExp(`\\.query\\(\\s*["'](${TABLES.join("|")})["']\\s*\\)([\\s\\S]{0,200})`, "g");
 
@@ -259,7 +261,7 @@ describe("Google Analytics and the Google sign-in are read only through the comp
   });
 
   const LOOKUPS: Record<string, ReadonlySet<string>> = {
-    "googleConnection.ts": new Set(["by_account", "by_connection"]),
+    "googleConnection.ts": new Set(["by_account", "by_connection", "by_pending_state"]),
     "googleAnalyticsConnect.ts": new Set(["by_pending_state"]),
     "googleAnalyticsAgentRun.ts": new Set(["by_status"]),
   };

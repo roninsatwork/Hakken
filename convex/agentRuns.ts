@@ -11,6 +11,7 @@ import { appError } from "./utils/appError";
 import schema from "./schema";
 import * as agentRunShapes from "./utils/agentRunShapes";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
+import { scopeAgentVersionSnapshot } from "./agentVersionScope";
 import { chargeEndedRun } from "./modelSpend";
 import {
   getNextStepIndex,
@@ -710,8 +711,9 @@ export const getReplayExecutionContextInternal = internalQuery({
     if (!run || run.replayMode !== "SAME_VERSION" || !run.agentVersionId) return null;
 
     const version = await ctx.db.get(run.agentVersionId);
-    if (!version) return null;
-    const snapshot = parseAgentVersionSnapshot(version.snapshotJson);
+    if (!version || version.companyId !== run.companyId) return null;
+    const scopedVersion = await scopeAgentVersionSnapshot(ctx, version);
+    const snapshot = parseAgentVersionSnapshot(scopedVersion.snapshotJson);
     if (!snapshot) return null;
 
     return {
@@ -845,6 +847,7 @@ export const getRunExecutionStateInternal = internalQuery({
   handler: async (ctx, args) => {
     const run = await ctx.db.get(args.runId);
     if (!run) return null;
+    if (run.companyId && !(await ctx.db.get(run.companyId))) return null;
 
     return {
       status: run.status,

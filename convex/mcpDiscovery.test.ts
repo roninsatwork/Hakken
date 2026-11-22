@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { MCP_PROTOCOL_VERSION } from "./mcpProtocol";
@@ -119,6 +119,28 @@ afterEach(() => {
 });
 
 describe("discovering what a server offers", () => {
+  test("a late result from an old address cannot replace the new address's tools or status", async () => {
+    const { t, adminA, serverId } = await setup();
+    const server = await t.run(async (ctx) => await ctx.db.get(serverId));
+    if (!server) throw new Error("server missing");
+    const expectedVersion = await t.mutation(internal.mcpDiscovery.beginDiscovery, {
+      serverId, companyId: server.companyId, url: server.url, authMode: server.authMode,
+    });
+    if (expectedVersion === null) throw new Error("discovery did not start");
+    await adminA.mutation(api.mcpServers.updateServer, { id: serverId, url: "https://new.example.com/mcp" });
+    await adminA.mutation(api.mcpServers.setServerStatus, { id: serverId, status: "CONNECTED" });
+    expect(await t.mutation(internal.mcpDiscovery.recordDiscovery, {
+      serverId, companyId: server.companyId, expectedVersion, ok: true, message: "Old answer",
+      serverLabel: "Old server", tools: [{ name: "old_tool", description: "From the old address", inputSchemaJson: "{}" }],
+    })).toBe(false);
+    expect(await t.mutation(internal.mcpDiscovery.recordDiscovery, {
+      serverId, companyId: server.companyId, expectedVersion, ok: false, message: "Old failure",
+    })).toBe(false);
+    const stored = await t.run(async (ctx) => ({ server: await ctx.db.get(serverId), tools: await ctx.db.query("mcpServerTools").withIndex("by_server", (q) => q.eq("serverId", serverId)).take(10) }));
+    expect(stored.server).toMatchObject({ url: "https://new.example.com/mcp", status: "CONNECTED" });
+    expect(stored.tools).toHaveLength(0);
+  });
+
   test("records the tools a server lists", async () => {
     const { t, adminA, serverId } = await setup();
     stubServer([greeting(), accepted(), toolsPage(2, [invoiceTool])]);

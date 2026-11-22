@@ -197,6 +197,46 @@ describe("the switch, Unlink and the limit", () => {
     expect((await t.mutation(internal.chatAppPasses.renewInternal, { renewalPass: passes.renewalPass, clientId })).ok).toBe(false);
   });
 
+  test("Unlink reaches a live pass after 50 older links were cut off", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const clientId = await signUp(t);
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 50; i++) {
+        await ctx.db.insert("chatAppGrants", {
+          userId: seeded.memberA, companyId: seeded.companyA, app: "local", clientId: `old-${i}`,
+          allowedAt: i, cutOffAt: Date.now(), cutOffBy: "person",
+        });
+      }
+    });
+    const passes = await passesFor(t, seeded.memberA, clientId);
+    expect(await t.withIdentity({ subject: seeded.memberA }).mutation(api.chatAppPasses.unlinkChatApp, { app: "local" })).toBe(1);
+    expect(await t.mutation(internal.chatAppPasses.checkPassInternal, { accessPass: passes.accessPass })).toMatchObject({ ok: false, status: 401 });
+    expect((await t.mutation(internal.chatAppPasses.renewInternal, { renewalPass: passes.renewalPass, clientId })).ok).toBe(false);
+    const linkedAgain = await passesFor(t, seeded.memberA, clientId);
+    expect(await t.mutation(internal.chatAppPasses.checkPassInternal, { accessPass: linkedAgain.accessPass })).toMatchObject({ ok: true });
+  });
+
+  test("the integrations page shows a live link after 50 older cut-off links", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 50; i++) await ctx.db.insert("chatAppGrants", {
+        userId: seeded.memberA, companyId: seeded.companyA, app: "claude", clientId: `old-${i}`,
+        allowedAt: i, cutOffAt: Date.now(), cutOffBy: "person",
+      });
+      await ctx.db.insert("chatAppGrants", {
+        userId: seeded.memberA, companyId: seeded.companyA, app: "claude", clientId: "live",
+        allowedAt: Date.now(),
+      });
+    });
+    const shown = await t.withIdentity({ subject: seeded.memberA }).query(api.chatAppPasses.myChatApps, {});
+    expect(shown.apps.find((app) => app.app === "claude")?.linked?.companyName).toBe("Period House Group");
+    expect(await t.withIdentity({ subject: seeded.memberA }).mutation(api.chatAppPasses.unlinkChatApp, { app: "claude" })).toBe(1);
+    const after = await t.withIdentity({ subject: seeded.memberA }).query(api.chatAppPasses.myChatApps, {});
+    expect(after.apps.find((app) => app.app === "claude")?.linked).toBeNull();
+  });
+
   test("15 questions a minute, then the app waits", async () => {
     const t = harness();
     const seeded = await seed(t);
@@ -211,6 +251,52 @@ describe("the switch, Unlink and the limit", () => {
       }
     });
     expect(await t.mutation(internal.chatAppPasses.checkPassInternal, { accessPass: passes.accessPass })).toMatchObject({ ok: false, status: 429 });
+  });
+
+  test("earlier refused calls cannot hide 15 questions from the minute limit", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const clientId = await signUp(t);
+    const passes = await passesFor(t, seeded.memberA, clientId);
+    const check = await t.mutation(internal.chatAppPasses.checkPassInternal, { accessPass: passes.accessPass });
+    if (!check.ok) throw new Error("the pass should work");
+    await t.run(async (ctx) => {
+      const at = Date.now();
+      for (let i = 0; i < 16; i++) await ctx.db.insert("chatAppRequests", { grantId: check.grantId, userId: seeded.memberA, companyId: seeded.companyA, app: "local", method: "tools/call", outcome: "refused", at: at + i });
+      for (let i = 0; i < 15; i++) await ctx.db.insert("chatAppRequests", { grantId: check.grantId, userId: seeded.memberA, companyId: seeded.companyA, app: "local", method: "tools/call", outcome: "answered", at: at + 16 + i });
+    });
+    expect(await t.mutation(internal.chatAppPasses.checkPassInternal, { accessPass: passes.accessPass })).toMatchObject({ ok: false, status: 429 });
+  });
+
+  test("a reserved question takes the last slot before its answer is logged", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const clientId = await signUp(t);
+    const passes = await passesFor(t, seeded.memberA, clientId);
+    const check = await t.mutation(internal.chatAppPasses.checkPassInternal, { accessPass: passes.accessPass });
+    if (!check.ok) throw new Error("the pass should work");
+    await t.run(async (ctx) => {
+      const at = Date.now();
+      for (let i = 0; i < 14; i++) await ctx.db.insert("chatAppRequests", { grantId: check.grantId, userId: seeded.memberA, companyId: seeded.companyA, app: "local", method: "tools/call", outcome: "answered", at });
+    });
+    const first = await t.mutation(internal.chatAppPasses.reserveQuestionInternal, { accessPass: passes.accessPass, tool: "your_websites" });
+    expect(first.ok).toBe(true);
+    expect(await t.mutation(internal.chatAppPasses.reserveQuestionInternal, { accessPass: passes.accessPass, tool: "your_websites" })).toMatchObject({ ok: false, status: 429 });
+    if (first.ok) {
+      await t.mutation(internal.chatAppPasses.logQuestionInternal, { requestId: first.requestId, grantId: check.grantId, method: "tools/call", tool: "your_websites", outcome: "answered" });
+      const reserved = await t.run(async (ctx) => await ctx.db.get(first.requestId));
+      expect(reserved?.outcome).toBe("answered");
+    }
+  });
+
+  test("a pass cut off after the first check cannot reserve a tool call", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const clientId = await signUp(t);
+    const passes = await passesFor(t, seeded.memberA, clientId);
+    expect(await t.mutation(internal.chatAppPasses.checkPassInternal, { accessPass: passes.accessPass })).toMatchObject({ ok: true });
+    await t.withIdentity({ subject: seeded.memberA }).mutation(api.chatAppPasses.unlinkChatApp, { app: "local" });
+    expect(await t.mutation(internal.chatAppPasses.reserveQuestionInternal, { accessPass: passes.accessPass, tool: "your_websites" })).toMatchObject({ ok: false, status: 401 });
   });
 
   test("a pass that isn't one, or has run out, is refused", async () => {

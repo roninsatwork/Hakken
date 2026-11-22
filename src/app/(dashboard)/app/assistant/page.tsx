@@ -11,7 +11,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useVoiceToText } from "@/src/hooks/useVoiceToText";
-import { validateUploadFile } from "@/src/lib/constants/uploads";
+import { CHAT_ATTACHMENTS_MAX_COUNT, validateUploadFile } from "@/src/lib/constants/uploads";
 import { AssistantComposer } from "./_components/AssistantComposer";
 import { AssistantHero } from "./_components/AssistantHero";
 import {
@@ -162,7 +162,10 @@ export default function AssistantWelcomePage() {
     }
 
     if (validFiles.length > 0) {
-      setPendingFiles((previous) => [...previous, ...validFiles]);
+      if (pendingFiles.length + validFiles.length > CHAT_ATTACHMENTS_MAX_COUNT) {
+        setUploadError(t("tooManyFiles"));
+      }
+      setPendingFiles((previous) => [...previous, ...validFiles].slice(0, CHAT_ATTACHMENTS_MAX_COUNT));
     }
 
     if (fileInputRef.current) fileInputRef.current.value = "";

@@ -6,6 +6,32 @@ import schema from "./schema";
 import { seedUploadReceipt } from "../scripts/test-upload-fixture";
 
 describe("Strict Message Upload Gating (Option B)", () => {
+  test("one message cannot repeat an attachment or carry more than ten IDs", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { userId, threadId, storageId } = await t.run(async (ctx) => {
+      const userId = await ctx.db.insert("users", { email: "visitor@hakken.com", role: "USER" });
+      const threadId = await ctx.db.insert("threads", {
+        userId, title: "Test Thread", createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      const storageId = await ctx.storage.store(new Blob(["hello,world"], { type: "text/csv" }));
+      await seedUploadReceipt(ctx, storageId, { userId }, "chat");
+      await ctx.db.insert("mockStorageMetadata", { storageId, size: 11, contentType: "text/csv" });
+      return { userId, threadId, storageId };
+    });
+    const user = t.withIdentity({ subject: userId });
+
+    await expect(user.mutation(api.chat.sendMessage, {
+      threadId, content: "Please read this", fileIds: [storageId, storageId],
+    })).rejects.toThrow("only once");
+    const extraIds = await t.run(async (ctx) => Promise.all(
+      Array.from({ length: 10 }, () => ctx.storage.store(new Blob(["x"], { type: "text/plain" })))
+    ));
+    await expect(user.mutation(api.chat.sendMessage, {
+      threadId, content: "Please read these", fileIds: [storageId, ...extraIds],
+    })).rejects.toThrow("up to 10");
+    expect(await t.run(async (ctx) => ctx.db.query("messages").collect())).toHaveLength(0);
+  });
+
   test("Message with no attachments succeeds", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 

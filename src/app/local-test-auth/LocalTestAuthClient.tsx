@@ -30,16 +30,17 @@ export function LocalTestAuthClient({ enabled }: LocalTestAuthClientProps) {
 
   const params = useMemo(() => {
     const role = searchParams.get("role") || "";
-    const secret = searchParams.get("secret") || "";
     const redirectTo = sanitizeRedirectTo(searchParams.get("redirectTo"));
-    return { role, secret, redirectTo };
+    return { role, redirectTo };
   }, [searchParams]);
 
   useEffect(() => {
     let isActive = true;
-    const attemptKey = `${enabled ? "enabled" : "disabled"}:${params.role}:${params.secret}:${params.redirectTo}`;
+    const attemptKey = `${enabled ? "enabled" : "disabled"}:${params.role}:${params.redirectTo}`;
     if (signInAttemptKeyRef.current === attemptKey) return;
     signInAttemptKeyRef.current = attemptKey;
+    const secret = window.sessionStorage.getItem("hakken-local-test-auth-secret") || "";
+    window.sessionStorage.removeItem("hakken-local-test-auth-secret");
 
     async function signInForLocalTest() {
       if (!enabled) {
@@ -52,7 +53,7 @@ export function LocalTestAuthClient({ enabled }: LocalTestAuthClientProps) {
         return;
       }
 
-      if (!allowedRoles.has(params.role) || !params.secret) {
+      if (!allowedRoles.has(params.role) || !secret) {
         setError("Missing or invalid local test auth parameters.");
         return;
       }
@@ -60,7 +61,7 @@ export function LocalTestAuthClient({ enabled }: LocalTestAuthClientProps) {
       try {
         const result = await signIn("local-test", {
           role: params.role,
-          secret: params.secret,
+          secret,
           redirectTo: params.redirectTo,
         });
 

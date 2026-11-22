@@ -36,9 +36,19 @@ export const chatAppTables = {
     /** Unlinked: every pass of it stops at once. */
     cutOffAt: v.optional(v.number()),
     cutOffBy: v.optional(v.union(v.literal("person"), v.literal("reused"), v.literal("left"))),
+    /** The user's app link generation. Older generations stop at Unlink without scanning every grant. */
+    linkVersion: v.optional(v.number()),
   })
     .index("by_user_app", ["userId", "app"])
+    .index("by_user_app_cut_off", ["userId", "app", "cutOffAt"])
     .index("by_client", ["clientId"]),
+
+  /** One revocation point per person and app, so Unlink reaches every old pass in one write. */
+  chatAppLinkStates: defineTable({
+    userId: v.id("users"),
+    app: chatAppValidator,
+    version: v.number(),
+  }).index("by_user_app", ["userId", "app"]),
 
   /** The one-use code an app swaps for its first passes, good for five minutes. */
   chatAppCodes: defineTable({
@@ -84,11 +94,12 @@ export const chatAppTables = {
     detail: v.optional(v.string()),
     website: v.optional(v.string()),
     period: v.optional(v.string()),
-    outcome: v.union(v.literal("answered"), v.literal("refused")),
+    outcome: v.union(v.literal("answered"), v.literal("refused"), v.literal("pending")),
     reason: v.optional(v.string()),
     at: v.number(),
   })
     .index("by_at", ["at"])
     .index("by_grant_at", ["grantId", "at"])
-    .index("by_user_at", ["userId", "at"]),
+    .index("by_user_at", ["userId", "at"])
+    .index("by_user_method_at", ["userId", "method", "at"]),
 };

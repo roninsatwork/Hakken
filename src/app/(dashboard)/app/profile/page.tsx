@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Header from "@/src/ui/components/layout/Header";
 import { useQuery, useMutation } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@/convex/_generated/api";
 import { UserCircle, Save, CheckCircle } from "lucide-react";
 import ProfileTabs from "./ProfileTabs";
@@ -10,6 +11,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Field } from "@/src/ui/components/screens/Field";
+import { Button } from "@/src/ui/components/screens/Button";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type ProfileFormData = {
@@ -24,6 +26,8 @@ export default function MyProfilePage() {
   const t = useTranslations('user.profile');
 
   const user = useQuery(api.users.getMe);
+  const googleLink = useQuery(api.auth.myGoogleLink);
+  const { signIn } = useAuthActions();
   const updateProfile = useMutation(api.users.updateMyProfile);
   const generateUploadUrl = useMutation(api.users.generateUploadUrl);
 
@@ -40,6 +44,19 @@ export default function MyProfilePage() {
   });
 
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [googleLinkError, setGoogleLinkError] = useState(false);
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
+
+  const linkGoogle = async () => {
+    setGoogleLinkError(false);
+    setLinkingGoogle(true);
+    try {
+      await signIn("google", { redirectTo: "/app/profile" });
+    } catch {
+      setGoogleLinkError(true);
+      setLinkingGoogle(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -121,6 +138,11 @@ export default function MyProfilePage() {
           </div>
 
           <div className="flex items-center gap-4">
+            {googleLink && !googleLink.linked && (
+              <Button type="button" variant="quiet" onClick={linkGoogle} disabled={linkingGoogle}>
+                {t("linkGoogle")}
+              </Button>
+            )}
             {saveSuccess && (
               <div className="flex items-center gap-2 text-[#10b981] text-[13px] font-medium animate-in fade-in slide-in-from-right-2 duration-300">
                 <CheckCircle className="w-4 h-4" />
@@ -138,6 +160,10 @@ export default function MyProfilePage() {
             </button>
           </div>
         </header>
+
+        {googleLink && !googleLink.linked && (
+          <p className="text-[12px] text-secondary">{googleLinkError ? t("googleLinkFailed") : t("googleLinkHint")}</p>
+        )}
 
         {/* Form Container */}
         <div className="w-full mt-2">

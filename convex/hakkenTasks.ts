@@ -22,6 +22,8 @@ import { addWebsiteKeywordCore, addWebsiteQuestionCore } from "./websiteCanonica
 import { problemOf } from "./hakkenCaretaker";
 import { moduleMutation, moduleQuery, requireTenant, superAdminMutation, superAdminQuery, tenantMutation } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
+import { companyHasFeature } from "./utils/featureSwitchReads";
+import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { nextRunOf, taskTimeOfDay, taskTimeZone } from "./utils/hakkenTaskTiming";
 
@@ -357,7 +359,9 @@ async function answerProposalAs(ctx: MutationCtx, userId: Id<"users">, args: { m
     const message = await ctx.db.get(args.messageId);
     const proposal = message?.taskProposal;
     const thread = message ? await ctx.db.get(message.threadId) : null;
-    if (!message || !proposal || !thread || thread.userId !== userId || !thread.companyId) {
+    const owner = await ctx.db.get(userId);
+    if (!message || !proposal || !thread || thread.userId !== userId || !thread.companyId
+      || !owner || getActiveCompanyId(owner) !== thread.companyId) {
       throw appError("NOT_FOUND", "That offer isn’t there any more.");
     }
     if (proposal.status !== "PENDING") return { status: proposal.status, ...(proposal.taskId ? { taskId: proposal.taskId } : {}) };
@@ -365,6 +369,9 @@ async function answerProposalAs(ctx: MutationCtx, userId: Id<"users">, args: { m
     if (!args.yes) {
       await ctx.db.patch(message._id, { taskProposal: { ...proposal, status: "DECLINED", answeredAt: now } });
       return { status: "DECLINED" as const };
+    }
+    if (!(await companyHasFeature(ctx, thread.companyId, MENU_FEATURES.hakkenTasks))) {
+      throw appError("MODULE_DISABLED", "This section is switched off for your workspace");
     }
 
     let taskId = proposal.taskId;

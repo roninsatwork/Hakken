@@ -5,9 +5,9 @@ import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-// @ts-expect-error pdf-extraction ships incomplete TypeScript declarations.
-import pdfParse from "pdf-extraction";
 import mammoth from "mammoth";
+import { assertOfficeArchiveBudget } from "./utils/officeArchiveBudget";
+import { extractPdfTextWithinBudget } from "./utils/pdfBudget";
 import { validateSafeUrl } from "./utils/security";
 import { chunkKnowledgeText, isMarkdownFormat, prepareKnowledgeMarkdown } from "./utils/knowledgeActionsService";
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
@@ -66,9 +66,9 @@ async function ingestStoredDocument(
           const buffer = Buffer.from(arrayBuffer);
 
           if (doc.format === "application/pdf") {
-              const pdfData = await pdfParse(buffer);
-              rawText = pdfData.text;
+              rawText = await extractPdfTextWithinBudget(buffer);
           } else if (doc.format === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+              assertOfficeArchiveBudget(new Uint8Array(arrayBuffer));
               const result = await mammoth.extractRawText({ buffer });
               rawText = result.value;
           } else {

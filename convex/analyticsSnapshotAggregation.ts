@@ -32,7 +32,7 @@ type CompanyAggregate = {
   topUsers: Map<string, UserLeader>;
   modelMetrics: Map<string, ModelMetric>;
 };
-type UserAggregate = { messages: number; inTokens: number; outTokens: number; costUsd: number };
+type UserAggregate = { userId: Id<"users">; companyId?: Id<"companies">; messages: number; inTokens: number; outTokens: number; costUsd: number };
 
 export type SnapshotJoins = {
   userMap: Map<Id<"users">, Doc<"users">>;
@@ -55,7 +55,7 @@ export function aggregateDailySnapshots(
   const globalModelMetrics = new Map<string, { model: string, cost: number, calls: number }>();
 
   const companyAggregates = new Map<Id<"companies">, CompanyAggregate>(); // companyId -> metrics
-  const userAggregates = new Map<Id<"users">, UserAggregate>(); // userId -> metrics
+  const userAggregates = new Map<string, UserAggregate>(); // user and historical company -> metrics
 
   // Build the "Widget User" fallback leader profile
   const widgetUserLeader: UserLeader = {
@@ -74,7 +74,8 @@ export function aggregateDailySnapshots(
      const outputs = msg.outputTokens;
      const costUsd = computeCostFromMap(msg.modelUsed, inputs, outputs, modelMap);
 
-     const activeCompanyId = msg.companyId || (msg.userId ? userMap.get(msg.userId)?.companyId : undefined);
+     // A user's current company cannot identify who owned older activity.
+     const activeCompanyId = msg.companyId;
 
      // 1. GLOBAL TALLIES
      globalMetrics.messages++;
@@ -186,10 +187,11 @@ export function aggregateDailySnapshots(
 
      // 3. USER TALLIES (For getUserCostOverview)
      if (msg.userId && !msg.widgetId) {
-         let uAgg = userAggregates.get(msg.userId);
+         const userKey = `${msg.userId}:${activeCompanyId ?? "unknown"}`;
+         let uAgg = userAggregates.get(userKey);
          if (!uAgg) {
-             uAgg = { messages: 0, inTokens: 0, outTokens: 0, costUsd: 0 };
-             userAggregates.set(msg.userId, uAgg);
+             uAgg = { userId: msg.userId, companyId: activeCompanyId, messages: 0, inTokens: 0, outTokens: 0, costUsd: 0 };
+             userAggregates.set(userKey, uAgg);
          }
          uAgg.messages++;
          uAgg.inTokens += inputs;
@@ -235,17 +237,18 @@ export function aggregateDailySnapshots(
             }
   }));
 
-  const userRows = [...userAggregates.entries()].map(([uId, uAgg]) => ({
+  const userRows = [...userAggregates.values()].map((uAgg) => ({
             date: dateString,
             type: "user" as const,
-            userId: uId,
+            userId: uAgg.userId,
+            companyId: uAgg.companyId,
             metrics: {
                 totalMessages: uAgg.messages,
                 totalInputTokens: uAgg.inTokens,
                 totalOutputTokens: uAgg.outTokens,
                 costUsd: Number(uAgg.costUsd.toFixed(6))
             },
-            uniqueUserIds: [uId]
+            uniqueUserIds: [uAgg.userId]
         }));
 
   return { globalRow, companyRows, userRows };

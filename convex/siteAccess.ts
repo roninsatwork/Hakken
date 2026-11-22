@@ -1,6 +1,7 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import type { TenantQueryCtx } from "./tenantFunctions";
+import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
 import { isTrackedHold, listOwnerHold } from "./utils/websitePairing";
@@ -50,6 +51,19 @@ export type CompanyHold = { hold: Doc<"companyWebsites">; website: Doc<"websites
  * conversation's (`assistantReads.ts`), never anything a model wrote.
  */
 export type SiteReader = Pick<TenantQueryCtx, "companyId"> & Reader;
+
+/** A saved OAuth state is useful only while its starter can still manage this site. */
+export async function pendingSiteConnectionAllowed(
+  ctx: Pick<QueryCtx, "db">,
+  pendingBy: Id<"users"> | undefined,
+  companyId: Id<"companies">,
+  companyWebsiteId: Id<"companyWebsites">,
+) {
+  if (!pendingBy) return false;
+  const [starter, hold] = await Promise.all([ctx.db.get(pendingBy), ctx.db.get(companyWebsiteId)]);
+  return !!starter && !!hold && hold.companyId === companyId && !isTrackedHold(hold) &&
+    (starter.role === "SUPER_ADMIN" || (starter.role === "ADMIN" && getActiveCompanyId(starter) === companyId));
+}
 
 /** The site, when it is one of the caller's company's holds; otherwise null. */
 export async function findMySite(ctx: SiteReader, siteId: Id<"companyWebsites">): Promise<Site | null> {

@@ -73,6 +73,13 @@ afterEach(() => {
 });
 
 describe("the provider roster", () => {
+  test("Google passes its verified email and hosted domain to account checks", async () => {
+    await loadAuth();
+    const mapProfile = optionOf<(profile: Record<string, unknown>) => Record<string, unknown>>(findProvider("google"), "profile");
+    expect(mapProfile({ sub: "google-123", email: "owner@external.test", email_verified: true, hd: "external.test", name: "Owner", picture: "https://img.test/owner" }))
+      .toMatchObject({ id: "google-123", email: "owner@external.test", emailVerified: true, hostedDomain: "external.test" });
+  });
+
   test("ships Google, the magic link, and the typed code — and no local-test door by default", async () => {
     vi.stubEnv("LOCAL_TEST_AUTH_ENABLED", "");
     await loadAuth();

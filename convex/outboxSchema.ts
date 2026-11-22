@@ -139,10 +139,13 @@ export const outboxTables = {
     turnedOff: v.optional(v.array(communicationValidator)),
     /** Unguessable: the unsubscribe link carries it, never the user's id. */
     unsubscribeToken: v.string(),
+    /** A separate bearer token: a digest link must not stop task emails. */
+    taskUnsubscribeToken: v.optional(v.string()),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_token", ["unsubscribeToken"]),
+    .index("by_token", ["unsubscribeToken"])
+    .index("by_task_token", ["taskUnsubscribeToken"]),
 
   /** Addresses that bounced or complained, from Resend's webhook: never sent to again. */
   emailSuppressions: defineTable({

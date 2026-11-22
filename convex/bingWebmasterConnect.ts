@@ -6,7 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { moduleMutation, moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { ADMIN_WRITE_ROLES } from "./authz";
-import { companyHolds, findMySite, requireMySite } from "./siteAccess";
+import { companyHolds, findMySite, pendingSiteConnectionAllowed, requireMySite } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
 import { appError } from "./utils/appError";
 import { websiteIconUrl } from "./websiteIcons";
@@ -125,7 +125,8 @@ export const pendingByState = internalQuery({
       .query("bingConnections")
       .withIndex("by_pending_state", (q) => q.eq("pendingState", args.state))
       .first();
-    if (!connection?.pendingAt || Date.now() - connection.pendingAt > STATE_MAX_AGE_MS) return null;
+    if (!connection?.pendingAt || Date.now() - connection.pendingAt > STATE_MAX_AGE_MS ||
+      !(await pendingSiteConnectionAllowed(ctx, connection.pendingBy, connection.companyId, connection.companyWebsiteId))) return null;
     const website = await ctx.db.get(connection.websiteId);
     if (!website) return null;
     return { companyWebsiteId: connection.companyWebsiteId, host: website.host };
@@ -269,6 +270,10 @@ export const completeSignIn = internalMutation({
       .first();
     if (!connection) throw appError("CONFLICT", "This sign-in has already been used.");
     const now = Date.now();
+    if (!connection.pendingAt || now - connection.pendingAt > STATE_MAX_AGE_MS ||
+      !(await pendingSiteConnectionAllowed(ctx, connection.pendingBy, connection.companyId, connection.companyWebsiteId))) {
+      throw appError("UNAUTHORIZED", EXPIRED_SIGN_IN);
+    }
     await deleteTokens(ctx, connection._id);
     await ctx.db.insert("bingTokens", {
       companyWebsiteId: connection.companyWebsiteId,

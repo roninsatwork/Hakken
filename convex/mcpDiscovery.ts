@@ -99,6 +99,19 @@ export const getServerForDiscovery = internalQuery({
   handler: async (ctx, args) => await ctx.db.get(args.serverId),
 });
 
+/** Give this attempt a version only while the connection still matches the snapshot it will contact. */
+export const beginDiscovery = internalMutation({
+  args: { serverId: v.id("mcpServers"), companyId: v.id("companies"), url: v.string(), authMode: v.union(v.literal("NONE"), v.literal("SECRET_REF")), secretRef: v.optional(v.string()) },
+  returns: v.union(v.number(), v.null()),
+  handler: async (ctx, args) => {
+    const server = await ctx.db.get(args.serverId);
+    if (!server || server.companyId !== args.companyId || server.url !== args.url || server.authMode !== args.authMode || server.secretRef !== args.secretRef) return null;
+    const version = (server.discoveryVersion ?? 0) + 1;
+    await ctx.db.patch(server._id, { discoveryVersion: version });
+    return version;
+  },
+});
+
 /**
  * Replace what we know a server offers.
  *
@@ -111,6 +124,7 @@ export const recordDiscovery = internalMutation({
   args: {
     serverId: v.id("mcpServers"),
     companyId: v.id("companies"),
+    expectedVersion: v.number(),
     ok: v.boolean(),
     message: v.string(),
     serverLabel: v.optional(v.string()),
@@ -123,7 +137,10 @@ export const recordDiscovery = internalMutation({
       outputSchemaJson: v.optional(v.string()),
     }))),
   },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
+    const server = await ctx.db.get(args.serverId);
+    if (!server || server.companyId !== args.companyId || (server.discoveryVersion ?? 0) !== args.expectedVersion) return false;
     const now = Date.now();
 
     if (args.tools) {
@@ -158,6 +175,7 @@ export const recordDiscovery = internalMutation({
       ...(args.ok ? {} : { status: "ERROR" as const }),
       updatedAt: now,
     });
+    return true;
   },
 });
 
@@ -226,10 +244,15 @@ export const discoverServerTools = adminAction({
     // Re-checked rather than trusted because it passed once. The address is the
     // one field worth an attacker's effort, and a stored value is not a check.
     const url = normaliseServerUrl(server.url);
+    const expectedVersion = await ctx.runMutation(internal.mcpDiscovery.beginDiscovery, {
+      serverId: server._id, companyId, url: server.url, authMode: server.authMode,
+      ...(server.secretRef ? { secretRef: server.secretRef } : {}),
+    });
+    if (expectedVersion === null) return { ok: false, message: "This connection changed. Try discovery again.", toolCount: 0 };
 
     const credential = resolveServerAuthorization(server);
     if (!credential.ok) {
-      return await record(ctx, server._id, companyId, false, credential.reason);
+      return await record(ctx, server._id, companyId, expectedVersion, false, credential.reason);
     }
     const authorization = credential.authorization;
 
@@ -248,16 +271,17 @@ export const discoverServerTools = adminAction({
         notes.push(`The list was cut short at ${MCP_MAX_TOOLS}.`);
       }
 
-      await ctx.runMutation(internal.mcpDiscovery.recordDiscovery, {
+      const recorded = await ctx.runMutation(internal.mcpDiscovery.recordDiscovery, {
         serverId: server._id,
         companyId,
+        expectedVersion,
         ok: true,
         message: notes.join(" "),
         serverLabel: session.label,
         protocolVersion: session.protocolVersion,
         tools: collected.tools,
       });
-
+      if (!recorded) return { ok: false, message: "This connection changed. Try discovery again.", toolCount: 0 };
       return { ok: true, message: notes.join(" "), toolCount: collected.tools.length };
     } catch (error) {
       // A server misbehaving is an outcome to record, not a stack trace to
@@ -266,7 +290,7 @@ export const discoverServerTools = adminAction({
         ? error.message
         : getErrorMessage(error, "The server could not be reached.");
 
-      return await record(ctx, server._id, companyId, false, message);
+      return await record(ctx, server._id, companyId, expectedVersion, false, message);
     }
   },
 });
@@ -275,10 +299,12 @@ async function record(
   ctx: ActionCtx,
   serverId: Id<"mcpServers">,
   companyId: Id<"companies">,
+  expectedVersion: number,
   ok: boolean,
   message: string,
 ) {
-  await ctx.runMutation(internal.mcpDiscovery.recordDiscovery, { serverId, companyId, ok, message });
+  const recorded = await ctx.runMutation(internal.mcpDiscovery.recordDiscovery, { serverId, companyId, expectedVersion, ok, message });
+  if (!recorded) return { ok: false, message: "This connection changed. Try discovery again.", toolCount: 0 };
   return { ok, message, toolCount: 0 };
 }
 

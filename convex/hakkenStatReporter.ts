@@ -14,6 +14,7 @@ import { pathOf } from "./utils/hakkenTaskRules";
 import { nextRunOf } from "./utils/hakkenTaskTiming";
 import { sendChartReport } from "./hakkenChartReporter";
 import { REPORT_STEP, STAT_REPORTER } from "./utils/statReporter";
+import { getActiveCompanyId } from "./authz";
 
 /**
  * The Stat Report Agent (docs/plans/active/hakken-tasks-plan.md, item 4.1):
@@ -150,7 +151,7 @@ export const sendReportInternal = internalMutation({
     const { from, to, pages, total } = read;
 
     const owner = await ctx.db.get(task.userId);
-    if (!owner) return "GONE";
+    if (!owner || getActiveCompanyId(owner) !== task.companyId) return "GONE";
     const preferences = await ensureReaderPreferences(ctx, owner._id);
     const language = preferences?.language ?? "en";
     const link = `/app/search-console/${target.companyWebsiteId}/pages`;

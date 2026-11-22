@@ -26,12 +26,14 @@ export const MAP_BOX = 3;
  * them, within its limits — read from the company's own website, also when a
  * competitor's pages are open (`groupOwner`).
  */
-export async function localSetup(ctx: Reader, site: Site) {
+export async function localSetup(ctx: Reader, site: Site, withRivalOffice = false) {
   const hold = groupOwner(site);
   if (!hold) return { hold: null, offices: [] as Doc<"listings">[], rivals: [] as Doc<"listings">[], rivalOffice: new Map<Id<"listings">, Id<"listings"> | null>(), limits: null };
   const limits = await readFanOutLimits(ctx, hold.companyId, hold._id);
   const { offices, rivals } = await localWatchList(ctx, hold, limits);
-  const links = await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(200);
+  const links = withRivalOffice
+    ? await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).take(200)
+    : [];
   const rivalOffice = new Map(links.filter((link) => link.role === "RIVAL").map((link) => [link.listingId, link.againstListingId ?? null]));
   return { hold, offices, rivals, rivalOffice, limits };
 }

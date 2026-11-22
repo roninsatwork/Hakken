@@ -23,8 +23,8 @@ import { ukDayStart } from "./creditKinds";
  * against, so only the day's ceiling holds it.
  */
 
-/** The Collector's runs read to add up what it has spent today. */
-const RUNS_READ_FOR_TODAY = 200;
+/** A busy day beyond this read limit is treated as capped. */
+const CHARGES_READ_FOR_TODAY = 10_000;
 
 export type HeldBack = {
   /** The requests that may go, in the order given. */
@@ -108,18 +108,28 @@ export async function dayCeilingReached(ctx: { db: QueryCtx["db"] }): Promise<st
 }
 
 /**
- * What the Collector has spent since UK midnight: its runs started today. A
- * run is one continuous send, so there are a handful a day; one that started
- * before midnight counts to the day it started.
+ * What the Collector has spent since UK midnight, by charge time. A run can
+ * continue across midnight, so its start time cannot decide the spending day.
  *
  * Auto Setup's ceiling a day reads it too (auto-setup-plan.md, AS2).
  */
 export async function spentToday(ctx: { db: QueryCtx["db"] }, agentId: Id<"agents">): Promise<number> {
-  const runs = await ctx.db
-    .query("agentRuns")
-    .withIndex("by_agent_started", (q) => q.eq("agentId", agentId).gte("startedAt", ukDayStart(Date.now())))
-    .take(RUNS_READ_FOR_TODAY);
-  return runs.reduce((total, run) => total + (run.costUsd ?? 0), 0);
+  const agent = await ctx.db.get(agentId);
+  if (agent?.systemKey !== "DATAFORSEO_COLLECTOR") {
+    const runs = await ctx.db
+      .query("agentRuns")
+      .withIndex("by_agent_started", (q) => q.eq("agentId", agentId).gte("startedAt", ukDayStart(Date.now())))
+      .take(CHARGES_READ_FOR_TODAY + 1);
+    if (runs.length > CHARGES_READ_FOR_TODAY) return MOST_A_DAY_USD;
+    return runs.reduce((total, run) => total + (run.costUsd ?? 0), 0);
+  }
+  const charges = await ctx.db
+    .query("agentTransactions")
+    .withIndex("by_agent", (q) => q.eq("agentId", agentId).gte("createdAt", ukDayStart(Date.now())))
+    .take(CHARGES_READ_FOR_TODAY + 1);
+  if (charges.length > CHARGES_READ_FOR_TODAY) return MOST_A_DAY_USD;
+  return charges.reduce((total, charge) =>
+    total + (charge.providerKey === "dataforseo" ? charge.costUsd : 0), 0);
 }
 
 async function websiteSpend(ctx: MutationCtx, cycleId: Id<"seoCollectionCycles">, websiteId: Id<"websites">): Promise<number> {

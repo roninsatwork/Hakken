@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { MENU_FEATURES } from "./utils/coreModules";
+import { getActiveCompanyId } from "./authz";
 import { companyHasFeature } from "./utils/featureSwitchReads";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -76,7 +77,9 @@ export const taskSwitchedOffInternal = internalQuery({
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.taskId);
     if (!task) return false;
-    return !(await companyHasFeature(ctx, task.companyId, MENU_FEATURES.hakkenTasks));
+    const owner = await ctx.db.get(task.userId);
+    return !owner || getActiveCompanyId(owner) !== task.companyId
+      || !(await companyHasFeature(ctx, task.companyId, MENU_FEATURES.hakkenTasks));
   },
 });
 
@@ -118,6 +121,8 @@ export const taskForCheckInternal = internalQuery({
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.taskId);
     if (!task || task.state !== "ON" || task.kind !== "ALERT" || !task.measure || !task.target || !task.condition) return null;
+    const owner = await ctx.db.get(task.userId);
+    if (!owner || getActiveCompanyId(owner) !== task.companyId) return null;
     const last = await ctx.db.query("hakkenTaskChecks").withIndex("by_task_day", (q) => q.eq("taskId", task._id)).order("desc").first();
     const target = task.target;
     const connection = await ctx.db
@@ -158,6 +163,8 @@ export const watchForCheckInternal = internalQuery({
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.taskId);
     if (!task || task.state !== "ON" || task.kind !== "ALERT" || !task.target || !(task.answer || task.ranking)) return null;
+    const owner = await ctx.db.get(task.userId);
+    if (!owner || getActiveCompanyId(owner) !== task.companyId) return null;
     return {
       companyId: task.companyId,
       target: task.target,
@@ -193,6 +200,8 @@ export const recordCheckInternal = internalMutation({
   handler: async (ctx, args) => {
     const task = await ctx.db.get(args.taskId);
     if (!task || task.state !== "ON") return { recorded: 0, alerted: false };
+    const owner = await ctx.db.get(task.userId);
+    if (!owner || getActiveCompanyId(owner) !== task.companyId) return { recorded: 0, alerted: false };
     const now = Date.now();
     let recorded = 0;
     for (const day of args.judged) {
@@ -220,8 +229,6 @@ export const recordCheckInternal = internalMutation({
     }
 
     if (!args.alert) return { recorded, alerted: false };
-    const owner = await ctx.db.get(task.userId);
-    if (!owner) return { recorded, alerted: false };
     const link = !task.target
       ? "/app/hakken-tasks"
       : task.answer

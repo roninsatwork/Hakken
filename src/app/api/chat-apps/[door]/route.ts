@@ -27,6 +27,36 @@ const ANSWERED_HEADERS = [
 ];
 const MOST_BODY_BYTES = 1024 * 1024;
 
+async function limitedBody(request: Request): Promise<ArrayBuffer | null> {
+  const claimed = request.headers.get("Content-Length");
+  if (claimed !== null && /^\d+$/.test(claimed) && Number(claimed) > MOST_BODY_BYTES) return null;
+  if (!request.body) return new ArrayBuffer(0);
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      total += part.value.byteLength;
+      if (total > MOST_BODY_BYTES) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(part.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body.buffer;
+}
+
 function convexSite(): string | null {
   const site = (process.env.CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? "").trim().replace(/\/+$/, "");
   return site || null;
@@ -45,8 +75,9 @@ async function passThrough(request: Request, door: string): Promise<Response> {
   }
   let body: ArrayBuffer | undefined;
   if (request.method === "POST") {
-    body = await request.arrayBuffer();
-    if (body.byteLength > MOST_BODY_BYTES) return new Response("Too large", { status: 413 });
+    const limited = await limitedBody(request);
+    if (limited === null) return new Response("Too large", { status: 413 });
+    body = limited;
   }
   const answer = await fetch(`${site}${path}`, { method: request.method, headers, body, redirect: "manual", signal: AbortSignal.timeout(60_000) });
   const passed = new Headers();

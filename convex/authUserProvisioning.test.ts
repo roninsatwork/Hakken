@@ -228,7 +228,7 @@ describe("Hakken auth user provisioning", () => {
     });
   });
 
-  test("accepts a pending invite for a Google sign-in, which never sets emailVerified", async () => {
+  test("accepts a pending invite for a verified Google Workspace address", async () => {
     const t = setup();
 
     const ids = await t.run(async (ctx) => {
@@ -248,13 +248,11 @@ describe("Hakken auth user provisioning", () => {
         invitedAt: NOW,
       });
 
-      // Exactly what Auth.js hands over for Google: no `emailVerified`, because
-      // the default profile mapper drops it.
       const returnedUserId = await createOrUpdateHakkenAuthUser(
         ctx,
         {
           provider: { id: "google", type: "oidc" },
-          profile: { email: "oauth@example.com", name: "Alessandro Merola" },
+          profile: { email: "oauth@example.com", emailVerified: true, hostedDomain: "example.com", name: "Alessandro Merola" },
         },
         NOW + 1000
       );
@@ -288,7 +286,7 @@ describe("Hakken auth user provisioning", () => {
     const { companyId, userId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "First Login Corp", createdAt: NOW });
       await ctx.db.insert("invitations", {
-        email: "firstlogin@example.com",
+        email: "firstlogin@gmail.com",
         role: "ADMIN",
         companyId,
         status: "PENDING",
@@ -300,7 +298,7 @@ describe("Hakken auth user provisioning", () => {
         ctx,
         {
           provider: { id: "google", type: "oidc" },
-          profile: { email: "firstlogin@example.com", name: "First Login", picture: "https://img/1" },
+          profile: { email: "firstlogin@gmail.com", emailVerified: true, name: "First Login", picture: "https://img/1" },
         },
         NOW + 1000
       );
@@ -311,12 +309,12 @@ describe("Hakken auth user provisioning", () => {
       user: await ctx.db.get(userId),
       invite: await ctx.db
         .query("invitations")
-        .withIndex("by_email", (q) => q.eq("email", "firstlogin@example.com"))
+        .withIndex("by_email", (q) => q.eq("email", "firstlogin@gmail.com"))
         .first(),
     }));
 
     expect(snapshot.user).toMatchObject({
-      email: "firstlogin@example.com",
+      email: "firstlogin@gmail.com",
       name: "First Login",
       role: "ADMIN",
       companyId,
@@ -325,9 +323,21 @@ describe("Hakken auth user provisioning", () => {
       status: "ACCEPTED",
       acceptedAt: NOW + 1000,
     });
-    expect(await getAuthEventTypes(t, "firstlogin@example.com")).toEqual(
+    expect(await getAuthEventTypes(t, "firstlogin@gmail.com")).toEqual(
       expect.arrayContaining(["INVITE_FOUND", "OAUTH_VERIFIED"])
     );
+  });
+
+  test("an unlinked external Google address cannot claim an existing account without email proof", async () => {
+    const t = setup();
+    const memberId = await t.run(async (ctx) => ctx.db.insert("users", {
+      email: "owner@external.test", role: "ADMIN", createdAt: NOW,
+    }));
+    await expect(t.run(async (ctx) => createOrUpdateHakkenAuthUser(ctx, {
+      provider: { id: "google", type: "oidc" },
+      profile: { email: "owner@external.test", emailVerified: true },
+    }, NOW + 1000))).rejects.toThrow("Sign in by email");
+    expect(await t.run(async (ctx) => ctx.db.get(memberId))).toMatchObject({ role: "ADMIN" });
   });
 
   test("recovers an accepted invite that is missing its user row", async () => {

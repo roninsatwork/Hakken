@@ -1,6 +1,7 @@
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 import { authorizationServerDocument, CHAT_APP_SCOPE, protectedResourceDocument, publicOrigin } from "./utils/chatApps";
+import { readLimitedText } from "./utils/boundedRequestBody";
 
 /**
  * Ask Hakken in ChatGPT and Claude: the sign-in server's public endpoints
@@ -46,9 +47,10 @@ export const handleProtectedResource = httpAction(async (ctx) => {
 export const handleAuthorizationServer = httpAction(async () => json(authorizationServerDocument(publicOrigin(process.env.SITE_URL)), 200, { "Cache-Control": "public, max-age=300" }));
 
 /** A request's fields: a form, as RFC 6749 asks and Claude sends, or JSON, which some apps send instead. */
-async function fieldsOf(request: Request): Promise<Record<string, string>> {
+async function fieldsOf(request: Request): Promise<Record<string, string> | null> {
   const type = request.headers.get("Content-Type") ?? "";
-  const text = (await request.text()).slice(0, 16 * 1024);
+  const text = await readLimitedText(request, 16 * 1024);
+  if (text === null) return null;
   if (type.includes("application/json")) {
     try {
       const body = JSON.parse(text) as Record<string, unknown>;
@@ -63,6 +65,7 @@ async function fieldsOf(request: Request): Promise<Record<string, string>> {
 /** The token endpoint: a code with its PKCE verifier, or a renewal pass, for an hour's pass and a fresh renewal pass. */
 export const handleToken = httpAction(async (ctx, request) => {
   const fields = await fieldsOf(request);
+  if (fields === null) return oauthError("invalid_request", "Request too large.", 413);
   const clientId = fields.client_id ?? "";
   if (!clientId) return oauthError("invalid_client", "Say which app is asking (client_id).", 401);
 
@@ -99,7 +102,9 @@ export const handleToken = httpAction(async (ctx, request) => {
 export const handleRegister = httpAction(async (ctx, request) => {
   let body: Record<string, unknown>;
   try {
-    body = JSON.parse((await request.text()).slice(0, 16 * 1024)) as Record<string, unknown>;
+    const text = await readLimitedText(request, 16 * 1024);
+    if (text === null) return oauthError("invalid_client_metadata", "Request too large.", 413);
+    body = JSON.parse(text) as Record<string, unknown>;
   } catch {
     return oauthError("invalid_client_metadata", "Send the app's details as JSON.");
   }

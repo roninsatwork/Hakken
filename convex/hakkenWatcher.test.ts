@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
@@ -64,6 +64,46 @@ async function checksOf(t: Harness, taskId: Id<"hakkenTasks">) {
 }
 
 describe("the Watcher's morning round", () => {
+  test("an old company task stops when its owner moves to another company", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const taskId = await alertBelow(t, seeded, 10);
+    await t.run(async (ctx) => {
+      const companyB = await ctx.db.insert("companies", { name: "Dummy B", createdAt: Date.now() });
+      await ctx.db.patch(seeded.owner, { companyId: companyB });
+    });
+    expect(await t.query(internal.hakkenWatcher.taskSwitchedOffInternal, { taskId })).toBe(true);
+    expect(await t.query(internal.hakkenWatcher.taskForCheckInternal, { taskId })).toBeNull();
+    await round(t);
+    expect(await checksOf(t, taskId)).toEqual([]);
+    expect(await t.run((ctx) => ctx.db.query("outboxMessages").take(1))).toEqual([]);
+    expect(await t.run((ctx) => ctx.db.query("notifications").take(1))).toEqual([]);
+    expect(await t.mutation(internal.hakkenWatcher.recordCheckInternal, {
+      taskId,
+      judged: [{ day: "2026-09-26", value: 7, met: true, streak: 1, tells: true }],
+      alert: { day: "2026-09-26", headline: "Dummy alert", body: "Seven visits", value: 7 },
+    })).toEqual({ recorded: 0, alerted: false });
+  });
+
+  test("old task mail and bell entries are hidden after their owner moves", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    await alertBelow(t, seeded, 10);
+    await round(t);
+    const [email] = await t.run((ctx) => ctx.db.query("outboxMessages").collect());
+    expect(email).toBeDefined();
+    await t.run(async (ctx) => {
+      const companyB = await ctx.db.insert("companies", { name: "Dummy B", createdAt: Date.now() });
+      await ctx.db.patch(seeded.owner, { companyId: companyB });
+    });
+    const rendered = await t.run((ctx) => renderOutboxRow(ctx, email));
+    expect(rendered).toHaveProperty("skip");
+    const moved = t.withIdentity({ subject: seeded.owner });
+    const page = await moved.query(api.notifications.listMine, { paginationOpts: { numItems: 10, cursor: null } });
+    expect(page.page).toEqual([]);
+    expect(await moved.query(api.notifications.countMineUnread, {})).toEqual({ count: 0, atLimit: false });
+  });
+
   test("a rule met on the newest settled day tells its owner in the bell and by email, then waits for the next morning", async () => {
     const t = harness();
     const seeded = await seed(t);

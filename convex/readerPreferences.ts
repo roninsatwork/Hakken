@@ -17,9 +17,9 @@ import { CHOOSABLE_COMMUNICATIONS, isChoosable, type Communication } from "./uti
  * subscribed, in English.
  */
 
-export type ReaderPreferences = { newsDigest: boolean; turnedOff: Communication[]; language: string; unsubscribeToken: string | null };
+export type ReaderPreferences = { newsDigest: boolean; turnedOff: Communication[]; language: string; unsubscribeToken: string | null; taskUnsubscribeToken: string | null };
 
-const DEFAULTS: ReaderPreferences = { newsDigest: true, turnedOff: [], language: SOURCE_LANGUAGE, unsubscribeToken: null };
+const DEFAULTS: ReaderPreferences = { newsDigest: true, turnedOff: [], language: SOURCE_LANGUAGE, unsubscribeToken: null, taskUnsubscribeToken: null };
 
 /**
  * Whether someone turned a type of communication off (outbox-and-preferences-
@@ -63,7 +63,7 @@ async function rowOf(ctx: QueryCtx, userId: Id<"users">): Promise<Doc<"readerPre
 
 export async function readerPreferencesOf(ctx: QueryCtx, userId: Id<"users">): Promise<ReaderPreferences> {
   const row = await rowOf(ctx, userId);
-  return row ? { newsDigest: row.newsDigest, turnedOff: row.turnedOff ?? [], language: row.language ?? SOURCE_LANGUAGE, unsubscribeToken: row.unsubscribeToken } : DEFAULTS;
+  return row ? { newsDigest: row.newsDigest, turnedOff: row.turnedOff ?? [], language: row.language ?? SOURCE_LANGUAGE, unsubscribeToken: row.unsubscribeToken, taskUnsubscribeToken: row.taskUnsubscribeToken ?? null } : DEFAULTS;
 }
 
 /** An unguessable token for the unsubscribe link: the link carries it, never the user's id. */
@@ -74,8 +74,12 @@ function newToken(): string {
 /** The user's row, made when first needed, with its unsubscribe token. */
 export async function ensureReaderPreferences(ctx: MutationCtx, userId: Id<"users">): Promise<Doc<"readerPreferences">> {
   const held = await rowOf(ctx, userId);
-  if (held) return held;
-  const rowId = await ctx.db.insert("readerPreferences", { userId, newsDigest: true, unsubscribeToken: newToken(), updatedAt: Date.now() });
+  if (held?.taskUnsubscribeToken) return held;
+  if (held) {
+    await ctx.db.patch(held._id, { taskUnsubscribeToken: newToken(), updatedAt: Date.now() });
+    return (await ctx.db.get(held._id))!;
+  }
+  const rowId = await ctx.db.insert("readerPreferences", { userId, newsDigest: true, unsubscribeToken: newToken(), taskUnsubscribeToken: newToken(), updatedAt: Date.now() });
   return (await ctx.db.get(rowId))!;
 }
 
@@ -152,7 +156,9 @@ async function unsubscribe(ctx: MutationCtx, token: string, kind: string | undef
   if (!/^[a-f0-9]{64}$/.test(token)) return false;
   const communication = kind ?? "WEEKLY_NEWS_DIGEST";
   if (!isChoosable(communication)) return false;
-  const row = await ctx.db.query("readerPreferences").withIndex("by_token", (q) => q.eq("unsubscribeToken", token)).first();
+  const row = communication === "HAKKEN_TASKS"
+    ? await ctx.db.query("readerPreferences").withIndex("by_task_token", (q) => q.eq("taskUnsubscribeToken", token)).first()
+    : await ctx.db.query("readerPreferences").withIndex("by_token", (q) => q.eq("unsubscribeToken", token)).first();
   if (!row) return false;
   await setTurnedOff(ctx, row, communication, true);
   return true;

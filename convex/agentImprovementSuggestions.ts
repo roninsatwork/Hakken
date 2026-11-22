@@ -2,10 +2,12 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { adminMutation, adminQuery } from "./tenantFunctions";
 import * as reviewInboxShapes from "./utils/reviewInboxShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
+import { assertAgentAlwaysCapacity, insertAgentMemory } from "./agentMemories";
 import { ensureAgentSkillVersionSnapshot } from "./agentSkillsService";
 import { appError } from "./utils/appError";
 
@@ -410,7 +412,7 @@ function buildSuggestionDrafts(args: {
   if (reflection?.proposedPromptChange) {
     drafts.push({
       type: "PROMPT_CHANGE",
-      title: "Append approved learning guidance to the agent prompt",
+      title: "Add approved learning guidance for this company",
       description: reflection.proposedPromptChange,
       proposedPatch: {
         appendSystemPrompt: reflection.proposedPromptChange,
@@ -489,7 +491,7 @@ function buildSuggestionDrafts(args: {
   return drafts;
 }
 
-async function applySuggestion(ctx: Parameters<typeof ensureAgentVersionSnapshot>[0], args: {
+async function applySuggestion(ctx: MutationCtx, args: {
   suggestion: Doc<"agentImprovementSuggestions">;
   userId: Id<"users">;
   canManageSkills: boolean;
@@ -520,12 +522,25 @@ async function applySuggestion(ctx: Parameters<typeof ensureAgentVersionSnapshot
   if (args.suggestion.type === "PROMPT_CHANGE") {
     const appendSystemPrompt = typeof patch.appendSystemPrompt === "string" ? patch.appendSystemPrompt.trim() : "";
     if (!appendSystemPrompt) throw appError("INVALID_INPUT", "Prompt suggestion is missing text");
-    const currentPrompt = agent.systemPrompt || "";
-    await ctx.db.patch(agent._id, {
-      systemPrompt: `${currentPrompt}${currentPrompt ? "\n\n" : ""}Approved learning note ${args.now}: ${appendSystemPrompt}`,
-      updatedAt: args.now,
+    if (!args.suggestion.companyId) throw appError("INVALID_INPUT", "Prompt guidance needs a company");
+    await assertAgentAlwaysCapacity(ctx, {
+      agentId: agent._id,
+      companyId: args.suggestion.companyId,
+      applyMode: "ALWAYS",
+    });
+    await insertAgentMemory(ctx, {
+      agentId: agent._id,
+      companyId: args.suggestion.companyId,
+      sourceRunId: args.suggestion.sourceRunId,
+      applyMode: "ALWAYS",
+      content: appendSystemPrompt,
+      importance: 1,
+      createdBy: args.userId,
     });
   } else if (args.suggestion.type === "APPROVAL_POLICY_CHANGE") {
+    if (!args.canManageSkills) {
+      throw appError("UNAUTHORIZED", "Only super admins can apply shared agent approval policy suggestions.");
+    }
     // Autonomy outranks the approval flag in the runtime, so setting the flag on
     // an autonomous agent would apply cleanly, report success and change nothing.
     // A suggestion whose whole purpose is to restore human review has to turn

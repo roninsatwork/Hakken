@@ -22,6 +22,7 @@ import {
   toolAnswer,
 } from "./utils/chatAppMcp";
 import { publicOrigin, unauthorizedHeader } from "./utils/chatApps";
+import { readLimitedText } from "./utils/boundedRequestBody";
 
 /**
  * Ask Hakken in ChatGPT and Claude: the MCP door, `/mcp`
@@ -63,7 +64,8 @@ export const handleMcp = httpAction(async (ctx, request) => {
     return json({ error: why === "tooMany" ? "rate_limited" : "access_denied", error_description: refusalWords[why] }, check.status, why === "tooMany" ? { "Retry-After": "60" } : {});
   }
 
-  const text = (await request.text()).slice(0, MOST_BODY);
+  const text = await readLimitedText(request, MOST_BODY);
+  if (text === null) return json({ error: "request_too_large", error_description: "Request too large." }, 413);
   const parsed = parseRpc(text);
   if (!parsed.ok) return answer(rpcError(null, parsed.code, parsed.message), 400);
   const rpc: RpcRequest = parsed.request;
@@ -106,6 +108,13 @@ export const handleMcp = httpAction(async (ctx, request) => {
     case "tools/call": {
       const name = typeof rpc.params?.name === "string" ? rpc.params.name : "";
       const args = rpc.params?.arguments && typeof rpc.params.arguments === "object" && !Array.isArray(rpc.params.arguments) ? (rpc.params.arguments as Record<string, unknown>) : {};
+      const reservation = await ctx.runMutation(internal.chatAppPasses.reserveQuestionInternal, { accessPass: pass, tool: name });
+      if (!reservation.ok) {
+        if (reservation.status === 401) return json({ error: "invalid_token", error_description: "This pass has run out or been cut off. Sign in again from the app." }, 401, { "WWW-Authenticate": unauthorizedHeader(origin, "invalid_token") });
+        if (reservation.status === 403) return json({ error: "access_denied", error_description: refusalWords.switchedOff }, 403);
+        await ctx.runMutation(internal.chatAppPasses.logQuestionInternal, { grantId: check.grantId, method: "refused", outcome: "refused", reason: "tooMany" });
+        return json({ error: "rate_limited", error_description: refusalWords.tooMany }, 429, { "Retry-After": "60" });
+      }
       let outcome;
       try {
         outcome = await runTool(ctx, { companyId: check.companyId, origin, platformName: check.platformName }, name, args);
@@ -113,6 +122,7 @@ export const handleMcp = httpAction(async (ctx, request) => {
         outcome = { answer: { problem: "That couldn't be read just now. Try again in a moment." }, isError: true, reason: "failed" };
       }
       await ctx.runMutation(internal.chatAppPasses.logQuestionInternal, {
+        requestId: reservation.requestId,
         grantId: check.grantId,
         method: "tools/call",
         tool: name.slice(0, 64),

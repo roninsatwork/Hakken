@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import type { ActionCtx } from "./_generated/server";
+import { internalMutation, type ActionCtx } from "./_generated/server";
 import { moduleAction } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
@@ -84,6 +84,57 @@ const answerValidator = v.union(
 /** Named, not worked out: an action that calls `internal` must say what it returns, or its type refers to itself. */
 type LiveAnswer = typeof answerValidator.type;
 
+const LIVE_WINDOW_MS = 60_000;
+const LIVE_BUNDLES_PER_WINDOW = 4;
+const LIVE_LEASE_MS = 120_000;
+
+/** Reserve before opening a Google session, including direct calls that skip the page's timer. */
+export const reserveLiveBundle = internalMutation({
+  args: {
+    connectionId: v.id("googleAnalyticsConnections"),
+    companyId: v.id("companies"),
+    siteId: v.id("companyWebsites"),
+    leaseId: v.string(),
+  },
+  returns: v.union(v.literal("OK"), v.literal("GOOGLE_BUSY"), v.literal("NOT_CONNECTED")),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection || connection.companyId !== args.companyId ||
+      connection.companyWebsiteId !== args.siteId || connection.status !== "CONNECTED" ||
+      !connection.property || connection.clearing) return "NOT_CONNECTED" as const;
+
+    const now = Date.now();
+    if ((connection.realtimeActiveUntil ?? 0) > now) return "GOOGLE_BUSY" as const;
+    const windowStartedAt = connection.realtimeWindowStartedAt ?? now;
+    const freshWindow = now - windowStartedAt >= LIVE_WINDOW_MS;
+    const used = freshWindow ? 0 : connection.realtimeCountInWindow ?? 0;
+    if (used >= LIVE_BUNDLES_PER_WINDOW) return "GOOGLE_BUSY" as const;
+
+    await ctx.db.patch(connection._id, {
+      realtimeWindowStartedAt: freshWindow ? now : windowStartedAt,
+      realtimeCountInWindow: used + 1,
+      realtimeActiveLeaseId: args.leaseId,
+      realtimeActiveUntil: now + LIVE_LEASE_MS,
+    });
+    return "OK" as const;
+  },
+});
+
+export const releaseLiveBundle = internalMutation({
+  args: { connectionId: v.id("googleAnalyticsConnections"), leaseId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (connection?.realtimeActiveLeaseId === args.leaseId) {
+      await ctx.db.patch(connection._id, {
+        realtimeActiveLeaseId: undefined,
+        realtimeActiveUntil: undefined,
+      });
+    }
+    return null;
+  },
+});
+
 export const askGoogleAnalyticsRealtime = moduleAction({
   module: MENU_FEATURES.googleAnalytics,
   args: {
@@ -110,6 +161,12 @@ export async function askLiveFigures(
 ): Promise<LiveAnswer> {
   const found = await ctx.runQuery(internal.googleAnalyticsLive.liveTarget, { companyId, siteId: args.siteId, period: OPENING_PERIOD });
   if (!found) return { ok: false as const, problem: "NOT_CONNECTED" as const };
+  const leaseId = crypto.randomUUID();
+  const reserved = await ctx.runMutation(internal.googleAnalyticsRealtime.reserveLiveBundle, {
+    connectionId: found.connectionId, companyId, siteId: args.siteId, leaseId,
+  });
+  if (reserved !== "OK") return { ok: false as const, problem: reserved };
+  try {
   const opened = await openSession(ctx, found.connectionId);
   if (!opened.ok) return { ok: false as const, problem: opened.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" as const : "NOT_CONNECTED" as const };
   // Every country: no home country here, unlike every other screen.
@@ -182,4 +239,9 @@ export async function askLiveFigures(
     sorted: saved.sorted,
     seen: liveSees({ now, people, topPage: pages[0] ? { title: pages[0].name, people: pages[0].people } : null, conversion: newest }),
   };
+  } finally {
+    await ctx.runMutation(internal.googleAnalyticsRealtime.releaseLiveBundle, {
+      connectionId: found.connectionId, leaseId,
+    });
+  }
 }

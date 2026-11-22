@@ -6,7 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { moduleMutation, moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { ADMIN_WRITE_ROLES } from "./authz";
-import { companyHolds, findMySite, requireMySite } from "./siteAccess";
+import { companyHolds, findMySite, pendingSiteConnectionAllowed, requireMySite } from "./siteAccess";
 import { noteHoldPagesChanged } from "./holdPages";
 import { isTrackedHold } from "./utils/websitePairing";
 import { appError } from "./utils/appError";
@@ -19,6 +19,8 @@ import {
   googleAccessToken,
   isGoogleConfigured,
   newSignInState,
+  pendingGoogleGrantValidator,
+  replaceGoogleGrantTokens,
 } from "./googleConnection";
 import {
   attemptOutcomeValidator,
@@ -112,7 +114,8 @@ export const pendingByState = internalQuery({
       .query("searchConsoleConnections")
       .withIndex("by_pending_state", (q) => q.eq("pendingState", args.state))
       .first();
-    if (!connection?.pendingAt || Date.now() - connection.pendingAt > STATE_MAX_AGE_MS) return null;
+    if (!connection?.pendingAt || Date.now() - connection.pendingAt > STATE_MAX_AGE_MS ||
+      !(await pendingSiteConnectionAllowed(ctx, connection.pendingBy, connection.companyId, connection.companyWebsiteId))) return null;
     const website = await ctx.db.get(connection.websiteId);
     if (!website) return null;
     return { connectionId: connection._id, companyWebsiteId: connection.companyWebsiteId, host: website.host };
@@ -163,6 +166,7 @@ export const completeSignIn = internalMutation({
     state: v.optional(v.string()),
     companyWebsiteId: v.id("companyWebsites"),
     googleConnectionId: v.id("googleConnections"),
+    grant: v.optional(pendingGoogleGrantValidator),
     choices: v.array(propertyValidator),
     only: v.union(propertyValidator, v.null()),
   },
@@ -173,6 +177,17 @@ export const completeSignIn = internalMutation({
       ? await ctx.db.query("searchConsoleConnections").withIndex("by_pending_state", (q) => q.eq("pendingState", args.state)).first()
       : await connectionOfHold(ctx, args.companyWebsiteId);
     if (args.state && !connection) throw appError("CONFLICT", "This sign-in has already been used.");
+    if (args.state && connection && (connection.companyWebsiteId !== args.companyWebsiteId ||
+      !connection.pendingAt || now - connection.pendingAt > STATE_MAX_AGE_MS ||
+      !(await pendingSiteConnectionAllowed(ctx, connection.pendingBy, connection.companyId, connection.companyWebsiteId)))) {
+      throw appError("UNAUTHORIZED", "This sign-in has expired. Start again from the website's Connection page.");
+    }
+    const googleGrant = await ctx.db.get(args.googleConnectionId);
+    if (!googleGrant || googleGrant.companyWebsiteId !== args.companyWebsiteId) throw appError("UNAUTHORIZED", "This Google sign-in belongs to another website.");
+    if (args.state) {
+      if (!args.grant) throw appError("CONFLICT", "This Google sign-in has no grant to save.");
+      await replaceGoogleGrantTokens(ctx, args.googleConnectionId, args.grant);
+    }
     if (!connection) {
       const hold = await ctx.db.get(args.companyWebsiteId);
       if (!hold) return null;

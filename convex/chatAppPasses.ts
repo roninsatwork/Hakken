@@ -60,6 +60,18 @@ type Refusal = { ok: false; error: string; description: string };
 
 const origin = () => publicOrigin(process.env.SITE_URL);
 
+async function linkState(ctx: Pick<QueryCtx, "db">, userId: Id<"users">, app: ChatApp) {
+  return await ctx.db.query("chatAppLinkStates").withIndex("by_user_app", (q) => q.eq("userId", userId).eq("app", app)).first();
+}
+
+async function toolCallLimitReached(ctx: Pick<QueryCtx, "db">, userId: Id<"users">, now: number) {
+  const recent = await ctx.db.query("chatAppRequests")
+    .withIndex("by_user_method_at", (q) => q.eq("userId", userId).eq("method", "tools/call").gt("at", now - 60_000))
+    .order("desc")
+    .take(QUESTIONS_PER_MINUTE);
+  return recent.length >= QUESTIONS_PER_MINUTE;
+}
+
 // ---------- clients ----------
 
 export const clientInternal = internalQuery({
@@ -235,9 +247,10 @@ export const allow = tenantMutation({
     if (!(await companyHasOutsideFeature(ctx, companyId, "chatApps"))) throw appError("MODULE_DISABLED", "Linking ChatGPT and Claude is switched off for this company.");
 
     const now = Date.now();
-    const existing = (await ctx.db.query("chatAppGrants").withIndex("by_user_app", (q) => q.eq("userId", ctx.userId).eq("app", check.app)).take(50))
-      .find((grant) => grant.companyId === companyId && grant.cutOffAt === undefined);
-    const grantId = existing?._id ?? await ctx.db.insert("chatAppGrants", { userId: ctx.userId, companyId, app: check.app, clientId: client.clientId, allowedAt: now });
+    const version = (await linkState(ctx, ctx.userId, check.app))?.version ?? 0;
+    const existing = (await ctx.db.query("chatAppGrants").withIndex("by_user_app_cut_off", (q) => q.eq("userId", ctx.userId).eq("app", check.app).eq("cutOffAt", undefined)).order("desc").take(50))
+      .find((grant) => grant.companyId === companyId && (grant.linkVersion ?? 0) === version);
+    const grantId = existing?._id ?? await ctx.db.insert("chatAppGrants", { userId: ctx.userId, companyId, app: check.app, clientId: client.clientId, allowedAt: now, linkVersion: version });
     if (existing) await ctx.db.patch(existing._id, { clientId: client.clientId, allowedAt: now });
 
     const code = newSecret("code");
@@ -272,6 +285,7 @@ async function cutOffChain(ctx: Pick<MutationCtx, "db">, chain: string, now: num
 /** Whether the person may still read the grant's company: still in it (a super admin always), and the switch on. */
 async function grantStillGood(ctx: Pick<QueryCtx, "db">, grant: Doc<"chatAppGrants"> | null): Promise<{ ok: true; grant: Doc<"chatAppGrants"> } | { ok: false; why: "cutOff" | "left" | "switchedOff" }> {
   if (!grant || grant.cutOffAt !== undefined) return { ok: false, why: "cutOff" };
+  if ((grant.linkVersion ?? 0) !== ((await linkState(ctx, grant.userId, grant.app))?.version ?? 0)) return { ok: false, why: "cutOff" };
   const user = await ctx.db.get(grant.userId);
   if (!user || (user.role !== "SUPER_ADMIN" && user.companyId !== grant.companyId) || !(await ctx.db.get(grant.companyId))) return { ok: false, why: "left" };
   if (!(await companyHasOutsideFeature(ctx, grant.companyId, "chatApps"))) return { ok: false, why: "switchedOff" };
@@ -337,6 +351,10 @@ export const renewInternal = internalMutation({
  */
 export const checkPassInternal = internalMutation({
   args: { accessPass: v.string() },
+  returns: v.union(
+    v.object({ ok: v.literal(true), grantId: v.id("chatAppGrants"), userId: v.id("users"), companyId: v.id("companies"), app: chatAppValidator, platformName: v.string() }),
+    v.object({ ok: v.literal(false), status: v.union(v.literal(401), v.literal(403), v.literal(429)), why: v.union(v.literal("noPass"), v.literal("cutOff"), v.literal("left"), v.literal("switchedOff"), v.literal("tooMany")), grantId: v.optional(v.id("chatAppGrants")) }),
+  ),
   handler: async (ctx, args): Promise<
     | { ok: true; grantId: Id<"chatAppGrants">; userId: Id<"users">; companyId: Id<"companies">; app: ChatApp; platformName: string }
     | { ok: false; status: 401 | 403 | 429; why: "noPass" | "cutOff" | "left" | "switchedOff" | "tooMany"; grantId?: Id<"chatAppGrants"> }
@@ -354,17 +372,41 @@ export const checkPassInternal = internalMutation({
       return { ok: false, status: good.why === "switchedOff" ? 403 : 401, why: good.why, grantId: pass.grantId };
     }
     const grant = good.grant;
-    const recent = await ctx.db.query("chatAppRequests").withIndex("by_user_at", (q) => q.eq("userId", grant.userId).gt("at", now - 60_000)).take(QUESTIONS_PER_MINUTE + 1);
-    if (recent.filter((question) => question.outcome === "answered").length >= QUESTIONS_PER_MINUTE) return { ok: false, status: 429, why: "tooMany", grantId: grant._id };
+    if (await toolCallLimitReached(ctx, grant.userId, now)) return { ok: false, status: 429, why: "tooMany", grantId: grant._id };
     if ((grant.lastUsedAt ?? 0) < now - 60_000) await ctx.db.patch(grant._id, { lastUsedAt: now });
     const settings = await ctx.db.query("systemSettings").first();
     return { ok: true, grantId: grant._id, userId: grant.userId, companyId: grant.companyId, app: grant.app, platformName: resolvePlatformName(settings?.platformName) };
   },
 });
 
+/** Reserve one question before the tool runs. The insert makes parallel checks share the same limit. */
+export const reserveQuestionInternal = internalMutation({
+  args: { accessPass: v.string(), tool: v.string() },
+  returns: v.union(
+    v.object({ ok: v.literal(true), requestId: v.id("chatAppRequests") }),
+    v.object({ ok: v.literal(false), status: v.union(v.literal(401), v.literal(403), v.literal(429)) }),
+  ),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const fingerprint = await fingerprintOf(args.accessPass);
+    const pass = await ctx.db.query("chatAppPasses").withIndex("by_fingerprint", (q) => q.eq("fingerprint", fingerprint)).first();
+    if (!pass || pass.kind !== "access" || pass.cutOffAt !== undefined || pass.expiresAt <= now) return { ok: false as const, status: 401 as const };
+    const good = await grantStillGood(ctx, await ctx.db.get(pass.grantId));
+    if (!good.ok) return { ok: false as const, status: good.why === "switchedOff" ? 403 as const : 401 as const };
+    const grant = good.grant;
+    if (await toolCallLimitReached(ctx, grant.userId, now)) return { ok: false as const, status: 429 as const };
+    const requestId = await ctx.db.insert("chatAppRequests", {
+      grantId: grant._id, userId: grant.userId, companyId: grant.companyId, app: grant.app,
+      method: "tools/call", tool: args.tool.slice(0, 64), outcome: "pending", at: now,
+    });
+    return { ok: true as const, requestId };
+  },
+});
+
 /** One line in the log for each question, answered or refused. */
 export const logQuestionInternal = internalMutation({
   args: {
+    requestId: v.optional(v.id("chatAppRequests")),
     grantId: v.optional(v.id("chatAppGrants")),
     method: v.string(),
     tool: v.optional(v.string()),
@@ -374,18 +416,29 @@ export const logQuestionInternal = internalMutation({
     outcome: v.union(v.literal("answered"), v.literal("refused")),
     reason: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const grant = args.grantId ? await ctx.db.get(args.grantId) : null;
-    const requestId = await ctx.db.insert("chatAppRequests", {
-      ...args,
-      ...(grant ? { userId: grant.userId, companyId: grant.companyId, app: grant.app } : {}),
-      website: args.website?.slice(0, 200),
-      at: Date.now(),
-    });
+    const { requestId: reservedId, ...row } = args;
+    let requestId: Id<"chatAppRequests">;
+    if (reservedId) {
+      const reserved = await ctx.db.get(reservedId);
+      if (!reserved || reserved.grantId !== args.grantId || reserved.method !== "tools/call" || reserved.outcome !== "pending") return null;
+      await ctx.db.patch(reservedId, { ...row, website: args.website?.slice(0, 200) });
+      requestId = reservedId;
+    } else {
+      requestId = await ctx.db.insert("chatAppRequests", {
+        ...row,
+        ...(grant ? { userId: grant.userId, companyId: grant.companyId, app: grant.app } : {}),
+        website: args.website?.slice(0, 200),
+        at: Date.now(),
+      });
+    }
     // Each answered question spends the company's credits and shows on its Usage statement.
     if (grant && args.method === "tools/call" && args.outcome === "answered") {
       await creditChatAppQuestion(ctx, { companyId: grant.companyId, userId: grant.userId, requestId });
     }
+    return null;
   },
 });
 
@@ -407,9 +460,9 @@ export const myChatApps = tenantQuery({
     const company = ctx.companyId ? await ctx.db.get(ctx.companyId) : null;
     const apps = [];
     for (const app of LISTED_CHAT_APPS) {
-      const grant = (await ctx.db.query("chatAppGrants").withIndex("by_user_app", (q) => q.eq("userId", ctx.userId).eq("app", app)).take(50))
-        .filter((one) => one.cutOffAt === undefined)
-        .sort((a, b) => b.allowedAt - a.allowedAt)[0];
+      const version = (await linkState(ctx, ctx.userId, app))?.version ?? 0;
+      const grant = (await ctx.db.query("chatAppGrants").withIndex("by_user_app_cut_off", (q) => q.eq("userId", ctx.userId).eq("app", app).eq("cutOffAt", undefined)).order("desc").take(50))
+        .find((one) => (one.linkVersion ?? 0) === version);
       const company = grant ? await ctx.db.get(grant.companyId) : null;
       apps.push({
         app,
@@ -434,13 +487,15 @@ export const myChatAppQuestions = tenantQuery({
     reason: v.union(v.string(), v.null()),
   })),
   handler: async (ctx, args) => {
-    const grants = (await ctx.db.query("chatAppGrants").withIndex("by_user_app", (q) => q.eq("userId", ctx.userId).eq("app", args.app)).take(50)).filter((grant) => grant.cutOffAt === undefined);
+    const version = (await linkState(ctx, ctx.userId, args.app))?.version ?? 0;
+    const grants = (await ctx.db.query("chatAppGrants").withIndex("by_user_app_cut_off", (q) => q.eq("userId", ctx.userId).eq("app", args.app).eq("cutOffAt", undefined)).order("desc").take(50))
+      .filter((grant) => (grant.linkVersion ?? 0) === version);
     const rows: Doc<"chatAppRequests">[] = [];
     for (const grant of grants) {
       rows.push(...(await ctx.db.query("chatAppRequests").withIndex("by_grant_at", (q) => q.eq("grantId", grant._id)).order("desc").take(200)));
     }
     return rows
-      .filter((row) => row.method === "tools/call")
+      .filter((row): row is Doc<"chatAppRequests"> & { outcome: "answered" | "refused" } => row.method === "tools/call" && row.outcome !== "pending")
       .sort((a, b) => b.at - a.at)
       .slice(0, 200)
       .map((row) => ({ id: row._id, tool: row.tool ?? "", detail: row.detail ?? null, website: row.website ?? null, period: row.period ?? null, at: row.at, outcome: row.outcome, reason: row.reason ?? null }));
@@ -452,17 +507,14 @@ export const unlinkChatApp = tenantMutation({
   args: { app: chatAppValidator },
   returns: v.number(),
   handler: async (ctx, args) => {
-    const now = Date.now();
-    let cut = 0;
-    for (const grant of await ctx.db.query("chatAppGrants").withIndex("by_user_app", (q) => q.eq("userId", ctx.userId).eq("app", args.app)).take(50)) {
-      if (grant.cutOffAt !== undefined) continue;
-      await ctx.db.patch(grant._id, { cutOffAt: now, cutOffBy: "person" });
-      for (const pass of await ctx.db.query("chatAppPasses").withIndex("by_grant", (q) => q.eq("grantId", grant._id)).take(500)) {
-        if (pass.cutOffAt === undefined) await ctx.db.patch(pass._id, { cutOffAt: now });
-      }
-      cut += 1;
-    }
-    return cut;
+    const state = await linkState(ctx, ctx.userId, args.app);
+    const active = await ctx.db.query("chatAppGrants")
+      .withIndex("by_user_app_cut_off", (q) => q.eq("userId", ctx.userId).eq("app", args.app).eq("cutOffAt", undefined))
+      .order("desc").take(1);
+    if (!active.length || (active[0].linkVersion ?? 0) !== (state?.version ?? 0)) return 0;
+    if (state) await ctx.db.patch(state._id, { version: state.version + 1 });
+    else await ctx.db.insert("chatAppLinkStates", { userId: ctx.userId, app: args.app, version: 1 });
+    return 1;
   },
 });
 

@@ -1,8 +1,9 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { httpAction, internalAction, internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
+import { pendingSiteConnectionAllowed } from "./siteAccess";
 import {
   SEARCH_CONSOLE_PROVIDER,
   getConnectorOAuthClientCredentials,
@@ -265,15 +266,20 @@ export const handleGoogleCallback = httpAction(async (ctx, request) => {
   const found = await findFor(section, accessToken, pending.host);
   if (!found.ok) return await fail(found.outcome, account, grant, found.detail);
 
-  const googleConnectionId = await ctx.runMutation(internal.googleConnection.keepGrant, {
-    companyWebsiteId: pending.companyWebsiteId,
-    account,
+  const pendingGrant = {
     scopes: granted,
     accessTokenCiphertext: await encryptConnectorToken(accessToken),
     refreshTokenCiphertext: await encryptConnectorToken(tokens.refresh_token),
     expiresAt: tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : undefined,
+  };
+  const googleConnectionId = await ctx.runMutation(internal.googleConnection.keepGrant, {
+    state,
+    section,
+    companyWebsiteId: pending.companyWebsiteId,
+    account,
+    ...pendingGrant,
   });
-  await complete(ctx, found.found, { state, googleConnectionId, account, companyWebsiteId: pending.companyWebsiteId });
+  await complete(ctx, found.found, { state, googleConnectionId, account, companyWebsiteId: pending.companyWebsiteId, grant: pendingGrant });
 
   // The other section, when it is waiting for a sign-in and Google gave it access (§10, Q3).
   const other: GoogleSection = section === "SEARCH_CONSOLE" ? "GOOGLE_ANALYTICS" : "SEARCH_CONSOLE";
@@ -293,13 +299,14 @@ export const handleGoogleCallback = httpAction(async (ctx, request) => {
 async function complete(
   ctx: ActionCtx,
   found: ConsoleFound | AnalyticsFound,
-  args: { state?: string; googleConnectionId: Id<"googleConnections">; account?: string; companyWebsiteId: Id<"companyWebsites"> },
+  args: { state?: string; googleConnectionId: Id<"googleConnections">; account?: string; companyWebsiteId: Id<"companyWebsites">; grant?: PendingGoogleGrant },
 ) {
   if (found.section === "SEARCH_CONSOLE") {
     await ctx.runMutation(internal.searchConsoleConnect.completeSignIn, {
       state: args.state,
       companyWebsiteId: args.companyWebsiteId,
       googleConnectionId: args.googleConnectionId,
+      grant: args.grant,
       choices: found.choices,
       only: found.only,
     });
@@ -309,6 +316,7 @@ async function complete(
     state: args.state,
     companyWebsiteId: args.companyWebsiteId,
     googleConnectionId: args.googleConnectionId,
+    grant: args.grant,
     choices: found.choices.map((choice) => ({
       property: choice.property,
       displayName: choice.displayName,
@@ -338,6 +346,31 @@ export const waitingForSignIn = internalQuery({
   },
 });
 
+export const pendingGoogleGrantValidator = v.object({
+  scopes: v.array(v.string()),
+  accessTokenCiphertext: v.string(),
+  refreshTokenCiphertext: v.string(),
+  expiresAt: v.optional(v.number()),
+});
+export type PendingGoogleGrant = Infer<typeof pendingGoogleGrantValidator>;
+
+/** Save a real Google grant only in the same mutation that finishes its section. */
+export async function replaceGoogleGrantTokens(ctx: MutationCtx, googleConnectionId: Id<"googleConnections">, grant: PendingGoogleGrant) {
+  const connection = await ctx.db.get(googleConnectionId);
+  if (!connection) throw appError("NOT_FOUND", "The Google connection is gone.");
+  const now = Date.now();
+  await ctx.db.patch(googleConnectionId, { scopes: grant.scopes, updatedAt: now });
+  await deleteTokens(ctx, googleConnectionId);
+  await ctx.db.insert("googleTokens", {
+    googleConnectionId,
+    accessTokenCiphertext: grant.accessTokenCiphertext,
+    refreshTokenCiphertext: grant.refreshTokenCiphertext,
+    expiresAt: grant.expiresAt,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
 /**
  * The account's grant, kept once for the website: its connection for that
  * account found or made, and its tokens replaced — one token row per
@@ -345,6 +378,9 @@ export const waitingForSignIn = internalQuery({
  */
 export const keepGrant = internalMutation({
   args: {
+    /** Omitted only by the internal collection rehearsal, which uses pretend credentials. */
+    state: v.optional(v.string()),
+    section: v.optional(v.union(v.literal("SEARCH_CONSOLE"), v.literal("GOOGLE_ANALYTICS"))),
     companyWebsiteId: v.id("companyWebsites"),
     account: v.optional(v.string()),
     scopes: v.array(v.string()),
@@ -356,6 +392,18 @@ export const keepGrant = internalMutation({
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.companyWebsiteId);
     if (!hold) throw appError("NOT_FOUND", "The website is no longer held.");
+    if (args.state) {
+      const connection = args.section === "SEARCH_CONSOLE"
+        ? await ctx.db.query("searchConsoleConnections").withIndex("by_pending_state", (q) => q.eq("pendingState", args.state)).first()
+        : args.section === "GOOGLE_ANALYTICS"
+          ? await ctx.db.query("googleAnalyticsConnections").withIndex("by_pending_state", (q) => q.eq("pendingState", args.state)).first()
+          : null;
+      if (!connection || connection.companyWebsiteId !== args.companyWebsiteId || !connection.pendingAt ||
+        Date.now() - connection.pendingAt > STATE_MAX_AGE_MS ||
+        !(await pendingSiteConnectionAllowed(ctx, connection.pendingBy, connection.companyId, connection.companyWebsiteId))) {
+        throw appError("UNAUTHORIZED", "This sign-in has expired. Start again from the website's Connection page.");
+      }
+    }
     const now = Date.now();
     const existing = await ctx.db
       .query("googleConnections")
@@ -370,16 +418,9 @@ export const keepGrant = internalMutation({
       createdAt: now,
       updatedAt: now,
     });
-    if (existing) await ctx.db.patch(existing._id, { scopes: args.scopes, updatedAt: now });
-    await deleteTokens(ctx, googleConnectionId);
-    await ctx.db.insert("googleTokens", {
-      googleConnectionId,
-      accessTokenCiphertext: args.accessTokenCiphertext,
-      refreshTokenCiphertext: args.refreshTokenCiphertext,
-      expiresAt: args.expiresAt,
-      createdAt: now,
-      updatedAt: now,
-    });
+    if (!args.state) {
+      await replaceGoogleGrantTokens(ctx, googleConnectionId, args);
+    }
     return googleConnectionId;
   },
 });

@@ -175,6 +175,7 @@ export const getPendingInvites = adminQuery({
         .order("desc")
         .take(50)).map(toClientInvite);
     }
+    if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
     
     return (await ctx.db
       .query("invitations")
@@ -212,7 +213,7 @@ export const revokeInvite = adminMutation({
     const invite = await ctx.db.get(args.id);
     if (!invite) throw appError("NOT_FOUND", "Invite not found");
 
-    if (user.role !== "SUPER_ADMIN" && invite.companyId !== user.companyId) {
+    if (user.role !== "SUPER_ADMIN" && (!user.companyId || invite.companyId !== user.companyId)) {
       throw appError("UNAUTHORIZED", "Unauthorized");
     }
 

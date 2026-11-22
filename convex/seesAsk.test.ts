@@ -96,6 +96,25 @@ const answers = (head: unknown, specialist: unknown, judge: unknown = null) => {
 };
 
 describe("the eye asks the Insights team", () => {
+  test("one member's browser figures cannot become another member's saved eye answer", async () => {
+    const t = harness();
+    const { siteId, userId, companyId } = await seed(t);
+    const otherId = await t.run(async (ctx) => ctx.db.insert("users", {
+      name: "Other", email: "other@acme-shop.test", role: "USER", companyId, createdAt: 1,
+    }));
+    const firstMember = t.withIdentity({ subject: userId });
+    const secondMember = t.withIdentity({ subject: otherId });
+    const first = await firstMember.mutation(api.seesAsk.askSees, ask(siteId));
+    expect(await secondMember.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toBeNull();
+    const second = await secondMember.mutation(api.seesAsk.askSees, {
+      ...ask(siteId),
+      facts: [{ key: "conv.purchases.now", value: 9000, unit: "count", label: "purchases last month" }],
+    });
+    expect(second.status).toBe("RESEARCHING");
+    expect(await t.run(async (ctx) => (await ctx.db.query("seesAnswers").collect()).length)).toBe(2);
+    expect(await firstMember.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "RESEARCHING" });
+  });
+
   test("a press starts the Head's run, the specialist writes from the page's figures, the Editor passes it, and it is kept a day", async () => {
     const t = harness();
     const { siteId, userId } = await seed(t);
@@ -139,10 +158,7 @@ describe("the eye asks the Insights team", () => {
     const mobile = await user.mutation(api.seesAsk.askSees, { ...ask(siteId), device: "mobile" });
     expect(mobile.status).toBe("RESEARCHING");
     expect(mobile.key).not.toBe(first.key);
-    // The week's written bubbles, for the weekly run (S10).
-    const week = await t.query(internal.seesAsk.weekSeesAnswers, { holdId: siteId, week: "2026-10-26" });
-    expect(week.length).toBeGreaterThanOrEqual(1);
-    expect(week[0].says[0]).toBe("1,258 purchases last month, up from 1,091.");
+    // This member's browser figures do not enter the company-wide weekly run.
   });
 
   test("a typed number is sent back by the Editor: the bubble keeps the rule's words and the next press asks again", async () => {
@@ -584,9 +600,10 @@ describe("what a press is doing, and a super admin's refresh (Anthony, 2026-11-0
     expect(await admin.mutation(api.seesAsk.refreshSees, ask(siteId))).toEqual({ key: first.key, status: "RESEARCHING" });
     expect(await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect()).length)).toBe(2);
     await finishScheduled(t);
-    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month."] });
+    expect(await admin.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month."] });
+    expect(await user.query(api.seesAsk.seesAnswer, { siteId, key: first.key })).toMatchObject({ status: "WRITTEN", says: ["1,258 purchases last month, up from 1,091."] });
     expect(await charges()).toBe(1);
-    // The client's next press reads the new words, and pays for nothing.
+    // The client's next press reads their own words, and pays for nothing.
     expect(await user.mutation(api.seesAsk.askSees, ask(siteId))).toEqual({ key: first.key, status: "WRITTEN" });
     expect(await charges()).toBe(1);
   });

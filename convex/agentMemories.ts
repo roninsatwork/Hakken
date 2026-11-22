@@ -274,7 +274,9 @@ export const getAlwaysMemoriesInternal = internalQuery({
     const platformScoped = await getAlwaysMemoriesForScope(ctx, args.agentId, undefined);
     const memories = [...companyScoped, ...platformScoped]
       .sort((left, right) => right.updatedAt - left.updatedAt)
-      .slice(0, MAX_ALWAYS_MEMORIES);
+      // Each scope may hold five. Keep both scopes so a later platform update
+      // cannot silently push a company's approved guidance out of the prompt.
+      .slice(0, MAX_ALWAYS_MEMORIES * (args.companyId ? 2 : 1));
 
     return memories.map((memory, index) => toRuntimeAgentMemory(memory, rankScore(index, memories.length)));
   },

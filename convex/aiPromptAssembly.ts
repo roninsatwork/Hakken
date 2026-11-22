@@ -1,6 +1,7 @@
 import type { Doc } from "./_generated/dataModel";
 
 import { resolvePlatformName } from "./settingsService";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 
 /**
  * The assistant's identity when no global system prompt is configured.
@@ -90,7 +91,8 @@ export function buildAssistantSystemInstruction(args: {
     alwaysMemories?: Array<{ title: string; content: string }>;
   };
 }) {
-  const agentPrompt = args.agent?.systemPrompt?.trim() ? args.agent.systemPrompt : null;
+  const scopedAgentPrompt = stripLegacySharedLearningNotes(args.agent?.systemPrompt);
+  const agentPrompt = scopedAgentPrompt?.trim() ? scopedAgentPrompt : null;
   // An agent's own prompt says who is answering, so the platform's fallback
   // identity is only for a conversation nobody gave one.
   const configuredPlatformPrompt =
@@ -224,9 +226,10 @@ export function buildAgentSystemInstruction(
   /** The deployment's configured name; only the fallback identity uses it. */
   platformName?: string
 ) {
+  const scopedAgentPrompt = stripLegacySharedLearningNotes(agentSystemPrompt);
   const configuredAgentPrompt =
-    agentSystemPrompt && agentSystemPrompt.trim().length > 0
-      ? agentSystemPrompt
+    scopedAgentPrompt && scopedAgentPrompt.trim().length > 0
+      ? scopedAgentPrompt
       : `You are an autonomous ${resolvePlatformName(platformName)} Agent. Use available tools to fulfill user requests.`;
 
   let instruction = `${ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT}

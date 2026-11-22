@@ -189,6 +189,10 @@ describe("claiming", () => {
         agentId, triggerType: "MANUAL", objective: "collect", status: "SUCCESS", costUsd: 100.42,
         startedAt: Date.now(), updatedAt: Date.now(),
       } as never);
+      await ctx.db.insert("agentTransactions", {
+        agentId, actionContext: "dataforseo:test", modelUsed: "test", providerKey: "dataforseo",
+        inputTokens: 0, outputTokens: 0, costUsd: 100.42, status: "SUCCESS", createdAt: Date.now(),
+      });
     });
     const waiting = await seedPull(t);
 

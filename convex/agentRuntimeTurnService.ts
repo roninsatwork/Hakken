@@ -2,6 +2,7 @@ import type { Doc } from "./_generated/dataModel";
 import { buildToolResultPayload, type ToolSideEffectLevel } from "./aiToolExecutionService";
 import { calculateModelCostUsd as calculateCostUsd } from "./aiCostService";
 import { isRecord } from "./utils/lang";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 
 /**
  * The agent runtime's pure workings: parsing a model's tool call, deciding
@@ -168,7 +169,7 @@ export function buildHistoricalReplaySystemPrompt(args: {
     rules: Array<{ name?: string; trigger?: string; instruction: string; priority?: number }>;
     skills?: Array<{ name: string; instruction: string; category?: string; riskLevel?: string }>;
 }) {
-    const configuredPrompt = args.systemPrompt || "";
+    const configuredPrompt = stripLegacySharedLearningNotes(args.systemPrompt) || "";
     const skillInstruction = args.skills && args.skills.length > 0
         ? "\n\n====================\nHISTORICAL ENABLED AGENT SKILLS FROM THE REPLAYED VERSION SNAPSHOT:\n\n" + args.skills
             .map((skill) => {

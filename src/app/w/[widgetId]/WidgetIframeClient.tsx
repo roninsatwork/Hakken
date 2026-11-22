@@ -228,27 +228,12 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
            return;
        }
 
-       const existingThreadKey = `hakken_widget_${widgetId}_thread`;
-       const existingTokenKey = `hakken_widget_${widgetId}_token`;
-       const storedThreadId = localStorage.getItem(existingThreadKey) as Id<"threads"> | null;
-       const storedAccessToken = localStorage.getItem(existingTokenKey);
-       
-       if (storedThreadId && storedAccessToken) {
-           setThreadId(storedThreadId);
-           setWidgetAccessToken(storedAccessToken);
-           setHasPassedGateway(true);
-           setIsInitializing(false);
-       } else {
-           if (storedThreadId || storedAccessToken) {
-               localStorage.removeItem(existingThreadKey);
-               localStorage.removeItem(existingTokenKey);
-           }
-           // Decide if gateway is needed
-           if (!widget.requireName && !widget.requireEmail) {
-               setHasPassedGateway(true);
-           }
-           setIsInitializing(false);
-       }
+       // A browser profile may be shared by visitors. Never restore an anonymous
+       // bearer token from an earlier page load; clear old versions' saved keys.
+       localStorage.removeItem(`hakken_widget_${widgetId}_thread`);
+       localStorage.removeItem(`hakken_widget_${widgetId}_token`);
+       if (!widget.requireName && !widget.requireEmail) setHasPassedGateway(true);
+       setIsInitializing(false);
     }
   }, [widget, widgetId]);
 
@@ -273,8 +258,6 @@ export function WidgetIframeClient({ embedPass }: { embedPass: string | null }) 
     }
     setThreadId(createdThread.threadId);
     setWidgetAccessToken(createdThread.accessToken);
-    localStorage.setItem(`hakken_widget_${widgetId}_thread`, createdThread.threadId);
-    localStorage.setItem(`hakken_widget_${widgetId}_token`, createdThread.accessToken);
     return { threadId: createdThread.threadId, accessToken: createdThread.accessToken };
   };
 

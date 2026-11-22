@@ -7890,6 +7890,7 @@
         "readingMany": "Reading {count} files before answering"
       },
       "unsupportedFiles": "Unsupported file(s): {files}",
+      "tooManyFiles": "You can add up to 10 files to one message.",
       "analyzedDocuments": "Analyzed attached documents.",
       "lookedUp": {
         "label": "Looked up",
@@ -9032,6 +9033,9 @@
   "user": {
     "profile": {
       "title": "My Profile",
+      "linkGoogle": "Link Google sign-in",
+      "googleLinkHint": "For other email addresses, sign in by email first. Then link Google here.",
+      "googleLinkFailed": "Google could not be linked. Try again.",
       "description": "Manage your identity and personal preferences.",
       "saved": "Profile saved",
       "saving": "Saving...",

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { readerPreferencesOf } from "./readerPreferences";
+import { ensureReaderPreferences, readerPreferencesOf } from "./readerPreferences";
 import { SOURCE_LANGUAGE } from "./utils/contentLanguages";
 import { COMMUNICATION_OF_TYPE, outboxMessageTypeValidator, type OutboxMessageType } from "./outboxSchema";
 
@@ -51,6 +51,9 @@ export async function queueOutboxMessage(
 ): Promise<Id<"outboxMessages"> | null> {
   const held = await ctx.db.query("outboxMessages").withIndex("by_idempotency", (q) => q.eq("idempotencyKey", message.idempotencyKey)).first();
   if (held) return null;
+  if (message.userId && COMMUNICATION_OF_TYPE[message.messageType] === "HAKKEN_TASKS") {
+    await ensureReaderPreferences(ctx, message.userId);
+  }
   const now = Date.now();
   return await ctx.db.insert("outboxMessages", {
     messageType: message.messageType,
@@ -121,6 +124,7 @@ export const claimOutboxBatch = internalMutation({
       .order("asc")
       .take(OUTBOX_BATCH);
     for (const row of due) {
+      if (row.userId && row.communication === "HAKKEN_TASKS") await ensureReaderPreferences(ctx, row.userId);
       await ctx.db.patch(row._id, { status: "CLAIMED", claimedBy: args.runId, claimedAt: now, updatedAt: now });
     }
     return due.map((row) => ({

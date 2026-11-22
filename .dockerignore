@@ -6,6 +6,9 @@ README.md
 .next
 .git
 .env*.local
+# google-github-actions/auth writes this file into the checkout before Buildx.
+# Keep it out of builder layers and the exported registry cache.
+gha-creds-*.json
 
 # The build needs src/, convex/, public/, config and package files — nothing
 # below is reachable from `next build`, and together these were ~100MB of

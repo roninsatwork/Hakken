@@ -716,6 +716,37 @@ describe("Visits (GA24; visits-redo-plan-2026-11-03.md)", () => {
 });
 
 describe("Live (GA34)", () => {
+  test("direct live asks stop at the website's shared minute budget", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    const google = fakeGoogle(growing());
+    const ask = () => user.action(api.googleAnalyticsRealtime.askGoogleAnalyticsRealtime, {
+      siteId, device: "", list: "pages",
+    });
+    for (let i = 0; i < 4; i += 1) expect(await ask()).toMatchObject({ ok: true });
+    const callsBefore = google.calls.filter((call) => call.url.endsWith(":runRealtimeReport")).length;
+
+    expect(await ask()).toEqual({ ok: false, problem: "GOOGLE_BUSY" });
+    expect(google.calls.filter((call) => call.url.endsWith(":runRealtimeReport"))).toHaveLength(callsBefore);
+  });
+
+  test("overlapping live asks share one provider slot and an old release cannot free a new one", async () => {
+    const t = harness();
+    const { siteId } = await collected(t, growing());
+    const connection = await t.run(async (ctx) => ctx.db
+      .query("googleAnalyticsConnections")
+      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId))
+      .first());
+    if (!connection) throw new Error("Connection missing");
+    const args = { connectionId: connection._id, companyId: connection.companyId, siteId };
+    expect(await t.mutation(internal.googleAnalyticsRealtime.reserveLiveBundle, { ...args, leaseId: "first" })).toBe("OK");
+    expect(await t.mutation(internal.googleAnalyticsRealtime.reserveLiveBundle, { ...args, leaseId: "second" })).toBe("GOOGLE_BUSY");
+    await t.mutation(internal.googleAnalyticsRealtime.releaseLiveBundle, { connectionId: connection._id, leaseId: "first" });
+    expect(await t.mutation(internal.googleAnalyticsRealtime.reserveLiveBundle, { ...args, leaseId: "third" })).toBe("OK");
+    await t.mutation(internal.googleAnalyticsRealtime.releaseLiveBundle, { connectionId: connection._id, leaseId: "first" });
+    expect(await t.mutation(internal.googleAnalyticsRealtime.reserveLiveBundle, { ...args, leaseId: "fourth" })).toBe("GOOGLE_BUSY");
+  });
+
   test("who is on the website now and the last 30 minutes, from Google's live figures, and nothing kept", async () => {
     const { t, siteId, user } = await collectedGrowing();
     const google = fakeGoogle(growing());

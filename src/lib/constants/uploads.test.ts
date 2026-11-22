@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ADMIN_IMAGE_MAX_BYTES,
+  CHAT_ATTACHMENTS_MAX_COUNT,
   CHAT_DOCUMENT_CONTENT_TYPES,
   CHAT_DOCUMENT_MAX_BYTES,
   KNOWLEDGE_DOCUMENT_CONTENT_TYPES,
@@ -10,11 +11,15 @@ import {
   validateUploadFile,
 } from "./uploads";
 import {
+  CHAT_ATTACHMENTS_MAX_COUNT as CONVEX_CHAT_ATTACHMENTS_MAX_COUNT,
   CHAT_DOCUMENT_CONTENT_TYPES as CONVEX_CHAT_DOCUMENT_CONTENT_TYPES,
   KNOWLEDGE_DOCUMENT_CONTENT_TYPES as CONVEX_KNOWLEDGE_DOCUMENT_CONTENT_TYPES,
 } from "@/convex/utils/uploadPolicy";
 
 describe("frontend upload policy", () => {
+  it("keeps the chat file count in step with the server", () => {
+    expect(CHAT_ATTACHMENTS_MAX_COUNT).toBe(CONVEX_CHAT_ATTACHMENTS_MAX_COUNT);
+  });
   it("allows supported chat documents by MIME type or extension", () => {
     expect(isSupportedChatDocument(new File(["a"], "report.pdf", { type: "application/pdf" }))).toBe(true);
     expect(isSupportedChatDocument(new File(["a"], "report.csv", { type: "" }))).toBe(true);

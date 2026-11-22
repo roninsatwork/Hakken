@@ -114,6 +114,29 @@ describe("Message feedback (self-improvement, Phase 3)", () => {
     ]);
   });
 
+  test("a moved user cannot rate or review feedback on their old company's legacy thread", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const seed = await seedChat(t);
+    await t.run(async (ctx) => {
+      await ctx.db.patch(seed.assistantMessageId, { companyId: undefined });
+      await ctx.db.patch(seed.userAId, { companyId: seed.companyBId });
+    });
+    const movedUser = t.withIdentity({ subject: seed.userAId });
+    await expect(movedUser.mutation(api.messageFeedback.upsertForMessage, {
+      messageId: seed.assistantMessageId,
+      rating: "NEGATIVE",
+      comment: "Dummy correction for the old company",
+    })).rejects.toThrow("Unauthorized");
+    expect(await movedUser.query(api.messageFeedback.getMineForThread, { threadId: seed.threadId }))
+      .toEqual({ enabled: true, ratings: [] });
+    const state = await t.run(async (ctx) => ({
+      feedback: await ctx.db.query("messageFeedback").collect(),
+      candidates: await ctx.db.query("companyMemoryCandidates").collect(),
+    }));
+    expect(state.feedback).toHaveLength(0);
+    expect(state.candidates).toHaveLength(0);
+  });
+
   test("every guard refuses: foreign user, user message, switched off", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const seed = await seedChat(t);

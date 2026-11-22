@@ -1073,6 +1073,27 @@ describe("Agent Runs", () => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+      const replayMemoryId = await ctx.db.insert("agentMemories", {
+        agentId,
+        companyId: companyAId,
+        kind: "FACT",
+        content: "Historical memory: prefer concise replay outputs.",
+        normalizedContent: "historical memory: prefer concise replay outputs.",
+        importance: 0.8,
+        isActive: true,
+        createdAt: 88,
+        updatedAt: 88,
+      });
+      const replayRuleId = await ctx.db.insert("aiRules", {
+        agentId,
+        companyId: companyAId,
+        name: "Replay rule",
+        trigger: "replay",
+        instruction: "Keep the historical replay answer short.",
+        priority: "NORMAL",
+        isActive: true,
+        createdAt: 89,
+      });
       const sourceVersionId = await ctx.db.insert("agentVersions", {
         agentId,
         companyId: companyAId,
@@ -1110,10 +1131,11 @@ describe("Agent Runs", () => {
             },
           ],
           memory: {
-            activeCount: 2,
+            activeCount: 1,
             latestUpdatedAt: 89,
             items: [
               {
+                id: replayMemoryId,
                 kind: "FACT",
                 content: "Historical memory: prefer concise replay outputs.",
                 importance: 0.8,
@@ -1123,6 +1145,7 @@ describe("Agent Runs", () => {
           },
           rules: [
             {
+              id: replayRuleId,
               name: "Replay rule",
               trigger: "replay",
               instruction: "Keep the historical replay answer short.",
@@ -1363,7 +1386,7 @@ describe("Agent Runs", () => {
           replayBlockedReason: "Historical replay does not execute write, destructive, or external tools.",
         },
       ],
-      memoryActiveCount: 2,
+      memoryActiveCount: 1,
       ruleCount: 1,
       memoryContents: [
         {

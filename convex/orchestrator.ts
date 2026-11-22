@@ -7,6 +7,11 @@ import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { generationSpend, recordModelSpend } from "./modelSpend";
 import { tenantAction } from "./tenantFunctions";
 import * as governanceShapes from "./utils/governanceShapes";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
+import { appError } from "./utils/appError";
+
+const MAX_ROUTER_PROMPT_LENGTH = 10_000;
+const ROUTER_REQUESTS_PER_MINUTE = 10;
 
 export const routeAgentIntent = tenantAction({
   args: {
@@ -16,6 +21,9 @@ export const routeAgentIntent = tenantAction({
   handler: async (ctx, args) => {
     // Authenticate routing dispatch
     const { user, userId } = ctx;
+    if (args.prompt.length > MAX_ROUTER_PROMPT_LENGTH) {
+      throw appError("INVALID_INPUT", "Router prompt cannot exceed 10,000 characters.");
+    }
 
     try {
         // Fetch pool of active agents available to this company
@@ -30,7 +38,7 @@ export const routeAgentIntent = tenantAction({
         // Build the routing context
         let contextBlock = "Available Agents:\n\n";
         agents.forEach((agent: Doc<"agents">) => {
-            contextBlock += `[ID: ${agent._id}]\nName: ${agent.name}\nDescription: ${agent.description || 'No description provided'}\nSystem Rules: ${agent.systemPrompt || 'None'}\n\n`;
+            contextBlock += `[ID: ${agent._id}]\nName: ${agent.name}\nDescription: ${agent.description || 'No description provided'}\nSystem Rules: ${stripLegacySharedLearningNotes(agent.systemPrompt) || 'None'}\n\n`;
         });
 
         // Plain JSON Schema rather than Vertex's `Schema` type. Routing runs on
@@ -69,6 +77,13 @@ Output your intent alignment as JSON.
         const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
             companyId: user.companyId,
             useCase: "router",
+        });
+        await ctx.runMutation(internal.aiActionRequests.reserve, {
+            actorId: userId,
+            ...(user.companyId ? { companyId: user.companyId } : {}),
+            actionName: "routeAgentIntent",
+            windowMs: 60_000,
+            maxRequests: ROUTER_REQUESTS_PER_MINUTE,
         });
         const response = await generateTextWithResolvedModel({
              model: modelConfig,

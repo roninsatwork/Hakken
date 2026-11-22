@@ -9,9 +9,13 @@ async function signInAsLocalRole(
 ) {
   const url = new URL("/local-test-auth", "http://localhost:3100");
   url.searchParams.set("role", role);
-  url.searchParams.set("secret", localAuthSecret);
   url.searchParams.set("redirectTo", redirectTo);
 
+  await page.addInitScript((secret) => {
+    if (window.location.pathname === "/local-test-auth") {
+      window.sessionStorage.setItem("hakken-local-test-auth-secret", secret);
+    }
+  }, localAuthSecret);
   await page.goto(url.pathname + url.search);
   await expect(page).toHaveURL(new RegExp(`${redirectTo}$`), { timeout: 45000 });
 }

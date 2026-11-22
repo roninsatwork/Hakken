@@ -192,7 +192,7 @@ function buildSkillSummary(args: {
 
 function buildSuggestionAppliedEffect(suggestion: Doc<"agentImprovementSuggestions">) {
   if (suggestion.status !== "APPLIED") return null;
-  if (suggestion.type === "PROMPT_CHANGE") return "Prompt guidance appended and version snapshot updated.";
+  if (suggestion.type === "PROMPT_CHANGE") return "Guidance added for this company and saved in a version snapshot.";
   if (suggestion.type === "APPROVAL_POLICY_CHANGE") return "Human approval requirement enabled and version snapshot updated.";
   if (suggestion.type === "RULE_CHANGE") return "AI rule created and version snapshot updated.";
   if (suggestion.type === "TOOL_SCHEMA_CHANGE") return "Tool schema review rule created and version snapshot updated.";
@@ -269,10 +269,12 @@ function buildSuggestionPatchPreview(suggestion: Doc<"agentImprovementSuggestion
   if (suggestion.type === "PROMPT_CHANGE") {
     return [{
       operation: "APPEND",
-      target: "Agent system prompt",
-      before: "Existing prompt",
+      target: "Agent guidance for this company",
+      before: "Current company guidance",
       after: typeof patch.appendSystemPrompt === "string" ? truncateText(patch.appendSystemPrompt, 700) : suggestion.description,
-      note: appliedNote || "Adds approved learning guidance to the end of the prompt.",
+      note: suggestion.status === "APPLIED"
+        ? "Saved with this company's agent version."
+        : "Adds this guidance when the agent works for this company.",
     }];
   }
 

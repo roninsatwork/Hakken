@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 
 import { internalMutation, internalQuery } from "./_generated/server";
 import { requestTranslation } from "./contentTranslation";
@@ -28,7 +29,7 @@ export const readCollectorAgent = internalQuery({
     const agent = run ? await ctx.db.get(run.agentId) : null;
     if (!agent) return null;
     return {
-      instructions: agent.systemPrompt ?? "",
+      instructions: stripLegacySharedLearningNotes(agent.systemPrompt) ?? "",
       ...(agent.modelSelectionMode === "inherit" ? {} : { requestedModelId: agent.modelId }),
     };
   },

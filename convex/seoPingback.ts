@@ -1,5 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { seoPingbackProofMatches } from "./seoPingbackProof";
 
 /**
  * DataForSEO saying a task is ready.
@@ -28,11 +29,15 @@ export const handleSeoPingback = httpAction(async (ctx, request) => {
   const taskId = params.get("id");
   // Our own tag, echoed back: how a send we could not confirm is found again.
   const tag = params.get("tag");
+  const proof = params.get("proof");
 
   if (taskId && taskId.length <= MAX_TASK_ID) {
     const pullId = await ctx.runMutation(internal.seoCollectionQueue.markSeoPinged, {
       taskId,
-      ...(tag && tag.length <= MAX_TAG ? { tag } : {}),
+      ...(tag && tag.length <= MAX_TAG ? {
+        tag,
+        tagVerified: await seoPingbackProofMatches(tag, proof, process.env.DATAFORSEO_PASSWORD),
+      } : {}),
     });
     if (pullId) {
       await ctx.scheduler.runAfter(0, internal.seoCollectionActions.fetchSeoResult, { pullId });

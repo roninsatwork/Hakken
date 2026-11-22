@@ -55,8 +55,9 @@ export const getRules = softQuery({
     }
 
     if (args.agentId) {
-       // Agents are global. But an ADMIN can only see rules for an agent if the rule ALSO has their companyId.
-       if (user.role === "ADMIN") {
+       // A shared agent does not make another company's rules public.
+       if (user.role !== "SUPER_ADMIN") {
+           if (!user.companyId) return [];
            return await ctx.db
             .query("aiRules")
             .withIndex("by_agent_company_created", q => q.eq("agentId", args.agentId).eq("companyId", user.companyId))
@@ -111,7 +112,8 @@ export const getOffsetPaginatedRules = softQuery({
     let rawResults: Doc<"aiRules">[] = [];
 
     if (args.agentId) {
-       if (user.role === "ADMIN") {
+       if (user.role !== "SUPER_ADMIN") {
+           if (!user.companyId) return { data: [], totalCount: 0, totalPages: 1 };
            rawResults = await ctx.db
             .query("aiRules")
             .withIndex("by_agent_company_created", q => q.eq("agentId", args.agentId).eq("companyId", user.companyId))
@@ -181,12 +183,24 @@ export const getActiveRulesInternal = internalQuery({
     const agentRules = args.agentId
       ? await ctx.db
         .query("aiRules")
-        .withIndex("by_agent_active_created", (q) => q.eq("agentId", args.agentId).eq("isActive", true))
+        .withIndex("by_agent_company_active_created", (q) =>
+          q.eq("agentId", args.agentId).eq("companyId", args.companyId).eq("isActive", true)
+        )
+        .order("desc")
+        .take(1000)
+      : [];
+    // Platform-owned rules for this agent still apply, but another company’s do not.
+    const platformAgentRules = args.agentId && args.companyId
+      ? await ctx.db
+        .query("aiRules")
+        .withIndex("by_agent_company_active_created", (q) =>
+          q.eq("agentId", args.agentId).eq("companyId", undefined).eq("isActive", true)
+        )
         .order("desc")
         .take(1000)
       : [];
 
-    return uniqueRulesById([...globalRules, ...companyRules, ...agentRules]);
+    return uniqueRulesById([...globalRules, ...companyRules, ...agentRules, ...platformAgentRules]);
   },
 });
 

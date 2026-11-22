@@ -442,6 +442,49 @@ describe("confirming a photo action", () => {
     expect(tasks).toHaveLength(0);
   });
 
+  test("a photo tap respects the workspace's Tasks capability", async () => {
+    const { t, companyA, userA } = await seedWorkspaces();
+    const { messageId } = await seedProposalMessage(t, { companyId: companyA, userId: userA });
+    await t.run(async (ctx) => ctx.db.patch(companyA, { enabledModules: [] }));
+
+    const person = t.withIdentity({ subject: userA });
+    await expect(person.mutation(api.tasks.createTask, { title: "Normal task" }))
+      .rejects.toThrow("This section is switched off for your workspace");
+    await expect(person.mutation(api.tasks.confirmPhotoAction, { messageId }))
+      .rejects.toThrow("This section is switched off for your workspace");
+    expect(await t.run(async (ctx) => ctx.db.query("tasks").take(1))).toEqual([]);
+    expect((await t.run(async (ctx) => ctx.db.get(messageId)))?.photoActionTaskId).toBeUndefined();
+
+    await t.run(async (ctx) => ctx.db.patch(companyA, { enabledModules: [...DEFAULT_COMPANY_MODULE_KEYS] }));
+    const taskId = await person.mutation(api.tasks.confirmPhotoAction, { messageId });
+    expect((await t.run(async (ctx) => ctx.db.get(taskId)))?.companyId).toBe(companyA);
+  });
+
+  test("an anonymous photo tap also respects the Tasks capability", async () => {
+    const { t, companyA, userA } = await seedWorkspaces();
+    const widgetId = await t.run(async (ctx) => ctx.db.insert("widgets", {
+      companyId: companyA, name: "Dummy widget", allowedDomains: ["example.com"],
+      isActive: true, createdBy: userA, createdAt: Date.now(),
+    }));
+    const created = await t.mutation(api.widgets.createWidgetThread, {
+      widgetId,
+      sourceUrl: "https://support.example.com/help",
+      embedPass: await mintWidgetEmbedPass({
+        widgetId, embedHost: "support.example.com", secret: TEST_EMBED_SECRET,
+      }),
+    });
+    if ("refused" in created) throw new Error(`Widget session refused: ${created.refused}`);
+    const messageId = await t.run(async (ctx) => ctx.db.insert("messages", {
+      threadId: created.threadId, role: "assistant", content: "Dummy photo suggestion",
+      photoActionProposal: PROPOSAL, createdAt: Date.now(),
+    }));
+    await t.run(async (ctx) => ctx.db.patch(companyA, { enabledModules: [] }));
+    await expect(t.mutation(api.tasks.confirmPhotoAction, {
+      messageId, widgetAccessToken: created.accessToken,
+    })).rejects.toThrow("This section is switched off for your workspace");
+    expect(await t.run(async (ctx) => ctx.db.query("tasks").take(1))).toEqual([]);
+  });
+
   test("another workspace's member cannot confirm somebody else's proposal", async () => {
     const { t, companyA, userA, userB } = await seedWorkspaces();
     const { messageId } = await seedProposalMessage(t, { companyId: companyA, userId: userA });

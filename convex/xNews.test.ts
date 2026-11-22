@@ -138,6 +138,30 @@ describe("connecting Anthony's X account", () => {
     await admin.mutation(api.xConnect.disconnectX, {});
     expect(await t.run(async (ctx) => await ctx.db.query("xConnections").collect())).toEqual([]);
   });
+
+  test("a pending X connection cannot finish after its starter loses super-admin access", async () => {
+    for (const removal of ["downgraded", "deleted"] as const) {
+      const t = harness();
+      const starterId = await t.run(async (ctx) => ctx.db.insert("users", {
+        email: `starter-${removal}@test.invalid`, role: "SUPER_ADMIN",
+      }));
+      const starter = t.withIdentity({ subject: starterId });
+      const { authorizeUrl } = await starter.mutation(api.xConnect.beginXConnect, {});
+      const state = new URL(authorizeUrl, "https://deployment.example").searchParams.get("state")!;
+      await t.run(async (ctx) => {
+        if (removal === "deleted") await ctx.db.delete(starterId);
+        else await ctx.db.patch(starterId, { role: "USER" });
+      });
+      const saved = await t.mutation(internal.xConnect.completeXConnect, {
+        state, account: "@dummy", xUserId: "dummy-id",
+        accessTokenCiphertext: "dummy-access", refreshTokenCiphertext: "dummy-refresh",
+      });
+      const connection = await t.run(async (ctx) => ctx.db.query("xConnections").first());
+      expect(saved).toBe(false);
+      expect(connection?.status).toBe("CONNECTING");
+      expect(connection?.accessTokenCiphertext).toBeUndefined();
+    }
+  });
 });
 
 describe("reading X", () => {

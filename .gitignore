@@ -18,6 +18,7 @@ yarn-error.log*
 .env*.local
 .env*.backup
 .env.backup
+gha-creds-*.json
 
 # OS Files
 .DS_Store

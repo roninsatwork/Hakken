@@ -49,8 +49,8 @@ function reviewSteps(rows: readonly StoredReview[], span: PeriodSpan, step: Char
 }
 
 /** The company's own listings in a page's scope: one office's Google profile, or every own listing. */
-async function ownListings(ctx: Reader, site: Site, officeId: Id<"listings"> | undefined) {
-  const setup = await localSetup(ctx, site);
+async function ownListings(ctx: Reader, site: Site, officeId: Id<"listings"> | undefined, withRivalOffice = false) {
+  const setup = await localSetup(ctx, site, withRivalOffice);
   const office = officeId ? setup.offices.find((entry) => entry._id === officeId) ?? null : null;
   if (office) return { setup, office, listings: [office] };
   const links = setup.hold ? await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", setup.hold!._id)).take(200) : [];
@@ -201,7 +201,7 @@ export const reviewsAgainstRivals = moduleQuery({
 /** reviewsAgainstRivals's answer for the company the reader carries: the screen's, and Ask Hakken's Visibility read's (`assistantVisibilityReads.ts`, ask-hakken-every-chart-page-plan-2026-11-03.md, section 10). */
 export async function readReviewsAgainstRivals(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings">; period: CalendarPeriod; step: ChartStep }) {
   const site = await requireMySite(ctx, args.siteId);
-  const setup = await localSetup(ctx, site);
+  const setup = await localSetup(ctx, site, true);
   const office = setup.offices.find((entry) => entry._id === args.officeId) ?? setup.offices[0] ?? null;
   const offices = setup.offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
   if (!office) return { offices, office: null, rows: [], steps: [], lines: [] };
@@ -298,7 +298,7 @@ export const whatCustomersSay = moduleQuery({
 /** whatCustomersSay's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
 export async function readWhatCustomersSay(ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) {
   const site = await requireMySite(ctx, args.siteId);
-  const { setup, office, listings } = await ownListings(ctx, site, args.officeId);
+  const { setup, office, listings } = await ownListings(ctx, site, args.officeId, true);
   const reviews: Array<StoredReview & { listing: Doc<"listings"> }> = [];
   for (const listing of listings) for (const review of await readReviews(ctx, listing._id)) reviews.push({ ...review, listing });
   const year = new Date().toISOString().slice(0, 4);

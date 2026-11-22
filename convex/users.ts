@@ -272,7 +272,7 @@ export const getUserById = tenantQuery({
        return toClientUser(targetUser);
     }
 
-    if (activeCompanyId === targetUser.companyId) {
+    if (activeCompanyId && activeCompanyId === targetUser.companyId) {
        return toClientUser(targetUser);
     }
 
@@ -566,7 +566,9 @@ export const getUserLogins = tenantQuery({
       const activeCompanyId = getActiveCompanyId(caller);
       
       const targetUser = await ctx.db.get(args.userId);
-      if (!targetUser || (caller.role !== "SUPER_ADMIN" && activeCompanyId !== targetUser.companyId)) {
+      if (!targetUser || (caller.role !== "SUPER_ADMIN" && (
+        caller.role !== "ADMIN" || !activeCompanyId || activeCompanyId !== targetUser.companyId
+      ))) {
         throw appError("UNAUTHORIZED", "Unauthorized");
       }
     }
@@ -654,12 +656,14 @@ export const recordLogin = softMutation({
      */
     if (lastLogin
       && now - lastLogin.timestamp < RECENT_LOGIN_WINDOW_MS
-      && lastLogin.device === args.device) {
+      && lastLogin.device === args.device
+      && lastLogin.companyId === getActiveCompanyId(current.user)) {
       return lastLogin._id;
     }
 
     const loginId = await ctx.db.insert("logins", {
       userId: current.userId,
+      companyId: getActiveCompanyId(current.user),
       device: args.device,
       ip: args.ip,
       location: args.location,

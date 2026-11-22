@@ -13,6 +13,7 @@ import { getActiveCompanyId, getCurrentUser } from "./authz";
 import { publicMutation, publicQuery, tenantMutation, tenantQuery } from "./tenantFunctions";
 import {
   assertCanAccessThread,
+  assertChatAttachmentIds,
   assertWidgetTurnSettingsAllowed,
   assertWithinMessageRateLimit,
   canAccessThread,
@@ -430,6 +431,7 @@ export const sendMessage = publicMutation({
       throw appError("UNAUTHORIZED", "Unauthorized: Widget conversations cannot switch agents");
     }
     if (targetAgentId) await assertRunnableAgent(ctx, targetAgentId, thread.companyId);
+    assertChatAttachmentIds(args.fileIds);
 
     // Strict upload validation: images can be attached inline, documents can be ingested as thread knowledge.
     if (args.fileIds?.length && !thread.widgetId && !(current && isThreadInCallersWorkspace(current.user, thread))) {

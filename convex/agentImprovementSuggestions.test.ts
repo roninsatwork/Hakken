@@ -116,11 +116,18 @@ describe("Agent Improvement Suggestions", () => {
       promptSuggestion: await ctx.db.get(promptSuggestion._id),
       toolSuggestion: await ctx.db.get(toolSuggestion._id),
       versions: await ctx.db.query("agentVersions").collect(),
+      memories: await ctx.db.query("agentMemories").collect(),
       auditLogs: await ctx.db.query("auditLogs").collect(),
     }));
 
-    expect(state.agent?.systemPrompt).toContain("Approved learning note");
-    expect(state.agent?.systemPrompt).toContain("verify the payload matches the tool schema");
+    expect(state.agent?.systemPrompt).toBe("Initial prompt.");
+    expect(state.memories).toEqual([
+      expect.objectContaining({
+        agentId,
+        applyMode: "ALWAYS",
+        content: "Before updating overview fields, verify the payload matches the tool schema.",
+      }),
+    ]);
     expect(state.promptSuggestion).toMatchObject({
       status: "APPLIED",
       reviewedBy: adminAId,
@@ -140,13 +147,13 @@ describe("Agent Improvement Suggestions", () => {
         expect.objectContaining({
           suggestionId: promptSuggestion._id,
           status: "APPLIED",
-          appliedEffect: "Prompt guidance appended and version snapshot updated.",
+          appliedEffect: "Guidance added for this company and saved in a version snapshot.",
           appliedAgentVersionId: applied.appliedAgentVersionId,
           patchPreview: [
             expect.objectContaining({
               operation: "APPEND",
-              target: "Agent system prompt",
-              note: "Applied to the agent and captured in a version snapshot.",
+              target: "Agent guidance for this company",
+              note: "Saved with this company's agent version.",
             }),
           ],
         }),
@@ -166,6 +173,7 @@ describe("Agent Improvement Suggestions", () => {
     expect(state.auditLogs.map((log) => log.actionType)).toEqual([
       "CREATE_AGENT_IMPROVEMENT_SUGGESTION",
       "CREATE_AGENT_IMPROVEMENT_SUGGESTION",
+      "WRITE_AGENT_MEMORY",
       "APPLY_AGENT_IMPROVEMENT_SUGGESTION",
       "REJECT_AGENT_IMPROVEMENT_SUGGESTION",
     ]);

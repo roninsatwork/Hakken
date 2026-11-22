@@ -4,6 +4,7 @@ import { internalMutation } from "./_generated/server";
 import { tenantMutation, tenantQuery } from "./tenantFunctions";
 import * as platformShapes from "./utils/platformShapes";
 import { appError } from "./utils/appError";
+import { getActiveCompanyId } from "./authz";
 
 /**
  * The platform telling one person that something happened.
@@ -33,11 +34,14 @@ export const listMine = tenantQuery({
   args: { paginationOpts: paginationOptsValidator },
   returns: platformShapes.notificationPageShape,
   handler: async (ctx, args) => {
-    return await ctx.db
+    const notifications = ctx.db
       .query("notifications")
       .withIndex("by_user_created", (q) => q.eq("userId", ctx.userId))
-      .order("desc")
-      .paginate(args.paginationOpts);
+      .order("desc");
+    return await (ctx.user.role === "SUPER_ADMIN" ? notifications : notifications.filter((q) => q.or(
+      q.eq(q.field("companyId"), ctx.companyId),
+      q.eq(q.field("companyId"), undefined),
+    ))).paginate(args.paginationOpts);
   },
 });
 
@@ -45,10 +49,13 @@ export const countMineUnread = tenantQuery({
   args: {},
   returns: platformShapes.unreadCountShape,
   handler: async (ctx) => {
-    const unread = await ctx.db
+    const unreadQuery = ctx.db
       .query("notifications")
-      .withIndex("by_user_unread", (q) => q.eq("userId", ctx.userId).eq("readAt", undefined))
-      .take(UNREAD_COUNT_LIMIT + 1);
+      .withIndex("by_user_unread", (q) => q.eq("userId", ctx.userId).eq("readAt", undefined));
+    const unread = await (ctx.user.role === "SUPER_ADMIN" ? unreadQuery : unreadQuery.filter((q) => q.or(
+      q.eq(q.field("companyId"), ctx.companyId),
+      q.eq(q.field("companyId"), undefined),
+    ))).take(UNREAD_COUNT_LIMIT + 1);
 
     return {
       count: Math.min(unread.length, UNREAD_COUNT_LIMIT),
@@ -64,7 +71,8 @@ export const markRead = tenantMutation({
     const notification = await ctx.db.get(args.notificationId);
     // Checked against the row's own owner, not the tenant: two colleagues in
     // one workspace still have separate inboxes.
-    if (!notification || notification.userId !== ctx.userId) {
+    if (!notification || notification.userId !== ctx.userId
+      || (ctx.user.role !== "SUPER_ADMIN" && notification.companyId !== undefined && notification.companyId !== ctx.companyId)) {
       throw appError("NOT_FOUND", "That notification could not be found.");
     }
     if (notification.readAt) return;
@@ -77,10 +85,13 @@ export const markAllMineRead = tenantMutation({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    const unread = await ctx.db
+    const unreadQuery = ctx.db
       .query("notifications")
-      .withIndex("by_user_unread", (q) => q.eq("userId", ctx.userId).eq("readAt", undefined))
-      .take(200);
+      .withIndex("by_user_unread", (q) => q.eq("userId", ctx.userId).eq("readAt", undefined));
+    const unread = await (ctx.user.role === "SUPER_ADMIN" ? unreadQuery : unreadQuery.filter((q) => q.or(
+      q.eq(q.field("companyId"), ctx.companyId),
+      q.eq(q.field("companyId"), undefined),
+    ))).take(200);
 
     const readAt = Date.now();
     for (const notification of unread) {
@@ -104,6 +115,10 @@ export const notifyUserInternal = internalMutation({
   handler: async (ctx, args) => {
     const title = args.title.trim();
     if (!title) throw appError("INVALID_INPUT", "A notification needs a title.");
+    if (args.companyId) {
+      const recipient = await ctx.db.get(args.userId);
+      if (!recipient || (recipient.role !== "SUPER_ADMIN" && getActiveCompanyId(recipient) !== args.companyId)) return null;
+    }
 
     return await ctx.db.insert("notifications", {
       userId: args.userId,

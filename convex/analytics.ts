@@ -244,7 +244,7 @@ export const getUserCostOverview = adminQuery({
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
 
-    snapshots.forEach((snapshot) => {
+    snapshots.filter((snapshot) => admin.role === "SUPER_ADMIN" || snapshot.companyId === admin.companyId).forEach((snapshot) => {
       totalCostUsd += snapshot.metrics.costUsd;
       totalInputTokens += snapshot.metrics.totalInputTokens;
       totalOutputTokens += snapshot.metrics.totalOutputTokens;
@@ -256,7 +256,7 @@ export const getUserCostOverview = adminQuery({
       .withIndex("by_user_role_created", (q) => q.eq("userId", args.userId).eq("role", "assistant").gte("createdAt", todayStartTs))
       .take(ANALYTICS_SCAN + 1));
 
-    liveAssistantMessages.forEach((message) => {
+    liveAssistantMessages.filter((message) => admin.role === "SUPER_ADMIN" || message.companyId === admin.companyId).forEach((message) => {
       const inputs = message.inputTokens || 0;
       const outputs = message.outputTokens || 0;
       const model = message.modelUsed || defaultModelId;
@@ -294,10 +294,11 @@ export const getUserCostThreads = adminQuery({
     if (!targetUser) throw appError("NOT_FOUND", "User not found");
     assertAnalyticsUserAccess(admin, targetUser);
 
-    const threads = await ctx.db
+    const threadQuery = ctx.db
       .query("threads")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .order("desc")
+      .order("desc");
+    const threads = await (admin.role === "SUPER_ADMIN" ? threadQuery : threadQuery.filter((q) => q.eq(q.field("companyId"), admin.companyId)))
       .paginate(args.paginationOpts);
 
     const enrichedThreads = await Promise.all(

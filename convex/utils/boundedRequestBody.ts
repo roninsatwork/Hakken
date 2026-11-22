@@ -82,3 +82,10 @@ export async function readBoundedJson(
     return { ok: false, reason: "unreadable" };
   }
 }
+
+/** OAuth and MCP handlers share the same bounded reader as the public API. */
+export async function readLimitedText(request: Pick<Request, "body" | "headers">, maxBytes: number): Promise<string | null> {
+  if (!request.body) return "";
+  const result = await readBoundedBody(request, maxBytes);
+  return result.ok ? result.text : null;
+}

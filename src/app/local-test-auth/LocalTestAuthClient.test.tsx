@@ -20,6 +20,7 @@ describe("LocalTestAuthClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.queryString = "";
+    window.sessionStorage.clear();
   });
 
   it("keeps the loading view immediate before showing the disabled error", async () => {
@@ -42,7 +43,8 @@ describe("LocalTestAuthClient", () => {
   });
 
   it("preserves the local-test auth payload and rejection state", async () => {
-    mocks.queryString = "role=user&secret=test-secret&redirectTo=%2Fapp%2Fcalls";
+    mocks.queryString = "role=user&redirectTo=%2Fapp%2Fcalls";
+    window.sessionStorage.setItem("hakken-local-test-auth-secret", "test-secret");
     mocks.signIn.mockResolvedValue({ signingIn: false });
 
     render(<LocalTestAuthClient enabled />);
@@ -57,5 +59,16 @@ describe("LocalTestAuthClient", () => {
     expect(await screen.findByTestId("local-test-auth-error")).toHaveTextContent(
       "Local test sign-in was rejected."
     );
+    expect(window.sessionStorage.getItem("hakken-local-test-auth-secret")).toBeNull();
+  });
+
+  it("does not accept a test secret from the browser URL", async () => {
+    mocks.queryString = "role=user&secret=url-secret&redirectTo=%2Fapp";
+    render(<LocalTestAuthClient enabled />);
+
+    expect(await screen.findByTestId("local-test-auth-error")).toHaveTextContent(
+      "Missing or invalid local test auth parameters."
+    );
+    expect(mocks.signIn).not.toHaveBeenCalled();
   });
 });

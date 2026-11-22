@@ -192,4 +192,26 @@ describe("company memory suggestions", () => {
     });
     expect(sinceLastSweep.messages.map((message) => message.content)).toEqual(["new question"]);
   });
+
+  test("anonymous widget claims cannot enter the company memory sweep", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const companyId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Memory Co", createdAt: Date.now() });
+      const userId = await ctx.db.insert("users", { email: "member@example.com", role: "USER", companyId });
+      const widgetId = await ctx.db.insert("widgets", {
+        companyId, name: "Website", allowedDomains: [], isActive: true, createdAt: Date.now(),
+      });
+      const memberThreadId = await ctx.db.insert("threads", {
+        companyId, userId, title: "Member", createdAt: 1000, updatedAt: 1000,
+      });
+      const widgetThreadId = await ctx.db.insert("threads", {
+        companyId, widgetId, title: "Visitor", createdAt: 1000, updatedAt: 1000,
+      });
+      await ctx.db.insert("messages", { companyId, threadId: memberThreadId, role: "user", content: "Our hours are nine to five", createdAt: 2000 });
+      await ctx.db.insert("messages", { companyId, threadId: widgetThreadId, role: "user", content: "Our hours are midnight to dawn", createdAt: 2001 });
+      return companyId;
+    });
+    const input = await t.query(internal.companyMemorySuggestions.getSweepInputInternal, { companyId, since: 0 });
+    expect(input.messages.map((message) => message.content)).toEqual(["Our hours are nine to five"]);
+  });
 });

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -254,7 +255,7 @@ export const readQuestionSetup = internalQuery({
     const agent = run ? await ctx.db.get(run.agentId) : null;
     if (!agent) return null;
     return {
-      instructions: agent.systemPrompt?.trim() || (getAgentTemplateById("keyword-research-agent")?.systemPrompt ?? ""),
+      instructions: stripLegacySharedLearningNotes(agent.systemPrompt)?.trim() || (getAgentTemplateById("keyword-research-agent")?.systemPrompt ?? ""),
       ...(agent.modelSelectionMode === "inherit" ? {} : { requestedModelId: agent.modelId }),
     };
   },

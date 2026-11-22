@@ -188,6 +188,10 @@ describe("sending", () => {
     await t.run(async (ctx) => {
       await ctx.db.patch(agentId, { maxDailyCostUsd: 1 });
       await ctx.db.patch(runId, { costUsd: 0.9 });
+      await ctx.db.insert("agentTransactions", {
+        agentId, actionContext: "dataforseo:test", modelUsed: "test", providerKey: "dataforseo",
+        inputTokens: 0, outputTokens: 0, costUsd: 0.9, status: "SUCCESS", createdAt: Date.now(),
+      });
       await ctx.db.insert("seoOperationCosts", {
         operationId: "serp_google_organic", charged: 10, totalUsd: 0.5, lastUsd: 0.05, updatedAt: Date.now(),
       });
@@ -381,6 +385,10 @@ describe("one continuous send", () => {
     await t.run(async (ctx) => {
       await ctx.db.patch(runId, { status: "SUCCESS", costUsd: 5 });
       await ctx.db.patch(agentId, { maxDailyCostUsd: 5 });
+      await ctx.db.insert("agentTransactions", {
+        agentId, actionContext: "dataforseo:test", modelUsed: "test", providerKey: "dataforseo",
+        inputTokens: 0, outputTokens: 0, costUsd: 5, status: "SUCCESS", createdAt: Date.now(),
+      });
     });
     await t.mutation(internal.seoCollectionSweep.sweepDuty, { duty: "sendWaiting" });
     expect(await runs()).toHaveLength(1);
@@ -429,6 +437,17 @@ describe("one Collector at a time", () => {
 describe("fetching an answer", () => {
   const answerFor = (statusCode: number, extra: Record<string, unknown> = {}) =>
     vi.fn(async () => Response.json({ status_code: 20000, tasks: [{ id: "task-1", status_code: statusCode, ...extra }] }));
+
+  test("a provider reply for another task or tag is not filed", async () => {
+    const t = harness();
+    const pullId = await request(t, { operationId: "serp_google_organic", mode: "QUEUED", status: "SUBMITTED", taskId: "task-1", tag: "right-tag" });
+    vi.stubGlobal("fetch", answerFor(20000, { id: "other-task", data: { tag: "right-tag" }, result: [{ items: [] }] }));
+    await t.action(internal.seoCollectionActions.fetchSeoResult, { pullId });
+    expect(await get(t, pullId)).toMatchObject({ status: "SUBMITTED", lastFetch: { said: "DataForSEO's reply did not match this request." } });
+    vi.stubGlobal("fetch", answerFor(20000, { data: { tag: "wrong-tag" }, result: [{ items: [] }] }));
+    await t.action(internal.seoCollectionActions.fetchSeoResult, { pullId });
+    expect(await get(t, pullId)).toMatchObject({ status: "SUBMITTED", lastFetch: { said: "DataForSEO's reply did not match this request." } });
+  });
 
   test("an answer DataForSEO is still working on is waited for, not thrown away", async () => {
     const t = harness();
@@ -494,7 +513,10 @@ describe("answers arriving late", () => {
     const t = harness();
     const pullId = await request(t, { status: "FAILED", tag: "our-tag", error: `${SEND_UNCERTAIN} (timeout).` });
 
-    expect(await t.mutation(internal.seoCollectionQueue.markSeoPinged, { taskId: "task-7", tag: "our-tag" })).toBe(pullId);
+    expect(await t.mutation(internal.seoCollectionQueue.markSeoPinged, { taskId: "false-id", tag: "our-tag" })).toBeNull();
+    expect(await get(t, pullId)).toMatchObject({ status: "FAILED" });
+    expect((await get(t, pullId))?.taskId).toBeUndefined();
+    expect(await t.mutation(internal.seoCollectionQueue.markSeoPinged, { taskId: "task-7", tag: "our-tag", tagVerified: true })).toBe(pullId);
     expect(await get(t, pullId)).toMatchObject({ status: "SUBMITTED", taskId: "task-7" });
   });
 

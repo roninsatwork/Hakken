@@ -114,11 +114,15 @@ async function resolveTenantIdentity(
   guard: Guard,
 ): Promise<TenantIdentity> {
   const current = await GUARD_RESOLVERS[guard](ctx);
+  const companyId = getActiveCompanyId(current.user);
+  if (companyId && !(await ctx.db.get(companyId))) {
+    throw appError("NO_ACTIVE_COMPANY", "No active company");
+  }
 
   return {
     user: current.user,
     userId: current.userId,
-    companyId: getActiveCompanyId(current.user),
+    companyId,
   };
 }
 

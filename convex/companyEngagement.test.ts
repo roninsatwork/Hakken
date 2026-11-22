@@ -44,6 +44,28 @@ async function seed(t: ReturnType<typeof convexTest>) {
 }
 
 describe("company engagement", () => {
+  test("a transferred member's old sign-ins and questions stay with the old company", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId: newCompany, admin, regular } = await seed(t);
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      const oldCompany = await ctx.db.insert("companies", { name: "Old company", createdAt: now });
+      await ctx.db.patch(regular, { companyId: oldCompany });
+      const oldThread = await ctx.db.insert("threads", { userId: regular, companyId: oldCompany, createdAt: now, updatedAt: now });
+      await ctx.db.insert("messages", { threadId: oldThread, role: "user", content: "Old secret", userId: regular, companyId: oldCompany, createdAt: now });
+      await ctx.db.insert("logins", { userId: regular, companyId: oldCompany, ip: "1.1.1.1", device: "Mac", location: "London", status: "SUCCESS", timestamp: now });
+      await ctx.db.insert("logins", { userId: regular, ip: "1.1.1.1", device: "Legacy", location: "London", status: "SUCCESS", timestamp: now });
+      await ctx.db.patch(regular, { companyId: newCompany });
+      const newThread = await ctx.db.insert("threads", { userId: regular, companyId: newCompany, createdAt: now, updatedAt: now });
+      await ctx.db.insert("messages", { threadId: newThread, role: "user", content: "New work", userId: regular, companyId: newCompany, createdAt: now });
+      await ctx.db.insert("logins", { userId: regular, companyId: newCompany, ip: "1.1.1.2", device: "Mac", location: "London", status: "SUCCESS", timestamp: now });
+    });
+    const report = await t.withIdentity({ subject: admin }).query(api.companyEngagement.getCompanyEngagement, { companyId: newCompany });
+    expect(report.signIns.total).toBe(1);
+    expect(report.questions.asked).toBe(1);
+    expect(report.everyone.find((person) => person.userId === regular)).toMatchObject({ signIns: 1, questions: 1 });
+  });
+
   test("counts people, questions and sign-ins, and leaves platform staff out", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { companyId, admin, regular, superAdmin } = await seed(t);
@@ -55,6 +77,7 @@ describe("company engagement", () => {
       for (const timestamp of [now - 1000, now - 2000, now - DAY_MS]) {
         await ctx.db.insert("logins", {
           userId: regular,
+          companyId,
           ip: "1.1.1.1",
           device: "Mac",
           location: "London",
@@ -65,6 +88,7 @@ describe("company engagement", () => {
       // A failed attempt is not a sign-in.
       await ctx.db.insert("logins", {
         userId: regular,
+        companyId,
         ip: "1.1.1.1",
         device: "Mac",
         location: "London",
@@ -74,6 +98,7 @@ describe("company engagement", () => {
       // The super admin is busy, and must not appear anywhere.
       await ctx.db.insert("logins", {
         userId: superAdmin,
+        companyId,
         ip: "2.2.2.2",
         device: "Mac",
         location: "London",
@@ -136,6 +161,7 @@ describe("company engagement", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("logins", {
         userId: regular,
+        companyId,
         ip: "1.1.1.1",
         device: "Mac",
         location: "London",
@@ -222,6 +248,7 @@ describe("company engagement", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("logins", {
         userId: regular,
+        companyId,
         ip: "1.1.1.1",
         device: "Mac",
         location: "London",
@@ -258,6 +285,7 @@ describe("company engagement", () => {
       for (const timestamp of [now - 1000, now - 2000]) {
         await ctx.db.insert("logins", {
           userId: regular,
+          companyId,
           ip: "1.1.1.1",
           device: "Mac",
           location: "London",
@@ -291,6 +319,7 @@ describe("company engagement", () => {
       for (let index = 0; index < 9; index += 1) {
         await ctx.db.insert("logins", {
           userId: regular,
+          companyId,
           ip: "1.1.1.1",
           device: "Mac",
           location: "London",

@@ -15,6 +15,7 @@ import { hakkenTaskProposalValidator } from "./hakkenTaskSchema";
 import { generateCode } from "./oneTimeCodeService";
 import { readerPreferencesOf } from "./readerPreferences";
 import { tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
+import { getActiveCompanyId } from "./authz";
 import { redactPII } from "./utils/pii";
 
 /**
@@ -157,6 +158,8 @@ const linkValidator = v.object({ userId: v.id("users"), companyId: v.id("compani
 /** A link as the bot uses it: whose it is, where to send, and the language they read the platform in. */
 async function linkOut(ctx: QueryCtx, link: Doc<"telegramLinks"> | null) {
   if (!link) return null;
+  const owner = await ctx.db.get(link.userId);
+  if (!owner || getActiveCompanyId(owner) !== link.companyId) return null;
   const { language } = await readerPreferencesOf(ctx, link.userId);
   return { userId: link.userId, companyId: link.companyId, threadId: link.threadId, chatId: link.chatId, language };
 }

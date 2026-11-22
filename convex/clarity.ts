@@ -5,6 +5,7 @@ import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from
 import { moduleAction, moduleMutation, moduleQuery } from "./tenantFunctions";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { getActiveCompanyId } from "./authz";
+import { companyHasFeature } from "./utils/featureSwitchReads";
 import { companyHolds, requireMySite } from "./siteAccess";
 import { appError } from "./utils/appError";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
@@ -300,7 +301,8 @@ export const connectClarity = moduleAction({
     const tested = await askClarity(token, "Device");
     if (!tested.ok) return { ok: false, problem: tested.problem };
     const tokenCiphertext = await encryptConnectorToken(token);
-    await ctx.runMutation(internal.clarity.saveConnection, { siteId: args.siteId, companyId: allowed.companyId!, tokenCiphertext, connectedBy: ctx.userId });
+    const saved = await ctx.runMutation(internal.clarity.saveConnection, { siteId: args.siteId, companyId: allowed.companyId!, tokenCiphertext, connectedBy: ctx.userId });
+    if (!saved) return { ok: false, problem: "Clarity could not connect. Please try again." };
     // The test ask was one of today's ten; then the Collector's first run for this website (agents-and-clarity-plan.md, CC6).
     await ctx.runMutation(internal.clarityAgentRun.countAsks, { holdId: args.siteId, asks: 1 });
     await ctx.runMutation(internal.clarityAgentRun.startFirstCollection, { holdId: args.siteId });
@@ -316,21 +318,31 @@ export const canConnect = internalQuery({
     const hold = await ctx.db.get(args.siteId);
     const user = args.userId ? await ctx.db.get(args.userId) : null;
     if (!hold || !args.companyId || hold.companyId !== args.companyId || hold.relationship !== "OWNED") return { ok: false, problem: "Only your company's own website can be connected.", companyId: null };
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) return { ok: false, problem: "Only a company admin can connect Clarity.", companyId: null };
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") || getActiveCompanyId(user) !== hold.companyId) {
+      return { ok: false, problem: "Only a company admin can connect Clarity.", companyId: null };
+    }
     return { ok: true, problem: null, companyId: hold.companyId };
   },
 });
 
 export const saveConnection = internalMutation({
-  args: { siteId: v.id("companyWebsites"), companyId: v.id("companies"), tokenCiphertext: v.string(), connectedBy: v.optional(v.id("users")) },
-  returns: v.null(),
+  args: { siteId: v.id("companyWebsites"), companyId: v.id("companies"), tokenCiphertext: v.string(), connectedBy: v.id("users") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
+    const [site, user, featureOn] = await Promise.all([
+      ctx.db.get(args.siteId),
+      ctx.db.get(args.connectedBy),
+      companyHasFeature(ctx, args.companyId, MENU_FEATURES.clarity),
+    ]);
+    if (!site || site.companyId !== args.companyId || site.relationship !== "OWNED"
+      || !user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")
+      || getActiveCompanyId(user) !== args.companyId || !featureOn) return false;
     const now = Date.now();
     const held = await ctx.db.query("clarityConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.siteId)).first();
     const fields = { companyId: args.companyId, companyWebsiteId: args.siteId, status: "CONNECTED" as const, tokenCiphertext: args.tokenCiphertext, problem: undefined, connectedBy: args.connectedBy, updatedAt: now };
     if (held) await ctx.db.patch(held._id, fields);
     else await ctx.db.insert("clarityConnections", { ...fields, createdAt: now });
-    return null;
+    return true;
   },
 });
 

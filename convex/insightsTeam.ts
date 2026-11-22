@@ -1,4 +1,5 @@
 import { v, type Infer } from "convex/values";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 import { MENU_FEATURES } from "./utils/coreModules";
 import { featureOffCheck } from "./utils/featureSwitchReads";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -75,7 +76,7 @@ export const teamSetup = internalQuery({
         name: agent.name,
         isActive: agent.isActive,
         ...(agent.modelSelectionMode === "inherit" ? {} : { requestedModelId: agent.modelId }),
-        instructions: agent.systemPrompt ?? "",
+        instructions: stripLegacySharedLearningNotes(agent.systemPrompt) ?? "",
         ...(agent.maxCostUsd !== undefined ? { maxCostUsd: agent.maxCostUsd } : {}),
         mode: agent.plannerMode ?? "TEST",
       });

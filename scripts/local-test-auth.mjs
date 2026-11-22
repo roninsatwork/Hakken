@@ -99,9 +99,13 @@ async function state() {
       const page = await context.newPage();
       const url = new URL("/local-test-auth", baseUrl);
       url.searchParams.set("role", role.role);
-      url.searchParams.set("secret", secret);
       url.searchParams.set("redirectTo", role.redirectTo);
 
+      await page.addInitScript((testSecret) => {
+        if (window.location.pathname === "/local-test-auth") {
+          window.sessionStorage.setItem("hakken-local-test-auth-secret", testSecret);
+        }
+      }, secret);
       await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
 
       const authError = page.getByTestId("local-test-auth-error");

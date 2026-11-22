@@ -2,10 +2,11 @@
 
 import { GenericActionCtx } from "convex/server";
 import type { DataModel, Id } from "../_generated/dataModel";
-// @ts-expect-error pdf-extraction ships incomplete TypeScript declarations.
-import pdfExtraction from "pdf-extraction";
 import * as ExcelJSNamespace from "exceljs";
 import mammoth from "mammoth";
+import { assertOfficeArchiveBudget } from "./officeArchiveBudget";
+import { appErrorMessage } from "./appError";
+import { extractPdfTextWithinBudget, PDF_TOO_LONG_MESSAGE } from "./pdfBudget";
 
 /**
  * exceljs, whichever shape the bundler hands over.
@@ -28,8 +29,7 @@ export async function parseDocuments(ctx: GenericActionCtx<DataModel>, fileIds: 
 
   let compiledTexts = "";
 
-  for (let i = 0; i < fileIds.length; i++) {
-    const fileId = fileIds[i];
+  for (const [i, fileId] of [...new Set(fileIds)].slice(0, 10).entries()) {
     try {
       const blob = await ctx.storage.get(fileId);
       if (!blob) continue;
@@ -42,25 +42,33 @@ export async function parseDocuments(ctx: GenericActionCtx<DataModel>, fileIds: 
 
       if (mimeType === "application/pdf") {
         try {
-           const pdfData = await pdfExtraction(buffer);
-           extractedText = pdfData.text;
+           extractedText = await extractPdfTextWithinBudget(buffer);
         } catch (e) {
-           console.error("PDF Parsing error:", e);
-           extractedText = "[Failed to extract exact text from PDF. It may be heavily styled or encrypted.]";
+           if (appErrorMessage(e, "") === PDF_TOO_LONG_MESSAGE) {
+             extractedText = `[${PDF_TOO_LONG_MESSAGE}]`;
+           } else {
+             console.error("PDF Parsing error:", e);
+             extractedText = "[Failed to extract exact text from PDF. It may be heavily styled or encrypted.]";
+           }
         }
       } else if (
         mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" || 
         mimeType === "application/vnd.ms-excel"
       ) {
          try {
+           assertOfficeArchiveBudget(new Uint8Array(arrayBuffer));
            const workbook = new ExcelJS.Workbook();
            await workbook.xlsx.load(arrayBuffer);
            // Extract text from the first sheet
            if (workbook.worksheets.length > 0) {
               const worksheet = workbook.worksheets[0];
               const rows: string[] = [];
+              let rowCharacters = 0;
               worksheet.eachRow((row) => {
-                 rows.push(row.values.toString());
+                 if (rowCharacters >= 50000) return;
+                 const value = row.values.toString();
+                 rows.push(value.substring(0, 50000 - rowCharacters));
+                 rowCharacters += value.length + 1;
               });
               extractedText = rows.join('\n');
            } else {
@@ -74,6 +82,7 @@ export async function parseDocuments(ctx: GenericActionCtx<DataModel>, fileIds: 
         mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       ) {
          try {
+           assertOfficeArchiveBudget(new Uint8Array(arrayBuffer));
            const result = await mammoth.extractRawText({ buffer });
            extractedText = result.value;
          } catch (e) {
@@ -82,7 +91,7 @@ export async function parseDocuments(ctx: GenericActionCtx<DataModel>, fileIds: 
          }
       } else if (mimeType.startsWith("text/")) {
          // This covers CSV, txt
-         extractedText = buffer.toString("utf-8");
+         extractedText = buffer.subarray(0, 200000).toString("utf-8");
       } else {
          extractedText = `[Unsupported document type uploaded: ${mimeType}]`;
       }

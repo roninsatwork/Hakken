@@ -28,6 +28,11 @@ async function seed(t: Harness, options: { sending: boolean; ceilingReached?: bo
       agentId: collector, triggerType: "MANUAL", objective: "send", title: "Collect now — Acme",
       status: options.sending ? "RUNNING" : "SUCCESS", costUsd: options.ceilingReached ? 12 : 1, startedAt: now, updatedAt: now,
     } as never);
+    await ctx.db.insert("agentTransactions", {
+      agentId: collector, actionContext: "dataforseo:test", modelUsed: "test", providerKey: "dataforseo",
+      inputTokens: 0, outputTokens: 0, costUsd: options.ceilingReached ? 12 : 1,
+      status: "SUCCESS", createdAt: now,
+    });
     const planner = await ctx.db.insert("agentRuns", {
       agentId: collector, triggerType: "MANUAL", objective: "plan", title: "Collect now — Acme", status: "SUCCESS",
       userId: owner, startedAt: now, updatedAt: now,

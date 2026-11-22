@@ -185,7 +185,7 @@ export const businessProfile = moduleQuery({
 /** businessProfile's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
 export const readBusinessProfile = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
   const site = await requireMySite(ctx, args.siteId);
-  const { offices, rivals, rivalOffice } = await localSetup(ctx, site);
+  const { offices, rivals, rivalOffice } = await localSetup(ctx, site, true);
   const office = openOffice(offices, args.officeId);
   const options = offices.map((entry) => ({ listingId: entry._id, name: entry.name, town: entry.town ?? null }));
   if (!office) return { offices: options, office: null };
@@ -279,7 +279,7 @@ export const everyOffice = moduleQuery({
 /** everyOffice's answer for the company the reader carries: the screen's, and a chat app's question's (`chatAppEyes/visibility.ts`). */
 export const readEveryOffice = seeing(async (ctx: SiteReader, args: { siteId: Id<"companyWebsites"> }) => {
   const site = await requireMySite(ctx, args.siteId);
-  const { offices, rivals, rivalOffice } = await localSetup(ctx, site);
+  const { offices, rivals, rivalOffice } = await localSetup(ctx, site, true);
   const searchesOf = await searchesByOffice(ctx, site, offices);
   const maps: Array<Awaited<ReturnType<typeof officeMap>>> = [];
   for (const office of offices) maps.push(await officeMap(ctx, office, searchesOf.get(office._id) ?? []));

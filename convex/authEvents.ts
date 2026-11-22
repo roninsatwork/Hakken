@@ -74,31 +74,33 @@ export async function usersForCanonicalEmail(ctx: AuthIdentityLookupCtx, rawEmai
  * wrapper now returns the same generic result for both branches and only calls
  * the provider for an address that can actually complete sign-in.
  */
+async function mayStartEmailSignIn(ctx: AuthIdentityLookupCtx, rawEmail: string): Promise<boolean> {
+  const email = normaliseEmail(rawEmail);
+  if (!email) return false;
+
+  const existingUsers = await usersForCanonicalEmail(ctx, email);
+  // Ambiguous identity rows must be repaired by an operator, never selected
+  // by whichever document the database happens to return first.
+  if (existingUsers.length !== 0) return existingUsers.length === 1;
+
+  const initialSuperAdmin = normaliseEmail(process.env.INITIAL_SUPER_ADMIN_EMAIL ?? "");
+  if (initialSuperAdmin && email === initialSuperAdmin) return true;
+
+  const invitations = await ctx.db
+    .query("invitations")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .take(2);
+  if (invitations.length !== 1) return false;
+  const invite = invitations[0];
+  if (!invite) return false;
+  if (invite.status === "ACCEPTED") return true;
+  return invite.status === "PENDING" && Date.now() - invite.invitedAt <= INVITE_EXPIRATION_MS;
+}
+
 export const canStartEmailSignIn = internalQuery({
   args: { email: v.string() },
   returns: v.boolean(),
-  handler: async (ctx, args): Promise<boolean> => {
-    const email = normaliseEmail(args.email);
-    if (!email) return false;
-
-    const existingUsers = await usersForCanonicalEmail(ctx, email);
-    // Ambiguous identity rows must be repaired by an operator, never selected
-    // by whichever document the database happens to return first.
-    if (existingUsers.length !== 0) return existingUsers.length === 1;
-
-    const initialSuperAdmin = normaliseEmail(process.env.INITIAL_SUPER_ADMIN_EMAIL ?? "");
-    if (initialSuperAdmin && email === initialSuperAdmin) return true;
-
-    const invitations = await ctx.db
-      .query("invitations")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .take(2);
-    if (invitations.length !== 1) return false;
-    const invite = invitations[0];
-    if (!invite) return false;
-    if (invite.status === "ACCEPTED") return true;
-    return invite.status === "PENDING" && Date.now() - invite.invitedAt <= INVITE_EXPIRATION_MS;
-  },
+  handler: async (ctx, args): Promise<boolean> => mayStartEmailSignIn(ctx, args.email),
 });
 
 /**
@@ -116,6 +118,8 @@ export const reserveAuthEmailSend = internalMutation({
   handler: async (ctx, args): Promise<boolean> => {
     const email = normaliseEmail(args.email);
     if (!email) return false;
+    // Check in this transaction so unknown addresses never take a shared mail slot.
+    if (!(await mayStartEmailSignIn(ctx, email))) return false;
 
     const now = Date.now();
     const recentGlobal = await ctx.db

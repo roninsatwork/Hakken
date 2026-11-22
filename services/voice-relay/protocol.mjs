@@ -178,9 +178,13 @@ export function readUsage(raw) {
  * knowledge lookup about, say, setup instructions would otherwise have their
  * answer silently dropped and the model would wait for it forever.
  */
-export function isCallerFrameAllowed(text) {
+export function isCallerFrameAllowed(text, meteredVoiceTurns = false) {
   try {
-    return !Object.hasOwn(JSON.parse(text), "setup");
+    const frame = JSON.parse(text);
+    return !Object.hasOwn(frame, "setup") &&
+      // Kiosk audio must arrive as binary PCM, where the server can reserve
+      // a turn before it forwards the frame. A JSON audio frame skips that meter.
+      !(meteredVoiceTurns && Object.hasOwn(frame, "realtimeInput"));
   } catch {
     // Unparseable is not audio and not an answer. Drop it rather than
     // forward something Vertex will reject the whole session over.
@@ -244,6 +248,7 @@ export function createCallerRouter({
   claimTicket = () => true,
 }) {
   let ticketAccepted = false;
+  let meteredVoiceTurns = false;
   let vertexOpen = false;
   const held = [];
 
@@ -268,6 +273,7 @@ export function createCallerRouter({
           return { kind: "refused", reason: error?.message ?? "Refused." };
         }
         ticketAccepted = true;
+        meteredVoiceTurns = ticket.meteredVoiceTurns === true;
         // The raw string is kept as well as its contents: the platform is
         // shown the ticket itself when knowledge is looked up, so it can
         // verify the signature rather than take this relay's word for it.
@@ -279,7 +285,7 @@ export function createCallerRouter({
         frame = buildAudioFrame(Buffer.from(data));
       } else {
         const text = data.toString();
-        if (!isCallerFrameAllowed(text)) return { kind: "dropped" };
+        if (!isCallerFrameAllowed(text, meteredVoiceTurns)) return { kind: "dropped" };
         frame = text;
       }
 

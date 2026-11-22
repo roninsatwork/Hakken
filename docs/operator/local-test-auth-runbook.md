@@ -44,7 +44,7 @@ Local test auth fails closed unless all required controls are present:
 - `LOCAL_TEST_AUTH_ENABLED` must be `1` for the local Next.js app so `/local-test-auth` renders the client flow.
 - `LOCAL_TEST_AUTH_ENABLED` must be `1` for the local Convex environment so the `local-test` credentials provider and seed/authorize functions are available.
 - `LOCAL_TEST_AUTH_SECRET` must be configured in the local Convex environment.
-- The secret passed to the script or `/local-test-auth` route must match `LOCAL_TEST_AUTH_SECRET`.
+- The secret passed to the script must match `LOCAL_TEST_AUTH_SECRET`. The script passes it to the browser without placing it in the address bar.
 - `LOCAL_TEST_AUTH_ENVIRONMENT` must be exactly `local` in both the local Next.js app and local Convex environment.
 - The browser route must be opened on `localhost`, `127.0.0.1`, or `::1`.
 
@@ -149,15 +149,9 @@ npm run test:e2e:real-auth
 
 That lane starts the local app on port `3100` with `LOCAL_TEST_AUTH_ENABLED=1` and `LOCAL_TEST_AUTH_ENVIRONMENT=local`, then runs `e2e/local-real-auth-smoke.spec.ts` projects for public, super-admin, and user checks. The smoke spec signs in dynamically through `/local-test-auth`; it does not require pre-generated storage states. You still need to seed the deterministic local users first with `npm run auth:local:seed`.
 
-## Manual Route Check
+## Route Check
 
-The script-driven state command is the preferred path, but the route can also be checked manually on localhost:
-
-```text
-/local-test-auth?role=company-admin&secret=replace-with-local-secret&redirectTo=/app
-```
-
-Valid roles are `super-admin`, `company-admin`, and `user`. `redirectTo` must be a local path beginning with `/` and cannot begin with `//`; invalid redirects fall back to `/app`.
+Use `npm run auth:local:state` to check sign-in for each role. The route no longer accepts a secret in its URL, because browser history and failed test reports can retain that URL. Valid roles are `super-admin`, `company-admin`, and `user`. `redirectTo` must be a local path beginning with `/` and cannot begin with `//`; invalid redirects fall back to `/app`.
 
 The route shows a loading state while creating the local test session. If a safety gate fails, it shows `Local test auth unavailable` with an error message.
 

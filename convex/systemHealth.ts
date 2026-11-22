@@ -334,17 +334,10 @@ async function getRecentAgentTransactions(ctx: QueryCtx, args: { scope?: HealthS
 async function executionMatchesScope(ctx: QueryCtx, execution: Doc<"workflowExecutions">, scope: HealthScope | undefined) {
   if (isPlatformScope(scope)) return true;
   if (!scope?.companyId) return false;
+  if (execution.companyId) return execution.companyId === scope.companyId;
   if (execution.agentRunId) {
     const run = await ctx.db.get(execution.agentRunId);
-    if (run?.companyId === scope.companyId) return true;
-  }
-  if (execution.agentId) {
-    const run = await ctx.db
-      .query("agentRuns")
-      .withIndex("by_agent_started", (q) => q.eq("agentId", execution.agentId!))
-      .order("desc")
-      .first();
-    if (run?.companyId === scope.companyId) return true;
+    return run?.companyId === scope.companyId;
   }
   // A run whose starter has since been erased belongs to no one's scope.
   const starter = execution.startedBy ? await ctx.db.get(execution.startedBy) : null;
@@ -366,14 +359,7 @@ async function filterExecutionsForScope(
 async function scheduleMatchesScope(ctx: QueryCtx, schedule: Doc<"schedules">, scope: HealthScope | undefined) {
   if (isPlatformScope(scope)) return true;
   if (!scope?.companyId) return false;
-  if (schedule.agentId) {
-    const run = await ctx.db
-      .query("agentRuns")
-      .withIndex("by_agent_started", (q) => q.eq("agentId", schedule.agentId!))
-      .order("desc")
-      .first();
-    if (run?.companyId === scope.companyId) return true;
-  }
+  if (schedule.companyId) return schedule.companyId === scope.companyId;
   // A schedule whose creator has since been erased belongs to no scope.
   const creator = schedule.createdBy ? await ctx.db.get(schedule.createdBy) : null;
   return getUserCompanyScope(creator) === scope.companyId;

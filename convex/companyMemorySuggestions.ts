@@ -222,10 +222,14 @@ export const getSweepInputInternal = internalQuery({
       .take(MESSAGES_PER_SWEEP);
 
     const seen = new Set(flaggedMessages.map((message) => message._id));
-    const merged = [
+    const candidates = [
       ...flaggedMessages,
       ...chronological.filter((message) => !seen.has(message._id)),
-    ].slice(0, MESSAGES_PER_SWEEP);
+    ];
+    const threadIds = [...new Set(candidates.map((message) => message.threadId))];
+    const threads = await Promise.all(threadIds.map((id) => ctx.db.get(id)));
+    const memberThreads = new Set(threads.filter((thread) => thread && !thread.widgetId).map((thread) => thread!._id));
+    const merged = candidates.filter((message) => memberThreads.has(message.threadId)).slice(0, MESSAGES_PER_SWEEP);
 
     return {
       openSuggestionCount: openSuggestions.length,

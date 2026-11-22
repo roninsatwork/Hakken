@@ -138,6 +138,21 @@ describe("what the page is allowed to send", () => {
 });
 
 describe("metering kiosk speech", () => {
+  test("kiosk text frames cannot carry audio past the turn meter", () => {
+    const audio = JSON.stringify({ realtimeInput: {
+      mediaChunks: [{ mimeType: "audio/pcm;rate=16000", data: "AAE=" }],
+    } });
+    const kiosk = createCallerRouter({ secret: SECRET, now: () => 1_000 });
+    expect(kiosk.receive(JSON.stringify({ ticket: validTicket({ meteredVoiceTurns: true }) }), false).kind).toBe("ticket");
+    kiosk.release();
+    expect(kiosk.receive(audio, false)).toEqual({ kind: "dropped" });
+
+    const ordinaryCall = createCallerRouter({ secret: SECRET, now: () => 1_000 });
+    expect(ordinaryCall.receive(JSON.stringify({ ticket: validTicket() }), false).kind).toBe("ticket");
+    ordinaryCall.release();
+    expect(ordinaryCall.receive(audio, false).kind).toBe("send");
+  });
+
   test("silence does not start a paid turn, while ordinary speech does", () => {
     expect(pcm16HasSpeech(Buffer.alloc(640))).toBe(false);
     const speech = Buffer.alloc(640);

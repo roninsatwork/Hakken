@@ -12,7 +12,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "google-auth-library": "^10.6.2",
-    "ws": "^8.21.0"
+    "google-auth-library": "10.6.2",
+    "ws": "8.21.0"
   }
 }

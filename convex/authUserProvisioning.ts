@@ -11,10 +11,23 @@ const INVITE_ONLY_ACCESS_DENIED = "Access Denied: This is an invite-only platfor
 export type AuthProfile = {
   email?: string;
   emailVerified?: boolean;
+  hostedDomain?: string;
+  /** Set only by the auth store after checking the email sign-in session. */
+  emailProofConfirmed?: boolean;
   name?: string;
   image?: string;
   picture?: string;
 };
+
+/** Google controls Gmail and verified Workspace addresses; other mailboxes can change hands. */
+export function googleControlsEmail(profile: AuthProfile) {
+  const email = normaliseEmail(profile.email ?? "");
+  const domain = email.split("@")[1];
+  return profile.emailVerified === true && !!domain && (
+    domain === "gmail.com" || domain === "googlemail.com" ||
+    profile.hostedDomain?.trim().toLowerCase() === domain
+  );
+}
 
 export type AuthUser = {
   email?: string;
@@ -93,26 +106,13 @@ export async function createOrUpdateHakkenAuthUser(
   const provider = args.provider?.id;
   const isEmailProvider = args.provider?.type === "email";
   const isOneTimeCodeProvider = provider === "one-time-code";
-  /*
-   * Google never sets `profile.emailVerified`, so reading only that flag meant
-   * `acceptPendingInvite` never ran for a Google sign-in and the invitation
-   * stayed PENDING for good — the directory showed a pending row sitting next
-   * to the very account it had just provisioned, and nothing would ever clear
-   * it.
-   *
-   * Two things in the framework combine to cause it. Auth.js's default profile
-   * mapper keeps only id/name/email/image, dropping Google's `email_verified`;
-   * and `verifyCodeAndSignIn` skips its second `createOrUpdateUser` call for
-   * oauth/oidc providers, which is the call that carries `emailVerified: true`
-   * on the email path. So this callback sees an OAuth sign-in exactly once,
-   * always unverified.
-   *
-   * Reaching here on an OAuth provider means the provider already
-   * authenticated the address against its own account — the same guarantee the
-   * flag stands for on the email path.
-   */
   const isOAuthProvider = args.provider?.type === "oauth" || args.provider?.type === "oidc";
-  const isVerifiedEmail = args.profile?.emailVerified === true || isOAuthProvider;
+  const isGoogle = provider === "google";
+  if (isGoogle && (args.profile?.emailVerified !== true ||
+    (!args.existingUserId && !googleControlsEmail(args.profile) && args.profile?.emailProofConfirmed !== true))) {
+    throw appError("UNAUTHORIZED", "Sign in by email, then link Google from your profile.");
+  }
+  const isVerifiedEmail = args.profile?.emailVerified === true || (isOAuthProvider && !isGoogle);
   const isMagicLinkRequest = isEmailProvider && !isVerifiedEmail && !isOneTimeCodeProvider;
   // The same acceptance, reached two ways. Recording a Google sign-in as
   // MAGIC_LINK_VERIFIED would put a link that was never sent on the auth trail.

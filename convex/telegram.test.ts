@@ -71,6 +71,22 @@ async function link(t: Harness, userId: Id<"users">, chatId: string) {
 }
 
 describe("linking a Telegram chat", () => {
+  test("a link to an old company stops after its owner moves", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    await link(t, seeded.me, "old-company-chat");
+    sent = [];
+    await t.run(async (ctx) => {
+      const companyB = await ctx.db.insert("companies", { name: "Dummy B", createdAt: Date.now() });
+      await ctx.db.patch(seeded.me, { companyId: companyB });
+    });
+    expect(await t.query(internal.telegram.chatLinkInternal, { chatId: "old-company-chat" })).toBeNull();
+    expect(await t.action(internal.telegramActions.sendToUserInternal, {
+      userId: seeded.me, text: "Dummy old company figures",
+    })).toBe(false);
+    expect(said()).toEqual([]);
+  });
+
   test("a code from the profile links the chat, in a conversation of its own, and the person's tasks tell them there too", async () => {
     const t = harness();
     const seeded = await seed(t);

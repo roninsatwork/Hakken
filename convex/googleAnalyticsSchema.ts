@@ -544,6 +544,11 @@ export const googleAnalyticsTables = {
     fillsReached: v.optional(v.array(v.object({ country: v.string(), fill: v.string(), to: v.string() }))),
     /** The last sign-in that did not connect, and the account it was tried with. */
     attempt: v.optional(v.object({ outcome: analyticsAttemptValidator, account: v.optional(v.string()), at: v.number() })),
+    /** Live reports share one short server-side budget per connected website. */
+    realtimeWindowStartedAt: v.optional(v.number()),
+    realtimeCountInWindow: v.optional(v.number()),
+    realtimeActiveLeaseId: v.optional(v.string()),
+    realtimeActiveUntil: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

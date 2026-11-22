@@ -148,7 +148,10 @@ export const upsertForMessage = tenantMutation({
     // Ownership, not role: you rate the answers you were given. Admins have
     // the observability screens for everything else.
     if (thread.userId !== userId) throw appError("UNAUTHORIZED", "Unauthorized");
-    if (user.role !== "SUPER_ADMIN" && message.companyId && message.companyId !== ctx.companyId) {
+    if (user.role !== "SUPER_ADMIN" && (
+      thread.companyId !== ctx.companyId
+      || (message.companyId !== undefined && message.companyId !== ctx.companyId)
+    )) {
       throw appError("UNAUTHORIZED", "Unauthorized");
     }
 
@@ -244,12 +247,15 @@ export const getMineForThread = tenantQuery({
   },
   returns: tailShapes.messageRatingsShape,
   handler: async (ctx, args) => {
-    const { userId } = ctx;
+    const { userId, user } = ctx;
     const config = await getSelfImprovementConfig(ctx.db);
     if (!config.endUserFeedback) return { enabled: false, ratings: [] };
 
     const thread = await ctx.db.get(args.threadId);
-    if (!thread || thread.userId !== userId) return { enabled: true, ratings: [] };
+    if (!thread || thread.userId !== userId
+      || (user.role !== "SUPER_ADMIN" && thread.companyId !== ctx.companyId)) {
+      return { enabled: true, ratings: [] };
+    }
 
     const rows = await ctx.db
       .query("messageFeedback")

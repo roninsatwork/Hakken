@@ -51,38 +51,6 @@ function twimlResponse(body: string, status = 200) {
   return new Response(body, { status, headers: TWIML_HEADERS });
 }
 
-/** Recorded on arrival so a call exists even if everything after this fails. */
-export const upsertCallOnAnswer = internalMutation({
-  args: {
-    companyId: v.id("companies"),
-    providerCallId: v.string(),
-    fromNumber: v.string(),
-    toNumber: v.string(),
-  },
-  handler: async (ctx, args): Promise<Id<"phoneCalls">> => {
-    // A provider redelivers a webhook it believes failed, so the same call
-    // arriving twice must update one row rather than create a second.
-    const existing = await ctx.db
-      .query("phoneCalls")
-      .withIndex("by_provider_call", (q) => q.eq("providerCallId", args.providerCallId))
-      .first();
-    if (existing) {
-      await ctx.db.patch(existing._id, { status: "IN_PROGRESS" });
-      return existing._id;
-    }
-
-    return await ctx.db.insert("phoneCalls", {
-      companyId: args.companyId,
-      providerCallId: args.providerCallId,
-      fromNumber: args.fromNumber,
-      toNumber: args.toNumber,
-      status: "IN_PROGRESS",
-      turns: [],
-      startedAt: Date.now(),
-    });
-  },
-});
-
 export const getCompanyForCall = internalQuery({
   args: { companyId: v.id("companies") },
   handler: async (ctx, args): Promise<{ name: string } | null> => {
@@ -101,16 +69,34 @@ export const getCompanyForCall = internalQuery({
  * spends one conversation from the same allowance chat spends, and a company
  * out of allowance hears "call back later" rather than a dead line.
  *
- * A mutation rather than a query, because saying yes SPENDS: the check and
- * the spend must be one atomic step, or two simultaneous calls both pass a
- * limit with one slot left.
+ * The duplicate check, line reservation and quota spend are one atomic step.
+ * A repeated provider delivery gets its answer without another charge or a
+ * change to a finished call.
  */
 export const admitCall = internalMutation({
-  args: { companyId: v.id("companies"), fromNumber: v.string() },
+  args: {
+    companyId: v.id("companies"),
+    providerCallId: v.string(),
+    fromNumber: v.string(),
+    toNumber: v.string(),
+  },
   handler: async (
     ctx,
     args
-  ): Promise<"OK" | "BUSY" | "REDIALLING" | "OUT_OF_QUOTA"> => {
+  ): Promise<"OK" | "REPLAY_ACTIVE" | "REPLAY_FINISHED" | "CALL_MISMATCH" | "BUSY" | "REDIALLING" | "OUT_OF_QUOTA"> => {
+    const existing = await ctx.db
+      .query("phoneCalls")
+      .withIndex("by_provider_call", (q) => q.eq("providerCallId", args.providerCallId))
+      .first();
+    if (existing) {
+      if (existing.companyId !== args.companyId || existing.toNumber !== args.toNumber) {
+        return "CALL_MISMATCH";
+      }
+      return existing.status === "COMPLETED" || existing.status === "FAILED"
+        ? "REPLAY_FINISHED"
+        : "REPLAY_ACTIVE";
+    }
+
     const maxConcurrent = readCeiling(process.env.TELEPHONY_MAX_CONCURRENT_CALLS, 4);
     const maxPerNumberPerHour = readCeiling(process.env.TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR, 6);
 
@@ -146,6 +132,15 @@ export const admitCall = internalMutation({
         await ctx.db.patch(args.companyId, { messagesUsedThisPeriod: used + 1 });
       }
     }
+    await ctx.db.insert("phoneCalls", {
+      companyId: args.companyId,
+      providerCallId: args.providerCallId,
+      fromNumber: args.fromNumber,
+      toNumber: args.toNumber,
+      status: "IN_PROGRESS",
+      turns: [],
+      startedAt: Date.now(),
+    });
     return "OK";
   },
 });
@@ -293,9 +288,14 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
   // a penny of model spend.
   const admission = await ctx.runMutation(internal.telephony.admitCall, {
     companyId: companyId as Id<"companies">,
+    providerCallId,
     fromNumber,
+    toNumber,
   });
-  if (admission !== "OK") {
+  if (admission === "REPLAY_FINISHED" || admission === "CALL_MISMATCH") {
+    return twimlResponse(buildRefusalTwiml("Sorry, this call has ended. Goodbye."), 200);
+  }
+  if (admission !== "OK" && admission !== "REPLAY_ACTIVE") {
     const refusals = {
       BUSY: "Sorry, all our lines are busy at the moment. Please call back shortly. Goodbye.",
       REDIALLING: "Sorry, this number has called several times recently. Please try again later. Goodbye.",
@@ -303,13 +303,6 @@ export const handleIncomingCall = httpAction(async (ctx, request) => {
     } as const;
     return twimlResponse(buildRefusalTwiml(refusals[admission]), 200);
   }
-
-  await ctx.runMutation(internal.telephony.upsertCallOnAnswer, {
-    companyId: companyId as Id<"companies">,
-    providerCallId,
-    fromNumber,
-    toNumber,
-  });
 
   // A known caller's wiki page joins the session's instructions (wiki plan,
   // phase 2). Fetched fail-open: a page lookup that dies must never cost a

@@ -450,8 +450,7 @@ export const insightsTables = {
      */
     pageData: v.optional(v.any()),
   })
-    .index("by_hold_key", ["companyWebsiteId", "key"])
-    .index("by_hold_week", ["companyWebsiteId", "week"]),
+    .index("by_hold_key_user", ["companyWebsiteId", "key", "askedBy"]),
 
   /**
    * The eval set (stronger-agents-plan-2026-10-30.md A6): real pages, each

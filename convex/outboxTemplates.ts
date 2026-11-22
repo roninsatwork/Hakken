@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { internalQuery, type QueryCtx } from "./_generated/server";
+import { getActiveCompanyId } from "./authz";
 import type { Doc } from "./_generated/dataModel";
 import { readerFields } from "./contentTranslation";
 import { renderEmail, type EmailContent } from "./emailLayoutService";
@@ -172,6 +173,10 @@ const taskAlert: Template = async (ctx, row, brand) => {
   const taskId = typeof payload.taskId === "string" ? ctx.db.normalizeId("hakkenTasks", payload.taskId) : null;
   const task = taskId ? await ctx.db.get(taskId) : null;
   if (!task || task.state === "DELETED") return { skip: "The task was deleted before its alert was sent." };
+  const owner = await ctx.db.get(task.userId);
+  if (!owner || getActiveCompanyId(owner) !== task.companyId || row.userId !== task.userId || row.email !== owner.email) {
+    return { skip: "The task's owner no longer has access to this company." };
+  }
   return buildTaskAlertEmail({ language: row.language, brand, task, payload });
 };
 
@@ -185,6 +190,10 @@ const taskReport: Template = async (ctx, row, brand) => {
   const taskId = typeof payload.taskId === "string" ? ctx.db.normalizeId("hakkenTasks", payload.taskId) : null;
   const task = taskId ? await ctx.db.get(taskId) : null;
   if (!task || task.state === "DELETED") return { skip: "The task was deleted before its report was sent." };
+  const owner = await ctx.db.get(task.userId);
+  if (!owner || getActiveCompanyId(owner) !== task.companyId || row.userId !== task.userId || row.email !== owner.email) {
+    return { skip: "The task's owner no longer has access to this company." };
+  }
   return buildTaskReportEmail({ language: row.language, brand, payload });
 };
 
@@ -236,8 +245,8 @@ export async function renderOutboxRow(ctx: QueryCtx, row: Doc<"outboxMessages">)
   let content = made.content;
   let headers = made.headers ?? {};
   if (preferences && isChoosable(row.communication) && row.communication !== "WEEKLY_NEWS_DIGEST") {
-    if (!preferences.unsubscribeToken) return { skip: "It has no way to unsubscribe yet, so it is not sent." };
-    const stop = unsubscribeOf(brand, preferences.unsubscribeToken, row.communication);
+    if (!preferences.taskUnsubscribeToken) return { skip: "It has no way to unsubscribe yet, so it is not sent." };
+    const stop = unsubscribeOf(brand, preferences.taskUnsubscribeToken, row.communication);
     content = { ...content, footer: { ...(content.footer ?? {}), links: [...(content.footer?.links ?? []), { label: emailWording(row.language).stopTheseEmails, url: stop.url }] } };
     headers = { ...headers, ...stop.headers };
   }

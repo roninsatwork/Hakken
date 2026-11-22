@@ -2,6 +2,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { stableStringify } from "./utils/lang";
 import { appError } from "./utils/appError";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 
 const VERSION_SNAPSHOT_LIMIT = 200;
 
@@ -35,22 +36,18 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
       .take(VERSION_SNAPSHOT_LIMIT),
     ctx.db
       .query("aiRules")
-      .withIndex("by_agent_active_created", (q) => q.eq("agentId", args.agentId).eq("isActive", true))
+      .withIndex("by_agent_company_active_created", (q) =>
+        q.eq("agentId", args.agentId).eq("companyId", args.companyId).eq("isActive", true)
+      )
       .order("desc")
       .take(VERSION_SNAPSHOT_LIMIT),
-    args.companyId
-      ? ctx.db
-          .query("agentMemories")
-          .withIndex("by_agent_company_active_updated", (q) =>
-            q.eq("agentId", args.agentId).eq("companyId", args.companyId).eq("isActive", true)
-          )
-          .order("desc")
-          .take(VERSION_SNAPSHOT_LIMIT)
-      : ctx.db
-          .query("agentMemories")
-          .withIndex("by_agent_active_updated", (q) => q.eq("agentId", args.agentId).eq("isActive", true))
-          .order("desc")
-	      .take(VERSION_SNAPSHOT_LIMIT),
+    ctx.db
+      .query("agentMemories")
+      .withIndex("by_agent_company_active_updated", (q) =>
+        q.eq("agentId", args.agentId).eq("companyId", args.companyId).eq("isActive", true)
+      )
+      .order("desc")
+      .take(VERSION_SNAPSHOT_LIMIT),
   ]);
   const skillBindings = await ctx.db
     .query("agentSkillBindings")
@@ -115,7 +112,7 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
     }));
 
   const promptSnapshot = {
-    systemPrompt: agent.systemPrompt || "",
+    systemPrompt: stripLegacySharedLearningNotes(agent.systemPrompt) || "",
     inputSchema: agent.inputSchema,
     outputSchema: agent.outputSchema,
   };
@@ -175,6 +172,7 @@ export async function ensureAgentVersionSnapshot(ctx: VersioningCtx, args: {
     triggerType: agent.triggerType,
   };
   const snapshot = {
+    tenantSafeVersion: 2,
     agent: {
       id: agent._id,
       name: agent.name,

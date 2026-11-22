@@ -353,9 +353,8 @@ async function readAndDecide(ctx: ActionCtx, runArgs: InsightsRunArgs, pagesChan
   let ordered: Draft[] = [...drafts].sort((a, b) => b.stake - a.stake);
   if (drafts.length > 0 || toCall.length > 0) {
     try {
-      // What the eye's bubbles said this week (sees-conversion-specialist-plan-2026-10-30.md S10): the Head weighs them too.
-      const bubbles = await ctx.runQuery(internal.seesAsk.weekSeesAnswers, { holdId: args.holdId, week: weekOf(now) }).catch(() => []);
-      const strategy = await askStrategy(ctx, args, drafts, reading.facts, lead, toCall, bubbles);
+      // Eye answers carry member-supplied figures and stay with the member who pressed.
+      const strategy = await askStrategy(ctx, args, drafts, reading.facts, lead, toCall);
       ordered = strategy.ordered;
       verdict = strategy.verdict;
       written = strategy.summary;

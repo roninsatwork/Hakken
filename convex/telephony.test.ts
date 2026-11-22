@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { computeTwilioSignature } from "./telephonyService";
@@ -835,6 +835,57 @@ describe("who gets answered — ceilings and the plan", () => {
             To: CALLED_NUMBER,
         });
         expect(await second.text()).toContain("call back later");
+    });
+
+    test("a repeated call does not spend twice or reopen a finished call", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await withOwnership(t);
+        const planId = await t.run(async (ctx) =>
+            ctx.db.insert("plans", {
+                name: "Small", messageLimit: 5, priceGBP: 10,
+                isActive: true, createdAt: Date.now(),
+            })
+        );
+        await t.run(async (ctx) => ctx.db.patch(companyId, { planId, messagesUsedThisPeriod: 0 }));
+
+        const fields = { CallSid: "CA-metered-repeat", From: CALLER_NUMBER, To: CALLED_NUMBER };
+        expect(await (await dial(t, fields)).text()).toContain("A.I. assistant");
+        expect(await (await dial(t, fields)).text()).toContain("A.I. assistant");
+        const afterReplay = await t.run(async (ctx) => ctx.db.get(companyId));
+        expect(afterReplay?.messagesUsedThisPeriod).toBe(1);
+
+        await t.run(async (ctx) => {
+            const call = await ctx.db.query("phoneCalls").first();
+            if (!call) throw new Error("Call missing");
+            await ctx.db.patch(call._id, { status: "COMPLETED" as const, endedAt: Date.now() });
+        });
+        expect(await (await dial(t, fields)).text()).toContain("<Hangup/>");
+        const afterFinishedReplay = await t.run(async (ctx) => ({
+            company: await ctx.db.get(companyId),
+            calls: await ctx.db.query("phoneCalls").collect(),
+        }));
+        expect(afterFinishedReplay.company?.messagesUsedThisPeriod).toBe(1);
+        const calls = afterFinishedReplay.calls;
+        expect(calls).toHaveLength(1);
+        expect(calls[0].status).toBe("COMPLETED");
+    });
+
+    test("admission reserves the final line slot before another call arrives", async () => {
+        const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+        const companyId = await withOwnership(t);
+        vi.stubEnv("TELEPHONY_MAX_CONCURRENT_CALLS", "1");
+
+        const first = await t.mutation(internal.telephony.admitCall, {
+            companyId, providerCallId: "CA-slot-1", fromNumber: CALLER_NUMBER, toNumber: CALLED_NUMBER,
+        });
+        const second = await t.mutation(internal.telephony.admitCall, {
+            companyId, providerCallId: "CA-slot-2", fromNumber: "+447700900888", toNumber: CALLED_NUMBER,
+        });
+        expect(first).toBe("OK");
+        expect(second).toBe("BUSY");
+        const calls = await t.run(async (ctx) => ctx.db.query("phoneCalls").collect());
+        expect(calls).toHaveLength(1);
+        expect(calls[0].providerCallId).toBe("CA-slot-1");
     });
 
     test("a company on no plan is not rationed", async () => {

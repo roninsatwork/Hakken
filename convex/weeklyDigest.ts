@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
@@ -43,7 +44,7 @@ export const readDigestSetup = internalQuery({
     if (!agent) return null;
     return {
       mode: agent.plannerMode ?? "TEST",
-      instructions: agent.systemPrompt ?? "",
+      instructions: stripLegacySharedLearningNotes(agent.systemPrompt) ?? "",
       ...(agent.modelSelectionMode === "inherit" ? {} : { requestedModelId: agent.modelId }),
     };
   },

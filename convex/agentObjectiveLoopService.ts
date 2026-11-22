@@ -250,6 +250,10 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
     ? { companyId: thread.companyId, userId: thread.userId }
     : args.owner ?? {};
 
+  if (owner.companyId && !(await ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: owner.companyId }))) {
+    throw appError("NO_ACTIVE_COMPANY", "No active company");
+  }
+
   if (agent.companyId !== undefined && agent.companyId !== owner.companyId) {
     throw appError("NOT_FOUND", "Agent not found.");
   }

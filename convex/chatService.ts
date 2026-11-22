@@ -3,7 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
-import { validateChatAttachmentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
+import { CHAT_ATTACHMENTS_MAX_COUNT, validateChatAttachmentMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import type { PiiConfig } from "./utils/pii";
 
 type DbCtx = Pick<QueryCtx, "db">;
@@ -109,6 +109,16 @@ export async function validateChatAttachments(ctx: StorageCtx, storageIds?: Id<"
 
   for (const storageId of storageIds) {
     await validateStoredUpload(ctx, storageId, validateChatAttachmentMetadata);
+  }
+}
+
+export function assertChatAttachmentIds(storageIds?: Id<"_storage">[]) {
+  if (!storageIds?.length) return;
+  if (storageIds.length > CHAT_ATTACHMENTS_MAX_COUNT) {
+    throw appError("INVALID_INPUT", "You can attach up to 10 files to one message.");
+  }
+  if (new Set(storageIds).size !== storageIds.length) {
+    throw appError("INVALID_INPUT", "Attach each file only once.");
   }
 }
 

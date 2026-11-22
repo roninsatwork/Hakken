@@ -26,6 +26,7 @@ import {
 import { createVertexGenAIClient, generateVertexContentWithRetry, VERTEX_TEXT_CLIENT } from "./vertexProviderService";
 import { vertexUsage } from "./vertexUsage";
 import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
 import {
@@ -56,7 +57,6 @@ import {
   settleBatchAndContinue,
   type LoopExecutionContext,
 } from "./agentObjectiveLoopService";
-
 
 
 
@@ -1100,7 +1100,7 @@ export const executeAgentNode = internalAction({
        requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
        useCase: "workflow",
     });
-    const systemInstruction = agent.systemPrompt || "You are a specialized agent in a workflow.";
+    const systemInstruction = stripLegacySharedLearningNotes(agent.systemPrompt) || "You are a specialized agent in a workflow.";
 
     // Google Search grounding is a capability only Vertex offers, so an agent
     // that wants the internet still needs a Vertex model — and now says so in

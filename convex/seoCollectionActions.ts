@@ -23,6 +23,7 @@ import { emptyIsAnAnswer } from "./dataForSeoLocalOperations";
 import { keepAnswerFile } from "./seoPullAnswers";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
+import { seoPingbackProof } from "./seoPingbackProof";
 
 /**
  * The sending: the only place in the pipeline that spends money, and it runs
@@ -126,17 +127,16 @@ export async function sendNextBatch(
   const sending = claim.pulls.filter((pull) => marked.includes(pull.pullId));
   if (sending.length === 0) return { kind: "SENT", count: 0 };
 
-  const pingbackUrl = seoPingbackUrl();
-  const tasks = sending.map((pull) => ({
+  const tasks = await Promise.all(sending.map(async (pull) => ({
     // As asked, but for the country where the Labs answer only for countries (B10).
     ...argsToSend(operation, JSON.parse(pull.taskArgsJson) as Record<string, unknown>),
     // Our own pull id, echoed back in the task's data. It is how a result
     // finds its row, and it is what the pingback is checked against.
     tag: pull.tag,
-    ...(operation.mode === "QUEUED" && pingbackUrl
-      ? { pingback_url: pingbackUrl }
+    ...(operation.mode === "QUEUED" && process.env.CONVEX_SITE_URL
+      ? { pingback_url: `${process.env.CONVEX_SITE_URL}/api/seo/pingback?id=$id&tag=$tag&proof=${await seoPingbackProof(pull.tag, credentials.password)}` }
       : {}),
-  }));
+  })));
 
   // A queued batch is one request; live requests go one task each, all at once
   // (`SEO_LIVE_AT_ONCE`), and each request's fate is its own.
@@ -325,6 +325,9 @@ export const fetchSeoResult = internalAction({
     }
     const task = envelope.tasks?.[0];
     if (!task) return await waiting("DataForSEO's reply had no task in it.");
+    if (task.id !== pull.taskId || (typeof task.data?.tag === "string" && task.data.tag !== pull.tag)) {
+      return await waiting("DataForSEO's reply did not match this request.");
+    }
 
     // A crawl's summary can be asked for while the crawl is still running.
     // That is not the answer yet: leave the task to be asked again.
@@ -398,18 +401,4 @@ async function keepAnswer(
     ...(rowsLeftOff > 0 ? { rowsLeftOff } : {}),
     ...(rowsReturned !== undefined ? { rowsReturned } : {}),
   };
-}
-
-/**
- * Where DataForSEO should ping when a task is ready.
- *
- * Absent means we simply do not ask for a ping, and the hourly sweep collects
- * results instead. That is a slower pipeline, not a broken one, which is the
- * right failure for a deployment that has not published its URL yet.
- */
-function seoPingbackUrl(): string | null {
-  const site = process.env.CONVEX_SITE_URL;
-  if (!site) return null;
-  // `$id` is DataForSEO's own placeholder; they substitute the task id.
-  return `${site}/api/seo/pingback?id=$id&tag=$tag`;
 }

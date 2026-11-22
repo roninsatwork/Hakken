@@ -8,6 +8,8 @@ import schema from "./schema";
 import { proposalFromToolCalls } from "./utils/hakkenTaskProposals";
 import { weekdayIn } from "./utils/hakkenTaskTiming";
 import { useFixedDay } from "@/src/test/realTime";
+import { writeFeaturesOff } from "./utils/featureSwitchReads";
+import { MENU_FEATURES } from "./utils/coreModules";
 
 /**
  * Setting a Hakken task up in Ask Hakken, item 1.2 of
@@ -110,6 +112,40 @@ describe("the Assistant proposes an alert", () => {
 });
 
 describe("nothing changes until its owner taps yes", () => {
+  test("an offer cannot start a task while Hakken tasks is switched off", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const { proposal } = await propose(t, seeded, { website: "ronins.test", when: "below", value: 15 });
+    const messageId = await replyWith(t, seeded.threadId, proposal!);
+    const asMe = t.withIdentity({ subject: seeded.me });
+    await t.run(async (ctx) => writeFeaturesOff(ctx, seeded.companyId, [MENU_FEATURES.hakkenTasks]));
+
+    await expect(asMe.query(api.hakkenTasks.listMine, {}))
+      .rejects.toThrow("This section is switched off for your workspace");
+    await expect(asMe.mutation(api.hakkenTasks.answerProposal, { messageId, yes: true }))
+      .rejects.toThrow("This section is switched off for your workspace");
+    expect(await t.run(async (ctx) => ctx.db.query("hakkenTasks").take(1))).toEqual([]);
+    expect((await t.run(async (ctx) => ctx.db.get(messageId)))?.taskProposal?.status).toBe("PENDING");
+
+    await t.run(async (ctx) => writeFeaturesOff(ctx, seeded.companyId, []));
+    expect((await asMe.mutation(api.hakkenTasks.answerProposal, { messageId, yes: true })).status).toBe("DONE");
+  });
+
+  test("a moved user cannot accept a task offer from their old company", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const { proposal } = await propose(t, seeded, { website: "ronins.test", when: "below", value: 15 });
+    const messageId = await replyWith(t, seeded.threadId, proposal!);
+    await t.run(async (ctx) => {
+      const companyB = await ctx.db.insert("companies", { name: "Dummy B", createdAt: Date.now() });
+      await ctx.db.patch(seeded.me, { companyId: companyB });
+    });
+    const moved = t.withIdentity({ subject: seeded.me });
+    await expect(moved.mutation(api.hakkenTasks.answerProposal, { messageId, yes: true }))
+      .rejects.toThrow("That offer isn’t there any more.");
+    expect(await t.run(async (ctx) => ctx.db.query("hakkenTasks").take(1))).toEqual([]);
+  });
+
   test("yes sets up the alert for them, at their own time zone; asking again changes nothing", async () => {
     const t = harness();
     const seeded = await seed(t);

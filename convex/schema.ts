@@ -1295,6 +1295,7 @@ export default defineSchema({
   
   logins: defineTable({
     userId: v.id("users"),
+    companyId: v.optional(v.id("companies")),
     ip: v.string(),
     device: v.string(),
     location: v.string(),
@@ -1495,7 +1496,8 @@ export default defineSchema({
       v.literal("realtimeVoiceSession"),
       v.literal("voiceKnowledge"),
       v.literal("voicePreview"),
-      v.literal("generateNodeConfig")
+      v.literal("generateNodeConfig"),
+      v.literal("routeAgentIntent")
     ),
     requestedAt: v.number(),
   })
@@ -2886,7 +2888,7 @@ export default defineSchema({
     .index("by_company_active_created", ["companyId", "isActive", "createdAt"])
     .index("by_agent", ["agentId", "createdAt"])
     .index("by_agent_company_created", ["agentId", "companyId", "createdAt"])
-    .index("by_agent_active_created", ["agentId", "isActive", "createdAt"])
+    .index("by_agent_company_active_created", ["agentId", "companyId", "isActive", "createdAt"])
     .index("by_global_created", ["companyId", "agentId", "createdAt"])
     .index("by_global_active_created", ["companyId", "agentId", "isActive", "createdAt"]),
 
@@ -3494,6 +3496,8 @@ export default defineSchema({
     serverLabel: v.optional(v.string()),
     /** The version the server agreed to speak, which may be older than ours. */
     protocolVersion: v.optional(v.string()),
+    /** Changes at each discovery start or admin edit; late replies cannot change newer settings. */
+    discoveryVersion: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
     createdBy: v.optional(v.id("users")),

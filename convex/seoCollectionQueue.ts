@@ -848,6 +848,7 @@ export const getPullForFetch = internalQuery({
   returns: v.union(v.null(), v.object({
     operationId: v.string(),
     taskId: v.union(v.string(), v.null()),
+    tag: v.string(),
     status: v.string(),
   })),
   handler: async (ctx, args) => {
@@ -856,6 +857,7 @@ export const getPullForFetch = internalQuery({
     return {
       operationId: row.operationId,
       taskId: row.taskId ?? null,
+      tag: row.tag,
       status: row.status,
     };
   },
@@ -936,7 +938,7 @@ const FETCH_NOTE_CHARS = 300;
  * prove who sent it.
  */
 export const markSeoPinged = internalMutation({
-  args: { taskId: v.string(), tag: v.optional(v.string()) },
+  args: { taskId: v.string(), tag: v.optional(v.string()), tagVerified: v.optional(v.boolean()) },
   returns: v.union(v.null(), v.id("seoDataPulls")),
   handler: async (ctx, args) => {
     const row = await ctx.db
@@ -955,7 +957,7 @@ export const markSeoPinged = internalMutation({
     }
     // A send we could not confirm, which DataForSEO did take: we never had its
     // task id, but its tag — our own, echoed back — finds it.
-    if (!row && args.tag) {
+    if (!row && args.tag && args.tagVerified === true) {
       const sent = await ctx.db
         .query("seoDataPulls")
         .withIndex("by_tag", (q) => q.eq("tag", args.tag!))

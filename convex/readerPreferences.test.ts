@@ -29,6 +29,8 @@ async function reader(t: ReturnType<typeof harness>, email = "anna@korda.example
 
 const tokenOf = (t: ReturnType<typeof harness>, userId: Id<"users">) =>
   t.run(async (ctx) => (await ensureReaderPreferences(ctx, userId)).unsubscribeToken);
+const taskTokenOf = (t: ReturnType<typeof harness>, userId: Id<"users">) =>
+  t.run(async (ctx) => (await ensureReaderPreferences(ctx, userId)).taskUnsubscribeToken!);
 
 async function digestFor(t: ReturnType<typeof harness>, userId: Id<"users">, email: string) {
   return await t.run(async (ctx) => {
@@ -67,10 +69,11 @@ describe("a reader's choices", () => {
   test("a task's alert carries its own way to stop Hakken tasks emails; turning them off changes how their tasks tell them", async () => {
     const t = harness();
     const { userId, as } = await reader(t, "jo@example.co.uk");
-    const token = await tokenOf(t, userId);
+    const token = await taskTokenOf(t, userId);
     const { taskId, messageId } = await t.run(async (ctx) => {
       const now = Date.now();
       const companyId = await ctx.db.insert("companies", { name: "Example", createdAt: now });
+      await ctx.db.patch(userId, { companyId });
       const websiteId = await ctx.db.insert("websites", { host: "example.co.uk", displayHost: "example.co.uk", firstSeenAt: now });
       const holdId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: now });
       const taskId = await ctx.db.insert("hakkenTasks", {
@@ -118,6 +121,14 @@ describe("a reader's choices", () => {
 });
 
 describe("unsubscribing", () => {
+  test("a digest link cannot turn off task emails", async () => {
+    const t = harness();
+    const { userId, as } = await reader(t);
+    const digestToken = await tokenOf(t, userId);
+    expect(await t.mutation(api.readerPreferences.unsubscribeWithToken, { token: digestToken, kind: "HAKKEN_TASKS" })).toBe(false);
+    expect(await onOf(as, "HAKKEN_TASKS")).toBe(true);
+  });
+
   test("the page's button turns off the email its link names, with the link's token; a wrong token does nothing", async () => {
     const t = harness();
     const { userId, as } = await reader(t);
@@ -131,14 +142,16 @@ describe("unsubscribing", () => {
     // A link from before the types names none: it stops the digest, as it always did.
     expect(await t.mutation(api.readerPreferences.unsubscribeWithToken, { token })).toBe(true);
     expect([await onOf(as, "WEEKLY_NEWS_DIGEST"), await onOf(as, "HAKKEN_TASKS")]).toEqual([false, true]);
-    expect(await t.mutation(api.readerPreferences.unsubscribeWithToken, { token, kind: "HAKKEN_TASKS" })).toBe(true);
+    expect(await t.mutation(api.readerPreferences.unsubscribeWithToken, { token, kind: "HAKKEN_TASKS" })).toBe(false);
+    const taskToken = await taskTokenOf(t, userId);
+    expect(await t.mutation(api.readerPreferences.unsubscribeWithToken, { token: taskToken, kind: "HAKKEN_TASKS" })).toBe(true);
     expect(await onOf(as, "HAKKEN_TASKS")).toBe(false);
   });
 
   test("a mail client's one-click unsubscribe is a POST to the platform, and answers the same whatever the token", async () => {
     const t = harness();
     const { userId, as } = await reader(t);
-    const token = await tokenOf(t, userId);
+    const token = await taskTokenOf(t, userId);
 
     expect((await t.fetch(`/api/email/unsubscribe?token=${"f".repeat(64)}`, { method: "POST" })).status).toBe(200);
     expect(await onOf(as, "HAKKEN_TASKS")).toBe(true);

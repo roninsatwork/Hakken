@@ -14,6 +14,7 @@ describe("the auth provider email-send boundary", () => {
 
   test("shares one short-window allowance across links and codes", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await t.run(async (ctx) => ctx.db.insert("users", { email: "person@example.com", role: "USER" }));
     for (let index = 0; index < MAX_REQUESTS_PER_WINDOW; index++) {
       await expect(t.mutation(internal.authEvents.reserveAuthEmailSend, {
         email: index % 2 ? " Person@Example.com " : "person@example.com",
@@ -58,6 +59,35 @@ describe("the auth provider email-send boundary", () => {
       ).collect());
     expect(reservations).toHaveLength(MAX_REQUESTS_PER_WINDOW);
     expect(sendSpy).toHaveBeenCalledTimes(MAX_REQUESTS_PER_WINDOW);
+  });
+
+  test("unknown addresses do not use the shared email allowance", async () => {
+    vi.stubEnv("SITE_URL", "https://product.test");
+    vi.stubEnv("CONVEX_SITE_URL", "https://backend.test");
+    vi.stubEnv("RESEND_API_KEY", "");
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Dummy", createdAt: Date.now() });
+      await ctx.db.insert("invitations", {
+        email: "invited@test.invalid", companyId, role: "USER", status: "PENDING",
+        token: "dummy-invite", invitedAt: Date.now(),
+      });
+      for (let index = 0; index < MAX_GLOBAL_REQUESTS_PER_MINUTE - 1; index += 1) {
+        await ctx.db.insert("authEvents", {
+          email: `existing-${index}@test.invalid`, eventType: "AUTH_EMAIL_SEND_RESERVED",
+          timestamp: Date.now(), provider: "resend",
+        });
+      }
+    });
+    for (const email of ["unknown@test.invalid", "invited@test.invalid"]) {
+      await expect(t.action(api.auth.signIn, { provider: "resend", params: { email, redirectTo: "https://product.test" } }))
+        .resolves.toMatchObject({ started: true });
+    }
+    const reservations = await t.run(async (ctx) => ctx.db.query("authEvents")
+      .withIndex("by_type", (q) => q.eq("eventType", "AUTH_EMAIL_SEND_RESERVED")).collect());
+    expect(reservations).toHaveLength(MAX_GLOBAL_REQUESTS_PER_MINUTE);
+    expect(reservations.some((event) => event.email === "unknown@test.invalid")).toBe(false);
+    expect(reservations.some((event) => event.email === "invited@test.invalid")).toBe(true);
   });
 });
 

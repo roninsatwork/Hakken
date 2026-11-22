@@ -109,7 +109,7 @@ async function startPress(ctx: TenantMutationCtx, args: ObjectType<typeof seesAs
   // The page's own facts, or its figures keyed as the writer will name them.
   const facts = (args.facts.length > 0 ? args.facts : pageFacts(args.screen, data, { ...(args.from ? { from: args.from } : {}), ...(args.to ? { to: args.to } : {}) }).facts.map(({ key: factKey, value, unit, label }) => ({ key: factKey, value, unit, label })))
     .slice(0, MOST_SEES_FACTS);
-  const held = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).first();
+  const held = await ctx.db.query("seesAnswers").withIndex("by_hold_key_user", (q) => q.eq("companyWebsiteId", holdId).eq("key", key).eq("askedBy", ctx.userId)).first();
   // Kept a day while nothing on the page changed (S3; Anthony: "dont cache if things change"): new figures, new words.
   if (held && stillStands(held, now) && (held.status === "RESEARCHING" || (!refresh && sameFigures(held.facts, facts)))) return { key, status: held.status };
   // The app's own screens, the Dashboard's `/app` (and its website menu's `/app?site=…`) among them.
@@ -171,7 +171,7 @@ export const seesAnswer = tenantQuery({
     // A key starts with its screen ("searchConsole.keywords|…"), whose section's switch it answers to.
     const screen = seesScreenFor(args.key.split(/[?|]/)[0] ?? "");
     if (screen) await requireEyeSectionOn(ctx, screen.section);
-    const row = await ctx.db.query("seesAnswers").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", site.hold._id).eq("key", args.key)).first();
+    const row = await ctx.db.query("seesAnswers").withIndex("by_hold_key_user", (q) => q.eq("companyWebsiteId", site.hold._id).eq("key", args.key).eq("askedBy", ctx.userId)).first();
     if (!row) return null;
     // An answer past its day reads as none: the next press writes afresh.
     if (!stillStands(row, Date.now()) && row.status !== "FAILED") return null;
@@ -236,15 +236,6 @@ export const trackingFaultsInternal = internalQuery({
   handler: async (ctx, args) => {
     const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first();
     return (connection?.health?.checks ?? []).filter((check) => !check.passing).map((check) => check.check);
-  },
-});
-
-export const weekSeesAnswers = internalQuery({
-  args: { holdId: v.id("companyWebsites"), week: v.string() },
-  returns: v.array(v.object({ screen: v.string(), path: v.string(), says: v.array(v.string()), role: v.union(v.string(), v.null()), writtenAt: v.number() })),
-  handler: async (ctx, args) => {
-    const rows = await ctx.db.query("seesAnswers").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", args.holdId).eq("week", args.week)).take(50);
-    return rows.filter((row) => row.status === "WRITTEN").map((row) => ({ screen: row.screen, path: row.path, says: row.says, role: row.role ?? null, writtenAt: row.writtenAt ?? row.askedAt }));
   },
 });
 

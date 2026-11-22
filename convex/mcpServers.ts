@@ -145,6 +145,7 @@ export const createServer = adminMutation({
       authMode: args.authMode,
       secretRef: args.secretRef?.trim() || undefined,
       status: "DISABLED",
+      discoveryVersion: 0,
       createdAt: now,
       updatedAt: now,
       createdBy: ctx.userId,
@@ -186,6 +187,7 @@ export const updateServer = adminMutation({
       url,
       authMode,
       secretRef,
+      discoveryVersion: (server.discoveryVersion ?? 0) + 1,
       updatedAt: Date.now(),
     });
   },
@@ -197,7 +199,7 @@ export const setServerStatus = adminMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const server = await requireOwnServer(ctx, args.id);
-    await ctx.db.patch(server._id, { status: args.status, updatedAt: Date.now() });
+    await ctx.db.patch(server._id, { status: args.status, discoveryVersion: (server.discoveryVersion ?? 0) + 1, updatedAt: Date.now() });
   },
 });
 

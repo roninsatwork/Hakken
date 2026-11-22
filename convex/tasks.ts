@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { moduleMutation, moduleQuery, publicMutation } from "./tenantFunctions";
+import { effectiveModulesFor, moduleMutation, moduleQuery, publicMutation } from "./tenantFunctions";
 import { CORE_MODULES } from "./utils/coreModules";
 import { appError } from "./utils/appError";
 import { getCurrentUser } from "./authz";
@@ -375,6 +375,10 @@ export const confirmPhotoAction = publicMutation({
     // INVALID_INPUT, not NO_ACTIVE_COMPANY: it is the conversation that lacks
     // a workspace, not the caller — selecting one cannot make it fileable.
     if (!companyId) throw appError("INVALID_INPUT", "This conversation has no workspace to file a task into.");
+    if (current?.user.role !== "SUPER_ADMIN" &&
+      !(await effectiveModulesFor(ctx, await ctx.db.get(companyId))).includes(CORE_MODULES.tasks)) {
+      throw appError("MODULE_DISABLED", "This section is switched off for your workspace");
+    }
 
     let taskId: Id<"tasks">;
     if (current?.user) {

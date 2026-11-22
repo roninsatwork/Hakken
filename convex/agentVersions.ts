@@ -5,6 +5,7 @@ import { adminMutation, adminQuery } from "./tenantFunctions";
 import * as agentRecordShapes from "./utils/agentRecordShapes";
 import { assertAdminCanAccessCompany } from "./authz";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
+import { scopeAgentVersionSnapshot } from "./agentVersionScope";
 import { appError } from "./utils/appError";
 
 export const createSnapshot = adminMutation({
@@ -42,13 +43,14 @@ export const getForAgent = adminQuery({
     const { user } = ctx;
     if (user.role === "ADMIN") {
       if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
-      return await ctx.db
+      const page = await ctx.db
         .query("agentVersions")
         .withIndex("by_agent_company_created", (q) =>
           q.eq("agentId", args.agentId).eq("companyId", user.companyId)
         )
         .order("desc")
-        .paginate(args.paginationOpts);
+        .paginate({ ...args.paginationOpts, numItems: Math.min(args.paginationOpts.numItems, 25) });
+      return { ...page, page: await Promise.all(page.page.map((version) => scopeAgentVersionSnapshot(ctx, version))) };
     }
 
     return await ctx.db
@@ -86,7 +88,7 @@ export const getVersionDetail = adminQuery({
     const terminalRuns = runs.filter((run) => run.status === "SUCCESS" || run.status === "FAILED" || run.status === "CANCELLED");
     const successfulRuns = runs.filter((run) => run.status === "SUCCESS").length;
     return {
-      version,
+      version: user.role === "SUPER_ADMIN" ? version : await scopeAgentVersionSnapshot(ctx, version),
       stats: {
         runs: runs.length,
         fixtures: fixtures.length,

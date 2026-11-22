@@ -303,7 +303,7 @@ describe("Agent Memory Candidates", () => {
         patchPreview: [
           expect.objectContaining({
             operation: "APPEND",
-            target: "Agent system prompt",
+            target: "Agent guidance for this company",
             after: "Escalation summaries require owner, blocker, and next action.",
           }),
         ],

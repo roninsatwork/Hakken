@@ -164,7 +164,7 @@ describe("calling a server's tool", () => {
     });
 
     expect(await call(t, toolId, companyAId)).toMatchObject({
-      ok: true, structured: { total: 240 },
+      ok: true, structured: { total: 240, _hakkenUntrusted: expect.stringContaining("external system") },
     });
   });
 
@@ -241,6 +241,22 @@ describe("what stops a call", () => {
     expect(sent).toHaveLength(0);
   });
 
+  test("enum, nested and extra argument rules stop an invalid outbound call", async () => {
+    const { t, companyAId, toolId } = await setup();
+    await t.run(async (ctx) => await ctx.db.patch(toolId, { inputSchema: JSON.stringify({
+      type: "object", additionalProperties: false, required: ["status", "details"],
+      properties: {
+        status: { type: "string", enum: ["paid"] },
+        details: { type: "object", required: ["invoice"], properties: { invoice: { type: "string" } } },
+      },
+    }) }));
+    const { sent } = stubServer({ content: [{ type: "text", text: "Done." }] });
+    expect(await call(t, toolId, companyAId, { status: "unpaid", details: {}, extra: "surprise" })).toMatchObject({ ok: false });
+    expect(sent).toHaveLength(0);
+    expect(await call(t, toolId, companyAId, { status: "paid", details: { invoice: "INV-1" } })).toMatchObject({ ok: true });
+    expect(sent.some((one) => one.method === "tools/call")).toBe(true);
+  });
+
   test("an unapproved credential is refused before any request", async () => {
     const { t, companyAId, serverId, toolId } = await setup();
     const adminA = t.withIdentity({
@@ -280,7 +296,10 @@ describe("when a server behaves badly", () => {
 
     const result = await call(t, toolId, companyAId);
     expect(result).toMatchObject({ ok: false });
-    if (!result.ok) expect(result.error).toBe("No invoice with that number.");
+    if (!result.ok) {
+      expect(result.error).toContain("UNTRUSTED TOOL RESULT");
+      expect(result.error).toContain("No invoice with that number.");
+    }
   });
 
   test("an unreachable server is an answer, not an exception", async () => {

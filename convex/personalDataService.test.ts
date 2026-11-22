@@ -36,17 +36,21 @@ function tablesReferencingUsers(): Map<string, string[]> {
   return found;
 }
 
-/** Every index in the schema, as "table.leadingField" to the index's name. */
-function indexesLeadingWith(): Map<string, string> {
+/** Every index in the schema, as "table.leadingField" to all matching names. */
+function indexesLeadingWith(): Map<string, Set<string>> {
   const source = schemaSource();
-  const found = new Map<string, string>();
+  const found = new Map<string, Set<string>>();
 
   // The end of the source is `$(?![\s\S])`: JavaScript reads `\Z` as the letter Z, which cut a table short
   // at its first capital Z (hakkenTasks' `timeZone`, 2026-10-07).
   for (const [, table, body] of source.matchAll(/^ {2}(\w+): defineTable\(([\s\S]*?)(?=^ {2}\w+: defineTable\(|$(?![\s\S]))/gm)) {
     for (const [, name, columns] of body.matchAll(/\.index\("(\w+)",\s*\[([^\]]+)\]/g)) {
       const leading = columns.match(/"(\w+)"/)?.[1];
-      if (leading) found.set(`${table}.${leading}`, name);
+      if (leading) {
+        const key = `${table}.${leading}`;
+        if (!found.has(key)) found.set(key, new Set());
+        found.get(key)?.add(name);
+      }
     }
   }
 
@@ -66,7 +70,7 @@ describe("the search knows which indexes it can actually use", () => {
     // nothing would say so until it failed in front of somebody answering a
     // legal request.
     const wrong = Object.entries(PERSONAL_DATA_INDEXES).filter(
-      ([pair, name]) => schemaIndexes.get(pair) !== name,
+      ([pair, name]) => !schemaIndexes.get(pair)?.has(name),
     );
 
     expect(wrong, `These no longer match the schema: ${wrong.map(([pair]) => pair).join(", ")}`).toEqual(

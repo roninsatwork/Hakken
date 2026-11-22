@@ -318,6 +318,7 @@ describe("Analytics MRR Strict Isolation", () => {
         date: yesterday,
         type: "user",
         userId: userAId,
+        companyId: companyAId,
         metrics: {
           totalMessages: 1,
           totalInputTokens: 10,
@@ -357,6 +358,51 @@ describe("Analytics MRR Strict Isolation", () => {
     });
     expect(threadCosts.page[0].costUsd).toBeCloseTo(0.4, 6);
     expect(companyAId).toBeDefined();
+  });
+
+  test("a new company admin sees only usage and threads from after a member moved", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const now = Date.now();
+    const yesterday = new Date(now - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const { oldCompany, newCompany, adminId, memberId } = await t.run(async (ctx) => {
+      await ctx.db.insert("aiModels", modelConfig);
+      const oldCompany = await ctx.db.insert("companies", { name: "Old", createdAt: now });
+      const newCompany = await ctx.db.insert("companies", { name: "New", createdAt: now });
+      const adminId = await ctx.db.insert("users", { email: "new-admin@test.invalid", role: "ADMIN", companyId: newCompany });
+      const memberId = await ctx.db.insert("users", { email: "moved@test.invalid", role: "USER", companyId: oldCompany });
+      const addThread = async (companyId: typeof oldCompany, title: string) => {
+        const threadId = await ctx.db.insert("threads", { userId: memberId, companyId, title, createdAt: now, updatedAt: now });
+        await ctx.db.insert("messages", {
+          threadId, role: "assistant", content: "Answer", companyId, userId: memberId,
+          inputTokens: 200_000, outputTokens: 100_000, modelUsed: "hakken-test-model", createdAt: now,
+        });
+      };
+      await addThread(oldCompany, "Old company secret");
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: yesterday, type: "user", userId: memberId, companyId: oldCompany,
+        metrics: { totalMessages: 1, totalInputTokens: 10, totalOutputTokens: 20, costUsd: 9 },
+      });
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: yesterday, type: "user", userId: memberId,
+        metrics: { totalMessages: 1, totalInputTokens: 10, totalOutputTokens: 20, costUsd: 7 },
+      });
+      await ctx.db.patch(memberId, { companyId: newCompany });
+      await addThread(newCompany, "New company work");
+      await ctx.db.insert("analyticsDailySnapshots", {
+        date: yesterday, type: "user", userId: memberId, companyId: newCompany,
+        metrics: { totalMessages: 1, totalInputTokens: 30, totalOutputTokens: 40, costUsd: 2 },
+      });
+      return { oldCompany, newCompany, adminId, memberId };
+    });
+    const asAdmin = t.withIdentity({ subject: adminId });
+    const overview = await asAdmin.query(api.analytics.getUserCostOverview, { userId: memberId });
+    expect(overview.totalCostUsd).toBe(2.4);
+    expect(overview.totalInputTokens).toBe(200_030);
+    const threads = await asAdmin.query(api.analytics.getUserCostThreads, {
+      userId: memberId, paginationOpts: { numItems: 15, cursor: null },
+    });
+    expect(threads.page.map((thread) => thread.title)).toEqual(["New company work"]);
+    expect(oldCompany).not.toBe(newCompany);
   });
 
   test("company metrics combine live usage, snapshots, plan MRR, knowledge count, and tenant authorization", async () => {

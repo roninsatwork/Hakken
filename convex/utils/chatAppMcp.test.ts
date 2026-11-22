@@ -31,7 +31,7 @@ describe("every tool only reads", () => {
     expect(tools).not.toMatch(/\.runMutation\(/);
     const mutations = [...door.matchAll(/\.runMutation\(\s*([\w.]+)/g)].map((match) => match[1]);
     expect(mutations.length).toBeGreaterThan(0);
-    for (const called of mutations) expect(called).toMatch(/^internal\.chatAppPasses\.(checkPassInternal|logQuestionInternal)$/);
+    for (const called of mutations) expect(called).toMatch(/^internal\.chatAppPasses\.(checkPassInternal|reserveQuestionInternal|logQuestionInternal)$/);
   });
 
   test("every read a tool makes is for the pass's company, never one the app names", () => {

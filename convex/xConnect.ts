@@ -59,6 +59,14 @@ async function theConnection(ctx: { db: QueryCtx["db"] }): Promise<Doc<"xConnect
   return await ctx.db.query("xConnections").first();
 }
 
+async function pendingSuperAdminIsCurrent(ctx: { db: QueryCtx["db"] }, connection: Doc<"xConnections">): Promise<boolean> {
+  if (!connection.pendingBy || !connection.pendingAt || Date.now() - connection.pendingAt > STATE_MAX_AGE_MS) {
+    return false;
+  }
+  const starter = await ctx.db.get(connection.pendingBy);
+  return starter?.role === "SUPER_ADMIN";
+}
+
 // ── Starting ───────────────────────────────────────────────────────────────
 
 /** Start connecting: super admins only. Hands back the one link the browser follows; only the state leaves the server. */
@@ -88,7 +96,7 @@ export const pendingByState = internalQuery({
   handler: async (ctx, args) => {
     if (!args.state) return null;
     const connection = await ctx.db.query("xConnections").withIndex("by_pending_state", (q) => q.eq("pendingState", args.state)).first();
-    if (!connection?.pendingAt || Date.now() - connection.pendingAt > STATE_MAX_AGE_MS) return null;
+    if (!connection || !(await pendingSuperAdminIsCurrent(ctx, connection))) return null;
     return { verifierCiphertext: connection.verifierCiphertext ?? null };
   },
 });
@@ -98,7 +106,9 @@ export const keepVerifier = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const connection = await ctx.db.query("xConnections").withIndex("by_pending_state", (q) => q.eq("pendingState", args.state)).first();
-    if (connection) await ctx.db.patch(connection._id, { verifierCiphertext: args.verifierCiphertext, updatedAt: Date.now() });
+    if (connection && await pendingSuperAdminIsCurrent(ctx, connection)) {
+      await ctx.db.patch(connection._id, { verifierCiphertext: args.verifierCiphertext, updatedAt: Date.now() });
+    }
     return null;
   },
 });
@@ -178,7 +188,7 @@ export const handleXCallback = httpAction(async (ctx, request) => {
     .catch(() => null);
   if (!me?.id) return await fail("failed", "X did not say which account signed in.", tokens.refresh_token);
 
-  await ctx.runMutation(internal.xConnect.completeXConnect, {
+  const saved = await ctx.runMutation(internal.xConnect.completeXConnect, {
     state,
     account: me.username ? `@${me.username}` : me.id,
     xUserId: me.id,
@@ -186,6 +196,7 @@ export const handleXCallback = httpAction(async (ctx, request) => {
     refreshTokenCiphertext: await encryptConnectorToken(tokens.refresh_token),
     ...(tokens.expires_in ? { expiresAt: Date.now() + tokens.expires_in * 1000 } : {}),
   });
+  if (!saved) return await fail("failed", "This X sign-in can no longer be completed.", tokens.refresh_token);
   return redirectTo(whoToFollowScreen("connected"));
 });
 
@@ -213,10 +224,10 @@ export const completeXConnect = internalMutation({
     refreshTokenCiphertext: v.string(),
     expiresAt: v.optional(v.number()),
   },
-  returns: v.null(),
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const connection = await ctx.db.query("xConnections").withIndex("by_pending_state", (q) => q.eq("pendingState", args.state)).first();
-    if (!connection) return null;
+    if (!connection || !(await pendingSuperAdminIsCurrent(ctx, connection))) return false;
     // Another account starts over; the same account keeps its place in the bookmarks.
     const sameAccount = connection.xUserId === args.xUserId;
     await ctx.db.patch(connection._id, {
@@ -231,7 +242,7 @@ export const completeXConnect = internalMutation({
       problem: undefined,
       updatedAt: Date.now(),
     });
-    return null;
+    return true;
   },
 });
 

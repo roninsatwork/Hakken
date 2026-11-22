@@ -72,7 +72,8 @@ describe("notifications", () => {
       title: "An approval is waiting",
     });
 
-    await t.withIdentity({ subject: me }).mutation(api.notifications.markRead, { notificationId: mineId });
+    expect(mineId).not.toBeNull();
+    await t.withIdentity({ subject: me }).mutation(api.notifications.markRead, { notificationId: mineId! });
 
     const theirCount = await t.withIdentity({ subject: colleague }).query(api.notifications.countMineUnread, {});
     expect(theirCount.count).toBe(1);
@@ -92,7 +93,7 @@ describe("notifications", () => {
     });
 
     await expect(
-      t.withIdentity({ subject: me }).mutation(api.notifications.markRead, { notificationId: theirs }),
+      t.withIdentity({ subject: me }).mutation(api.notifications.markRead, { notificationId: theirs! }),
     ).rejects.toThrow("could not be found");
   });
 
@@ -115,7 +116,8 @@ describe("notifications", () => {
     const asMe = t.withIdentity({ subject: me });
     expect((await asMe.query(api.notifications.countMineUnread, {})).count).toBe(2);
 
-    await asMe.mutation(api.notifications.markRead, { notificationId: first });
+    expect(first).not.toBeNull();
+    await asMe.mutation(api.notifications.markRead, { notificationId: first! });
     expect((await asMe.query(api.notifications.countMineUnread, {})).count).toBe(1);
   });
 

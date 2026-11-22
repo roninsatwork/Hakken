@@ -108,7 +108,7 @@ describe("Reviews at five times a large client", () => {
       if (!(read[name] <= (readBudgets[name] ?? -1))) over.push(`${name}: ${read[name]} KiB read, its budget ${readBudgets[name] ?? "not set"}`);
     }
     if (process.env.REVIEWS_READ_REPORT) process.stdout.write(`${JSON.stringify(read, null, 2)}\n`);
-    expect(over).toEqual([]);
+    expect(over, JSON.stringify(read)).toEqual([]);
 
     // What the screens say at this size.
     const asMember = t.withIdentity({ subject: seeded.userId });

@@ -12,6 +12,7 @@ import { dayIn } from "./utils/hakkenTaskTiming";
 import { groupsChartOf } from "./assistantGroupChartReads";
 import { isCalendarPeriod } from "./utils/calendarPeriods";
 import { EVERY_OTHER, groupsAreShares, sourceOfLook, type GroupsChart } from "./utils/assistantGroupCharts";
+import { getActiveCompanyId } from "./authz";
 
 /**
  * A chart sent at a time (sees-side-panel-plan-2026-10-31.md, phase 5; Anthony: "send me a chart at 10am tomorrow
@@ -43,7 +44,7 @@ export async function sendChartReport(
   const figures = chartReportFigures(read.points, before?.held ? before.points : null, measure, eventAt);
 
   const owner = await ctx.db.get(task.userId);
-  if (!owner) return "GONE";
+  if (!owner || getActiveCompanyId(owner) !== task.companyId) return "GONE";
   const preferences = await ensureReaderPreferences(ctx, owner._id);
   const language = preferences?.language ?? "en";
   const link = `/app/analytics/${target.companyWebsiteId}/conversions?period=${report.period}`;
@@ -115,7 +116,7 @@ async function sendGroupsChartReport(
   const top = chart.groups.find((group) => group.name !== EVERY_OTHER) ?? chart.groups[0];
 
   const owner = await ctx.db.get(task.userId);
-  if (!owner) return "GONE";
+  if (!owner || getActiveCompanyId(owner) !== task.companyId) return "GONE";
   const preferences = await ensureReaderPreferences(ctx, owner._id);
   const language = preferences?.language ?? "en";
   const sentOn = dayIn(now, task.timeZone);

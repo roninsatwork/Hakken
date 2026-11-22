@@ -185,8 +185,8 @@ jobs:
 
       # Tag every image with the commit SHA as well as :latest. :latest alone
       # is not rollback-able — once it is overwritten the previous image has no
-      # name left to deploy. The SHA tag is the immutable handle used by the
-      # rollback procedure in docs/developer/deployment.md.
+      # name left to find. Deploy and rollback use image digests, recorded in
+      # each job summary, so moving a registry tag cannot change the rollout.
       #
       # `--push` publishes straight from the builder, so the image is never
       # loaded into the local daemon only to be uploaded again.
@@ -200,6 +200,7 @@ jobs:
       # otherwise built cleanly — including the first run, when there is no
       # `:buildcache` tag to read yet.
       - name: Build and Push Docker image
+        id: build
         env:
           IMAGE_BASE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}
         run: |-
@@ -211,19 +212,23 @@ jobs:
             --build-arg BUILD_SHA=${{ github.sha }} \
             --cache-from type=registry,ref="$IMAGE_BASE:buildcache" \
             --cache-to type=registry,ref="$IMAGE_BASE:buildcache",mode=max,ignore-error=true \
+            --metadata-file "$RUNNER_TEMP/hakken-image.json" \
             -t "$IMAGE_BASE:${{ github.sha }}" \
             -t "$IMAGE_BASE:latest" \
             --push \
             . > docker_build.log 2>&1 || (echo '### Docker Build Failed! :x:' >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; tail -n 50 docker_build.log >> $GITHUB_STEP_SUMMARY; echo '```' >> $GITHUB_STEP_SUMMARY; cat docker_build.log; exit 1)
+          digest="$(jq -er '."containerimage.digest"' "$RUNNER_TEMP/hakken-image.json")"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Build did not return an image digest" >&2; exit 1; }
+          echo "image=$IMAGE_BASE@$digest" >> "$GITHUB_OUTPUT"
 
-      # Deploy the immutable SHA tag, not :latest, so the revision records
-      # exactly which image is serving traffic.
+      # The digest came from this build's pushed image. Registry tag changes
+      # after this step cannot replace the bytes Cloud Run deploys.
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:${{ github.sha }}
+          image: ${{ steps.build.outputs.image }}
           flags: '--allow-unauthenticated --port=3000 --service-account=hakken-runtime@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
           env_vars: |-
             NEXT_PUBLIC_CONVEX_URL=${{ secrets.NEXT_PUBLIC_CONVEX_URL }}
@@ -233,10 +238,11 @@ jobs:
       - name: Record deployed revision
         run: |-
           echo "### Deployed \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "Image: \`${{ steps.build.outputs.image }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Verify: \`curl -s https://<service-url>/api/health?deps=1\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Roll back to the previous commit SHA (see docs/developer/deployment.md):" >> $GITHUB_STEP_SUMMARY
+          echo "Roll back to the previous job's image digest (see docs/developer/deployment.md):" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "gcloud run services update ${{ env.SERVICE }} --region ${{ env.REGION }} --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.SERVICE }}:<PREVIOUS_SHA>" >> $GITHUB_STEP_SUMMARY
+          echo "gcloud run services update ${{ env.SERVICE }} --region ${{ env.REGION }} --image <PREVIOUS_IMAGE_WITH_DIGEST>" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

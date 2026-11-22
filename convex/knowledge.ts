@@ -2,6 +2,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
+import { stripLegacySharedLearningNotes } from "./utils/agentPromptScope";
 import { issueUpload, requireOwnedUpload } from "./uploadReservations";
 import { uploadMetadataArgs } from "./uploadSchema";
 import { paginationOptsValidator } from "convex/server";
@@ -76,7 +77,7 @@ function getAgentCoverageTerms(agent: Pick<Doc<"agents">, "name" | "description"
   return getCoverageTokens([
     agent.name,
     agent.description,
-    agent.systemPrompt,
+    stripLegacySharedLearningNotes(agent.systemPrompt),
   ].filter(Boolean).join(" ")).slice(0, KNOWLEDGE_COVERAGE_TERM_LIMIT);
 }
 

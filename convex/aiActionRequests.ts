@@ -8,7 +8,8 @@ const aiActionNameValidator = v.union(
   v.literal("realtimeVoiceSession"),
   v.literal("voiceKnowledge"),
   v.literal("voicePreview"),
-  v.literal("generateNodeConfig")
+  v.literal("generateNodeConfig"),
+  v.literal("routeAgentIntent")
 );
 
 export const reserve = internalMutation({
