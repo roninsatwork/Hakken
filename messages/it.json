@@ -21324,7 +21324,7 @@
       "taskReports": "Report delle attività",
       "taskResearch": "Scopri perché",
       "sees": "Cosa vede {platformName}",
-      "chatApps": "Ask {platformName} in ChatGPT e Claude"
+      "chatApps": "MCP"
     },
     "prices": {
       "rankings": "{credits} ogni {per, plural, =1 {parola chiave controllata} other {# parole chiave controllate}}",
@@ -24080,7 +24080,7 @@
       "badTitle": "Questo link non funziona",
       "badBody": "Qualcosa non va o è scaduto. Ricomincia dall'app.",
       "offTitle": "{app} non può leggere i tuoi dati in questo momento",
-      "offBody": "Il collegamento di ChatGPT e Claude è disattivato per {company}.",
+      "offBody": "MCP è disattivato per {company}.",
       "noCompanyTitle": "Ancora nessuna azienda",
       "noCompanyBody": "Il tuo account non fa ancora parte di un'azienda, quindi non ci sono dati da leggere.",
       "failed": "Non ha funzionato. Riprova tra un momento."

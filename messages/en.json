@@ -21324,7 +21324,7 @@
       "taskReports": "Task reports",
       "taskResearch": "Find out why",
       "sees": "What {platformName} sees",
-      "chatApps": "Ask {platformName} in ChatGPT and Claude"
+      "chatApps": "MCP"
     },
     "prices": {
       "rankings": "{credits} per {per, plural, =1 {keyword} other {# keywords}} checked",
@@ -24080,7 +24080,7 @@
       "badTitle": "This link doesn't work",
       "badBody": "Something in it is wrong or out of date. Start again from the app.",
       "offTitle": "{app} can't read your figures right now",
-      "offBody": "Linking ChatGPT and Claude is switched off for {company}.",
+      "offBody": "MCP is switched off for {company}.",
       "noCompanyTitle": "No company yet",
       "noCompanyBody": "Your account isn't part of a company yet, so there are no figures to read.",
       "failed": "That didn't work. Try again in a moment."
