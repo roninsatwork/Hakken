@@ -18,6 +18,7 @@ import { CUT_COLUMN, PositionCell } from "../../../_components/SiteCells";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { mapsSees } from "@/convex/utils/sees/eyeData/visibilityLocal";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { sharedSiteQuery, useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -67,6 +68,7 @@ const keywordOf = (row: Row) => row.keyword;
 export default function LocalMapsPage() {
   const t = useTranslations("sites.local.maps");
   const tl = useTranslations("sites.local");
+  const tn = useTranslations("sites.seesNames");
   const siteId = useSiteId();
   const site = useSite();
   const router = useRouter();
@@ -105,7 +107,7 @@ export default function LocalMapsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={office?.listingId ?? null} /> : undefined}
       />
-      <SiteSees screen="localMaps" seen={data?.seen} data={data} />
+      <SiteSees screen="localMaps" seen={data?.seen} data={mapsSees(data, { searchesChecked: tn("searchesChecked") })} />
       {data && !office ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {office && figures ? (

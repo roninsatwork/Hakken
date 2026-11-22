@@ -328,6 +328,8 @@ export function findingWords(finding: Pick<Finding, "kind" | "params">): string 
     case "rowDown":
       return `${p.name}: ${measureWords(p.measure)} ${finding.kind === "rowUp" ? "rose" : "fell"} to ${p.now} from ${p.before}, the biggest ${finding.kind === "rowUp" ? "rise" : "fall"} on the list.`;
     case "holdsMost":
+      // Out of a part of the whole (a screen's first page, the searches checked): said as so many of it, never of all.
+      if (p.outOf !== undefined) return `${p.name}: ${p.value} of ${p.of ?? `the ${p.outOf}`}, ${p.share}%.`;
       return `${p.name} holds ${p.share}% of the list's ${measureWords(p.measure)}.`;
     case "rowAbove":
     case "rowBelow": {

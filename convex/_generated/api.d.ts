@@ -953,6 +953,9 @@ import type * as utils_sees_eyeData_visibility from "../utils/sees/eyeData/visib
 import type * as utils_sees_eyeData_visibilityBacklinks from "../utils/sees/eyeData/visibilityBacklinks.js";
 import type * as utils_sees_eyeData_visibilityChecks from "../utils/sees/eyeData/visibilityChecks.js";
 import type * as utils_sees_eyeData_visibilityKeywords from "../utils/sees/eyeData/visibilityKeywords.js";
+import type * as utils_sees_eyeData_visibilityLinkLists from "../utils/sees/eyeData/visibilityLinkLists.js";
+import type * as utils_sees_eyeData_visibilityLocal from "../utils/sees/eyeData/visibilityLocal.js";
+import type * as utils_sees_eyeData_visibilityRadar from "../utils/sees/eyeData/visibilityRadar.js";
 import type * as utils_sees_findingValidator from "../utils/sees/findingValidator.js";
 import type * as utils_sees_findings from "../utils/sees/findings.js";
 import type * as utils_sees_google from "../utils/sees/google.js";
@@ -987,8 +990,12 @@ import type * as utils_sees_own_searchConsoleShared from "../utils/sees/own/sear
 import type * as utils_sees_own_searchConsoleTracked from "../utils/sees/own/searchConsoleTracked.js";
 import type * as utils_sees_own_shared from "../utils/sees/own/shared.js";
 import type * as utils_sees_own_visibility from "../utils/sees/own/visibility.js";
+import type * as utils_sees_own_visibilityBandsAndPages from "../utils/sees/own/visibilityBandsAndPages.js";
+import type * as utils_sees_own_visibilityLinkLists from "../utils/sees/own/visibilityLinkLists.js";
 import type * as utils_sees_own_visibilityLinks from "../utils/sees/own/visibilityLinks.js";
+import type * as utils_sees_own_visibilityLocal from "../utils/sees/own/visibilityLocal.js";
 import type * as utils_sees_own_visibilityMarket from "../utils/sees/own/visibilityMarket.js";
+import type * as utils_sees_own_visibilityRadar from "../utils/sees/own/visibilityRadar.js";
 import type * as utils_sees_pageData from "../utils/sees/pageData.js";
 import type * as utils_sees_pageFindings from "../utils/sees/pageFindings.js";
 import type * as utils_sees_pageOwnFindings from "../utils/sees/pageOwnFindings.js";
@@ -2088,6 +2095,9 @@ declare const fullApi: ApiFromModules<{
   "utils/sees/eyeData/visibilityBacklinks": typeof utils_sees_eyeData_visibilityBacklinks;
   "utils/sees/eyeData/visibilityChecks": typeof utils_sees_eyeData_visibilityChecks;
   "utils/sees/eyeData/visibilityKeywords": typeof utils_sees_eyeData_visibilityKeywords;
+  "utils/sees/eyeData/visibilityLinkLists": typeof utils_sees_eyeData_visibilityLinkLists;
+  "utils/sees/eyeData/visibilityLocal": typeof utils_sees_eyeData_visibilityLocal;
+  "utils/sees/eyeData/visibilityRadar": typeof utils_sees_eyeData_visibilityRadar;
   "utils/sees/findingValidator": typeof utils_sees_findingValidator;
   "utils/sees/findings": typeof utils_sees_findings;
   "utils/sees/google": typeof utils_sees_google;
@@ -2122,8 +2132,12 @@ declare const fullApi: ApiFromModules<{
   "utils/sees/own/searchConsoleTracked": typeof utils_sees_own_searchConsoleTracked;
   "utils/sees/own/shared": typeof utils_sees_own_shared;
   "utils/sees/own/visibility": typeof utils_sees_own_visibility;
+  "utils/sees/own/visibilityBandsAndPages": typeof utils_sees_own_visibilityBandsAndPages;
+  "utils/sees/own/visibilityLinkLists": typeof utils_sees_own_visibilityLinkLists;
   "utils/sees/own/visibilityLinks": typeof utils_sees_own_visibilityLinks;
+  "utils/sees/own/visibilityLocal": typeof utils_sees_own_visibilityLocal;
   "utils/sees/own/visibilityMarket": typeof utils_sees_own_visibilityMarket;
+  "utils/sees/own/visibilityRadar": typeof utils_sees_own_visibilityRadar;
   "utils/sees/pageData": typeof utils_sees_pageData;
   "utils/sees/pageFindings": typeof utils_sees_pageFindings;
   "utils/sees/pageOwnFindings": typeof utils_sees_pageOwnFindings;

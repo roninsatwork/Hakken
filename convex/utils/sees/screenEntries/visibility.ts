@@ -107,7 +107,15 @@ export const VISIBILITY_SCREENS: Readonly<Record<string, Partial<SeesScreen> & {
     ],
     never: LINKS_KEYWORDS_NEVER,
   },
-  "visibility.keywordsBandsMoved": { about: "the searches that moved between places on Google" },
+  // One square of Position bands' grid (visibility-16-eyes, 22 November 2026): its rules in `own/visibilityBandsAndPages.ts`.
+  "visibility.keywordsBandsMoved": {
+    about: "Keywords › Position bands › one square: the searches that moved from one band of Google's results to another at the newest check, each with where it was and is",
+    parts: [
+      "the title: the two bands, from and to",
+      "the table: each search with its place before and now, its band and its monthly searches, the most searched first",
+    ],
+    never: [...LINKS_KEYWORDS_NEVER, "the date menu: this page shows the newest check's moves whatever dates are chosen"],
+  },
   "visibility.keywordsPages": {
     about: "Keywords › Top pages: the website's pages that rank on Google, each with its searches and estimated visitors, and each classification",
     parts: ["the chart: ranking pages and estimated visitors at each check in the dates", "the table: each page with its kind, estimated visitors, searches, best place and linking websites"],
@@ -119,7 +127,19 @@ export const VISIBILITY_SCREENS: Readonly<Record<string, Partial<SeesScreen> & {
     parts: ["the sections as a map, each sized by its searches", "the table: each section with its pages, searches, top three and estimated visitors"],
     never: LINKS_KEYWORDS_NEVER,
   },
-  "visibility.yourPages": { about: "the pages the company chose to watch" },
+  // Your pages (visibility-16-eyes, 22 November 2026): its rules in `own/visibilityBandsAndPages.ts`.
+  "visibility.yourPages": {
+    about: "Your pages: every page of the website, once, with whether the sitemap lists it, the site audit reached it, Google showed it in the last 90 days and it ranks at the newest check",
+    parts: [
+      "the summary: pages known, those Google showed and never showed, those missing from the sitemap, those the audit couldn't reach and those ranking",
+      "the table: each page with its Classification, its clicks from Google in the last 90 days and its four checks",
+    ],
+    never: [
+      ...MARKET_MONEY,
+      "visits or conversions: the clicks are Search Console's clicks from Google, never Google Analytics' visits",
+      "asking the reader to sort, group or classify pages, or pages not sorted yet: that is done for them",
+    ],
+  },
   // Visibility's second half (ask-hakken-every-chart-page-plan-2026-11-03.md, section 10): Google results, Competitors, AI
   // answers, Brand radar, Web mentions, Reviews, Paid search and Site audit, each page's parts top to bottom; their own
   // rules in `own/visibility.ts` (the second half's block). Each writer as its prefix below named it.
@@ -289,5 +309,128 @@ export const VISIBILITY_SCREENS: Readonly<Record<string, Partial<SeesScreen> & {
       "the table: each problem, how serious it is, and its pages",
     ],
     never: [...MARKET_MONEY, "a crawl the website turned away: say only that too little was read to judge"],
+  },
+
+  // Backlinks' lists and records, Local, and Brand radar's Sources, a source website and a question (visibility-16-eyes,
+  // 22 November 2026): their rules in `own/visibilityLinkLists.ts`, `own/visibilityLocal.ts` and `own/visibilityRadar.ts`.
+  // Each shows the newest check or month whatever dates are chosen, but Rivals' activity, which counts the dates.
+  "visibility.backlinksDomains": {
+    writer: "INSIGHTS_LINKS",
+    about: "Backlinks › Linking websites: every website linking here at the newest check, the strongest first, with how many links each gives",
+    parts: [
+      "the summary: websites linking now of every one seen, and those that stopped",
+      "the table: each website with its domain rank, links, spam score and status",
+    ],
+    never: [...LINKS_KEYWORDS_NEVER, "the date menu: this page shows the newest list whatever dates are chosen"],
+  },
+  "visibility.backlinksDomain": {
+    writer: "INSIGHTS_LINKS",
+    about: "Backlinks › one linking website: how many links it gives this website, how strong it is, and the links listed from it",
+    parts: [
+      "the figures: its links, pages linking, domain rank, spam score and when it first linked",
+      "the table: each link listed with the page it's on, its words, the page it points at, and whether it's followed and live",
+    ],
+    never: [...LINKS_KEYWORDS_NEVER, "the date menu: this page shows the newest list whatever dates are chosen"],
+  },
+  "visibility.backlinksBroken": {
+    writer: "INSIGHTS_LINKS",
+    about: "Backlinks › Broken backlinks: links from other websites that point at pages of this one that no longer work",
+    parts: ["the table: each broken link with the linking website, its strength, the page it points at and the error that page gives"],
+    never: [...LINKS_KEYWORDS_NEVER, "the date menu: this page shows the newest list whatever dates are chosen"],
+  },
+  "visibility.backlinksAll": {
+    writer: "INSIGHTS_LINKS",
+    about: "Backlinks › All backlinks: the strongest link from each website linking here, the strongest first",
+    parts: ["the table: each link with the linking website, its strength, its words, the page it points at, and whether it's followed, live or lost"],
+    never: [...LINKS_KEYWORDS_NEVER, "the date menu: this page shows the newest list whatever dates are chosen"],
+  },
+  "visibility.backlinksAnchor": {
+    writer: "INSIGHTS_LINKS",
+    about: "Backlinks › one anchor: the words other websites link here with, how many links and linking websites use them, and the links listed",
+    parts: [
+      "the figures: its links, linking websites, spam score and when it was first seen",
+      "the table: each link listed with the linking website, the page it points at, and whether it's followed and live",
+    ],
+    never: [...LINKS_KEYWORDS_NEVER, "the date menu: this page shows the newest list whatever dates are chosen"],
+  },
+  "visibility.localProfile": {
+    writer: "INSIGHTS_LOCAL",
+    about: "Local › Business profile: the office's Google profile, how it shows on the map for the searches checked, and each detail against the businesses people also look at",
+    parts: [
+      "the boxes: the map box searches, rating, reviews and photos against the rivals' averages",
+      "what your profile shows: each detail Google holds, with those to put right",
+      "what reviews talk about, and the businesses people also look at",
+    ],
+    never: [...MARKET_MONEY, "the people who wrote reviews: never name or quote a reviewer", "the date menu: this page shows the newest check whatever dates are chosen"],
+  },
+  "visibility.localMaps": {
+    writer: "INSIGHTS_LOCAL",
+    about: "Local › Map rankings: where the office sits on Google Maps for each tracked search, and who tops the map",
+    parts: [
+      "the boxes: searches in the map box, below it and off the map, of those checked",
+      "the table: each search with its monthly searches, the office's place on the map and on Google, and who tops the map",
+    ],
+    never: [...MARKET_MONEY, "the date menu: this page shows the newest check whatever dates are chosen"],
+  },
+  "visibility.localActivity": {
+    writer: "INSIGHTS_LOCAL",
+    about: "Local › Rival activity: what the rivals watched did on their Google profiles in the dates, their posts and offers, changes to their profiles, and the questions people ask",
+    parts: [
+      "the boxes: the rivals' posts and yours in the dates, offers running, profile changes and questions waiting",
+      "the table: everything each rival did, newest first",
+      "the questions people asked on the profiles",
+    ],
+    never: [...MARKET_MONEY, "what a post says: never quote or sum up a rival's post", "why a rival posted or changed its profile: say what happened, never guess why"],
+  },
+  "visibility.localListings": {
+    writer: "INSIGHTS_LOCAL",
+    about: "Local › Your listings: the office profiles that are yours and the rivals' profiles watched, each with its rating, reviews and photos",
+    parts: ["your offices, each with its rating, reviews and photos", "the rivals watched, each with the same", "profiles found that may be yours, to mark"],
+    never: [...MARKET_MONEY, "the date menu: this page shows the newest check whatever dates are chosen"],
+  },
+  "visibility.localMarket": {
+    writer: "INSIGHTS_LOCAL",
+    about: "Local › Local market: every business Google lists as this kind near the office, how far away, how it looks on Google, and whether it's in the map box",
+    parts: [
+      "the summary: businesses of this kind nearby, and those with more reviews than the office",
+      "the table: each business with its distance, rating, reviews, photos and map box, the nearest first",
+    ],
+    never: [...MARKET_MONEY, "the date menu: this page shows the newest check whatever dates are chosen"],
+  },
+  "visibility.business": {
+    writer: "INSIGHTS_LOCAL",
+    about: "Local › one business: a business near the office against this one, its reviews, rating and places on Google Maps, its posts, and how Google's AI answers name it",
+    parts: [
+      "the figures: its reviews, rating, AI answers naming it and days to answer a review, each beside yours",
+      "its places on Google Maps for the searches checked, beside yours",
+      "its posts and profile changes, newest first",
+    ],
+    never: [...MARKET_MONEY, "what a post says: never quote or sum up its posts", "the people who wrote reviews: never name or quote a reviewer"],
+  },
+  "visibility.question": {
+    writer: "INSIGHTS_AI_VISIBILITY",
+    about: "Brand radar › one question: how often it's asked a month, the businesses Google's AI answer names for it and in what place, and the pages the answer quotes",
+    parts: ["the figures: monthly searches and the place you're named in", "the businesses the answer names, in order", "the pages it quotes, with the kind of website each is"],
+    never: [...MARKET_MONEY, "the date menu: Brand radar reads the answers once a month, and this page shows the newest month"],
+  },
+  "visibility.radarSources": {
+    writer: "INSIGHTS_AI_VISIBILITY",
+    about: "Brand radar › Websites AI cites: the websites Google's AI answers quote when they talk about this kind of work, and whether this business is named beside them",
+    parts: [
+      "the summary: websites quoted, those in answers naming you, and those beside your rivals and never beside you",
+      "the table: each website with its kind, the times it's quoted, and how often beside you and beside your rivals",
+      "your rivals' pages quoted most",
+    ],
+    never: [...MARKET_MONEY, "the date menu: Brand radar reads the answers once a month, and this page shows the newest month"],
+  },
+  "visibility.website": {
+    writer: "INSIGHTS_AI_VISIBILITY",
+    about: "Brand radar › one website AI cites: how often Google's AI answers quote it beside this business and beside its rivals, its pages quoted and the questions it's quoted for",
+    parts: [
+      "the figures: times quoted, beside you and beside your rivals, and its pages that name you",
+      "the businesses quoted beside it",
+      "its pages quoted, and the questions it's quoted for, with who each answer names",
+    ],
+    never: [...MARKET_MONEY, "the date menu: Brand radar reads the answers once a month, and this page shows the newest month"],
   },
 };

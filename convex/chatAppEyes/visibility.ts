@@ -52,7 +52,10 @@ import {
 import {
   anchorsSees, comparedSees, ipsSees, linkChangesSees, linkGroupNameFrom, qualitySees, summarySees, whereSees,
 } from "../utils/sees/eyeData/visibilityBacklinks";
-import { bandsSees, keywordsSees, newLostSees, pagesSees, readBandMove, searchSees, structureSees, withoutGuessedMoney } from "../utils/sees/eyeData/visibilityKeywords";
+import { bandSquareSees, bandsSees, keywordsSees, newLostSees, pagesSees, readBandMove, searchSees, structureSees, withoutGuessedMoney } from "../utils/sees/eyeData/visibilityKeywords";
+import { allBacklinksSees, anchorSees, brokenLinksSees, linkingWebsiteSees, linkingWebsitesSees } from "../utils/sees/eyeData/visibilityLinkLists";
+import { activitySees, businessSees, listingsSees, mapsSees, nearbySees, profileSees } from "../utils/sees/eyeData/visibilityLocal";
+import { questionSees, sourceWebsiteSees, sourcesSees, yourPagesEye } from "../utils/sees/eyeData/visibilityRadar";
 import { englishDay } from "../utils/sees/eyeData/englishDays";
 import { pageKindLabel } from "../utils/sees/eyeData/searchConsoleWords";
 import { englishNames, englishWords } from "../utils/sees/serverWords";
@@ -220,6 +223,13 @@ const series = (run: EyeRun, siteId: Id<"companyWebsites">, dates: { from: strin
 const engineName = () => engineNameFrom(englishWords("aiEngines"));
 /** The names a Backlinks or Keywords screen hands its eye (`sites.seesNames`). */
 const seesNames = () => englishWords("sites.seesNames");
+/** A link with no words, as Anchors names it. */
+const noAnchor = () => englishWords("sites.backlinksAnchors")("noAnchor");
+/** A kind of website Google's AI quotes, as Brand radar's Sources names it ("Forum", "Rival"). */
+const sourceKind = () => {
+  const kinds = englishWords("sites.radar.sources.kinds");
+  return (kind: string) => kinds(kind);
+};
 
 /** The website, when it's one of the company's own: a competitor's Backlinks lists aren't bought, and their screens show none (`useIsCompetitor`). */
 async function ownSite(run: EyeRun, siteId: Id<"companyWebsites">) {
@@ -510,14 +520,18 @@ export const VISIBILITY_EYES: EyeBuilders = {
   /** Summary (`backlinks`): yours and each rival's lines on the dates. */
   "visibility.backlinks": async (run, { siteId, period }) => summarySees((await series(run, siteId, datesOf(period), true)) ?? undefined, { rivals: seesNames()("rivals") }) ?? null,
 
-  /** Referring domains (`backlinks/domains`): the strongest first, and the whole list's length. */
+  /** Referring domains (`backlinks/domains`): the strongest first, the box's counts over the whole list, and every link counted. */
   "visibility.backlinksDomains": async (run, { siteId }) => {
     const [domains, totals] = await Promise.all([listPage(run, "vis.referringDomains", { siteId, ...firstPage("rank", "desc") }), run("vis.linkTotals", { siteId })]);
-    return domains ? { domains, totals } : null;
+    return linkingWebsitesSees(domains as Any, totals as Any, englishNames("sites.seesNames", ["linkingNow", "stoppedLinking"]) as Any) ?? null;
   },
 
-  /** A linking website's own screen (`backlinks/domains/domain`): the website from the key. */
-  "visibility.backlinksDomain": async (run, { siteId, key }) => (key ? await run("vis.linkingWebsite", { siteId, domain: hostOfKey(key) }) : null),
+  /** A linking website's own screen (`backlinks/domains/domain`): the website from the key, beside every link counted. */
+  "visibility.backlinksDomain": async (run, { siteId, key }) => {
+    if (!key) return null;
+    const [record, totals] = await Promise.all([run("vis.linkingWebsite", { siteId, domain: hostOfKey(key) }), run("vis.linkTotals", { siteId })]);
+    return linkingWebsiteSees(record as Any, totals as Any, { noAnchor: noAnchor(), ...englishNames("sites.seesNames", ["followedHeld", "lostHeld"]) } as Any) ?? null;
+  },
 
   /** Referring IPs (`backlinks/ips`): bought for a company's own websites only; the most links first. */
   "visibility.backlinksIps": async (run, { siteId }) => {
@@ -533,7 +547,7 @@ export const VISIBILITY_EYES: EyeBuilders = {
   "visibility.backlinksBroken": async (run, { siteId }) => {
     if (!(await ownSite(run, siteId))) return null;
     const [broken, totals] = await Promise.all([listPage(run, "vis.brokenBacklinks", { siteId, ...firstPage("domainRank", "desc") }), run("vis.linkTotals", { siteId })]);
-    return broken ? { broken, totals } : null;
+    return brokenLinksSees(broken as Any, totals as Any, englishNames("sites.seesNames", ["brokenLinks", "brokenFollowed", "brokenWebsites"]) as Any) ?? null;
   },
 
   /** Link quality (`backlinks/quality`): the newest summary, the lines on the dates and each rival's summary. */
@@ -549,7 +563,7 @@ export const VISIBILITY_EYES: EyeBuilders = {
   "visibility.backlinksAll": async (run, { siteId }) => {
     if (!(await ownSite(run, siteId))) return null;
     const [backlinks, totals] = await Promise.all([listPage(run, "vis.backlinks", { siteId, ...firstPage("domainRank", "desc") }), run("vis.linkTotals", { siteId })]);
-    return backlinks ? { backlinks, totals } : null;
+    return allBacklinksSees(backlinks as Any, totals as Any, englishNames("sites.seesNames", ["lostLinks", "lostStrongest", "redirectedLinks", "notFollowedLinks"]) as Any) ?? null;
   },
 
   /** New and lost links (`backlinks/new-lost`): bought for a company's own websites only; the dates and the span before. */
@@ -580,12 +594,16 @@ export const VISIBILITY_EYES: EyeBuilders = {
     const [anchors, figures] = await Promise.all([listPage(run, "vis.anchors", { siteId, ...firstPage("backlinks", "desc") }), run("vis.anchorFigures", { siteId })]);
     const names = seesNames();
     return anchorsSees((anchors ?? undefined) as Any, (figures ?? undefined) as Any, {
-      noAnchor: englishWords("sites.backlinksAnchors")("noAnchor"), noWords: names("noWords"), brand: names("brand"), spammy: names("spammy"), fresh: names("fresh"),
+      noAnchor: noAnchor(), noWords: names("noWords"), brand: names("brand"), spammy: names("spammy"), fresh: names("fresh"),
     }) ?? null;
   },
 
-  /** An anchor's own screen (`backlinks/anchors/anchor`): the words from the key. */
-  "visibility.backlinksAnchor": async (run, { siteId, key }) => (key ? await run("vis.anchorRecord", { siteId, anchor: key }) : null),
+  /** An anchor's own screen (`backlinks/anchors/anchor`): the words from the key, beside every link counted. */
+  "visibility.backlinksAnchor": async (run, { siteId, key }) => {
+    if (!key) return null;
+    const [record, totals] = await Promise.all([run("vis.anchorRecord", { siteId, anchor: key }), run("vis.linkTotals", { siteId })]);
+    return anchorSees(record as Any, totals as Any, { noAnchor: noAnchor(), wholeWebsite: seesNames()("wholeWebsite") }) ?? null;
+  },
 
   // --- Keywords ---
 
@@ -606,10 +624,17 @@ export const VISIBILITY_EYES: EyeBuilders = {
     return bandsSees(lines ?? undefined, (moves ?? undefined) as Any, (moved ?? undefined) as Any, { rivals: names("rivals"), pageOne: bands("pageOne"), pageTwo: bands("pageTwo"), closestOthers: names("closestOthers") }) ?? null;
   },
 
-  /** One square of Position bands' grid (`keywords/bands/moved`): the move from the key, `p04_10.p01_03`. */
+  /** One square of Position bands' grid (`keywords/bands/moved`): the move from the key, `p04_10.p01_03`, and each band's searches now. */
   "visibility.keywordsBandsMoved": async (run, { siteId, key }) => {
     const move = key ? readBandMove(key) : null;
-    return move ? await run("vis.bandMoved", { siteId, from: move.from, to: move.to }) : null;
+    if (!move) return null;
+    const [moved, moves] = await Promise.all([run("vis.bandMoved", { siteId, from: move.from, to: move.to }), run("vis.bandMoves", { siteId })]);
+    const band = englishWords("sites.overview.bands");
+    const square = englishWords("sites.bands");
+    const names = move.from === "none"
+      ? { square: square("cell.titleNew", { to: band(move.to) }), from: null, to: band(move.to) }
+      : { square: square("cell.title", { from: band(move.from), to: band(move.to) }), from: band(move.from), to: band(move.to) };
+    return bandSquareSees(moved as Any, moves as Any, move, names) ?? null;
   },
 
   /** New and lost keywords (`keywords/new-lost`): the checks on the dates and before, the newest check's moves up, each website's searches. */
@@ -671,29 +696,39 @@ export const VISIBILITY_EYES: EyeBuilders = {
 
   // --- Local: every screen hands its eye what its read answers, for the first office where it shows one ---
 
-  /** Business profile (`local`). */
-  "visibility.localProfile": async (run, { siteId }) => await run("vis.localProfile", { siteId }),
+  /** Business profile (`local`): each detail to put right by its name on the screen. */
+  "visibility.localProfile": async (run, { siteId }) => {
+    const details = englishWords("sites.local.profile.details");
+    return profileSees((await run("vis.localProfile", { siteId })) as Any, (detail) => details(`names.${detail}`), englishNames("sites.seesNames", ["searchesChecked", "rivalsAverage", "reviewsAnswered", "detailsToFix"]) as Any) ?? null;
+  },
 
   /** Google Maps (`local/maps`). */
-  "visibility.localMaps": async (run, { siteId }) => await run("vis.localMaps", { siteId }),
+  "visibility.localMaps": async (run, { siteId }) => mapsSees((await run("vis.localMaps", { siteId })) as Any, englishNames("sites.seesNames", ["searchesChecked"]) as Any) ?? null,
 
   /** One search on Google Maps (`local/maps/search`): the search from the key. */
   "visibility.localMapSearch": async (run, { siteId, key }) => (key?.trim() ? await run("vis.localMapSearch", { siteId, keyword: key.trim() }) : null),
 
-  /** Rivals' activity (`local/activity`): the dates chosen. */
-  "visibility.localActivity": async (run, { siteId, period }) => await run("vis.localActivity", { siteId, period }),
+  /** Rivals' activity (`local/activity`): the dates chosen, and you by your website's name. */
+  "visibility.localActivity": async (run, { siteId, period }) => {
+    const [open, answer] = await Promise.all([site(run, siteId), run("vis.localActivity", { siteId, period })]);
+    return activitySees(answer as Any, { yourRivals: seesNames()("yourRivals"), you: open?.host ?? "" }) ?? null;
+  },
 
   /** Listings (`local/listings`). */
-  "visibility.localListings": async (run, { siteId }) => await run("vis.localListings", { siteId }),
+  "visibility.localListings": async (run, { siteId }) => listingsSees((await run("vis.localListings", { siteId })) as Any, englishNames("sites.seesNames", ["yourOffices", "rivalsAhead"]) as Any) ?? null,
 
   /** Every office (`local/offices`). */
   "visibility.localOffices": async (run, { siteId }) => await run("vis.localOffices", { siteId }),
 
   /** Local market (`local/market`). */
-  "visibility.localMarket": async (run, { siteId }) => await run("vis.localMarket", { siteId }),
+  "visibility.localMarket": async (run, { siteId }) => nearbySees((await run("vis.localMarket", { siteId })) as Any, englishNames("sites.seesNames", ["moreReviewsNearby"]) as Any) ?? null,
 
-  /** One business (`local/market/business`): the business from the key, its address or its name. */
-  "visibility.business": async (run, { siteId, key }) => (key?.trim() ? await run("vis.business", { siteId, business: key.trim() }) : null),
+  /** One business (`local/market/business`): the business from the key, its address or its name, its posts counted to today. */
+  "visibility.business": async (run, { siteId, key }) => {
+    if (!key?.trim()) return null;
+    const [open, answer] = await Promise.all([site(run, siteId), run("vis.business", { siteId, business: key.trim() })]);
+    return businessSees(answer as Any, ukDay(), { you: open?.host ?? "" }) ?? null;
+  },
 
   // --- Brand radar ---
 
@@ -707,19 +742,26 @@ export const VISIBILITY_EYES: EyeBuilders = {
   "visibility.overviewGaps": async (run, { siteId }) => await run("vis.overviewGaps", { siteId }),
 
   /** One question (`radar/question`): the question from the key. */
-  "visibility.question": async (run, { siteId, key }) => (key?.trim() ? await run("vis.radarQuestion", { siteId, question: key.trim() }) : null),
+  "visibility.question": async (run, { siteId, key }) => {
+    if (!key?.trim()) return null;
+    const [open, answer] = await Promise.all([site(run, siteId), run("vis.radarQuestion", { siteId, question: key.trim() })]);
+    return questionSees(answer as Any, sourceKind(), open?.host ?? "", { yourRivals: seesNames()("yourRivals") }) ?? null;
+  },
 
   /** Sources (`radar/sources`). */
-  "visibility.radarSources": async (run, { siteId }) => await run("vis.radarSources", { siteId }),
+  "visibility.radarSources": async (run, { siteId }) => sourcesSees((await run("vis.radarSources", { siteId })) as Any, sourceKind(), englishNames("sites.seesNames", ["namingYou", "neverBesideYou", "besideRivals"]) as Any) ?? null,
 
   /** One source website (`radar/sources/website`): the website from the key. */
-  "visibility.website": async (run, { siteId, key }) => (key ? await run("vis.radarWebsite", { siteId, host: hostOfKey(key) }) : null),
+  "visibility.website": async (run, { siteId, key }) => {
+    if (!key) return null;
+    return sourceWebsiteSees((await run("vis.radarWebsite", { siteId, host: hostOfKey(key) })) as Any, sourceKind(), englishNames("sites.seesNames", ["besideRivals", "pagesNamingYou"]) as Any) ?? null;
+  },
 
   // --- Your pages ---
 
   /** Your pages (`your-pages`): the most clicks first; a competitor's website has none of its own, and its screen says so. */
   "visibility.yourPages": async (run, { siteId }) => {
     const page = await listPage(run, "vis.yourPages", { siteId, ...firstPage("clicks", "desc") }) as { own?: boolean } | null;
-    return page && page.own !== false ? page : null;
+    return page && page.own !== false ? yourPagesEye(page as Any, englishNames("sites.seesNames", ["shownOnGoogle", "neverShown", "notInSitemap", "ranking", "notCrawled"]) as Any) ?? null : null;
   },
 };

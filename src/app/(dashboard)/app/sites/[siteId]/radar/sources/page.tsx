@@ -18,6 +18,8 @@ import { useSiteRecordHref, type SiteRecord } from "../../../_components/siteRec
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { sourcesSees } from "@/convex/utils/sees/eyeData/visibilityRadar";
+import { useMemo } from "react";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -62,6 +64,9 @@ export default function RadarSourcesPage() {
   const siteId = useSiteId();
   const site = useSite();
   const data = useQuery(api.siteBrandRadar.radarSources, { siteId });
+  const tn = useTranslations("sites.seesNames");
+  // Every website quoted, summed once for the eye (visibility-16-eyes): over a thousand rows, so not on every draw.
+  const sees = useMemo(() => sourcesSees(data, (kind) => t(`kinds.${kind}`), { namingYou: tn("namingYou"), neverBesideYou: tn("neverBesideYou"), besideRivals: tn("besideRivals") }), [data, t, tn]);
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
   // A rival's row opens the business; any other website opens One website (discovery-detail-and-hakken-sees-plan.md §4).
@@ -94,7 +99,7 @@ export default function RadarSourcesPage() {
         description={t("description")}
         action={site ? <TagLabel>{tr("where", { place: site.placeLabel })}</TagLabel> : undefined}
       />
-      <SiteSees screen="radarSources" seen={data?.seen} data={data} />
+      <SiteSees screen="radarSources" seen={data?.seen} data={sees} />
 
       {data ? (
         <FigureRow>

@@ -43,7 +43,7 @@ const vsGap = (value: number, other: number) => (Math.max(value, other) > 0 ? Ma
  * One figure set beside another's at the same check, said with both names: a rival's, the group's middle, the searches
  * checked, the span before. The first name is the subject: yours, or a rival's beside its reference.
  */
-function vsBeside(list: string, name: string, measure: string, value: number, mean: number, other: string, score: number): OwnFound {
+export function vsBeside(list: string, name: string, measure: string, value: number, mean: number, other: string, score: number): OwnFound {
   const kind = value >= mean ? "rowAbove" : "rowBelow";
   const shown = vsShown(measure, value);
   const reference = vsShown(measure, mean);
@@ -58,7 +58,7 @@ function vsBeside(list: string, name: string, measure: string, value: number, me
 }
 
 /** A figure against the check before, with another's change beside it where it matters (a rival, the other group). */
-function vsMoved(list: string, name: string, measure: string, now: number, before: number, score: number, other?: { name: string; change: number }): OwnFound {
+export function vsMoved(list: string, name: string, measure: string, now: number, before: number, score: number, other?: { name: string; change: number }): OwnFound {
   const change = (now - before) / before;
   const kind = change >= 0 ? "movedUp" : "movedDown";
   const size = vsShared.round1(Math.abs(change) * 100);
@@ -108,7 +108,7 @@ function vsShareMoved(list: string, name: string, measure: string, share: number
 }
 
 /** A search's place that moved: "door handles: place 4, from 12", weighed by how many make the search. */
-function vsPlace(list: string, name: string, now: number, before: number, score: number): OwnFound {
+export function vsPlace(list: string, name: string, now: number, before: number, score: number): OwnFound {
   const kind = now < before ? "placeUp" : "placeDown";
   return {
     id: `${kind}:${list}:position:${name}`, kind, list, score,

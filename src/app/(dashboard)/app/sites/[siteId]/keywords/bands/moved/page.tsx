@@ -15,6 +15,7 @@ import { formatNumber, formatShortDay } from "../../../../_components/siteFormat
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../../_components/useSite";
 import { SiteSees } from "../../../../_components/SiteSees";
+import { bandSquareSees } from "@/convex/utils/sees/eyeData/visibilityKeywords";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
@@ -47,6 +48,8 @@ export default function SiteBandMovePage() {
   // The square's move, read as a chat app's question reads its key (`readBandMove`).
   const move = readBandMove(useRecordKey("bandMove"));
   const moved = useQuery(api.siteBands.listBandMoves, move ? { siteId, from: move.from, to: move.to } : "skip");
+  // Each band's searches now, for the eye (visibility-16-eyes): Position bands' own read.
+  const moves = useQuery(api.siteBands.bandMoves, move ? { siteId } : "skip");
   const { rows: sorted, tableSort } = useSiteSortedList(moved?.rows, SORTS, { opening: "volume", name: keywordOf });
   const pager = useSitePager(sorted, { isLoading: moved === undefined, cut: moved?.cut });
 
@@ -63,7 +66,7 @@ export default function SiteBandMovePage() {
         title={title}
         description={moved?.day ? t("cell.description", { day: formatShortDay(moved.day) }) : undefined}
       />
-      <SiteSees screen="keywordsBandsMoved" seen={moved?.seen} data={moved} />
+      <SiteSees screen="keywordsBandsMoved" seen={moved?.seen} data={bandSquareSees(moved, moves, move, { square: title, from: move.from === "none" ? null : tb(move.from), to: tb(move.to) })} />
 
       <DataTable
         rows={pager.pageRows}

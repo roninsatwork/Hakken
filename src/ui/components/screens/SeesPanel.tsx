@@ -220,6 +220,8 @@ function FindingLine({ finding, name, onAsk }: { finding: Finding; name?: (event
       case "rowDown":
         return t.rich(finding.kind, { ...rich, name: String(p.name), measure: measure(p.measure), now: figure(p.measure, p.now), before: figure(p.measure, p.before) });
       case "holdsMost":
+        // Out of a part of the whole (the 50 links listed): "4 of the 50 links", never "of all the links" (visibility-16-eyes).
+        if (p.outOf !== undefined) return t.rich("holdsMostOf", { ...rich, name: String(p.name), measure: measure(p.measure), value: figure(p.measure, p.value), outOf: figure(p.measure, p.outOf) });
         return t.rich("holdsMost", { ...rich, name: String(p.name), measure: measure(p.measure), share: percent(p.share) });
       case "rowAbove":
       case "rowBelow": {

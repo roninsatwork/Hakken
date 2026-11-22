@@ -3,14 +3,17 @@ import { expectEyeHolds } from "@/src/test/eyeHolds";
 import { readFixture } from "@/src/test/readFixture";
 import { useFixedDay } from "@/src/test/realTime";
 import type { Id } from "../_generated/dataModel";
-import type { CalendarPeriod } from "../utils/calendarPeriods";
+import { ukDay, type CalendarPeriod } from "../utils/calendarPeriods";
 import en from "@/messages/en.json";
 import {
   aboveSeen, aiDemandSeen, aiMentionsSeen, auditCheckNameFrom, auditSeen, featureNameFrom, featuresSeen, marketMapRows, marketSeen, mentionsRivalsSeen, overviewSeen, paidSeen,
   radarSeen, reviewsRivalsSeen, reviewsSeen, rivalSeen, searchesSeen, shareSeen, sideBySideSeen, webMentionsSeen, winsLossesSeen,
 } from "../utils/sees/eyeData/visibility";
 import { anchorsSees, comparedSees, ipsSees, linkChangesSees, qualitySees, summarySees, whereSees } from "../utils/sees/eyeData/visibilityBacklinks";
-import { bandsSees, keywordsSees, newLostSees, pagesSees, searchSees, structureSees } from "../utils/sees/eyeData/visibilityKeywords";
+import { bandSquareSees, bandsSees, keywordsSees, newLostSees, pagesSees, searchSees, structureSees } from "../utils/sees/eyeData/visibilityKeywords";
+import { allBacklinksSees, anchorSees, brokenLinksSees, linkingWebsiteSees, linkingWebsitesSees } from "../utils/sees/eyeData/visibilityLinkLists";
+import { activitySees, businessSees, listingsSees, mapsSees, nearbySees, profileSees } from "../utils/sees/eyeData/visibilityLocal";
+import { questionSees, sourceWebsiteSees, sourcesSees, yourPagesEye } from "../utils/sees/eyeData/visibilityRadar";
 import { findingWords } from "../utils/sees/findings";
 import { pageDataFor } from "../utils/sees/pageData";
 import { pageFindings } from "../utils/sees/pageFindings";
@@ -391,15 +394,57 @@ function echoRun(header: Row = HEADER, asked: string[] = [], answers: Record<str
 const ask = (screen: string, run: EyeRun, key?: string) => VISIBILITY_EYES[screen](run, { siteId: SITE, period: "lastMonth", ...(key ? { key } : {}) });
 const opening = (sort: string, direction: string) => ({ sort, direction, page: 1, rows: 25 });
 
+/** Ronins' answers (its address read as ronins.example, as the owner's own domain stays out of fixtures) for the sixteen screens given rules of their own on 22 November 2026, as saved on dev that day. */
+type RoninsSpan = { from: string; to: string };
+const RONINS = readFixture<Record<string, never> & { activity: { lines: never[]; periods: Record<string, Row & { span: RoninsSpan; before: RoninsSpan }> } }>("roninsVisibilityRest");
+const RONINS_HOST = "ronins.example";
+/** A run answering each read from Ronins' saved answers, noting each read and what it was asked with. */
+function roninsRun(asked: Array<[string, Row]>): EyeRun {
+  const answers: Record<string, (args: Row) => unknown> = {
+    "vis.site": () => ({ ...HEADER, host: RONINS_HOST }),
+    "vis.linkTotals": () => RONINS.linkTotals,
+    "vis.referringDomains": () => RONINS.referringDomains,
+    "vis.brokenBacklinks": () => RONINS.brokenBacklinks,
+    "vis.backlinks": () => RONINS.backlinks,
+    "vis.linkingWebsite": () => RONINS.linkingWebsite,
+    "vis.anchorRecord": () => RONINS.anchorRecord,
+    "vis.bandMoved": () => RONINS.bandMovedDown,
+    "vis.bandMoves": () => RONINS.bandMoves,
+    "vis.localProfile": () => RONINS.localProfile,
+    "vis.localMaps": () => RONINS.localMaps,
+    "vis.localActivity": (args) => ({ ...RONINS.activity.periods[args.period as string], lines: RONINS.activity.lines }),
+    "vis.localListings": () => RONINS.localListings,
+    "vis.localMarket": () => RONINS.localMarket,
+    "vis.business": () => RONINS.businessAirSocial,
+    "vis.radarQuestion": () => RONINS.radarQuestion,
+    "vis.radarSources": () => RONINS.radarSources,
+    "vis.radarWebsite": () => RONINS.radarWebsite,
+    "vis.yourPages": () => RONINS.yourPages,
+  };
+  return async (read, args) => {
+    if (!(read in VISIBILITY_EYE_READS)) throw new Error(`There's no read called ${read}.`);
+    asked.push([read, args]);
+    return answers[read]?.(args) ?? null;
+  };
+}
+
 describe("Visibility's list and record screens hand their eye the screen's own read, as the screen opens it", () => {
   beforeEach(() => useFixedDay("2026-11-03"));
   afterEach(() => vi.useRealTimers());
 
-  test("Backlinks' lists: their first page in their opening order, with the whole list's length", async () => {
-    const totals = { read: "vis.linkTotals", args: { siteId: SITE } };
-    expect(await ask("visibility.backlinksDomains", echoRun())).toEqual({ domains: { read: "vis.referringDomains", args: { siteId: SITE, ...opening("rank", "desc") } }, totals });
-    expect(await ask("visibility.backlinksBroken", echoRun())).toEqual({ broken: { read: "vis.brokenBacklinks", args: { siteId: SITE, ...opening("domainRank", "desc") } }, totals });
-    expect(await ask("visibility.backlinksAll", echoRun())).toEqual({ backlinks: { read: "vis.backlinks", args: { siteId: SITE, ...opening("domainRank", "desc") } }, totals });
+  test("Backlinks' lists: their first page in their opening order, beside every link counted, built as their screens build them", async () => {
+    const totals = ["vis.linkTotals", { siteId: SITE }];
+    const lists: Record<string, [string, string, unknown]> = {
+      "visibility.backlinksDomains": ["vis.referringDomains", "rank", linkingWebsitesSees(RONINS.referringDomains, RONINS.linkTotals, { linkingNow: NAMES.linkingNow, stoppedLinking: NAMES.stoppedLinking })],
+      "visibility.backlinksBroken": ["vis.brokenBacklinks", "domainRank", brokenLinksSees(RONINS.brokenBacklinks, RONINS.linkTotals, { brokenLinks: NAMES.brokenLinks, brokenFollowed: NAMES.brokenFollowed, brokenWebsites: NAMES.brokenWebsites })],
+      "visibility.backlinksAll": ["vis.backlinks", "domainRank", allBacklinksSees(RONINS.backlinks, RONINS.linkTotals, { lostLinks: NAMES.lostLinks, lostStrongest: NAMES.lostStrongest, redirectedLinks: NAMES.redirectedLinks, notFollowedLinks: NAMES.notFollowedLinks })],
+    };
+    for (const [screen, [read, sort, screenBuilds]] of Object.entries(lists)) {
+      const asked: Array<[string, Row]> = [];
+      expect(await ask(screen, roninsRun(asked)), screen).toEqual(screenBuilds);
+      expect(asked, screen).toContainEqual([read, { siteId: SITE, ...opening(sort, "desc") }]);
+      expect(asked, screen).toContainEqual(totals);
+    }
   });
 
   test("a competitor's Backlinks lists aren't bought, and their screens show nothing", async () => {
@@ -410,19 +455,27 @@ describe("Visibility's list and record screens hand their eye the screen's own r
     }
   });
 
-  test("Local, Brand radar's lists and Your pages hand their eye their read's answer", async () => {
-    const plain: Record<string, [string, Row]> = {
-      "visibility.localProfile": ["vis.localProfile", { siteId: SITE }],
-      "visibility.localMaps": ["vis.localMaps", { siteId: SITE }],
-      "visibility.localActivity": ["vis.localActivity", { siteId: SITE, period: "lastMonth" }],
-      "visibility.localListings": ["vis.localListings", { siteId: SITE }],
-      "visibility.localOffices": ["vis.localOffices", { siteId: SITE }],
-      "visibility.localMarket": ["vis.localMarket", { siteId: SITE }],
-      "visibility.overviewGaps": ["vis.overviewGaps", { siteId: SITE }],
-      "visibility.radarSources": ["vis.radarSources", { siteId: SITE }],
-      "visibility.yourPages": ["vis.yourPages", { siteId: SITE, ...opening("clicks", "desc") }],
+  test("Local, Brand radar's Sources and Your pages hand their eye what their screens build from the same read", async () => {
+    const kinds = en.sites.radar.sources.kinds as Record<string, string>;
+    const details = en.sites.local.profile.details.names as Record<string, string>;
+    const activity = RONINS.activity.periods.lastMonth;
+    const built: Record<string, [string, Row, unknown]> = {
+      "visibility.localProfile": ["vis.localProfile", { siteId: SITE }, profileSees(RONINS.localProfile, (detail) => details[detail], { searchesChecked: NAMES.searchesChecked, rivalsAverage: NAMES.rivalsAverage, reviewsAnswered: NAMES.reviewsAnswered, detailsToFix: NAMES.detailsToFix })],
+      "visibility.localMaps": ["vis.localMaps", { siteId: SITE }, mapsSees(RONINS.localMaps, { searchesChecked: NAMES.searchesChecked })],
+      "visibility.localActivity": ["vis.localActivity", { siteId: SITE, period: "lastMonth" }, activitySees({ ...activity, lines: RONINS.activity.lines } as never, { yourRivals: NAMES.yourRivals, you: RONINS_HOST })],
+      "visibility.localListings": ["vis.localListings", { siteId: SITE }, listingsSees(RONINS.localListings, { yourOffices: NAMES.yourOffices, rivalsAhead: NAMES.rivalsAhead })],
+      "visibility.localMarket": ["vis.localMarket", { siteId: SITE }, nearbySees(RONINS.localMarket, { moreReviewsNearby: NAMES.moreReviewsNearby })],
+      "visibility.radarSources": ["vis.radarSources", { siteId: SITE }, sourcesSees(RONINS.radarSources, (kind) => kinds[kind], { namingYou: NAMES.namingYou, neverBesideYou: NAMES.neverBesideYou, besideRivals: NAMES.besideRivals })],
+      "visibility.yourPages": ["vis.yourPages", { siteId: SITE, ...opening("clicks", "desc") }, yourPagesEye(RONINS.yourPages, { shownOnGoogle: NAMES.shownOnGoogle, neverShown: NAMES.neverShown, notInSitemap: NAMES.notInSitemap, ranking: NAMES.ranking, notCrawled: NAMES.notCrawled })],
     };
-    for (const [screen, [read, args]] of Object.entries(plain)) expect(await ask(screen, echoRun()), screen).toEqual({ read, args });
+    for (const [screen, [read, args, screenBuilds]] of Object.entries(built)) {
+      const asked: Array<[string, Row]> = [];
+      expect(screenBuilds, screen).toBeTruthy();
+      expect(await ask(screen, roninsRun(asked)), screen).toEqual(screenBuilds);
+      expect(asked, screen).toContainEqual([read, args]);
+    }
+    // Every office and AI Overview gaps still hand their eye their read's answer.
+    for (const [screen, read] of [["visibility.localOffices", "vis.localOffices"], ["visibility.overviewGaps", "vis.overviewGaps"]]) expect(await ask(screen, echoRun()), screen).toEqual({ read, args: { siteId: SITE } });
   });
 
   test("Your pages shows nothing on a competitor's website, or while its list is being built", async () => {
@@ -430,20 +483,28 @@ describe("Visibility's list and record screens hand their eye the screen's own r
     expect(await ask("visibility.yourPages", echoRun(HEADER, [], { "vis.yourPages": { rows: [], preparing: true } }))).toBeNull();
   });
 
-  test("a screen about one thing reads the thing named, and nothing without it", async () => {
-    const keyed: Record<string, [string, string, Row]> = {
-      "visibility.backlinksDomain": ["https://Example.com/a-page", "vis.linkingWebsite", { siteId: SITE, domain: "example.com" }],
-      "visibility.backlinksAnchor": ["door handles", "vis.anchorRecord", { siteId: SITE, anchor: "door handles" }],
-      "visibility.keywordsBandsMoved": ["p04_10.p01_03", "vis.bandMoved", { siteId: SITE, from: "p04_10", to: "p01_03" }],
-      "visibility.localMapSearch": [" door handles ", "vis.localMapSearch", { siteId: SITE, keyword: "door handles" }],
-      "visibility.business": ["handlestore.com", "vis.business", { siteId: SITE, business: "handlestore.com" }],
-      "visibility.question": ["best door handles", "vis.radarQuestion", { siteId: SITE, question: "best door handles" }],
-      "visibility.website": ["https://www.reddit.com/r/diy", "vis.radarWebsite", { siteId: SITE, host: "www.reddit.com" }],
+  test("a screen about one thing reads the thing named, builds what its screen builds, and reads nothing without it", async () => {
+    const kinds = en.sites.radar.sources.kinds as Record<string, string>;
+    const keyed: Record<string, [string, string, Row, unknown]> = {
+      "visibility.backlinksDomain": ["https://Mei.org.uk/a-page", "vis.linkingWebsite", { siteId: SITE, domain: "mei.org.uk" }, linkingWebsiteSees(RONINS.linkingWebsite, RONINS.linkTotals, { noAnchor: en.sites.backlinksAnchors.noAnchor, followedHeld: NAMES.followedHeld, lostHeld: NAMES.lostHeld })],
+      "visibility.backlinksAnchor": ["Website by Ronins", "vis.anchorRecord", { siteId: SITE, anchor: "Website by Ronins" }, anchorSees(RONINS.anchorRecord, RONINS.linkTotals, { noAnchor: en.sites.backlinksAnchors.noAnchor, wholeWebsite: NAMES.wholeWebsite })],
+      "visibility.keywordsBandsMoved": ["p11_20.p21_50", "vis.bandMoved", { siteId: SITE, from: "p11_20", to: "p21_50" }, bandSquareSees(RONINS.bandMovedDown, RONINS.bandMoves, { from: "p11_20", to: "p21_50" }, { square: "From 11–20 to 21–50", from: "11–20", to: "21–50" })],
+      "visibility.business": ["airsocial.co.uk", "vis.business", { siteId: SITE, business: "airsocial.co.uk" }, null],
+      "visibility.question": ["digital products agency", "vis.radarQuestion", { siteId: SITE, question: "digital products agency" }, questionSees(RONINS.radarQuestion, (kind) => kinds[kind], RONINS_HOST, { yourRivals: NAMES.yourRivals })],
+      "visibility.website": ["https://www.reddit.com/r/diy", "vis.radarWebsite", { siteId: SITE, host: "www.reddit.com" }, sourceWebsiteSees(RONINS.radarWebsite, (kind) => kinds[kind], { besideRivals: NAMES.besideRivals, pagesNamingYou: NAMES.pagesNamingYou })],
     };
-    for (const [screen, [key, read, args]] of Object.entries(keyed)) {
-      expect(await ask(screen, echoRun(), key), screen).toEqual({ read, args });
-      expect(await ask(screen, echoRun()), screen).toBeNull();
+    for (const [screen, [key, read, args, screenBuilds]] of Object.entries(keyed)) {
+      const asked: Array<[string, Row]> = [];
+      const built = await ask(screen, roninsRun(asked), key);
+      expect(asked, screen).toContainEqual([read, args]);
+      // A business's posts count to today, as its screen counts them: the test's fixed day.
+      expect(built, screen).toEqual(screenBuilds ?? businessSees(RONINS.businessAirSocial, ukDay(), { you: RONINS_HOST }));
+      const none: Array<[string, Row]> = [];
+      expect(await ask(screen, roninsRun(none)), screen).toBeNull();
+      expect(none, screen).toEqual([]);
     }
+    expect(await ask("visibility.localMapSearch", echoRun(), " door handles ")).toEqual({ read: "vis.localMapSearch", args: { siteId: SITE, keyword: "door handles" } });
+    expect(await ask("visibility.localMapSearch", echoRun())).toBeNull();
     for (const screen of ["visibility.keywordRecord", "visibility.pageRecord"]) expect(await ask(screen, echoRun()), screen).toBeNull();
     expect(await ask("visibility.keywordsBandsMoved", echoRun(), "p01_03.p01_03")).toBeNull();
     expect(await ask("visibility.keywordsBandsMoved", echoRun(), "page one")).toBeNull();

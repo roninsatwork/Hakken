@@ -21,6 +21,7 @@ import { formatDay } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { nearbySees } from "@/convex/utils/sees/eyeData/visibilityLocal";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -68,6 +69,7 @@ const nameOf = (row: Row) => row.name;
 export default function LocalMarketPage() {
   const t = useTranslations("sites.local.market");
   const tl = useTranslations("sites.local");
+  const tn = useTranslations("sites.seesNames");
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
@@ -106,7 +108,7 @@ export default function LocalMarketPage() {
         description={data?.day ? t("descriptionRead", { day: formatDay(data.day) }) : t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={officeId ?? data.offices[0]?.listingId ?? null} /> : undefined}
       />
-      <SiteSees screen="localMarket" seen={data?.seen} data={data} />
+      <SiteSees screen="localMarket" seen={data?.seen} data={nearbySees(data, { moreReviewsNearby: tn("moreReviewsNearby") })} />
       {data && data.offices.length === 0 ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
       {data && data.offices.length > 0 && data.total === null ? <LocalSetupNotice siteId={siteId} reason="notChecked" /> : null}
 

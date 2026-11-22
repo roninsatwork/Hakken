@@ -15,6 +15,7 @@ import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey } from "../../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../../_components/useSite";
 import { SiteSees } from "../../../../_components/SiteSees";
+import { linkingWebsiteSees } from "@/convex/utils/sees/eyeData/visibilityLinkLists";
 
 /**
  * One linking website's own screen (Backlinks › Referring domains › a
@@ -33,6 +34,10 @@ export default function SiteLinkingWebsitePage() {
   const back = useRecordBack("domain");
   const asked = useRecordKey("domain");
   const record = useQuery(api.siteLinkRecords.linkingWebsiteRecord, asked ? { siteId, domain: asked } : "skip");
+  // Every link counted, what this website's links are a share of (the eye's, visibility-16-eyes).
+  const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+  const tn = useTranslations("sites.seesNames");
+  const ta = useTranslations("sites.backlinksAnchors");
 
   if (!asked) {
     return <DetailHeader back={back} icon={<Globe className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
@@ -58,7 +63,7 @@ export default function SiteLinkingWebsitePage() {
         description={t("description")}
         pills={website ? <LinkStatusLabel status={website.status} /> : undefined}
       />
-      <SiteSees screen="backlinksDomain" seen={record?.seen} data={record} />
+      <SiteSees screen="backlinksDomain" seen={record?.seen} data={linkingWebsiteSees(record, totals, { noAnchor: ta("noAnchor"), followedHeld: tn("followedHeld"), lostHeld: tn("lostHeld") })} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

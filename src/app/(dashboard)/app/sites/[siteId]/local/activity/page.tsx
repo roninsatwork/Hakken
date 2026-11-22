@@ -18,6 +18,7 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { activitySees } from "@/convex/utils/sees/eyeData/visibilityLocal";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -65,6 +66,7 @@ const DAY_MS = 86_400_000;
 export default function LocalActivityPage() {
   const t = useTranslations("sites.local.activity");
   const tp = useTranslations("common.periods");
+  const tn = useTranslations("sites.seesNames");
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
@@ -102,7 +104,7 @@ export default function LocalActivityPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Activity className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="localActivity" seen={data?.seen} data={data} />
+      <SiteSees screen="localActivity" seen={data?.seen} data={activitySees(data, { yourRivals: tn("yourRivals"), you: site?.host ?? "" })} />
       {data && data.rivals.length === 0 ? <LocalSetupNotice siteId={siteId} reason="noRivals" /> : null}
 
       {figures ? (

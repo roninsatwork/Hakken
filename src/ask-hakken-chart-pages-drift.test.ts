@@ -42,13 +42,14 @@ const STILL_TO_DO = new Set([
   // Keyword cannibalisation ("searchConsole.competing") left on 20 November 2026 with its redo (search-console-keyword-cannibalisation-way-3-plan-2026-11-20.md).
   // Wins and losses ("searchConsole.moves") left on 19 November 2026: dropped, as Keywords sorted by Up or down lists the same.
   // Shown but not clicked ("searchConsole.lowCtr") left on 20 November 2026 with its redo (search-console-shown-but-not-clicked-way-2-plan-2026-11-20.md).
-  // Visibility's screens outside the plan's thirty-one.
-  "visibility.keywordsBandsMoved", "visibility.pageRecord", "visibility.yourPages", "visibility.paidKeywords",
+  // Visibility's screens outside the plan's thirty-one. A square of Position bands ("visibility.keywordsBandsMoved") and Your
+  // pages ("visibility.yourPages") left on 22 November 2026 with their own rules (own/visibilityBandsAndPages.ts).
+  "visibility.pageRecord", "visibility.paidKeywords",
   // Insights' screens outside the plan's twenty.
   "insights.trackRecord", "insights.experiments", "insights.findingsSection", "insights.strategyService",
 ]);
 /** The list's size: lower it as pages leave, never raise it. */
-const STILL_TO_DO_MOST = 20;
+const STILL_TO_DO_MOST = 13;
 
 /**
  * Pages that show no one website's own figures, and so carry no eye (Anthony, 2026-11-03: "We dont need the eye on non

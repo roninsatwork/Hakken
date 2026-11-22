@@ -22,6 +22,7 @@ import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { yourPagesSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../../_components/SiteSees";
+import { yourPagesEye } from "@/convex/utils/sees/eyeData/visibilityRadar";
 import { TABLE_PAGE_KEY, useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteListPage } from "../../_components/useSitePagedTable";
 import { useSiteSort } from "../../_components/useSiteSort";
@@ -72,6 +73,7 @@ export default function SiteYourPagesPage() {
   const t = useTranslations("sites.yourPages");
   const tc = useTranslations("sites.common");
   const tt = useTranslations("sites.common.pageTypes");
+  const tn = useTranslations("sites.seesNames");
   const siteId = useSiteId();
   const site = useSite();
   const router = useRouter();
@@ -161,7 +163,7 @@ export default function SiteYourPagesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<FileStack className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="yourPages" seen={table.result && yourPagesSees(table.result.own, table.result.summary)} data={table.result} />
+      <SiteSees screen="yourPages" seen={table.result && yourPagesSees(table.result.own, table.result.summary)} data={yourPagesEye(table.result, { shownOnGoogle: tn("shownOnGoogle"), neverShown: tn("neverShown"), notInSitemap: tn("notInSitemap"), ranking: tn("ranking"), notCrawled: tn("notCrawled") })} />
 
       <FigureRow>
         {FIGURES.map((key) => (

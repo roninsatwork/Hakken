@@ -15,6 +15,7 @@ import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack } from "../../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../../_components/useSite";
 import { SiteSees } from "../../../../_components/SiteSees";
+import { anchorSees } from "@/convex/utils/sees/eyeData/visibilityLinkLists";
 
 /**
  * One anchor's own screen (Backlinks › Anchors › an anchor): the words other
@@ -34,6 +35,10 @@ export default function SiteAnchorPage() {
   const chosen = params.has("anchor");
   const anchor = params.get("anchor") ?? "";
   const record = useQuery(api.siteLinkRecords.anchorRecord, chosen ? { siteId, anchor } : "skip");
+  // Every link counted, what these words' links are a share of (the eye's, visibility-16-eyes).
+  const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+  const tn = useTranslations("sites.seesNames");
+  const ta = useTranslations("sites.backlinksAnchors");
 
   if (!chosen) {
     return <DetailHeader back={back} icon={<Quote className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
@@ -49,7 +54,7 @@ export default function SiteAnchorPage() {
         description={t("description")}
         pills={summary ? <LinkStatusLabel status={summary.status} /> : undefined}
       />
-      <SiteSees screen="backlinksAnchor" seen={record?.seen} data={record} />
+      <SiteSees screen="backlinksAnchor" seen={record?.seen} data={anchorSees(record, totals, { noAnchor: ta("noAnchor"), wholeWebsite: tn("wholeWebsite") })} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

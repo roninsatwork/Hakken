@@ -24,6 +24,7 @@ import { VisitLink } from "../../_components/VisitLink";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSiteId, useSite } from "../../_components/useSite";
 import { SiteSees } from "../../_components/SiteSees";
+import { profileSees } from "@/convex/utils/sees/eyeData/visibilityLocal";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -75,6 +76,7 @@ const detailOrder = () => "";
 export default function LocalProfilePage() {
   const t = useTranslations("sites.local.profile");
   const tl = useTranslations("sites.local");
+  const tn = useTranslations("sites.seesNames");
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
@@ -116,7 +118,7 @@ export default function LocalProfilePage() {
           </div>
         ) : undefined}
       />
-      <SiteSees screen="localProfile" seen={data?.seen} data={data} />
+      <SiteSees screen="localProfile" seen={data?.seen} data={profileSees(data, (detail) => t(`details.names.${detail}`), { searchesChecked: tn("searchesChecked"), rivalsAverage: tn("rivalsAverage"), reviewsAnswered: tn("reviewsAnswered"), detailsToFix: tn("detailsToFix") })} />
       {/* Hakken's drafted fixes (insights-analyst-plan.md I23, I39): approved and copied, or dismissed, on each draft's own page. */}
       {drafts.shown ? (
         <>

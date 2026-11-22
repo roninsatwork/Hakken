@@ -22,6 +22,7 @@ import { PageSection } from "../../../../_components/PageSection";
 import { formatDay } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { listingsSees } from "@/convex/utils/sees/eyeData/visibilityLocal";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -77,6 +78,7 @@ const pagedOnly = <Footer extends { totalCount: number; pageSize: number }>(foot
 export default function LocalListingsPage() {
   const t = useTranslations("sites.local.listings");
   const tl = useTranslations("sites.local");
+  const tn = useTranslations("sites.seesNames");
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
@@ -141,7 +143,7 @@ export default function LocalListingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Link2 className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="localListings" seen={data?.seen} data={data} />
+      <SiteSees screen="localListings" seen={data?.seen} data={listingsSees(data, { yourOffices: tn("yourOffices"), rivalsAhead: tn("rivalsAhead") })} />
       {data && !data.ownSite ? <Notice>{t("notOwnSite")}</Notice> : null}
       {data && data.ownSite && !data.on ? <LocalSetupNotice siteId={siteId} reason="off" /> : null}
 

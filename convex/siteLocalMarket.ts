@@ -9,7 +9,7 @@ import { ACTIVITY_KINDS } from "./localSchema";
 import { listingRowOf, listingRowValidator, readListingActivity, readListingWeeks } from "./localListings";
 import { MAP_BOX, listingsById, localSetup, officeChecks, officeSearches, openOffice } from "./localReads";
 import { unpackColumn } from "./utils/packedColumns";
-import { calendarPeriodValidator, periodSpan, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
+import { calendarPeriodValidator, periodSpan, spanBefore, ukDay, type CalendarPeriod } from "./utils/calendarPeriods";
 
 /**
  * Visibility → Local → Local market and Rival activity
@@ -135,6 +135,9 @@ export const rivalActivity = moduleQuery({
       answeredDay: v.union(v.string(), v.null()),
     })),
     period: calendarPeriodValidator,
+    /** The days the figures count over, and the same span before them: the eye sets each rival's posts against both. */
+    span: v.object({ from: v.string(), to: v.string() }),
+    before: v.object({ from: v.string(), to: v.string() }),
     seen: seenValidator,
   }),
   handler: async (ctx, args) => await readRivalActivity(ctx, args),
@@ -186,5 +189,7 @@ export const readRivalActivity = seeing(async (ctx: SiteReader, args: { siteId: 
     lines,
     questions,
     period: args.period,
+    span: { from: span.from, to: span.to },
+    before: (({ from, to }) => ({ from, to }))(spanBefore(args.period, span)),
   };
 }, rivalActivitySees);

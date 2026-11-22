@@ -19,6 +19,7 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { CUT_COLUMN, ExternalUrlCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { SiteSees } from "../../../_components/SiteSees";
+import { questionSees } from "@/convex/utils/sees/eyeData/visibilityRadar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -62,6 +63,7 @@ export default function OneQuestionPage() {
   const t = useTranslations("sites.questionRecord");
   const tk = useTranslations("sites.radar.sources.kinds");
   const tr = useTranslations("sites.record");
+  const tn = useTranslations("sites.seesNames");
   const siteId = useSiteId();
   const site = useSite();
   const router = useRouter();
@@ -132,7 +134,7 @@ export default function OneQuestionPage() {
           </PagePrimaryAction>
         ) : undefined}
       />
-      <SiteSees screen="question" seen={data?.seen} data={data} />
+      <SiteSees screen="question" seen={data?.seen} data={questionSees(data, (kind) => tk(kind), site?.host ?? "", { yourRivals: tn("yourRivals") })} />
 
       {data === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

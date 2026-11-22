@@ -313,3 +313,37 @@ export function readBandMove(move: string): { from: BandKey | "none"; to: BandKe
   return { from, to };
 }
 
+
+/**
+ * One square of Position bands' grid (visibility-16-eyes, 22 November 2026): the searches that moved from one band to
+ * another at the newest check, each with where it was and is and how often it's searched, most searched first; how many
+ * climbed, dropped or are new; and how many searches each of the two bands holds now, of every search ranked for (from
+ * Position bands' own read, `bandMoves`). Named in the square's own title and the bands' own labels.
+ */
+export function bandSquareSees(
+  moved: { day?: string | null; rows: ReadonlyArray<{ keyword: string; was: number | null; now: number; volume: number | null; page?: string | null }> } | null | undefined,
+  moves: { bands: Bands } | null | undefined,
+  move: { from: string; to: string },
+  names: { square: string; from: string | null; to: string },
+) {
+  if (!moved) return undefined;
+  const bands = moves?.bands ?? null;
+  const ranked = bands ? BAND_KEYS.reduce((sum, key) => sum + (bands[key] ?? 0), 0) : null;
+  const held = (band: string) => (bands && isBandKey(band) ? bands[band] ?? null : null);
+  return {
+    square: {
+      name: names.square, day: moved.day ?? null,
+      moved: moved.rows.length,
+      climbed: moved.rows.filter((row) => row.was !== null && row.now < row.was).length,
+      dropped: moved.rows.filter((row) => row.was !== null && row.now > row.was).length,
+      fresh: moved.rows.filter((row) => row.was === null).length,
+      volume: moved.rows.reduce((sum, row) => sum + (row.volume ?? 0), 0),
+    },
+    bandsNow: {
+      ...(names.from !== null && move.from !== "none" ? { from: { name: names.from, searches: held(move.from) } } : {}),
+      to: { name: names.to, searches: held(move.to) },
+      ranked,
+    },
+    moved: [...moved.rows].sort((left, right) => (right.volume ?? 0) - (left.volume ?? 0)).map((row) => ({ name: row.keyword, was: row.was, now: row.now, volume: row.volume, page: row.page ?? null })),
+  };
+}

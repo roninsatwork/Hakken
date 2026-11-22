@@ -14,6 +14,7 @@ import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { linkingWebsitesSees } from "@/convex/utils/sees/eyeData/visibilityLinkLists";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -54,11 +55,12 @@ export default function SiteReferringDomainsPage() {
   });
   // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+  const tn = useTranslations("sites.seesNames");
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Network className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksDomains" seen={table.result?.seen} data={table.result && { domains: table.result, totals }} />
+      <SiteSees screen="backlinksDomains" seen={table.result?.seen} data={linkingWebsitesSees(table.result, totals, { linkingNow: tn("linkingNow"), stoppedLinking: tn("stoppedLinking") })} />
       <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.referringDomains} />
       <DataTable
         rows={table.pageRows}

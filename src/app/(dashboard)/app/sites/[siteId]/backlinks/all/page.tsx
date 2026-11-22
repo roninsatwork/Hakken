@@ -15,6 +15,7 @@ import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { allBacklinksSees } from "@/convex/utils/sees/eyeData/visibilityLinkLists";
 import { useSetSiteParams, useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -78,6 +79,7 @@ export default function SiteAllBacklinksPage() {
   }, every ? [{ siteId, list: "links" }] : []);
   // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+  const tn = useTranslations("sites.seesNames");
 
   // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
   if (competitor) {
@@ -99,7 +101,7 @@ export default function SiteAllBacklinksPage() {
         title={t("title")}
         description={every ? t("descriptionEvery") : t("description")}
       />
-      <SiteSees screen="backlinksAll" seen={table.result?.seen} data={table.result && { backlinks: table.result, totals }} />
+      <SiteSees screen="backlinksAll" seen={table.result?.seen} data={allBacklinksSees(table.result, totals, { lostLinks: tn("lostLinks"), lostStrongest: tn("lostStrongest"), redirectedLinks: tn("redirectedLinks"), notFollowedLinks: tn("notFollowedLinks") })} />
       {narrowed ? <Notice>{t("narrowedNotice")}</Notice> : <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.[every ? "backlinks" : "oneEach"]} />}
       <DataTable
         rows={table.pageRows}

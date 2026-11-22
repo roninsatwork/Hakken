@@ -17,6 +17,8 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { CUT_COLUMN, ExternalUrlCell, RecordLinkCell } from "../../../../_components/SiteCells";
 import { ListDownload } from "../../../../_components/SiteDownloads";
 import { SiteSees } from "../../../../_components/SiteSees";
+import { businessSees } from "@/convex/utils/sees/eyeData/visibilityLocal";
+import { ukDay } from "@/convex/utils/calendarPeriods";
 import { VisitLink } from "../../../../_components/VisitLink";
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteListHref, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
@@ -143,7 +145,7 @@ export default function OneBusinessPage() {
         ) : undefined}
         action={data?.host ? <VisitLink icon href={`https://${data.host}`}>{t("visit", { host: data.host })}</VisitLink> : data?.profileUrl ? <VisitLink icon href={data.profileUrl}>{t("openOnGoogle")}</VisitLink> : undefined}
       />
-      <SiteSees screen="business" seen={data?.seen} data={data} />
+      <SiteSees screen="business" seen={data?.seen} data={businessSees(data, ukDay(), { you: site?.host ?? "" })} />
 
       {data === undefined || !f ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

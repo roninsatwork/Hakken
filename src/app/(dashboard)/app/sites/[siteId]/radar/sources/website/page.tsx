@@ -16,6 +16,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { CUT_COLUMN, ExternalUrlCell, RecordLinkCell } from "../../../../_components/SiteCells";
 import { ListDownload } from "../../../../_components/SiteDownloads";
 import { SiteSees } from "../../../../_components/SiteSees";
+import { sourceWebsiteSees } from "@/convex/utils/sees/eyeData/visibilityRadar";
 import { VisitLink } from "../../../../_components/VisitLink";
 import { formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteListHref, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
@@ -61,6 +62,7 @@ export default function OneWebsitePage() {
   const t = useTranslations("sites.websiteRecord");
   const tk = useTranslations("sites.radar.sources.kinds");
   const tr = useTranslations("sites.record");
+  const tn = useTranslations("sites.seesNames");
   const siteId = useSiteId();
   const site = useSite();
   const router = useRouter();
@@ -118,7 +120,7 @@ export default function OneWebsitePage() {
           : undefined}
         action={<VisitLink icon href={`https://${host}`}>{t("visit", { host })}</VisitLink>}
       />
-      <SiteSees screen="website" seen={data?.seen} data={data} />
+      <SiteSees screen="website" seen={data?.seen} data={sourceWebsiteSees(data, (kind) => tk(kind), { besideRivals: tn("besideRivals"), pagesNamingYou: tn("pagesNamingYou") })} />
 
       {data === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

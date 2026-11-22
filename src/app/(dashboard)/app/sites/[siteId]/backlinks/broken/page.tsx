@@ -13,6 +13,7 @@ import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { SiteSees } from "../../../_components/SiteSees";
+import { brokenLinksSees } from "@/convex/utils/sees/eyeData/visibilityLinkLists";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -43,6 +44,7 @@ export default function SiteBrokenBacklinksPage() {
   const table = useSiteListPage(api.siteLinkLists.listBrokenBacklinks, { siteId, ...(term ? { search: term } : {}), sort: order.key, direction: order.direction });
   // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+  const tn = useTranslations("sites.seesNames");
 
   // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
   if (competitor) {
@@ -60,7 +62,7 @@ export default function SiteBrokenBacklinksPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Unlink className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <SiteSees screen="backlinksBroken" seen={table.result?.seen} data={table.result && { broken: table.result, totals }} />
+      <SiteSees screen="backlinksBroken" seen={table.result?.seen} data={brokenLinksSees(table.result, totals, { brokenLinks: tn("brokenLinks"), brokenFollowed: tn("brokenFollowed"), brokenWebsites: tn("brokenWebsites") })} />
       <ListHeldLine held={!term ? table.result?.total : undefined} total={totals?.broken} />
       <DataTable
         rows={table.pageRows}

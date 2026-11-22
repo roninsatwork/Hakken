@@ -81,3 +81,31 @@ export function firstOfEachList<T extends { list: string }>(ranked: readonly T[]
   }
   return out;
 }
+
+/**
+ * A part of a whole with more facts beside it (visibility-16-eyes, 22 November 2026): "mei.org.uk: 28% of all your links",
+ * with its domain rank. `of` says what the whole is where it isn't all of the figure ("the 50 links listed"), so a share of
+ * a screen's first page is never read as a share of everything. A share under 1% keeps two decimals: one broken link of
+ * 6,972 is 0.01%, never 0%.
+ */
+export function partWithFacts(list: string, name: string, measure: string, value: number, whole: number, score: number, options: { extra?: FindingFact[]; of?: string } = {}): OwnFound {
+  const raw = whole > 0 ? (value / whole) * 100 : 0;
+  const share = raw > 0 && raw < 1 ? Math.round(raw * 100) / 100 : round1(raw);
+  const words = measureWords(measure);
+  return {
+    id: `holdsMost:${list}:${measure}:${name}`, kind: "holdsMost", list, score,
+    // Out of a part (`of`), the panel says "4 of the 50 links", never "of all the links" (its `holdsMostOf`).
+    params: { name, measure, share, value, ...(options.of ? { outOf: whole, of: options.of } : {}) },
+    facts: [
+      { key: "value", value, unit: "count", label: `${name}: ${words}` },
+      { key: "whole", value: whole, unit: "count", label: options.of ? `${options.of}: ${words}` : `all the ${words}` },
+      { key: "share", value: share, unit: "percent", label: `${name}'s share of ${options.of ?? `all the ${words}`}` },
+      ...(options.extra ?? []),
+    ],
+  };
+}
+
+/** A group's finding naming a few of its rows beside it (`other`, up to three), so the writer's brief keeps them (`findingNames`). */
+export function withRowNames(found: OwnFound, names: readonly string[]): OwnFound {
+  return names.length > 0 ? { ...found, params: { ...found.params, other: names.slice(0, 3).join(", ") } } : found;
+}

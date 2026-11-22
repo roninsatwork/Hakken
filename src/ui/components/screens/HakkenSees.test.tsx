@@ -305,6 +305,25 @@ describe("HakkenSees and its eye", () => {
       expect(screen.getByText(/ui\.hakkenSees\.findings\.holdsMost door handles/)).toBeInTheDocument();
     });
 
+    it("says a share of a list on screen as so many of it, never of all (visibility-16-eyes, 22 November 2026)", async () => {
+      vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "RESEARCHING" as const })) as never);
+      // A linking website's screen lists 50 of its 1,958 links: 4 of those 50 are lost, never "4% of all the links".
+      const linking = {
+        linkingSite: { name: "mei.org.uk", backlinks: 1958, domainRank: 262 },
+        held: { listed: 50, followed: 50, lost: 4, broken: 0, pages: [{ name: "/", backlinks: 50 }], anchors: [{ name: "Website by Ronins", backlinks: 46 }], websites: [] },
+        whole: { backlinks: 6972, referringDomains: 543 },
+      };
+      render(
+        <>
+          <HakkenSeesEye />
+          <HakkenSees says={says} steps={[]} advice="rule" page={{ screen: "visibility.backlinksDomain", siteId: "site_1" as never, data: linking }} />
+        </>,
+      );
+      fireEvent.click(eye());
+      expect(screen.getByText(/ui\.hakkenSees\.findings\.holdsMost mei\.org\.uk/)).toBeInTheDocument();
+      expect(screen.getAllByText(/ui\.hakkenSees\.findings\.holdsMostOf/).length).toBeGreaterThan(0);
+    });
+
     it("stays open while the page's figures change under it", async () => {
       vi.mocked(useMutation).mockReturnValue(vi.fn(async () => ({ key: "k", status: "FAILED" as const })) as never);
       const view = render(<Paged />);

@@ -222,6 +222,31 @@ const COUNTS: Record<string, Measure> = {
   viewsGained: { words: "views gained", kind: "count" },
   peopleInHalfHour: { words: "people in the last 30 minutes", kind: "count" },
   peopleInAMinute: { words: "people in one minute", kind: "count" },
+  // Visibility's Local, Brand radar and Backlinks records (own/visibilityLocal.ts, own/visibilityRadar.ts; visibility-16-eyes,
+  // 22 November 2026): a profile's photos, posts and details, the map searches a business tops, the businesses nearby, and
+  // how often Google's AI quotes a website. Last, and named for these pages alone, so no other table's main figure changes.
+  photos: { words: "photos", kind: "count" },
+  posts: { words: "posts", kind: "count" },
+  postsInAYear: { words: "posts in 12 months", kind: "count" },
+  profileDetails: { words: "details on your profile", kind: "count" },
+  mapFirsts: { words: "top spots on the map", kind: "count" },
+  businessesNearby: { words: "businesses of your kind nearby", kind: "count" },
+  businessesNamed: { words: "businesses the answer names", kind: "count" },
+  // Brand radar says "cited" (its menu, Sources and Overview): the website screen's "times cited", beside you and in all.
+  quotes: { words: "times cited", kind: "count" },
+  citedBesideYou: { words: "times cited beside you", kind: "count" },
+  quotedBeside: { words: "times Google's AI named them and quoted this website", kind: "count" },
+  // A part of a list set against the list on screen, named in the figure itself so the panel's "4 of the 50 links listed
+  // here" says which 50 (the second fresh reader, 22 November 2026): never "of all", never a set the reader can't see.
+  linksListed: { words: "links listed here", kind: "count" },
+  listedClicks: { words: "clicks on the pages listed here", kind: "count" },
+  checkedVolume: { words: "searches a month for what you track on Google Maps", kind: "count" },
+  movedVolume: { words: "searches a month for what moved between these bands", kind: "count" },
+  citedVolume: { words: "times a month people ask the questions this website answers", kind: "count" },
+  postsLast30Days: { words: "posts in the last 30 days", kind: "count" },
+  rivalPosts: { words: "posts by your rivals", kind: "count" },
+  sitemapPages: { words: "pages in your sitemap", kind: "count" },
+  quotedPages: { words: "pages quoted", kind: "count" },
 };
 
 /**
@@ -261,6 +286,8 @@ const SCORES: Record<string, Measure> = {
   daysToAnswer: { words: "days to answer a review", kind: "score", lessIsBetter: true },
   onPageScore: { words: "technical score, out of 100", kind: "score" },
   paidVisitsPerSearch: { words: "visits a month for each search with adverts", kind: "score" },
+  // Rivals' activity's (own/visibilityLocal.ts): how long a rival has gone without posting on its Google profile.
+  daysSincePost: { words: "days since its last post", kind: "score", lessIsBetter: true },
   // Search Console's (own/searchConsole.ts): a click rate under 2%, said as clicks for every 1,000 times shown, since a
   // percentage keeps one decimal and 0.85% against 0.92% read "0.9% against 0.9%".
   clicksPerThousand: { words: "clicks for every 1,000 times shown", kind: "score" },
