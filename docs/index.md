@@ -5,14 +5,14 @@ feature_area: coverage inventory and prioritized queue
 audience: all documentation audiences
 source_repository: roninsatwork/Hakken
 source_path: docs/index.md
-last_reviewed: '2026-11-15T09:05:56+00:00'
+last_reviewed: '2026-11-22T09:01:09+00:00'
 reviewed_against: current implementation
 status: Needs review
 ---
 # Hakken Documentation
 
 > **Product:** Hakken · **Document type:** documentation index · **Feature area:** coverage inventory and prioritized queue
-> **Reviewed:** 15 November 2026, 09:05:56 GMT (Europe/London)
+> **Reviewed:** 22 November 2026, 09:01:09 GMT (Europe/London)
 > **Source path:** `docs/index.md` · **Status:** Needs review
 
 
@@ -446,6 +446,72 @@ subdivision, not claims that unseen subfeatures were reviewed.
 | M14 | **Changed Visibility report projections** — implemented modules located; detailed review incomplete | changed | `convex/siteOverview.ts; siteCompetitors.ts; siteLinks.ts; siteLinkLists.ts; siteReviews.ts; siteBrandRadar.ts; siteCrawl.ts; siteWebMentions.ts; siteAi.ts` | [Visibility](./end-user/websites-and-visibility.md), [Developer](./developer/websites-and-visibility.md); reuse baseline Q39/Q58–Q70 specialist pairs | P1 pending. Review overview, organic/tracked search, backlink lists, reviews, Radar/AI, competitors, audit and mentions separately against specialist guides. Evidence paths located, complete behaviour review not claimed. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
 | M15 | **Agent reads, objective work and tool synchronization** — implemented modules located; detailed review incomplete | changed | `convex/agentReads.ts; agentObjectiveLoopService.ts; agentRunStepWriter.ts; utils/agentTools.ts; builtInToolSync.ts; decisionRegistry.ts` | [Agents](./end-user/agents.md) / [Developer](./developer/agents.md); [Tools](./developer/ai-tools-and-connectors.md) | P2 pending. Inspect role/read scope, tool-call limits and model/Decision use beyond reviewed eye/chart paths; refresh agent operations/AI guides as evidence requires. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
 | M16 | **Route/API/schema references and shared chart kit** — implemented modules located; detailed review incomplete | changed | `src/app page.tsx inventory; convex/schema.ts; convex/_generated/api.d.ts; src/ui/components/screens/ChartCard.tsx; scripts/drawing-kit/parts.tsx` | [Routes](./developer/route-reference.md), [API/schema](./developer/convex-api-and-schema-reference.md), [Screen kit](./developer/screen-kit.md) | P2 pending. Regenerate scoped references from static source; review chart registration, hover/layout and look-test contracts; verify source paths before changing any declared counts. No artificial end-user pair. Triage only 2026-11-05T08:52:48+00:00; no current full-review timestamp claimed. |
+
+
+### 22 November Review and Remaining Queue
+
+Reviewed at 2026-11-22T09:01:09+00:00 (22 November 2026, 09:01:09 GMT (Europe/London)). Git resolved `/Users/ants/Projects/Kakken`,
+on `dev`, with the expected Hakken origin. All five identity files and the three
+audience indexes were present. No nested AGENTS.md was found. The 38 initial
+source, generated and test edits are outside this pass and were preserved.
+
+Discovery compared `b4ad9e70` with the current tree. The delta spans 1,026 tracked
+paths, including 416 Convex paths, 414 frontend paths, 165 documentation paths
+and 20 scripts. Static discovery found 434 page files and six route handlers.
+This is file discovery, not a full capability census. Routes, shared UI, hooks,
+backend functions, authorization, schemas, jobs, integrations, AI, billing,
+notifications, storage and tests retain their older review dates unless named
+below. The new connection received detailed reads across its UI, proxy,
+consent, token lifecycle, tenant scope, read tools, charging and cleanup.
+
+The initial queue had eight pending units. Three coherent areas found in this
+week's history add three units. One scoped pair was attempted and refreshed.
+The known queue is now 11 units with one scoped unit complete and ten pending.
+Current-run completion is 1/11, about 9%. The finished slice is 100% documented
+and validated. Whole-library current coverage remains unknown. The historical
+89-unit inventory overlaps this queue and must not be added to its denominator.
+Discovery classifications are one new capability, ten changed/inherited areas
+and zero newly suspected removals. The two older possible removals remain open.
+
+| Unit | Status, evidence and current coverage | Priority and remaining work |
+|---|---|---|
+| M24 | New, implemented. External MCP read connection. `convex/chatAppPasses.ts:allow/checkPassInternal`, `chatAppDoor.ts:handleMcp`, `chatAppTools.ts:runTool`, `chatAppSchema.ts`, `chatAppEyeReads.ts` and profile `ChatAppPage.tsx`. Reviewed 2026-11-22T09:01:09+00:00. [User](./end-user/assistant-chat.md) / [Developer](./developer/assistant-chat.md). | P1 scoped pair refreshed. Setup, reads, tenancy, expiry, credits, unlink and retention covered. Individual screen parity belongs to M21/M14. Whole guides remain Needs review for older material. |
+| M25 | Changed, implemented modules located. Wiki expansion in `convex/wikiAsk.ts`, `wikiCheckupPages.ts`, `wikiReport.ts` and `wikiPages.ts`. Triage 2026-11-22T09:01:09+00:00. [User](./end-user/company-wiki.md) / [Developer](./developer/company-wiki.md). | P1 pending. Review the five-page surface, AI menu, permissions, report and checkup changes. Earlier shortlist review is insufficient. |
+| M26 | Changed, implemented modules located. Model routing in `convex/aiModels.ts`, `aiModelService.ts` and eye writing in `seesAskActions.ts`. Triage 2026-11-22T09:01:09+00:00. [Developer](./developer/ai-models-providers-and-costs.md), [eye user](./end-user/what-hakken-sees.md) and [eye developer](./developer/what-hakken-sees-guide.md). | P1 pending. Review new model names, eye model/effort and saved overrides with M21. No artificial standalone user guide for internal model routing. |
+
+Next process **M20 → M21/M26 → M25 → M22 → M13 → M14 → M15 → M16 → M23**.
+The eight inherited rows remain in the 15 November queue above with their
+source paths, guide pairs and unresolved questions. None is marked reviewed
+by this pass. Existing guides are reused and audience directory links remain
+valid because no guide was added, renamed or removed.
+
+A source discrepancy needs a separate decision. The MCP activity screen says
+90 days, but `myChatAppQuestions` has no age filter and returns at most 200 tool
+calls from active grants. Cleanup defaults to 90 days and can be configured.
+The guides now explain this limit. No source change was made. Product intent
+and current implementation remain distinct. PRODUCT.md, plans and dated
+research are unchanged. Local source review does not prove deployment or live
+Google, Stripe, Convex or external-app acceptance. Section 33 cutover remains
+unverified.
+
+Validation passed for the three changed documents. YAML parsed, required identity
+fields and visible metadata were checked, 647 relative links and anchors resolved
+and both feature guides exceeded 1,200 words. No empty Markdown files were found.
+The unfinished-content search matched only an older validation description.
+`git diff --check` passed. No standalone documentation check was found and no
+application gates, dependency installs or live operations were run.
+
+Final fingerprints showed concurrent edits to four initial source/test files
+and an additional modified Visibility test. This pass wrote only the three
+Markdown files. Those concurrent changes were left alone. Their contents cannot
+be claimed byte-for-byte unchanged. PRODUCT.md and audience indexes were not edited.
+
+Documentation status **UPDATED**. **STOPPED_DUE_TO_EXECUTION_OR_CONTEXT_LIMIT**.
+The broad change scan and cross-module access review used the available source
+review context. Capacity was reserved for validation and this handoff. One
+pair is fewer than eight because the new access path required consent, tenant,
+charge and cleanup review; the ten remaining areas need further source reads.
+This is completed run work, not completed library maintenance.
 
 ### 15 November Review and Remaining Queue
 

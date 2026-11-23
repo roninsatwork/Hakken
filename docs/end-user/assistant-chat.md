@@ -5,15 +5,15 @@ feature_area: Ask Hakken assistant conversations
 audience: signed-in company members and administrators
 source_repository: roninsatwork/Hakken
 source_path: docs/end-user/assistant-chat.md
-last_reviewed: '2026-11-05T08:45:39+00:00'
+last_reviewed: '2026-11-22T09:01:09+00:00'
 reviewed_against: current implementation
-status: Current
+status: Needs review
 ---
 # Assistant Chat User Guide
 
 > **Product:** Hakken · **Document type:** end-user guide · **Feature area:** Ask Hakken assistant conversations
-> **Reviewed:** 5 November 2026, 08:45:39 GMT (Europe/London)
-> **Source path:** `docs/end-user/assistant-chat.md` · **Status:** Current
+> **Reviewed:** 22 November 2026, 09:01:09 GMT (Europe/London)
+> **Source path:** `docs/end-user/assistant-chat.md` · **Status:** Needs review
 
 ## What Assistant Chat Is
 
@@ -184,3 +184,24 @@ A conversation started from the eye can also redraw a registered chart from that
 Page context is bounded: at most twelve charts, two hundred rows and ten columns per chart are retained. A redrawn categorical chart normally keeps twenty groups, a map forty boxes and a line up to two hundred points. A top list therefore need not represent every row of the original source. Check whether the chart is a supplied-page redraw or a fresh supported read before sharing it as a comprehensive report. Source-backed group charts have their own limits and sometimes collect small groups into an “every other” category.
 
 The ordinary Assistant reply currently starts at two credits per question in the default price map; saved operator pricing can override that. Opening the eye's new specialist interpretation is a separate credit kind with an eight-credit default. Reuse and failures follow their respective backend rules. A chart proposal does not itself schedule delivery. Use its confirmation control after checking the schedule; see [Hakken Tasks](./hakken-tasks.md) and [What Hakken Sees](./what-hakken-sees.md).
+
+
+## Ask about saved figures from ChatGPT or Claude
+
+You can link ChatGPT or Claude to read your company's saved website figures. This connection uses MCP, a way for a chat app to ask another service for information. It does not give the chat app the full set of actions available inside Ask Hakken. The current tools read figures. They do not change your website or start a new collection from Google.
+
+Open your profile and choose **Integrations**. Open ChatGPT or Claude to see that app's own page. If you have not linked it, the page shows an address ending in `/mcp` and a Copy button. Use the address shown by your own workspace. In ChatGPT, add an app with that address. In Claude, add a connector with it. These are the instructions supplied by the current Hakken screen. The exact controls in the outside app can change and were not checked during this source review.
+
+The chat app sends you to a sign-in and Allow page. Check the company and app before you press Allow. An ordinary member links their own company. A platform super admin can choose a company. Each permission belongs to one person, one app and one company. A company name typed into a chat does not change that permission. If MCP is switched off for the company, the connection cannot read its figures.
+
+Start by asking which websites you can read. Then name a website and a period. For example, ask for the website summary for last month, or the findings for a named screen. The tools cover Visibility, Search Console, Bing Webmaster, Google Analytics and Microsoft Clarity. Coverage differs between screens. A missing read can return a short explanation or figures without findings. A summary must not be read as proof that every section has complete data. The connection uses the saved data available to the company.
+
+There are five tools. They list your websites, give a website summary, read a screen's findings, return the top of a supported list or tell a page's story. A list answer is limited to ten rows. It is useful for a quick question, but it is not a full export. The dates use the same named periods as the screen menus. The connection can also offer a chart of Analytics visits against the earlier period. Whether that chart appears depends on the chat app and the saved figures.
+
+An answered tool request uses the company's MCP credit rate and appears in Usage. One message in the outside app can lead to several tool requests. Do not assume one chat message means one charge. Requests recorded as refused do not receive that charge. The tools themselves do not ask a writing model. The outside chat app supplies its own answer and may have its own charges.
+
+The connection page shows whether the app is linked, the company and when permission was given. Its history table shows what was requested, the website, dates, time and outcome. You can search that table. There is an important limit in the current implementation. The screen describes the last 90 days, but the query returns at most 200 tool requests from active links. It does not itself filter by age. The cleanup schedule defaults to 90 days and can differ from that text. This table is a recent activity view, not a complete audit export.
+
+Choose **Unlink** and confirm to stop the app reading through those permissions. Linking again starts from the outside app. Unlinking does not recall figures already sent to a conversation. Requests from old links can also disappear from this page because it reads active links. Leaving the company stops access too. Permission is checked again on each request.
+
+Access passes last an hour. The app can renew access with a pass that lasts 30 days. If renewal fails, start the connection again. If requests arrive too quickly, wait a minute before trying again. The current guard aims to allow 15 answered requests per person each minute. If the page says MCP is switched off, ask the person who manages your company's features. This documentation review did not test a live connection or prove that a deployment has completed the external integration cutover in PRODUCT.md section 33.

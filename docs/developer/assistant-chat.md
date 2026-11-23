@@ -5,15 +5,15 @@ feature_area: Ask Hakken assistant conversations
 audience: developers
 source_repository: roninsatwork/Hakken
 source_path: docs/developer/assistant-chat.md
-last_reviewed: '2026-11-05T08:45:39+00:00'
+last_reviewed: '2026-11-22T09:01:09+00:00'
 reviewed_against: current implementation
-status: Current
+status: Needs review
 ---
 # Assistant Chat Developer Guide
 
 > **Product:** Hakken · **Document type:** developer guide · **Feature area:** Ask Hakken assistant conversations
-> **Reviewed:** 5 November 2026, 08:45:39 GMT (Europe/London)
-> **Source path:** `docs/developer/assistant-chat.md` · **Status:** Current
+> **Reviewed:** 22 November 2026, 09:01:09 GMT (Europe/London)
+> **Source path:** `docs/developer/assistant-chat.md` · **Status:** Needs review
 
 ## Purpose and Product Surface
 
@@ -174,3 +174,22 @@ vision.
 `chartFromToolCalls` recognizes ordinary, proposed-report and page-chart handler mappings and keeps the last successful valid chart. The chat reply does not represent an unlimited gallery of every tool call. `splitAtChart` suppresses the placement marker, including a partial marker while streaming. Built-in tool definitions are reconciled by the synchronization path; an existing disabled tool should not be re-enabled merely to refresh its schema. Inspect `builtInToolSync.ts` before altering installation behaviour.
 
 Verification sources include `assistantPageChartHandlers.test.ts`, `utils/assistantPageCharts.test.ts`, `utils/assistantGroupCharts.test.ts`, `assistantChartHandlers.test.ts` and chart look tests. None was run during this documentation task. The source/default price map now charges two credits for an Assistant reply, with actual saved settings resolved by the credit service; the separate eye writing default is eight. [What Hakken Sees](./what-hakken-sees-guide.md) covers that path. Scheduled delivery remains a distinct confirmed-task workflow documented in [Hakken Tasks](./hakken-tasks.md).
+
+
+## MCP access from outside chat apps
+
+This section reviews the new read connection at source level. Its entry points are `src/app/(dashboard)/app/profile/integrations/ChatAppPage.tsx`, the ChatGPT and Claude child routes and `src/app/oauth/authorize/page.tsx`. It is separate from the existing outbound tool-server integration. The profile page copies the current browser origin with `/mcp` appended. Public MCP, token, registration and discovery routes are rewritten through `src/app/api/chat-apps/[door]/route.ts`. That handler forwards selected headers to Convex using `CONVEX_SITE_URL` or `NEXT_PUBLIC_CONVEX_SITE_URL`. A missing backend address returns 503. POST bodies over 1 MiB return 413. The proxy uses a 60-second fetch limit. `SITE_URL` supplies the backend's public origin and OAuth resource identity. These variable names are configuration references, not proof that a deployment is configured.
+
+`convex/chatAppsHttp.ts` serves OAuth discovery, client registration and token exchange. `convex/chatAppPasses.ts` owns consent and pass checks. `describeAllowRequest` checks the client and return address before describing consent. `allow` checks the company and the `chatApps` feature. Ordinary users grant their own company. Super admins can select a company. The scope is `figures:read`. Published client documents use fixed allowed hosts and a one-day cache. Dynamic registration accepts recognized return addresses. Local test clients are handled separately by `utils/chatApps.ts`; their existence is not a general production client registration promise.
+
+`chatAppSchema.ts` adds five tables. `chatAppClients` indexes client IDs and creation time. `chatAppGrants` indexes user/app and client. `chatAppCodes` indexes fingerprints and expiry. `chatAppPasses` indexes fingerprints, grants, renewal chains and expiry. `chatAppRequests` stores request metadata for logging and retention. Codes and passes are saved as SHA-256 fingerprints. Code exchange checks the client, exact return address, resource and PKCE verifier. PKCE ties the returned code to the app that began sign-in. Codes expire after five minutes and are single use. Access passes last one hour. Renewal passes last 30 days and rotate after use. Reusing a renewal pass cuts off its chain and grant. Reusing a code can cut off passes issued from it. These are explicit replay checks, not an invitation to retry token exchanges blindly.
+
+`checkPassInternal` rechecks expiry, the grant, the user, company membership and the feature switch on each request. It derives company scope from the grant. `chatAppEyeReads.ts:siteForWebsiteInternal` uses `holdFor` to resolve a website within that company. Its read dispatcher passes the grant's company to the registered reader. Each reader must keep that scope when resolving saved figures. The external app does not choose a trusted company ID. Review these checks before adding any read to `chatAppEyes/index.ts`.
+
+`chatAppDoor.ts:handleMcp` accepts bearer passes and dispatches JSON-RPC requests. `utils/chatAppMcp.ts` defines protocol parsing, the older initialize exchange and the stateless discover exchange. It rejects incompatible versions and header/meta disagreement. The five tool names are `your_websites`, `website_summary`, `screen_findings`, `top_of_list` and `page_story`. `chatAppTools.ts` reads saved section projections and server eye builders. Its main section set is Visibility, Search Console, Bing Webmaster, Analytics and Clarity. Some screen reads remain unavailable and return an explanation. Findings can come from the registered builder or fall back to supported figure reads. Do not promise uniform coverage from the section list alone. Top lists return at most ten rows. The chart resource supplies an MCP Apps HTML view for daily visits. The answer also carries text and structured content for clients that do not draw it.
+
+The door logs tool outcomes through `logQuestionInternal`. Answered tool calls invoke `creditChatAppQuestion` in `creditHooks.ts`, with kind `chatApps`, one unit and a run key derived from the request ID. It records zero model cost because this path does not ask a model. Refusals skip that charge. A retried HTTP tool request creates another request record. There is no client request deduplication contract in this path. Do not equate a chat message with a single tool charge. The per-user guard examines a bounded recent request list and counts answered records against `QUESTIONS_PER_MINUTE`, currently 15. It is a bounded implementation, not evidence of an unlimited audit scan or a strict concurrent request guarantee.
+
+`myChatApps` and `myChatAppQuestions` supply the profile screens. The latter reads up to 50 active grants, takes up to 200 records per grant, then returns at most 200 tool calls overall. It does not apply a 90-day timestamp condition. The screen still says the last 90 days. `purgeScheduleService.ts` sets a default 90-day `chatAppHistory` retention schedule. `purges.ts` calls `clearChatAppHistory`, which clears old requests, expired codes and passes in bounded batches and unused registered clients. Treat the screen/query mismatch as a separate source decision. Unlink cuts off active grants and their passes within bounded reads. It does not delete remote conversations or erase previously returned figures.
+
+Relevant source tests include `chatAppPasses.test.ts`, `chatAppDoor.test.ts`, `utils/chatApps.test.ts`, `utils/chatAppMcp.test.ts` and the five section suites under `chatAppEyes/`. They were inspected as evidence paths but were not run during this documentation pass. Current Visibility builders and related routes had pre-existing edits. Their detailed coverage remains open in the central queue. This scoped update does not revalidate every older Assistant section below the earlier review date, prove live OAuth acceptance or resolve the known external rename cutover.
