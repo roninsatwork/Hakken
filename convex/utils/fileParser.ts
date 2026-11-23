@@ -42,7 +42,8 @@ export async function parseDocuments(ctx: GenericActionCtx<DataModel>, fileIds: 
 
       if (mimeType === "application/pdf") {
         try {
-           extractedText = await extractPdfTextWithinBudget(buffer);
+           // Chat keeps a document's first 50,000 characters (the cap below), so the rest is never read.
+           extractedText = await extractPdfTextWithinBudget(buffer, { maxCharacters: 50_000, onOverflow: "truncate" });
         } catch (e) {
            if (appErrorMessage(e, "") === PDF_TOO_LONG_MESSAGE) {
              extractedText = `[${PDF_TOO_LONG_MESSAGE}]`;
