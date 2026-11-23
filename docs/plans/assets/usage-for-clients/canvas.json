@@ -1,0 +1,141 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "ByWebsite.dc.html": {
+      "expand": "fill",
+      "h": 1601,
+      "title": "By website",
+      "w": 1440,
+      "x": 3040,
+      "y": 3534
+    },
+    "ByWork.dc.html": {
+      "expand": "fill",
+      "h": 2037,
+      "title": "By work",
+      "w": 1440,
+      "x": 1520,
+      "y": 3534
+    },
+    "ComingUp.dc.html": {
+      "expand": "fill",
+      "h": 1531,
+      "title": "Coming up",
+      "w": 1440,
+      "x": 4560,
+      "y": 3534
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 3114,
+      "title": "Usage today",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Statement.dc.html": {
+      "expand": "fill",
+      "h": 1551,
+      "title": "Statement",
+      "w": 1440,
+      "x": 0,
+      "y": 3534
+    },
+    "Way2.dc.html": {
+      "expand": "fill",
+      "h": 1858,
+      "is_interactive": true,
+      "title": "Way 2 · Overview",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Charge.dc.html": {
+      "expand": "fill",
+      "h": 1149,
+      "title": "A charge",
+      "w": 1440,
+      "x": 0,
+      "y": 5205
+    },
+    "Check.dc.html": {
+      "expand": "fill",
+      "h": 1149,
+      "title": "A scheduled check",
+      "w": 1440,
+      "x": 4560,
+      "y": 5185
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-23T15:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "heading",
+    "pagesTitle",
+    "today",
+    "ways",
+    "figures",
+    "kit"
+  ],
+  "notes": {
+    "figures": {
+      "text": "Every figure is real. They're Period House Group's credits from 1 to 23 November 2026, with October to compare. Period House Group has one website and tracks seven competitors.\n\nKorda has five websites. Each would get its own row in the Overview's table and in the By website menu.\n\nNothing here is built.",
+      "w": 420,
+      "x": 6080,
+      "y": 2060
+    },
+    "heading": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "Usage for your clients",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "kit": {
+      "text": "Drawn from the drawing kit, kit.css 48caae902257, look 149d9f4fb243, on 23 November 2026.",
+      "w": 420,
+      "x": 6080,
+      "y": 2520
+    },
+    "pagesTitle": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "The pages under Usage",
+      "w": 240,
+      "x": 0,
+      "y": 3234
+    },
+    "today": {
+      "text": "The first board is Usage today, copied from the app. It reads like a bank statement. It has five pages, a box of rules at the top and tables of runs and prices.\n\nIts Credits by website table puts 611 of the 743 credits in a row called Not tied to a website. Most of them went on presses of the eye, and every press was on morehandles.co.uk. Since 23 November each press saves its website. So Way 2 puts each press under its website.",
+      "w": 420,
+      "x": 6080,
+      "y": 0
+    },
+    "ways": {
+      "text": "Way 2 is the new Overview. It shows what a client has used, what's left and what they used each day. Its table has every website, with October to compare.\n\nThe four pages in the row below sit under Usage in the menu. They're By work, By website, Coming up and Statement. The Overview links to the Statement and to Coming up.",
+      "w": 420,
+      "x": 6080,
+      "y": 640
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Way2.dc.html",
+    "Statement.dc.html",
+    "Charge.dc.html",
+    "ByWork.dc.html",
+    "ByWebsite.dc.html",
+    "ComingUp.dc.html",
+    "Check.dc.html"
+  ],
+  "pages": [],
+  "title": "Usage for your clients"
+}

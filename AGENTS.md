@@ -569,6 +569,14 @@ drifted from the app: "We cannot go through this with every agent").
     (`min-w-[160px]` beside its `CUT_COLUMN` share, as All pages) and is cut to
     one line with "…", whole on hover (RecordLinkCell's `cut`).
   - **Look at it in a narrower window**, about 1,330 wide, as well as at 3,200.
+  - **"Keep today's screen" never keeps a wide table** (Anthony, 2026-11-23,
+    on the Usage redo: "there should be no wide tables at all - we keep it
+    clear and simple and move to a detail page", then "you need to remember
+    this table rule"). When he keeps a built screen, its layout, boxes, filters
+    and words stay, but its table still goes lean on the board and in the
+    build. Every column that comes off moves to the row's own page, which the
+    row opens, and that page is drawn too. Being on the frozen list is never a
+    reason to keep a table wide.
   Keywords had nine columns, and in a narrower window its keyword got 68
   pixels, a word to a line. `npm run check:drawing` fails a board's table on
   each of the first four. A built table's column count is enforced too:

@@ -1,6 +1,7 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { calculateModelCostUsd } from "./aiCostService";
+import { assistantReplyDetail, chatAppQuestionDetail, seesPressDetail } from "./creditDetail";
 import {
   creditKindOfFamily,
   creditUnitsOfAnswer,
@@ -368,6 +369,8 @@ export async function creditAssistantReply(
       how: "byHand",
       messageId,
       ...(thread.userId ? { userId: thread.userId } : {}),
+      // The conversation's website, the page it began on and its title: Usage's detail.
+      ...await assistantReplyDetail(ctx, thread),
     }, 1, { realCostUsd }, Date.now());
   });
 }
@@ -387,6 +390,8 @@ export async function creditSeesPress(ctx: MutationCtx, answer: Doc<"seesAnswers
       how: "byHand",
       ...(answer.askedBy ? { userId: answer.askedBy } : {}),
       ...(answer.runId ? { agentRunId: answer.runId } : {}),
+      // The website it was pressed on and the screen it read: Usage's detail.
+      ...await seesPressDetail(ctx, answer),
       detail: answer.about ?? answer.screen,
     }, 1, { ...(run?.costUsd !== undefined ? { realCostUsd: run.costUsd } : {}) }, Date.now());
   });
@@ -409,6 +414,8 @@ export async function creditChatAppQuestion(
       runKey: `chatApp:${question.requestId}`,
       how: "byHand",
       userId: question.userId,
+      // Which app asked, the tool, the screen and dates it read, and the website: Usage's detail.
+      ...await chatAppQuestionDetail(ctx, await ctx.db.get(question.requestId), question.companyId),
     }, 1, { realCostUsd: 0 }, Date.now());
   });
 }

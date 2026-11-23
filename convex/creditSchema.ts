@@ -27,6 +27,24 @@ export const creditKindValidator = v.union(
 
 export const creditSourceValidator = v.union(v.literal("plan"), v.literal("topup"));
 
+/** The part of the app a piece of work was for (`CREDIT_SECTIONS` in `creditKinds.ts`). */
+export const creditSectionValidator = v.union(
+  v.literal("visibility"),
+  v.literal("searchConsole"),
+  v.literal("bingWebmaster"),
+  v.literal("googleAnalytics"),
+  v.literal("clarity"),
+  v.literal("insights"),
+  v.literal("dashboard"),
+  v.literal("assistant"),
+  v.literal("mcp"),
+  v.literal("hakkenTasks"),
+  v.literal("keywordResearch"),
+);
+
+/** Which app asked an MCP question (as `chatAppRequests.app`). */
+export const creditAppValidator = v.union(v.literal("chatgpt"), v.literal("claude"), v.literal("local"));
+
 /** Why a statement line that is not plain work was written (`creditCharges.reason`). */
 export const creditReasonValidator = v.union(v.literal("raised"), v.literal("recounted"), v.literal("nothingBack"));
 
@@ -124,6 +142,20 @@ export const creditTables = {
     refundOf: v.optional(v.id("creditCharges")),
     /** What a person would call it: the keywords looked up. */
     detail: v.optional(v.string()),
+    /**
+     * The detail Usage can show beside a charge (Anthony, 2026-11-23: "lets add all the detail to the capture and then
+     * we can [pick] what we want for usage - its important we track more than we are"). `section` is set on every
+     * charge from 23 November 2026, and filled in on older ones by `creditDetail.fillChargeDetail`.
+     */
+    section: v.optional(creditSectionValidator),
+    /** The screen the work read: the eye's page, or the one an MCP tool read (`searchConsole.performance`). */
+    screen: v.optional(v.string()),
+    /** The app address a piece of work was started from: an Ask Hakken conversation begun from the eye's panel. */
+    page: v.optional(v.string()),
+    /** An MCP question: which app asked, the tool it called and the dates it read. */
+    app: v.optional(creditAppValidator),
+    tool: v.optional(v.string()),
+    period: v.optional(v.string()),
     /**
      * Why a line that is not plain work was written: `raised`, a month's
      * plan credits raised after they were granted (finish-off-plan.md, item

@@ -10,8 +10,10 @@ import {
   creditDayOf,
   creditMonthOf,
   creditsForUnits,
+  sectionOfWork,
   type CreditKind,
   type CreditPrice,
+  type CreditSection,
 } from "./creditKinds";
 
 /**
@@ -359,6 +361,13 @@ export type CreditRunStart = {
   messageId?: Id<"messages">;
   pullId?: Id<"seoDataPulls">;
   detail?: string;
+  /** Usage's detail (`creditCharges.section` and on): the section is worked out from the kind and screen when not given. */
+  section?: CreditSection;
+  screen?: string;
+  page?: string;
+  app?: "chatgpt" | "claude" | "local";
+  tool?: string;
+  period?: string;
 };
 
 /** A run's charge by what it is for, open, charged or void. */
@@ -370,8 +379,10 @@ export async function findCreditRun(ctx: MutationCtx, runKey: string): Promise<C
 export async function openCreditRun(ctx: MutationCtx, start: CreditRunStart, now: number): Promise<Charge> {
   const existing = await findCreditRun(ctx, start.runKey);
   if (existing) return existing;
+  const section = start.section ?? sectionOfWork(start.kind, start.screen);
   const id = await ctx.db.insert("creditCharges", {
     ...start,
+    ...(section ? { section } : {}),
     entry: "charge",
     state: "open",
     at: now,

@@ -1,0 +1,529 @@
+// The Usage canvas, round 3 (Anthony, 23 Nov: "this is a credits based system and each press of the eye costs credits,
+// why have you taken important functionality away", "I never said remove it, I said remove the stuff that belongs in the
+// admin section"). The whole section kept: three simple Overviews, then By work, By website, Coming up and Statement,
+// each in client words with the admin parts out. Real parts, Period House Group's real November charges. Not built.
+import type { ReactNode } from "react";
+import { createRoot } from "react-dom/client";
+import { ArrowUpRight, Gauge, MessageSquare } from "lucide-react";
+import DATA from "./data.json";
+import LINES from "./lines.json";
+import COMING from "./comingup.json";
+import { ToastProvider } from "@/src/context/ToastContext";
+import { UIProvider } from "@/src/context/UIContext";
+import Header from "@/src/ui/components/layout/Header";
+import { NavItem, SubNavItem } from "@/src/ui/components/layout/SidebarNavigation";
+import { MonthPicker } from "@/src/app/(dashboard)/app/usage/_components/UsageParts";
+import { SectionMenu } from "@/src/app/(dashboard)/app/_components/SectionMenu";
+import { ResearchSection } from "@/src/app/(dashboard)/app/keyword-research/_components/ResearchCells";
+import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { FactsList } from "@/src/ui/components/screens/FactsList";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { BarsCard } from "@/src/ui/components/screens/BarsCard";
+import { ListTable } from "@/src/ui/components/screens/ListTable";
+import { DownloadButton } from "@/src/ui/components/screens/DownloadButton";
+import { Meter } from "@/src/ui/components/screens/Meter";
+import { Select } from "@/src/ui/components/screens/Select";
+import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
+import { CUT_COLUMN } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
+import { formatNumber } from "@/src/app/(dashboard)/app/sites/_components/siteFormat";
+
+const fmt = formatNumber;
+const noop = () => undefined;
+const D = DATA as unknown as {
+  used: number; usedOct: number; granted: number; left: number; today: number;
+  daily: Record<"own" | "rivals" | "questions", number[]>;
+  groups: { own: { nov: number; oct: number }; rivals: { nov: number; oct: number; count: number }; questions: { nov: number; oct: number } };
+  rows: { host: string; relationship: "owned" | "tracked"; nov: number; oct: number; icon: string | null }[];
+  kinds: Record<string, { credits: number; units: number; oct: number; octUnits: number }>;
+  bookedDec: number;
+};
+type Line = { at: number; when: string; what: string; kind: string | null; section?: string; site: string | null; who: string; change: number; left: number; page?: string | null };
+const ALL = (LINES as unknown as { lines: Line[] }).lines;
+const OWN = "morehandles.co.uk";
+const ownRow = D.rows.find((row) => row.host === OWN)!;
+const iconOf = (host: string | null) => (host ? D.rows.find((row) => row.host === host)?.icon ?? null : null);
+const rivals = `Your ${D.groups.rivals.count} competitors`;
+const signed = (value: number) => (value > 0 ? `+${fmt(value)}` : `−${fmt(Math.abs(value))}`);
+const footer = (count: number) => ({ mode: "paged" as const, page: 1, totalPages: Math.max(1, Math.ceil(count / 25)), totalCount: count, pageSize: 25, isLoading: false, onPageChange: noop });
+const mono = (text: string, strong = false) => <span className={`whitespace-nowrap font-mono text-[12px] ${strong ? "text-foreground" : "text-secondary"}`}>{text}</span>;
+
+// ——— What every board shares ———
+
+function Page({ title, description, children, month = true, current = "overview" }: { title: string; description: string; children: ReactNode; month?: boolean; current?: string }) {
+  return (
+    <>
+      <Header />
+      <div className="flex flex-col gap-6 pb-8">
+        <PageHeader divider icon={<Gauge className="h-6 w-6 text-brand" />} title={title} description={description} />
+        {month ? <div className="flex flex-wrap items-center gap-3"><MonthPicker /></div> : null}
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="xl:sticky xl:top-4 xl:self-start"><UsageMenu current={current} /></aside>
+          <section className="flex min-w-0 flex-col gap-6">{children}</section>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Usage's own menu beside the page: its pages, then each kind of work and each website as a page of its own. */
+function UsageMenu({ current }: { current: string }) {
+  return (
+    <SectionMenu
+      label="Usage"
+      currentId={current}
+      openAtFirst={["usage", "work", "websites"]}
+      groups={[
+        { id: "usage", label: "Usage", items: [
+          { id: "overview", label: "Overview", href: "Way2.dc.html" },
+          { id: "coming", label: "Coming up", href: "ComingUp.dc.html" },
+          { id: "statement", label: "Statement", href: "Statement.dc.html" },
+        ] },
+        { id: "work", label: "By work", items: WORK_MENU.map((item) => ({ id: item.id, label: item.label, href: "ByWork.dc.html", count: fmt(item.credits) })) },
+        { id: "websites", label: "By website", items: [
+          ...D.rows.map((row) => ({ id: row.host, label: row.host, href: "ByWebsite.dc.html", count: fmt(row.nov) })),
+          // What no one website was for, in the app's own words for it (usage.websites.none): since 23 November nearly nothing.
+          ...(D.groups.questions.nov > 0 ? [{ id: "none", label: "Not tied to a website", href: "ByWebsite.dc.html", count: fmt(D.groups.questions.nov) }] : []),
+        ] },
+      ]}
+    />
+  );
+}
+
+function SeeLink({ words, href }: { words: string; href: string }) {
+  return (
+    <a href={href} className="inline-flex items-center gap-1.5 text-[13px] text-secondary hover:text-foreground">
+      {words}
+      <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+    </a>
+  );
+}
+const Links = () => (
+  <div className="flex flex-wrap items-center gap-6">
+    <SeeLink words="See every charge" href="Statement.dc.html" />
+    <SeeLink words="See what's coming up" href="ComingUp.dc.html" />
+  </div>
+);
+
+function SiteName({ host, owned }: { host: string | null; owned?: boolean }) {
+  if (!host) return <span className="text-[13px] text-muted">–</span>;
+  return (
+    <span className="flex min-w-0 items-center gap-2" title={host}>
+      <SiteMark host={host} iconUrl={iconOf(host)} owned={owned ?? host === OWN} small />
+      <span className="block truncate text-[13px] text-foreground">{host}</span>
+    </span>
+  );
+}
+const What = ({ text }: { text: string }) => <span className="block truncate text-[13px] text-foreground" title={text}>{text}</span>;
+
+const UsedFigure = ({ meter = false }: { meter?: boolean }) => (
+  <Figure
+    label="Used in November"
+    value={fmt(D.used)}
+    detail={meter ? (
+      <span className="flex flex-col gap-1.5">
+        <Meter value={D.used / D.granted} size="md" />
+        <span>Out of your {fmt(D.granted)} credits</span>
+      </span>
+    ) : `${fmt(D.usedOct)} in October`}
+  />
+);
+const LeftFigure = ({ sure = false }: { sure?: boolean }) => (
+  <Figure emphasis label="Left now" value={fmt(D.left)} detail={sure ? "Unused credits end at midnight on 30 November. At this pace you won't run out." : "Unused credits end at midnight on 30 November"} />
+);
+
+// ——— The three Overviews ———
+
+const byWebsite = [
+  { label: OWN, credits: D.groups.own.nov },
+  { label: "Your team's questions", credits: D.groups.questions.nov },
+  { label: rivals, credits: D.groups.rivals.nov },
+];
+
+function Way1() {
+  return (
+    <Page title="Usage" description="How many credits you've used, and what they were for.">
+      <FigureRow columns={2}>
+        <UsedFigure meter />
+        <LeftFigure sure />
+      </FigureRow>
+      <BarsCard
+        title="Where your credits went"
+        hint="What you used on your website, your competitors and your team's questions in November."
+        exportName="usage-what-for"
+        host={OWN}
+        waiting={null}
+        controls={[]}
+        rows={byWebsite}
+        series={[{ key: "credits", name: "Credits", colour: CHART_SERIES_ORANGE }]}
+        figure="Credits"
+        labels={(value) => fmt(value)}
+        anything
+        empty="Nothing has used credits this month yet."
+      />
+      <Links />
+    </Page>
+  );
+}
+
+type Where = { key: string; name: string; owned: boolean; nov: number; oct: number };
+const WHERE: Where[] = D.rows.map((row) => ({ key: row.host, name: row.host, owned: row.relationship === "owned", nov: row.nov, oct: row.oct }));
+const total = (index: number) => D.daily.own[index] + D.daily.rivals[index] + D.daily.questions[index];
+
+function Way2() {
+  const days = Array.from({ length: 30 }, (_, index) => ({
+    label: String(index + 1),
+    day: new Date(Date.UTC(2026, 10, index + 1)).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }),
+    credits: index < D.today ? total(index) : 0,
+  }));
+  return (
+    <Page title="Usage" description="How many credits you've used, and what they were for.">
+      <FigureRow columns={3}>
+        <UsedFigure />
+        <LeftFigure />
+        <Figure label="Next month" value={fmt(D.granted)} detail="Your new credits come on 1 December" />
+      </FigureRow>
+      <BarsCard
+        title="Credits each day"
+        hint="How many credits you used each day in November."
+        exportName="usage-each-day"
+        host={OWN}
+        waiting={null}
+        controls={[]}
+        rows={days}
+        series={[{ key: "credits", name: "Credits", colour: CHART_SERIES_ORANGE }]}
+        figure="Credits"
+        upright
+        labels={(value) => (value >= 40 ? fmt(value) : null)}
+        // The hover names the day in full: "Thursday 5 November".
+        readout={({ row }) => ({
+          heading: String(row.day),
+          columns: [{ key: "figure", label: "Credits", tone: "band" }],
+          rows: [{ key: "credits", name: "Credits", colour: CHART_SERIES_ORANGE, cells: { figure: { text: fmt(Number(row.credits)) } } }],
+        })}
+        anything
+        empty="Nothing has used credits this month yet."
+      />
+      <ListTable<Where>
+        noun="websites"
+        title="Credits by website"
+        description="Your website and the competitors you track. Click a website to see every charge for it."
+        summary={<span className="text-[13px] text-secondary">Plus {fmt(D.groups.questions.nov)} on your team's questions</span>}
+        rows={WHERE}
+        rowKey={(row) => row.key}
+        onRowClick={noop}
+        search={{ value: "", onChange: noop, placeholder: "Find a website…" }}
+        sort={{ key: "credits", direction: "desc", onSort: noop }}
+        empty={{ label: "No credits were used this month." }}
+        footer={footer(WHERE.length)}
+        columns={[
+          { key: "name", header: "Website", sortable: true, className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (row) => <a href="ByWebsite.dc.html" className="block min-w-0"><SiteName host={row.name} owned={row.owned} /></a> },
+          { key: "credits", header: "Credits", align: "right", sortable: true, cell: (row) => mono(fmt(row.nov), true) },
+          { key: "october", header: "October", align: "right", sortable: true, cell: (row) => mono(fmt(row.oct)) },
+        ]}
+      />
+      <Links />
+    </Page>
+  );
+}
+
+const units = (kind: string) => D.kinds[kind]?.units ?? 0;
+const credits = (kind: string) => D.kinds[kind]?.credits ?? 0;
+const DID = [
+  { label: "What Hakken sees", credits: credits("sees"), did: `${fmt(units("sees"))} presses of the eye` },
+  { label: "Ask Hakken", credits: credits("assistant") + credits("chatApps"), did: `${fmt(units("assistant") + units("chatApps"))} questions answered` },
+  { label: "Rankings", credits: credits("rankings"), did: `${fmt(units("rankings"))} places on Google checked` },
+  { label: "AI answers", credits: credits("aiAnswers"), did: `${fmt(units("aiAnswers"))} answers read` },
+  { label: "Backlinks", credits: credits("backlinks"), did: `${fmt(units("backlinks"))} links counted` },
+  { label: "Site audit", credits: credits("siteAudit"), did: `${fmt(units("siteAudit"))} pages checked` },
+];
+
+function Way3() {
+  return (
+    <Page title="Usage" description="How many credits you've used, and what they were for.">
+      <FigureRow columns={2}>
+        <UsedFigure meter />
+        <LeftFigure sure />
+      </FigureRow>
+      <BarsCard
+        title="What your credits did"
+        hint="What each kind of work did for you in November."
+        exportName="usage-what-they-did"
+        host={OWN}
+        waiting={null}
+        controls={[]}
+        rows={DID}
+        series={[{ key: "credits", name: "Credits", colour: CHART_SERIES_ORANGE }]}
+        figure="Credits"
+        labels={(value, _key, row) => `${fmt(value)} · ${String(row.did)}`}
+        anything
+        empty="Nothing has used credits this month yet."
+      />
+      <Links />
+    </Page>
+  );
+}
+
+// ——— Statement ———
+
+function Statement() {
+  const shown = ALL.slice(0, 25);
+  return (
+    <Page current="statement" title="Statement" description="Your credits in and out in November, newest first, with what was left after each.">
+      <FigureRow columns={3}>
+        <Figure label="Came in" value={fmt(D.granted)} detail="Your credits for November, on 1 November" />
+        <UsedFigure />
+        <LeftFigure />
+      </FigureRow>
+      <ListTable<Line>
+        noun="lines"
+        actions={<DownloadButton label="Download every charge" onClick={noop} />}
+        rows={shown}
+        rowKey={(row) => `${row.at}:${row.what}`}
+        search={{ value: "", onChange: noop, placeholder: "Find a charge or page…" }}
+        filters={(
+          <Select value="" onChange={noop} chip={{ label: "Website", choice: null }}>
+            <option value="">Every website</option>
+          </Select>
+        )}
+        sort={{ key: "when", direction: "desc", onSort: noop }}
+        empty={{ label: "Nothing came in or went out this month." }}
+        footer={footer(ALL.length)}
+        columns={[
+          { key: "what", header: "What for", className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (row) => <What text={row.what} /> },
+          { key: "when", header: "When", sortable: true, cell: (row) => mono(row.when) },
+          { key: "website", header: "Website", className: "max-w-0 w-[18%]", cell: (row) => <SiteName host={row.site} /> },
+          { key: "who", header: "Who", cell: (row) => <span className="whitespace-nowrap text-[13px] text-secondary">{row.who || "–"}</span> },
+          { key: "credits", header: "Credits", align: "right", cell: (row) => mono(signed(row.change), true) },
+          { key: "left", header: "Left after", align: "right", cell: (row) => mono(fmt(row.left)) },
+        ]}
+      />
+    </Page>
+  );
+}
+
+// ——— By work and By website ———
+
+function Picked({ title, about, figures, children }: { title: string; about: string; figures: ReactNode; children: ReactNode }) {
+  return (
+    <>
+      <ResearchSection title={title} description={about}>{figures}</ResearchSection>
+      {children}
+    </>
+  );
+}
+
+const WORK_MENU = Object.entries(ALL.reduce<Record<string, number>>((all, line) => {
+  if (line.section) all[line.section] = (all[line.section] ?? 0) - line.change;
+  return all;
+}, {})).map(([section, used]) => ({ id: section, label: section, credits: used })).sort((a, b) => b.credits - a.credits);
+
+function ByWork() {
+  const presses = ALL.filter((line) => line.section === "Search Console");
+  const used = presses.reduce((sum, line) => sum - line.change, 0);
+  return (
+    <Page title="By work" description="Pick a kind of work to see every charge for it." current="Search Console">
+      <Picked
+        title="Search Console"
+        about="Each press of the eye that wrote new advice. Until the page's figures change, a press shows the same advice for up to a day, covered by your subscription."
+        figures={(
+          <FigureRow columns={2}>
+            <Figure label="Used in November" value={fmt(used)} detail={`Out of ${fmt(D.used)} in all`} />
+            <Figure label="Presses of the eye" value={fmt(presses.length)} detail={`On ${new Set(presses.map((line) => line.page)).size} pages`} />
+          </FigureRow>
+        )}
+      >
+        <ListTable<Line>
+          noun="lines"
+          actions={<DownloadButton label="Download" onClick={noop} />}
+          rows={presses.slice(0, 25)}
+          rowKey={(row) => `${row.at}`}
+          search={{ value: "", onChange: noop, placeholder: "Find a page…" }}
+          sort={{ key: "when", direction: "desc", onSort: noop }}
+          empty={{ label: "The eye wasn't pressed this month." }}
+          footer={footer(presses.length)}
+          columns={[
+            { key: "page", header: "Page", className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (row) => <What text={row.page ?? ""} /> },
+            { key: "when", header: "When", sortable: true, cell: (row) => mono(row.when) },
+            { key: "website", header: "Website", className: "max-w-0 w-[22%]", cell: (row) => <SiteName host={row.site} /> },
+            { key: "who", header: "Who", cell: (row) => <span className="whitespace-nowrap text-[13px] text-secondary">{row.who}</span> },
+            { key: "credits", header: "Credits", align: "right", cell: (row) => mono(fmt(-row.change), true) },
+          ]}
+        />
+      </Picked>
+    </Page>
+  );
+}
+
+function ByWebsite() {
+  const charges = ALL.filter((line) => line.site === OWN);
+  return (
+    <Page title="By website" description="Pick a website to see every charge for it." current={OWN}>
+      <Picked
+        title={OWN}
+        about="Your website"
+        figures={(
+          <FigureRow columns={2}>
+            <Figure label="Used in November" value={fmt(ownRow.nov)} detail={`${fmt(ownRow.oct)} in October`} />
+            <Figure label="Out of everything you used" value={`${Math.round((ownRow.nov / D.used) * 100)}%`} detail={`${fmt(D.used)} credits in all`} />
+          </FigureRow>
+        )}
+      >
+        <ListTable<Line>
+          noun="lines"
+          actions={<DownloadButton label="Download" onClick={noop} />}
+          rows={charges.slice(0, 25)}
+          rowKey={(row) => `${row.at}`}
+          search={{ value: "", onChange: noop, placeholder: "Find a charge or page…" }}
+          sort={{ key: "when", direction: "desc", onSort: noop }}
+          empty={{ label: "Nothing used credits on this website this month." }}
+          footer={footer(charges.length)}
+          columns={[
+            { key: "what", header: "What for", className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (row) => <What text={row.what} /> },
+            { key: "when", header: "When", sortable: true, cell: (row) => mono(row.when) },
+            { key: "who", header: "Who", cell: (row) => <span className="whitespace-nowrap text-[13px] text-secondary">{row.who}</span> },
+            { key: "credits", header: "Credits", align: "right", cell: (row) => mono(fmt(-row.change), true) },
+          ]}
+        />
+      </Picked>
+    </Page>
+  );
+}
+
+// ——— Coming up ———
+
+type Booked = { host: string; kinds: string[]; nextAt: number; dec: number };
+const KIND_NAME: Record<string, string> = { rankings: "Rankings", aiAnswers: "AI answers", backlinks: "Backlinks", siteAudit: "Site audit" };
+const checks = (COMING as unknown as { checks: { kind: string; nextAt: number; nextMonth: number; website: { host: string } | null }[] }).checks;
+const BOOKED: Booked[] = Object.values(checks.reduce<Record<string, Booked>>((all, check) => {
+  const host = check.website?.host ?? "";
+  const row = all[host] ?? (all[host] = { host, kinds: [], nextAt: check.nextAt, dec: 0 });
+  row.kinds.push(check.kind); row.dec += check.nextMonth; row.nextAt = Math.min(row.nextAt, check.nextAt);
+  return all;
+}, {})).sort((a, b) => b.dec - a.dec || a.host.localeCompare(b.host));
+const dayMonth = (at: number) => new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Europe/London" });
+
+function ComingUp() {
+  return (
+    <Page current="coming" title="Coming up" description="The checks booked for your website and the competitors you track, and the credits they'll use." month={false}>
+      <FigureRow columns={2}>
+        <Figure label="Booked for December" value={fmt(D.bookedDec)} detail={`Out of your ${fmt(D.granted)} credits`} />
+        <Figure emphasis label="Left for everything else" value={fmt(D.granted - D.bookedDec)} detail="For work you start yourself" />
+      </FigureRow>
+      <ListTable<Booked>
+        noun="websites"
+        rows={BOOKED}
+        rowKey={(row) => row.host}
+        search={{ value: "", onChange: noop, placeholder: "Find a website…" }}
+        sort={{ key: "credits", direction: "desc", onSort: noop }}
+        empty={{ label: "Nothing is booked yet." }}
+        footer={footer(BOOKED.length)}
+        columns={[
+          { key: "name", header: "Website", sortable: true, className: `${CUT_COLUMN.first} min-w-[160px]`, cell: (row) => <SiteName host={row.host} /> },
+          { key: "checks", header: "What runs", className: CUT_COLUMN.second, cell: (row) => <What text={row.kinds.map((kind) => KIND_NAME[kind] ?? kind).sort().join(", ")} /> },
+          { key: "often", header: "How often", cell: () => <span className="whitespace-nowrap text-[13px] text-secondary">Every month</span> },
+          { key: "next", header: "Next run", sortable: true, cell: (row) => <span className="whitespace-nowrap text-[13px] text-secondary">{dayMonth(row.nextAt)}</span> },
+          { key: "credits", header: "Credits", align: "right", sortable: true, cell: (row) => mono(fmt(row.dec), true) },
+        ]}
+      />
+    </Page>
+  );
+}
+
+// ——— One charge's own page, opened from its row on the Statement ———
+
+function Charge() {
+  return (
+    <>
+      <Header />
+      <div className="flex flex-col gap-6 pb-8">
+        <DetailHeader
+          back={{ label: "Statement", href: "Statement.dc.html" }}
+          icon={<Gauge className="h-6 w-6 text-brand" />}
+          title="What Hakken sees"
+          description="Purchase: one conversion on its own on this shop, last month"
+        />
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="xl:sticky xl:top-4 xl:self-start"><UsageMenu current="statement" /></aside>
+          <section className="flex min-w-0 flex-col gap-6">
+            <FactsList
+              facts={[
+                { label: "Date", value: "01/11/2026" },
+                { label: "Time", value: "07:58" },
+                { label: "Website", value: <SiteName host={OWN} /> },
+                { label: "User", value: "Anthony Basker" },
+                { label: "How", value: "By hand" },
+                { label: "Out", value: <span className="font-mono">2</span> },
+                { label: "Paid from", value: "November's plan" },
+                { label: "Balance", value: <span className="font-mono">9,998</span> },
+              ]}
+            />
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ——— A scheduled check's own page, opened from its row on Coming up ———
+
+function Check() {
+  return (
+    <>
+      <Header />
+      <div className="flex flex-col gap-6 pb-8">
+        <DetailHeader back={{ label: "Coming up", href: "ComingUp.dc.html" }} icon={<Gauge className="h-6 w-6 text-brand" />} title="Rankings" description="corston.com" />
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="xl:sticky xl:top-4 xl:self-start"><UsageMenu current="coming" /></aside>
+          <section className="flex min-w-0 flex-col gap-6">
+            <FactsList
+              facts={[
+                { label: "Website", value: <SiteName host="corston.com" owned={false} /> },
+                { label: "How often", value: "Every month" },
+                { label: "Next run", value: "16/12/2026 04:48" },
+                { label: "Set up by", value: "Anthony Basker" },
+                { label: "Each", value: <span className="font-mono">4</span> },
+                { label: "To month end", value: "–" },
+                { label: "Next month", value: <span className="font-mono">4</span> },
+              ]}
+            />
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ——— The menu: Usage open, one page lit ———
+
+const PAGES = [
+  ["overview", "Overview", "/app/usage"], ["work", "By work", "/app/usage/work"], ["websites", "By website", "/app/usage/websites"],
+  ["coming", "Coming up", "/app/usage/coming-up"], ["statement", "Statement", "/app/usage/statement"],
+] as const;
+function Menu({ lit: _lit }: { lit: string }) {
+  void PAGES; void SubNavItem;
+  return <NavItem icon={Gauge} label="Usage" href="/app/usage" isActive onClick={noop} />;
+}
+
+export const BOARDS: Record<string, () => ReactNode> = {
+  Way1: () => <Way1 />,
+  Way2: () => <Way2 />,
+  Way3: () => <Way3 />,
+  Statement: () => <Statement />,
+  ByWork: () => <ByWork />,
+  ByWebsite: () => <ByWebsite />,
+  ComingUp: () => <ComingUp />,
+  Charge: () => <Charge />,
+  Check: () => <Check />,
+  MenuOverview: () => <Menu lit="overview" />,
+  MenuWork: () => <Menu lit="work" />,
+  MenuWebsites: () => <Menu lit="websites" />,
+  MenuComing: () => <Menu lit="coming" />,
+  MenuStatement: () => <Menu lit="statement" />,
+};
+
+export function mount(name: string, element: HTMLElement) {
+  const root = createRoot(element);
+  root.render(<ToastProvider><UIProvider>{BOARDS[name]()}</UIProvider></ToastProvider>);
+  return () => root.unmount();
+}

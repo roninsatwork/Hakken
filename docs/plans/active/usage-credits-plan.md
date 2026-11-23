@@ -544,3 +544,13 @@ have you stopped"), every setting changeable on the screen.
   (finish-off-plan.md, item 3a): the platform default, a "Credits a month" box
   on Credit prices, and October's batches raised by a grant line of their own
   ("October's plan credits raised"), never by rewriting the first grant.
+- 2026-11-23 — Every charge saves more detail for Usage (Anthony, on the Usage
+  canvas: "lets add all the detail to the capture and then we can [pick] what we
+  want for usage - its important we track more than we are"). Each charge saves
+  its `section` (Visibility, Search Console, Google Analytics, Insights, Ask
+  Hakken, MCP, Hakken tasks and so on). A press of the eye also saves its website
+  and screen. An Ask Hakken reply saves the conversation's website, the page it
+  began on and its title. An MCP question saves the app, tool, screen, dates and
+  website (`convex/creditDetail.ts`). `creditDetail:fillChargeDetail` fills in
+  older charges and moves their credits from "none" to their website in the
+  month's rollups. Code and tests only, not yet pushed to Convex or run.

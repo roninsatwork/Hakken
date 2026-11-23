@@ -210,3 +210,45 @@ export function creditMonthNamed(month: string): { month: string; startsAt: numb
 export function cycleRunKey(cycleId: string, websiteId: string, kind: CreditKind): string {
   return `cycle:${cycleId}:${websiteId}:${kind}`;
 }
+
+/**
+ * The part of the app a piece of work was for, as a client knows it from the menu (Anthony, 2026-11-23, on the Usage
+ * canvas: "can we use the names like insights - visibility, search console and google analytics", then "lets add all
+ * the detail to the capture"). Saved on every charge so Usage can show credits by section.
+ */
+export const CREDIT_SECTIONS = [
+  "visibility", "searchConsole", "bingWebmaster", "googleAnalytics", "clarity", "insights", "dashboard",
+  "assistant", "mcp", "hakkenTasks", "keywordResearch",
+] as const;
+export type CreditSection = (typeof CREDIT_SECTIONS)[number];
+
+/** A screen's section, from its key (`searchConsole.performance`, `googleAnalytics.event:purchase`); unknown keys have none. */
+export function sectionOfScreen(screen: string | undefined): CreditSection | null {
+  const head = screen?.split(".")[0] ?? "";
+  if (head === "sites") return "visibility";
+  if (head === "bing") return "bingWebmaster";
+  return (CREDIT_SECTIONS as readonly string[]).includes(head) ? head as CreditSection : null;
+}
+
+/** The section a charge belongs to: its screen's, for work done on one screen; else its kind of work's. */
+export function sectionOfWork(kind: CreditKind, screen?: string): CreditSection | null {
+  const fromScreen = sectionOfScreen(screen);
+  if (kind === "sees") return fromScreen;
+  switch (kind) {
+    case "rankings":
+    case "aiAnswers":
+    case "backlinks":
+    case "siteAudit":
+      return "visibility";
+    case "keywordResearch":
+      return "keywordResearch";
+    case "assistant":
+      return "assistant";
+    case "chatApps":
+      return "mcp";
+    case "taskAlerts":
+    case "taskReports":
+    case "taskResearch":
+      return "hakkenTasks";
+  }
+}

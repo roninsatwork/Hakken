@@ -206,6 +206,7 @@ import type * as contentTranslationActions from "../contentTranslationActions.js
 import type * as contentTranslationSchema from "../contentTranslationSchema.js";
 import type * as costCurrencyMigration from "../costCurrencyMigration.js";
 import type * as creditCorrections from "../creditCorrections.js";
+import type * as creditDetail from "../creditDetail.js";
 import type * as creditForecastRules from "../creditForecastRules.js";
 import type * as creditHooks from "../creditHooks.js";
 import type * as creditKinds from "../creditKinds.js";
@@ -1354,6 +1355,7 @@ declare const fullApi: ApiFromModules<{
   contentTranslationSchema: typeof contentTranslationSchema;
   costCurrencyMigration: typeof costCurrencyMigration;
   creditCorrections: typeof creditCorrections;
+  creditDetail: typeof creditDetail;
   creditForecastRules: typeof creditForecastRules;
   creditHooks: typeof creditHooks;
   creditKinds: typeof creditKinds;
