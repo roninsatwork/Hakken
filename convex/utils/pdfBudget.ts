@@ -1,3 +1,5 @@
+"use node";
+
 // @ts-expect-error pdf-extraction ships incomplete TypeScript declarations.
 import pdfExtraction from "pdf-extraction";
 import { appError } from "./appError";

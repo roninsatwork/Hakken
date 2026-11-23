@@ -894,6 +894,7 @@ import type * as utils_pageKinds from "../utils/pageKinds.js";
 import type * as utils_pageMetadata from "../utils/pageMetadata.js";
 import type * as utils_pageMoves from "../utils/pageMoves.js";
 import type * as utils_pageNames from "../utils/pageNames.js";
+import type * as utils_pdfBudget from "../utils/pdfBudget.js";
 import type * as utils_pii from "../utils/pii.js";
 import type * as utils_placeNames from "../utils/placeNames.js";
 import type * as utils_platformShapes from "../utils/platformShapes.js";
@@ -2041,6 +2042,7 @@ declare const fullApi: ApiFromModules<{
   "utils/pageMetadata": typeof utils_pageMetadata;
   "utils/pageMoves": typeof utils_pageMoves;
   "utils/pageNames": typeof utils_pageNames;
+  "utils/pdfBudget": typeof utils_pdfBudget;
   "utils/pii": typeof utils_pii;
   "utils/placeNames": typeof utils_placeNames;
   "utils/platformShapes": typeof utils_platformShapes;
