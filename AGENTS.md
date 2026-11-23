@@ -103,6 +103,17 @@ restarted. Restart first, then run the checks.
 - If a normal `git pull` or `git fetch` fails with that credential error, retry the same operation with `/usr/bin/git` before asking the user to fix GitHub auth.
 - The remote is expected to be `https://github.com/roninsatwork/Hakken.git`; do not change its transport without the owner's instruction.
 
+## Mac Studio network safety
+
+On 2026-11-23, the whole Mac Studio lost internet access. A reboot restored it.
+The cause is not known. Security tests had used a temporary Lima VM the night
+before, so its network helper is a possible cause, not a confirmed one.
+
+Do not start or stop a Lima test VM on this Mac for Hakken checks while the
+cause is unknown. Do not change the Mac's network settings for a repo check.
+Use another isolated test environment when one is available. Otherwise report
+the check as still needed and ask Anthony before using a local VM again.
+
 ## Progress Reporting
 
 - For roadmap, plan, or multi-step product builds, include a percentage-complete estimate in user updates and final summaries.
