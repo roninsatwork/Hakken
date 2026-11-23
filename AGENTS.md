@@ -105,14 +105,17 @@ restarted. Restart first, then run the checks.
 
 ## Mac Studio network safety
 
-On 2026-11-23, the whole Mac Studio lost internet access. A reboot restored it.
-The cause is not known. Security tests had used a temporary Lima VM the night
-before, so its network helper is a possible cause, not a confirmed one.
+On 2026-11-23, the whole Mac Studio lost internet access twice. Reboots restored
+it temporarily. Security tests had used a temporary Lima VM the night before;
+whether that caused the first outage is unknown. During the second outage, the
+Mac routed internet traffic through Ethernet even though Ethernet had only a
+self-assigned address and no router. Putting Wi-Fi first and disabling the
+broken Ethernet network service restored web access without another reboot.
 
-Do not start or stop a Lima test VM on this Mac for Hakken checks while the
-cause is unknown. Do not change the Mac's network settings for a repo check.
-Use another isolated test environment when one is available. Otherwise report
-the check as still needed and ask Anthony before using a local VM again.
+Anthony has explicitly said never to use a VM on this Mac again. Do not start,
+stop, install, or use any local VM for Hakken work. Do not change the Mac's
+network settings for a repo check. Use a separate machine or remote isolated
+test environment when one is available; otherwise report the check as pending.
 
 ## Progress Reporting
 
